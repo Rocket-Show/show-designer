@@ -363,6 +363,9 @@ export class FixtureService {
 
   private getAllPixelKeys(profile: FixtureProfile) {
     let result: string[] = [];
+    if(!profile.matrix.pixelKeys) {
+      return result;
+    }
     for (let pixelKeyX of profile.matrix.pixelKeys) {
       for (let pixelKeyY of pixelKeyX) {
         for (let pixelKeyZ of pixelKeyY) {
@@ -377,6 +380,9 @@ export class FixtureService {
 
   private getAllPixelGroups(profile: FixtureProfile) {
     let result: string[] = [];
+    if(!profile.matrix.pixelGroups) {
+      return result;
+    }
     for (const property of Object.keys(profile.matrix.pixelGroups)) {
       result.push(property);
     }

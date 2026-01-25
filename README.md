@@ -18,8 +18,7 @@ https://github.com/moritzvieli/show-designer-ofl-import
 
 ## Development
 
-- The git-flow-workflow is used: https://www.atlassian.com/de/git/tutorials/comparing-workflows/gitflow-workflow
-- Start the designer with `npm install` and `ng serve`
+- Start the designer with  `cd web && npm install && ng serve`
 - Access the app in your browser with `localhost:4200`
 - Some functionality requires a server (e.g. loading/saving projects, handling audio files). You can start a rocket show server (see https://github.com/moritzvieli/rocketshow) and point environment.ts's localBackend to `http://localhost:8080`
 - Prettier and precommit hook according to: https://medium.com/@victormejia/setting-up-prettier-in-an-angular-cli-project-2f50c3b9a537
