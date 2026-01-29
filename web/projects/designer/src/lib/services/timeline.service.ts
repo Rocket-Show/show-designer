@@ -262,7 +262,6 @@ export class TimelineService {
     setTimeout(() => {
       this.waveSurfer.seekTo(progress);
       this.detectChanges.next();
-      this.presetService.previewLive(this.selectedComposition.name, Math.round(this.waveSurfer.getCurrentTime() * 1000));
     }, 0);
   }
 
@@ -669,8 +668,8 @@ export class TimelineService {
         waveSurferRegion.start = this.getRegionSnapToGridValue(waveSurferRegion.start);
         waveSurferRegion.end = this.getRegionSnapToGridValue(waveSurferRegion.end);
       }
-      scenePlaybackRegion.startMillis = waveSurferRegion.start * 1000;
-      scenePlaybackRegion.endMillis = waveSurferRegion.end * 1000;
+      scenePlaybackRegion.startMillis = Math.round(waveSurferRegion.start * 1000);
+      scenePlaybackRegion.endMillis = Math.round(waveSurferRegion.end * 1000);
     });
   }
 
