@@ -20,7 +20,7 @@ import { MovingHead3d } from './models/moving-head-3d';
 })
 export class PreviewComponent implements AfterViewInit {
   private renderer: THREE.WebGLRenderer;
-  private scene: THREE.Scene;
+  private scene: THREE.Scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   public controls: OrbitControls;
 
@@ -234,8 +234,6 @@ export class PreviewComponent implements AfterViewInit {
   }
 
   private setupScene() {
-    // Create a new scene
-    this.scene = new THREE.Scene();
     // this.scene.background = new THREE.Color(0x080808);
     // this.scene.fog	= new THREE.FogExp2( 0x000000, 0.1 );
 
