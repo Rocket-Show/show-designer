@@ -10,10 +10,10 @@ export const environment = {
   // localBackend: "https://rocketshow.net/designer",
 
   // local backend
-  localBackend: 'http://localhost:8080',
+  // localBackend: 'http://localhost:8080',
 
   // rocket show device backend
-  // localBackend: "http://rocketshow.local:8080",
+  localBackend: 'http://rocketshow.local',
 
   debug: true,
 };
