@@ -17,6 +17,7 @@ import { MovingHead3d } from './models/moving-head-3d';
   selector: 'lib-app-preview',
   templateUrl: './preview.component.html',
   styleUrls: ['./preview.component.css'],
+  standalone: false,
 })
 export class PreviewComponent implements AfterViewInit {
   private renderer: THREE.WebGLRenderer;

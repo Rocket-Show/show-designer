@@ -7,6 +7,7 @@ import { PresetService } from '../../../services/preset.service';
   selector: 'lib-app-fixture-settings-position',
   templateUrl: './fixture-settings-position.component.html',
   styleUrls: ['./fixture-settings-position.component.css'],
+  standalone: false,
 })
 export class FixtureSettingsPositionComponent implements OnInit {
   selectUndefinedOptionValue: any = undefined;

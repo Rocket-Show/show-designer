@@ -9,6 +9,7 @@ import { PresetService } from '../../../services/preset.service';
   templateUrl: './fixture-capability-channel.component.html',
   styleUrls: ['./fixture-capability-channel.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class FixtureCapabilityChannelComponent implements OnInit {
   @ViewChild('sliderValue', { static: false }) sliderValue: ElementRef;

@@ -18,6 +18,7 @@ import { TimelineGridComponent } from './timeline-grid/timeline-grid.component';
   selector: 'lib-app-timeline',
   templateUrl: './timeline.component.html',
   styleUrls: ['./timeline.component.css'],
+  standalone: false,
 })
 export class TimelineComponent implements OnInit, AfterViewInit {
   @ViewChild('waveWrapper')

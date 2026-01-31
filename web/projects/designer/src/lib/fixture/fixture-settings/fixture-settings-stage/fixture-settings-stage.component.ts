@@ -6,6 +6,7 @@ import { ProjectService } from '../../../services/project.service';
   selector: 'lib-app-fixture-settings-stage',
   templateUrl: './fixture-settings-stage.component.html',
   styleUrls: ['./fixture-settings-stage.component.css'],
+  standalone: false,
 })
 export class FixtureSettingsStageComponent implements OnInit {
   constructor(public projectService: ProjectService, public previewService: PreviewService, private changeDetectorRef: ChangeDetectorRef) {}

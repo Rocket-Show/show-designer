@@ -6,6 +6,7 @@ import { TimelineService } from '../../services/timeline.service';
   selector: 'lib-app-timeline-grid',
   templateUrl: './timeline-grid.component.html',
   styleUrls: ['./timeline-grid.component.css'],
+  standalone: false,
 })
 export class TimelineGridComponent implements OnInit {
   public gridType: string;

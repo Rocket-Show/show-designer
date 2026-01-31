@@ -6,6 +6,7 @@ import { ProjectService } from '../../services/project.service';
   selector: 'lib-project-share',
   templateUrl: './project-share.component.html',
   styleUrls: ['./project-share.component.css'],
+  standalone: false,
 })
 export class ProjectShareComponent implements OnInit {
   shareLink: string;

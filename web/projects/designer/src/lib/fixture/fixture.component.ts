@@ -11,6 +11,7 @@ import { PresetFixture } from '../models/preset-fixture';
   selector: 'lib-app-fixture',
   templateUrl: './fixture.component.html',
   styleUrls: ['./fixture.component.css'],
+  standalone: false,
 })
 export class FixtureComponent implements OnInit {
   constructor(

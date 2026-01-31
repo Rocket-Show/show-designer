@@ -16,6 +16,7 @@ import { WarningDialogService } from '../../services/warning-dialog.service';
   selector: 'lib-app-composition-settings',
   templateUrl: './composition-settings.component.html',
   styleUrls: ['./composition-settings.component.css'],
+  standalone: false,
 })
 export class CompositionSettingsComponent implements OnInit {
   composition: Composition;

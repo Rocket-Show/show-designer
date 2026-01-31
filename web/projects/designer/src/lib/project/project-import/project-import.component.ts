@@ -10,6 +10,7 @@ import { ProjectLoadService } from '../../services/project-load.service';
   selector: 'lib-project-import',
   templateUrl: './project-import.component.html',
   styleUrls: ['./project-import.component.css'],
+  standalone: false,
 })
 export class ProjectImportComponent implements OnInit {
   public dropzoneConfig: DropzoneConfigInterface;

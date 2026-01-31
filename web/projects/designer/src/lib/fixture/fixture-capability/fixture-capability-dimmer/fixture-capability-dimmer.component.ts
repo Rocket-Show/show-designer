@@ -6,6 +6,7 @@ import { PresetService } from '../../../services/preset.service';
   selector: 'lib-app-fixture-capability-dimmer',
   templateUrl: './fixture-capability-dimmer.component.html',
   styleUrls: ['./fixture-capability-dimmer.component.css'],
+  standalone: false,
 })
 export class FixtureCapabilityDimmerComponent implements OnInit {
   constructor(private presetService: PresetService, private changeDetectorRef: ChangeDetectorRef) {}

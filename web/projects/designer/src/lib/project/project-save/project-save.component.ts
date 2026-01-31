@@ -10,6 +10,7 @@ import { WarningDialogService } from '../../services/warning-dialog.service';
   selector: 'lib-project-save',
   templateUrl: './project-save.component.html',
   styleUrls: ['./project-save.component.css'],
+  standalone: false,
 })
 export class ProjectSaveComponent implements OnInit {
   projects: Project[] = [];

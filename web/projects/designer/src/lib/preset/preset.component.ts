@@ -11,6 +11,7 @@ import { PresetSettingsComponent } from './preset-settings/preset-settings.compo
   selector: 'lib-app-preset',
   templateUrl: './preset.component.html',
   styleUrls: ['./preset.component.css'],
+  standalone: false,
 })
 export class PresetComponent implements OnInit {
   constructor(

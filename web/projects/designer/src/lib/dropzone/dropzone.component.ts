@@ -8,6 +8,7 @@ import { ConfigService } from '../services/config.service';
   selector: 'app-dropzone',
   templateUrl: './dropzone.component.html',
   styleUrl: './dropzone.component.css',
+  standalone: false,
 })
 export class DropzoneComponent {
   @Output() error = new EventEmitter();

@@ -12,6 +12,7 @@ import { WarningDialogService } from '../../services/warning-dialog.service';
   selector: 'lib-project-browser',
   templateUrl: './project-browser.component.html',
   styleUrls: ['./project-browser.component.css'],
+  standalone: false,
 })
 export class ProjectBrowserComponent implements OnInit {
   projects: Project[] = [];

@@ -13,6 +13,7 @@ import { ProjectService } from '../../services/project.service';
   selector: 'lib-fixture-pool-create-from-file',
   templateUrl: './fixture-pool-create-from-file.component.html',
   styleUrls: ['./fixture-pool-create-from-file.component.css'],
+  standalone: false,
 })
 export class FixturePoolCreateFromFileComponent implements OnInit {
   public dropzoneConfig: DropzoneConfigInterface;

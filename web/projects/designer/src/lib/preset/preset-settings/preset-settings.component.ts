@@ -6,6 +6,7 @@ import { Preset } from '../../models/preset';
   selector: 'lib-preset-settings',
   templateUrl: './preset-settings.component.html',
   styleUrls: ['./preset-settings.component.css'],
+  standalone: false,
 })
 export class PresetSettingsComponent implements OnInit {
   preset: Preset;

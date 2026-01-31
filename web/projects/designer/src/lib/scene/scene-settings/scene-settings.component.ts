@@ -6,6 +6,7 @@ import { Scene } from '../../models/scene';
   selector: 'lib-scene-settings',
   templateUrl: './scene-settings.component.html',
   styleUrls: ['./scene-settings.component.css'],
+  standalone: false,
 })
 export class SceneSettingsComponent implements OnInit {
   scene: Scene;

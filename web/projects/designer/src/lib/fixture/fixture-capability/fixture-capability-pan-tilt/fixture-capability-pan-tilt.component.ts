@@ -6,6 +6,7 @@ import { PresetService } from '../../../services/preset.service';
   selector: 'lib-app-fixture-capability-pan-tilt',
   templateUrl: './fixture-capability-pan-tilt.component.html',
   styleUrls: ['./fixture-capability-pan-tilt.component.css'],
+  standalone: false,
 })
 export class FixtureCapabilityPanTiltComponent implements OnInit {
   constructor(private presetService: PresetService, private changeDetectorRef: ChangeDetectorRef) {}

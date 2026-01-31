@@ -8,6 +8,7 @@ import { UserLoginComponent } from '../user-login/user-login.component';
   selector: 'lib-user-register',
   templateUrl: './user-register.component.html',
   styleUrls: ['./user-register.component.css'],
+  standalone: false,
 })
 export class UserRegisterComponent implements OnInit {
   error = '';
@@ -36,7 +37,8 @@ export class UserRegisterComponent implements OnInit {
 
   private emailIsValid(email: string): boolean {
     // tslint:disable-next-line:max-line-length
-    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    const re =
+      /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
   }
 

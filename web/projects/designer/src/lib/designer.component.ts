@@ -29,6 +29,7 @@ import { HttpErrorResponse } from '@angular/common/http';
   templateUrl: './designer.component.html',
   styleUrls: ['./designer.component.scss'],
   encapsulation: ViewEncapsulation.None,
+  standalone: false,
 })
 export class DesignerComponent implements OnInit, AfterViewInit {
   @Input()

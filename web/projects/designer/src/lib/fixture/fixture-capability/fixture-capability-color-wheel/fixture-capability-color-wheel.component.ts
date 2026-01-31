@@ -12,6 +12,7 @@ import { PresetService } from '../../../services/preset.service';
   selector: 'lib-app-fixture-capability-color-wheel',
   templateUrl: './fixture-capability-color-wheel.component.html',
   styleUrls: ['./fixture-capability-color-wheel.component.css'],
+  standalone: false,
 })
 export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
   _fixtureProfile: FixtureProfile;

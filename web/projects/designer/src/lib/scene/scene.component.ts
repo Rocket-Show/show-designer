@@ -11,6 +11,7 @@ import { SceneSettingsComponent } from './scene-settings/scene-settings.componen
   selector: 'lib-app-scene',
   templateUrl: './scene.component.html',
   styleUrls: ['./scene.component.css'],
+  standalone: false,
 })
 export class SceneComponent implements OnInit {
   constructor(

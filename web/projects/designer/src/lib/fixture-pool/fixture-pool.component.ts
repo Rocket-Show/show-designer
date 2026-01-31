@@ -19,6 +19,7 @@ import { PresetFixture } from '../models/preset-fixture';
   selector: 'lib-app-fixture-pool',
   templateUrl: './fixture-pool.component.html',
   styleUrls: ['./fixture-pool.component.css'],
+  standalone: false,
 })
 export class FixturePoolComponent implements OnInit {
   private profiles: FixtureProfile[];

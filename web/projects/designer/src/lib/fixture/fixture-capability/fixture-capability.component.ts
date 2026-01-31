@@ -13,6 +13,7 @@ import { ProjectService } from '../../services/project.service';
   templateUrl: './fixture-capability.component.html',
   styleUrls: ['./fixture-capability.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   private fixtureSelectionChangedSubscription: Subscription;

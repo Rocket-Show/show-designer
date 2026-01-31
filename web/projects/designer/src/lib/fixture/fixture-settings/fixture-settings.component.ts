@@ -6,6 +6,7 @@ import { PresetService } from '../../services/preset.service';
   selector: 'lib-app-fixture-settings',
   templateUrl: './fixture-settings.component.html',
   styleUrls: ['./fixture-settings.component.css'],
+  standalone: false,
 })
 export class FixtureSettingsComponent implements OnInit {
   dmxChannels: number[] = [];

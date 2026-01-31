@@ -7,6 +7,7 @@ import { UserService } from '../../services/user.service';
   selector: 'lib-user-login',
   templateUrl: './user-login.component.html',
   styleUrls: ['./user-login.component.css'],
+  standalone: false,
 })
 export class UserLoginComponent implements OnInit {
   error = '';

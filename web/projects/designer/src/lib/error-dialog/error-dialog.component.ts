@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
   selector: 'lib-error-dialog',
   templateUrl: './error-dialog.component.html',
   styleUrls: ['./error-dialog.component.css'],
+  standalone: false,
 })
 export class ErrorDialogComponent implements OnInit {
   onClose: Subject<number>;

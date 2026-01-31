@@ -11,6 +11,7 @@ declare var iro: any;
   selector: 'lib-app-fixture-capability-color',
   templateUrl: './fixture-capability-color.component.html',
   styleUrls: ['./fixture-capability-color.component.css'],
+  standalone: false,
 })
 export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
   color = '#ffffff';

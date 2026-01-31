@@ -9,6 +9,7 @@ import { ProjectService } from '../../services/project.service';
   selector: 'lib-app-fixture-channel',
   templateUrl: './fixture-channel.component.html',
   styleUrls: ['./fixture-channel.component.css'],
+  standalone: false,
 })
 export class FixtureChannelComponent implements OnInit, OnDestroy {
   public channelCapabilities: Map<FixtureProfile, CachedFixtureChannel[]> = new Map<FixtureProfile, CachedFixtureChannel[]>();

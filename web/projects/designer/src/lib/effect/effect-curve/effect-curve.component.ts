@@ -15,6 +15,7 @@ import { AnimationService } from './../../services/animation.service';
   selector: 'lib-app-effect-curve',
   templateUrl: './effect-curve.component.html',
   styleUrls: ['./effect-curve.component.css'],
+  standalone: false,
 })
 export class EffectCurveComponent implements OnInit {
   private gridUpdateSubscription: Subscription;

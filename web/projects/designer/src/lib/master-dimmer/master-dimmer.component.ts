@@ -6,6 +6,7 @@ import { ProjectService } from '../services/project.service';
   selector: 'lib-app-master-dimmer',
   templateUrl: './master-dimmer.component.html',
   styleUrls: ['./master-dimmer.component.css'],
+  standalone: false,
 })
 export class MasterDimmerComponent implements OnInit {
   constructor(public projectService: ProjectService, private changeDetectorRef: ChangeDetectorRef, private presetService: PresetService) {}

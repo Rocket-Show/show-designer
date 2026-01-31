@@ -12,6 +12,7 @@ import { WarningDialogService } from '../services/warning-dialog.service';
   selector: 'lib-app-effect',
   templateUrl: './effect.component.html',
   styleUrls: ['./effect.component.css'],
+  standalone: false,
 })
 export class EffectComponent implements OnInit {
   constructor(
