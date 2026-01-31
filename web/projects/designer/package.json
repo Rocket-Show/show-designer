@@ -1,6 +1,6 @@
 {
   "name": "@rocketshow/designer",
-  "version": "1.40.0",
+  "version": "1.42.0",
   "scripts": {
     "assets-delete": "rmdir-cli ../../../src/assets/designer",
     "assets-copy": "ncp assets ../../../src/assets/designer",
