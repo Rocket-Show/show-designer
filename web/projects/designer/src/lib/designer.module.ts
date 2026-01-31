@@ -1,4 +1,4 @@
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
@@ -92,11 +92,11 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
     FixturePoolCreateFromFileComponent,
     DropzoneComponent,
   ],
+  exports: [DesignerComponent],
   imports: [
     RouterModule.forRoot([], {}),
     BrowserModule,
     BrowserAnimationsModule,
-    HttpClientModule,
     FormsModule,
     NgxBootstrapSliderModule,
     TranslateModule,
@@ -109,6 +109,6 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
       newestOnTop: true,
     }),
   ],
-  exports: [DesignerComponent],
+  providers: [provideHttpClient(withInterceptorsFromDi())],
 })
 export class DesignerModule {}

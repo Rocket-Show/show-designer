@@ -2,10 +2,10 @@
   "compileOnSave": false,
   "compilerOptions": {
     "baseUrl": "./",
-    "downlevelIteration": true,
     "importHelpers": true,
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
+    "esModuleInterop": true,
     "declaration": false,
     "moduleResolution": "bundler",
     "emitDecoratorMetadata": true,
@@ -18,7 +18,6 @@
       "@rocketshow/designer": ["dist/rocketshow/designer"],
       "@rocketshow/designer/*": ["dist/rocketshow/designer/*"]
     },
-    "allowSyntheticDefaultImports": true,
     "useDefineForClassFields": false,
     "skipLibCheck": true
   }
