@@ -1,16 +1,15 @@
 <div class="card border-secondary panel h-100">
   <div class="card-body capability-container d-flex h-100" style="overflow-y: hidden">
     <!-- h-100 needs to be applied in chrome to avoid performance issues with many layouts (reflows)
-      during sliding. But the class must not be applied e.g. in Safari, because the bottom margin is not correct
-      anymore afterwards. -->
-    <div *ngIf="presetService.selectedPreset" class="row m-0 pl-3" [class.h-100]="isChrome()">
+    during sliding. But the class must not be applied e.g. in Safari, because the bottom margin is not correct
+    anymore afterwards. -->
+    @if (presetService.selectedPreset) {
+    <div class="row m-0 pl-3" [class.h-100]="isChrome()">
       <!-- profile selection -->
-      <div
-        *ngIf="profiles.length > 1"
-        class="col col-auto p-3 my-3 mr-3"
-        style="height: calc(100% - 2rem); border: solid 1px #444; border-right: none"
-      >
-        <div *ngFor="let profile of profiles; let i = index" class="form-check">
+      @if (profiles.length > 1) {
+      <div class="col col-auto p-3 my-3 mr-3" style="height: calc(100% - 2rem); border: solid 1px #444; border-right: none">
+        @for (profile of profiles; track profile; let i = $index) {
+        <div class="form-check">
           <input
             type="checkbox"
             class="form-check-input"
@@ -22,31 +21,29 @@
             {{ profile.name }}
           </label>
         </div>
+        }
       </div>
-
+      }
       <!-- all channel capabilities -->
-      <ng-container *ngFor="let entry of channelCapabilities | keyvalue; let i = index">
-        <div *ngFor="let capability of entry.value; let j = index" class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
-          <lib-app-fixture-capability-channel [profile]="entry.key" [channel]="capability" [capabilityIndex]="i * 10000 + j">
-          </lib-app-fixture-capability-channel>
-        </div>
-      </ng-container>
-
+      @for (entry of channelCapabilities | keyvalue; track entry; let i = $index) { @for (capability of entry.value; track capability; let j
+      = $index) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-channel [profile]="entry.key" [channel]="capability" [capabilityIndex]="i * 10000 + j">
+        </lib-app-fixture-capability-channel>
+      </div>
+      } }
       <!-- fix spacing at the end -->
       <div class="col col-auto p-0 my-3 mr-3">&nbsp;</div>
     </div>
-
-    <div *ngIf="projectService.project.fixtures.length == 0" class="m-auto">
+    } @if (projectService.project.fixtures.length == 0) {
+    <div class="m-auto">
       <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures' | translate }}</p>
     </div>
-
-    <div
-      *ngIf="
-        projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length == 0
-      "
-      class="m-auto"
-    >
+    } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length == 0
+    ) {
+    <div class="m-auto">
       <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
+    }
   </div>
 </div>

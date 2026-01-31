@@ -12,11 +12,11 @@
         {{ 'designer.effect.curve-square' | translate }}
       </option>
       <!-- <option [value]="'triangle'">
-        {{ 'designer.effect.curve-triangle' | translate }}</option>
-      <option [value]="'sawtooth'">
-        {{ 'designer.effect.curve-sawtooth' | translate }}</option>
-      <option [value]="'reverse-sawtooth'">
-        {{ 'designer.effect.curve-reverse-sawtooth' | translate }}</option> -->
+    {{ 'designer.effect.curve-triangle' | translate }}</option>
+    <option [value]="'sawtooth'">
+    {{ 'designer.effect.curve-sawtooth' | translate }}</option>
+    <option [value]="'reverse-sawtooth'">
+    {{ 'designer.effect.curve-reverse-sawtooth' | translate }}</option> -->
     </select>
   </div>
   <div>
@@ -177,7 +177,8 @@
   <div class="tab-content h-100" id="v-pills-tabContent">
     <div class="tab-pane h-100 show active" id="v-pills-effect-capabilities-{{ curve?.uuid }}" role="tabpanel">
       <!-- Capabilities-->
-      <div *ngFor="let capability of availableCapabilities; let i = index" class="form-check">
+      @for (capability of availableCapabilities; track capability; let i = $index) {
+      <div class="form-check">
         <input
           type="checkbox"
           class="form-check-input"
@@ -187,13 +188,16 @@
         />
         <label class="form-check-label" for="capability_{{ curve?.uuid + '_' + i }}">{{ getCapabilityName(capability) | async }}</label>
       </div>
+      }
     </div>
     <div class="tab-pane h-100 show" id="v-pills-effect-channels-{{ curve?.uuid }}" role="tabpanel">
       <!-- channels -->
 
       <!-- profile selection -->
-      <div *ngIf="availableProfiles.length > 1">
-        <div *ngFor="let profile of availableProfiles; let i = index" class="form-check">
+      @if (availableProfiles.length > 1) {
+      <div>
+        @for (profile of availableProfiles; track profile; let i = $index) {
+        <div class="form-check">
           <input
             type="checkbox"
             class="form-check-input"
@@ -203,25 +207,27 @@
           />
           <label class="form-check-label" for="channel_profile_{{ curve?.uuid }}_{{ profile.uuid }}">{{ profile.name }}</label>
         </div>
-
+        }
         <hr class="my-1" style="border-color: white" />
       </div>
+      }
 
       <!-- channels -->
-      <ng-container *ngFor="let entry of availableChannels | keyvalue; let i = index">
-        <div *ngFor="let channel of entry.value; let j = index" class="form-check">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}"
-            [ngModel]="channelChecked(entry.key, channel)"
-            (change)="toggleChannel($event, entry.key, channel)"
-          />
-          <label class="form-check-label" for="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}">{{
-            getChannelName(entry.key.name, channel.name)
-          }}</label>
-        </div>
-      </ng-container>
+      @for (entry of availableChannels | keyvalue; track entry; let i = $index) { @for (channel of entry.value; track channel; let j =
+      $index) {
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}"
+          [ngModel]="channelChecked(entry.key, channel)"
+          (change)="toggleChannel($event, entry.key, channel)"
+        />
+        <label class="form-check-label" for="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}">{{
+          getChannelName(entry.key.name, channel.name)
+        }}</label>
+      </div>
+      } }
     </div>
   </div>
 </div>

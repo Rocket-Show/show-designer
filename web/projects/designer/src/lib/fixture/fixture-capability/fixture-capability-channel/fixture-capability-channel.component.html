@@ -19,8 +19,10 @@
   <div class="card-body h-100 d-flex" style="flex-direction: column; overflow: hidden">
     <div class="row h-100">
       <!-- display all options, if there is more than one -->
-      <div *ngIf="_channel.capabilities?.length > 1" class="col mr-3" style="overflow-y: auto">
-        <div *ngFor="let capability of _channel.capabilities; let i = index" class="form-check">
+      @if (_channel.capabilities?.length > 1) {
+      <div class="col mr-3" style="overflow-y: auto">
+        @for (capability of _channel.capabilities; track capability; let i = $index) {
+        <div class="form-check">
           <input
             [(ngModel)]="selectedCapability"
             (change)="capabilitySelected()"
@@ -31,17 +33,19 @@
             [value]="capability"
           />
           <label style="max-width: 200px" class="form-check-label" for="capabilityGeneric{{ capabilityIndex }}Option{{ i }}">
-            {{ 'designer.fixtureCapabilityType.' + capability.capability.type | translate
-            }}<span *ngIf="getDescription(capability)"> ({{ getDescription(capability) }})</span
-            ><small
-              ><div *ngFor="let color of capability.capability.colors" class="color" [style.background-color]="color"></div>
-              <small *ngIf="getDescriptionStart(capability)">
-                ({{ getDescriptionStart(capability) }} to {{ getDescriptionEnd(capability) }})</small
-              >
-              <span *ngIf="capability.capability.comment"> - </span> {{ capability.capability.comment }}</small
+            {{ 'designer.fixtureCapabilityType.' + capability.capability.type | translate }}@if (getDescription(capability)) {
+            <span> ({{ getDescription(capability) }})</span>
+            }<small
+              >@for (color of capability.capability.colors; track color) {
+              <div class="color" [style.background-color]="color"></div>
+              } @if (getDescriptionStart(capability)) {
+              <small> ({{ getDescriptionStart(capability) }} to {{ getDescriptionEnd(capability) }})</small>
+              } @if (capability.capability.comment) {
+              <span> - </span>
+              } {{ capability.capability.comment }}</small
             >
+            @if (capability.capability.soundControlled) {
             <i
-              *ngIf="capability.capability.soundControlled"
               class="fa fa-microphone pl-1"
               popover="{{ 'designer.fixture.capability-sound-controlled' | translate }}"
               container="body"
@@ -49,8 +53,8 @@
               triggers="mouseenter:mouseleave"
               aria-hidden="true"
             ></i>
+            } @if (capability.capability.randomTiming) {
             <i
-              *ngIf="capability.capability.randomTiming"
               class="fa fa-random pl-1"
               popover="{{ 'designer.fixture.capability-random-timing' | translate }}"
               container="body"
@@ -58,17 +62,16 @@
               triggers="mouseenter:mouseleave"
               aria-hidden="true"
             ></i>
+            }
           </label>
         </div>
+        }
       </div>
+      }
 
       <!-- display a slider to select the value for the currently selected capability, if it has a range -->
-      <div
-        *ngIf="hasRange"
-        class="col col-auto d-flex mx-auto"
-        [class.pl-0]="_channel.capabilities?.length > 1"
-        style="flex-direction: column"
-      >
+      @if (hasRange) {
+      <div class="col col-auto d-flex mx-auto" [class.pl-0]="_channel.capabilities?.length > 1" style="flex-direction: column">
         <div class="mb-2 w-100 d-flex">
           <input
             #sliderValue
@@ -79,9 +82,7 @@
             style="width: 45px; height: 20px; text-align: center; font-size: 12px; font-family: monospace"
           />
         </div>
-
         <div class="mx-auto mb-2">{{ descriptionEnd }}</div>
-
         <div class="h-100 w-100 d-flex">
           <mv-slider
             #slider
@@ -97,9 +98,9 @@
             [step]="1"
           ></mv-slider>
         </div>
-
         <div class="mx-auto mt-2">{{ descriptionStart }}</div>
       </div>
+      }
     </div>
   </div>
 </div>

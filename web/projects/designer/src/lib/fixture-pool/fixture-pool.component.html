@@ -20,13 +20,14 @@
       <div class="card border-secondary w-100" style="height: 200px">
         <div class="card-body p-0 w-100">
           <div class="list-group list-group-flush w-100">
-            <a *ngIf="loadingProfiles" class="list-group-item flex-column align-items-start d-flex">
+            @if (loadingProfiles) {
+            <a class="list-group-item flex-column align-items-start d-flex">
               <p class="mb-0 mx-auto">
                 <i class="fa fa-spinner fa-pulse fa-fw"></i>
               </p>
             </a>
-
-            <div class="list-group-item" *ngFor="let profile of filteredProfiles | sort : 'uuid'">
+            } @for (profile of filteredProfiles | sort : 'uuid'; track profile) {
+            <div class="list-group-item">
               <div class="row">
                 <div class="col-10 col-auto my-auto pl-2">
                   <p class="mb-0">
@@ -41,6 +42,7 @@
                 </div>
               </div>
             </div>
+            }
           </div>
         </div>
       </div>
@@ -56,18 +58,22 @@
         >
           <i class="fa fa-file-o" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
         </a>
+        @if (configService.localProfiles) {
         <button
-          *ngIf="configService.localProfiles"
           type="button"
           class="mr-2 mt-2 btn btn-secondary btn-sm float-right"
           (click)="updateProfiles(); (false)"
           [disabled]="updatingProfiles"
           role="button"
         >
-          <i *ngIf="updatingProfiles" class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i>
-          <i *ngIf="!updatingProfiles" class="fa fa-download fa-fw" aria-hidden="true"></i>
+          @if (updatingProfiles) {
+          <i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i>
+          } @if (!updatingProfiles) {
+          <i class="fa fa-download fa-fw" aria-hidden="true"></i>
+          }
           {{ 'designer.fixture-pool.update-profiles' | translate }}
         </button>
+        }
       </div>
     </div>
     <div class="col-6">
@@ -96,9 +102,9 @@
       <div class="card border-secondary" style="height: 235px">
         <div class="card-body p-0">
           <div class="list-group list-group-flush" [sortablejs]="fixturePool">
+            @for (fixture of fixturePool; track fixture) {
             <div
               class="list-group-item"
-              *ngFor="let fixture of fixturePool"
               [class.active]="fixture == selectedFixture"
               (click)="selectFixture(fixture)"
               style="cursor: pointer"
@@ -121,6 +127,7 @@
                 </div>
               </div>
             </div>
+            }
           </div>
         </div>
       </div>
@@ -160,8 +167,8 @@
 
           <!-- List of DMX channels -->
           <div>
+            @for (channel of dmxChannels; track channel; let i = $index) {
             <div
-              *ngFor="let channel of dmxChannels; let i = index"
               class="dmx-channel"
               [class.dmx-channel-occupied]="channelOccupied(i)"
               [class.dmx-channel-occupied-start]="channelOccupiedStart(i)"
@@ -179,19 +186,20 @@
                 <div class="m-auto" style="font-size: 11px" [attr.data-index]="i"><small [attr.data-index]="i">&nbsp;</small></div>
               </div>
             </div>
+            }
           </div>
         </div>
 
         <!-- Fixture settings -->
         <div class="tab-pane" id="settings" role="tabpanel">
-          <div *ngIf="selectedFixture && selectedFixtureProfile">
+          @if (selectedFixture && selectedFixtureProfile) {
+          <div>
             <div class="form-group row">
               <label class="col-lg-3 col-form-label" for="fixtureName">{{ 'designer.fixture-pool.fixture-name' | translate }}</label>
               <div class="col-lg-9">
                 <input type="text" class="form-control" [(ngModel)]="selectedFixture.name" maxlength="200" id="fixtureName" />
               </div>
             </div>
-
             <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.mode' | translate }}</label>
               <div class="col-lg-9">
@@ -200,15 +208,16 @@
                   [ngModel]="selectedFixture.modeShortName"
                   (ngModelChange)="selectedFixture.modeShortName = $event"
                 >
-                  <option *ngFor="let mode of selectedFixtureProfile.modes" [ngValue]="mode.shortName || mode.name">
+                  @for (mode of selectedFixtureProfile.modes; track mode) {
+                  <option [ngValue]="mode.shortName || mode.name">
                     {{ mode.name }}
                     - {{ fixtureService.getModeChannelCount(selectedFixtureProfile, mode) }}
                     {{ 'designer.fixture-pool.channels' | translate }}
                   </option>
+                  }
                 </select>
               </div>
             </div>
-
             <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.first-channel' | translate }}</label>
               <div class="col-lg-9">
@@ -217,13 +226,14 @@
                   [ngModel]="selectedFixture.dmxFirstChannel"
                   (ngModelChange)="selectedFixture.dmxFirstChannel = $event"
                 >
-                  <option *ngFor="let channel of dmxChannels; let i = index" [ngValue]="i">
+                  @for (channel of dmxChannels; track channel; let i = $index) {
+                  <option [ngValue]="i">
                     {{ i + 1 }}
                   </option>
+                  }
                 </select>
               </div>
             </div>
-
             <div class="form-group row">
               <label class="col-lg-3 col-form-label"></label>
               <div class="col-lg-9">
@@ -233,6 +243,7 @@
               </div>
             </div>
           </div>
+          }
         </div>
       </div>
     </div>

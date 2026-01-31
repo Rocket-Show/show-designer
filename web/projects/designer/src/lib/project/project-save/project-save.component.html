@@ -14,11 +14,14 @@
   </div>
 
   <!-- List existing projects -->
-  <div *ngIf="loading" class="m-2 d-flex w-100">
+  @if (loading) {
+  <div class="m-2 d-flex w-100">
     <p class="w-100" style="text-align: center"><i class="fa fa-spinner fa-pulse fa-fw"></i></p>
   </div>
-  <div *ngIf="!loading" class="list-group list-group-flush" style="max-height: 500px; overflow-y: scroll">
-    <div class="list-group-item" *ngFor="let project of projects | sort: 'name'">
+  } @if (!loading) {
+  <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: scroll">
+    @for (project of projects | sort: 'name'; track project) {
+    <div class="list-group-item">
       <div class="row">
         <div class="col-auto my-auto flex-grow">
           <a href="#" (click)="selectProject(project); (false)">
@@ -32,7 +35,9 @@
         </div>
       </div>
     </div>
+    }
   </div>
+  }
 </div>
 <div class="modal-footer">
   <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">

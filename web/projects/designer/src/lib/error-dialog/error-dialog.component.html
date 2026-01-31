@@ -13,7 +13,9 @@
         </div>
         <div class="col pl-0">
           <p class="mb-0">{{ message }}</p>
-          <p *ngIf="details" class="mt-1 mb-0">({{ details }})</p>
+          @if (details) {
+          <p class="mt-1 mb-0">({{ details }})</p>
+          }
         </div>
       </div>
     </div>

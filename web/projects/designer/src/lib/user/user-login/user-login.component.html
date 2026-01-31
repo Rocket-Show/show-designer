@@ -46,16 +46,20 @@
         </div>
       </div>
     </div>
-    <div *ngIf="error" class="alert alert-primary" role="alert">
+    @if (error) {
+    <div class="alert alert-primary" role="alert">
       {{ 'designer.user.error.' + error | translate }}
     </div>
+    }
   </div>
   <div class="modal-footer">
     <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">
       {{ 'designer.misc.cancel' | translate }}
     </a>
     <button [disabled]="loggingIn" type="submit" class="btn btn-primary">
-      <i *ngIf="loggingIn" class="fa fa-spinner fa-pulse fa-fw"></i> {{ 'designer.user.login' | translate }}
+      @if (loggingIn) {
+      <i class="fa fa-spinner fa-pulse fa-fw"></i>
+      } {{ 'designer.user.login' | translate }}
     </button>
   </div>
 </form>

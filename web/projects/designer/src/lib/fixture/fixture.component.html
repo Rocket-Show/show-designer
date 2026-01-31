@@ -16,12 +16,10 @@
 
   <div class="card-body h-100 p-0">
     <!-- List of fixtures -->
-    <div *ngIf="presetService.selectedPreset" class="list-group" [sortablejs]="projectService.project.presetFixtures">
-      <div
-        class="list-group-item"
-        *ngFor="let presetFixture of projectService.project.presetFixtures"
-        [class.inactive-list-item]="!fixtureIsSelected(presetFixture)"
-      >
+    @if (presetService.selectedPreset) {
+    <div class="list-group" [sortablejs]="projectService.project.presetFixtures">
+      @for (presetFixture of projectService.project.presetFixtures; track presetFixture) {
+      <div class="list-group-item" [class.inactive-list-item]="!fixtureIsSelected(presetFixture)">
         <div class="row d-flex" (click)="selectFixture($event, presetFixture)" style="cursor: pointer">
           <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
             <i class="fa fa-bars" aria-hidden="true"></i>
@@ -41,12 +39,14 @@
           </div>
         </div>
       </div>
+      }
     </div>
-
-    <div *ngIf="projectService.project.presetFixtures.length == 0" class="w-100 h-100 d-flex p-3 text-center">
+    } @if (projectService.project.presetFixtures.length == 0) {
+    <div class="w-100 h-100 d-flex p-3 text-center">
       <a href="#" class="m-auto" (click)="openFixturePool(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.fixture.no-fixtures' | translate }}</a
       >
     </div>
+    }
   </div>
 </div>

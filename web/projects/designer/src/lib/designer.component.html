@@ -72,13 +72,14 @@
     </ul>
 
     <ul class="navbar-nav">
-      <li *ngIf="configService.shareAvailable" class="nav-item d-none d-md-flex" data-toggle="collapse">
+      @if (configService.shareAvailable) {
+      <li class="nav-item d-none d-md-flex" data-toggle="collapse">
         <a class="nav-link text-primary" (click)="projectShare(); (false)" routerLinkActive="active"
           ><i class="fa fa-share-alt" aria-hidden="true"></i> {{ 'designer.navigation.project-share' | translate }}</a
         >
       </li>
-
-      <li *ngIf="configService.languageSwitch" class="nav-item dropdown">
+      } @if (configService.languageSwitch) {
+      <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
           ><i class="fa fa-globe" aria-hidden="true"></i>
           {{ 'designer.misc.language' | translate }}
@@ -88,14 +89,14 @@
           <a class="dropdown-item" href="#" (click)="switchLanguage('de'); (false)" target="_blank">Deutsch</a>
         </div>
       </li>
-
-      <li *ngIf="configService.loginAvailable && !userService.isLoggedIn()" class="nav-item" data-toggle="collapse">
+      } @if (configService.loginAvailable && !userService.isLoggedIn()) {
+      <li class="nav-item" data-toggle="collapse">
         <a class="nav-link" (click)="userRegister(); (false)" routerLinkActive="active"
           ><i class="fa fa-user" aria-hidden="true"></i> {{ 'designer.navigation.login' | translate }}</a
         >
       </li>
-
-      <li *ngIf="configService.loginAvailable && userService.isLoggedIn()" class="nav-item dropdown">
+      } @if (configService.loginAvailable && userService.isLoggedIn()) {
+      <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
           ><i class="fa fa-user" aria-hidden="true"></i>
           {{ userService.username }}
@@ -106,6 +107,7 @@
           >
         </div>
       </li>
+      }
     </ul>
   </nav>
 
@@ -114,31 +116,34 @@
     <div id="row1" class="split split-vertical clearfix pt-3 pl-3">
       <!-- Scenes -->
       <div id="scenes" class="split split-horizontal h-100">
-        <lib-app-scene *ngIf="projectService.project"></lib-app-scene>
+        @if (projectService.project) {
+        <lib-app-scene></lib-app-scene>
+        }
       </div>
 
       <!-- Presets -->
       <div id="presets" class="split split-horizontal h-100">
-        <lib-app-preset *ngIf="projectService.project"></lib-app-preset>
+        @if (projectService.project) {
+        <lib-app-preset></lib-app-preset>
+        }
       </div>
 
       <!-- 3D preview -->
       <div id="preview" class="split split-horizontal h-100 pr-3">
-        <div
-          *ngIf="projectService.project"
-          class="card border-secondary h-100"
-          [class.card-intro-active]="introService.showStep('preview')"
-        >
+        @if (projectService.project) {
+        <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('preview')">
           <div class="card-body p-0 h-100">
             <lib-app-preview class="h-100"></lib-app-preview>
           </div>
         </div>
+        }
       </div>
     </div>
 
     <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
       <!-- Menu for the capabilities, channels, effects and settings -->
-      <div *ngIf="projectService.project" class="col col-auto p-0" style="margin-right: -1px">
+      @if (projectService.project) {
+      <div class="col col-auto p-0" style="margin-right: -1px">
         <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
           <a
             class="nav-link px-3 active"
@@ -207,9 +212,11 @@
           </a>
         </div>
       </div>
+      }
 
       <div id="capabilities" class="split split-horizontal h-100" style="padding-left: 1rem">
-        <div *ngIf="projectService.project" class="row h-100">
+        @if (projectService.project) {
+        <div class="row h-100">
           <!-- Content for the capabilities, channels, effects and settings -->
           <div class="col pl-0 h-100">
             <div class="tab-content h-100" id="v-pills-tabContent">
@@ -228,33 +235,44 @@
             </div>
           </div>
         </div>
+        }
       </div>
 
       <!-- Fixtures -->
       <div id="fixtures" class="split split-horizontal h-100">
-        <lib-app-fixture *ngIf="projectService.project"></lib-app-fixture>
+        @if (projectService.project) {
+        <lib-app-fixture></lib-app-fixture>
+        }
       </div>
 
       <!-- Master dimmer -->
       <div id="masterDimmer" class="split split-horizontal h-100">
-        <lib-app-master-dimmer *ngIf="projectService.project"></lib-app-master-dimmer>
+        @if (projectService.project) {
+        <lib-app-master-dimmer></lib-app-master-dimmer>
+        }
       </div>
     </div>
 
     <!-- Timeline -->
     <div id="row3" class="split split-vertical clearfix px-3 pb-3" style="padding-bottom: 20px">
-      <lib-app-timeline *ngIf="projectService.project"></lib-app-timeline>
+      @if (projectService.project) {
+      <lib-app-timeline></lib-app-timeline>
+      }
     </div>
   </div>
 
   <!-- The components for small screens -->
   <div class="d-md-none p-3">
     <div>
-      <lib-app-master-dimmer *ngIf="projectService.project"></lib-app-master-dimmer>
+      @if (projectService.project) {
+      <lib-app-master-dimmer></lib-app-master-dimmer>
+      }
     </div>
 
     <div class="mt-3">
-      <lib-app-scene *ngIf="projectService.project"></lib-app-scene>
+      @if (projectService.project) {
+      <lib-app-scene></lib-app-scene>
+      }
     </div>
   </div>
 </div>

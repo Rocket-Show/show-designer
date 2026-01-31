@@ -3,7 +3,8 @@
     {{ 'designer.fixture.setting-position-title' | translate }}
   </div>
 
-  <div *ngIf="fixtureService.selectedSettingsFixtures.length > 0" class="card-body h-100">
+  @if (fixtureService.selectedSettingsFixtures.length > 0) {
+  <div class="card-body h-100">
     <div>
       <select class="mb-2" style="width: 140px" [(ngModel)]="selectedPositioning" (change)="changePosition($event.target.value)">
         <option [ngValue]="selectUndefinedOptionValue"></option>
@@ -14,8 +15,8 @@
         <option value="manual">{{ 'designer.fixture.setting-position-manual' | translate }}</option>
       </select>
     </div>
-
-    <div *ngIf="selectedPositioning == 'manual'">
+    @if (selectedPositioning == 'manual') {
+    <div>
       <div>{{ 'designer.fixture.setting-position' | translate }}</div>
       <div class="d-flex">
         <div class="my-auto" style="width: 20px; float: left">X</div>
@@ -68,7 +69,6 @@
           <input [ngModel]="positionY" (ngModelChange)="changePositionManual('y', $event)" type="text" class="slider-input" />
         </div>
       </div>
-
       <div class="mt-2">{{ 'designer.fixture.setting-rotation' | translate }}</div>
       <div class="d-flex">
         <div class="my-auto" style="width: 20px; float: left">X</div>
@@ -122,9 +122,11 @@
         </div>
       </div>
     </div>
+    }
   </div>
-
-  <div *ngIf="fixtureService.selectedSettingsFixtures.length == 0" class="card-body h-100 d-flex">
+  } @if (fixtureService.selectedSettingsFixtures.length == 0) {
+  <div class="card-body h-100 d-flex">
     <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures-settings-selected' | translate }}</p>
   </div>
+  }
 </div>

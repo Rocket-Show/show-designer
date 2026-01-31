@@ -3,26 +3,26 @@
     <!-- h-100 needs to be applied in chrome to avoid performance issues with many layouts (reflows)
     during sliding. But the class must not be applied e.g. in Safari, because the bottom margin is not correct
     anymore afterwards. -->
-    <div *ngIf="presetService.selectedPreset" class="row m-0 pl-3" [class.h-100]="isChrome()">
+    @if (presetService.selectedPreset) {
+    <div class="row m-0 pl-3" [class.h-100]="isChrome()">
       <!-- Dimmer -->
       <!-- the height attribute is required to avoid performance issues with many layouts (reflows)
-      in Chrome during sliding -->
-      <div *ngIf="hasCapabilityDimmer" class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        in Chrome during sliding -->
+      @if (hasCapabilityDimmer) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-dimmer></lib-app-fixture-capability-dimmer>
       </div>
-
+      }
       <!-- Color -->
       <!-- Also show for color wheel fixtures to approx. the color -->
-      <div *ngIf="hasCapabilityColorOrColorWheel" class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+      @if (hasCapabilityColorOrColorWheel) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-color></lib-app-fixture-capability-color>
       </div>
-
+      }
       <!-- Color wheels -->
-      <div
-        *ngFor="let entry of colorWheelChannels | keyvalue; let i = index"
-        class="col col-auto p-0 my-3 mr-3"
-        style="height: calc(100% - 2rem)"
-      >
+      @for (entry of colorWheelChannels | keyvalue; track entry; let i = $index) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-color-wheel
           [profile]="entry.key"
           [channel]="entry.value"
@@ -30,40 +30,30 @@
           [showContainer]="colorWheelChannels.size > 1"
         ></lib-app-fixture-capability-color-wheel>
       </div>
-
+      }
       <!-- Pan/Tilt -->
-      <div *ngIf="hasCapabilityPanTilt" class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+      @if (hasCapabilityPanTilt) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-pan-tilt></lib-app-fixture-capability-pan-tilt>
       </div>
-
+      }
       <!-- Fix spacing at the end -->
       <div class="col col-auto p-0 my-3 mr-3">&nbsp;</div>
     </div>
-
-    <div *ngIf="projectService.project.fixtures.length == 0" class="m-auto">
+    } @if (projectService.project.fixtures.length == 0) {
+    <div class="m-auto">
       <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures' | translate }}</p>
     </div>
-
-    <div
-      *ngIf="
-        projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length == 0
-      "
-      class="m-auto"
-    >
+    } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length == 0
+    ) {
+    <div class="m-auto">
       <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
-
-    <div
-      *ngIf="
-        projectService.project.fixtures.length > 0 &&
-        presetService.selectedPreset &&
-        presetService.selectedPreset.fixtures.length > 0 &&
-        !hasCapabilityColorOrColorWheel &&
-        !hasCapabilityPanTilt
-      "
-      class="m-auto"
-    >
+    } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length > 0
+    && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
+    <div class="m-auto">
       <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
     </div>
+    }
   </div>
 </div>

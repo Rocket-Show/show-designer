@@ -1,17 +1,17 @@
 <div class="card border-secondary panel h-100">
-  <div class="card-body capability-container" *ngIf="presetService.selectedPreset">
+  @if (presetService.selectedPreset) {
+  <div class="card-body capability-container">
     <div class="m-3">
       <accordion [closeOthers]="true">
-        <accordion-group
-          *ngFor="let item of presetService.selectedPreset.effects; let i = index"
-          [isOpen]="effectService.selectedEffect == item"
-          (isOpenChange)="openEffect(item, $event)"
-          style="margin-top: 1px"
-        >
+        @for (item of presetService.selectedPreset.effects; track item; let i = $index) {
+        <accordion-group [isOpen]="effectService.selectedEffect == item" (isOpenChange)="openEffect(item, $event)" style="margin-top: 1px">
           <button class="btn btn-link btn-block clearfix" accordion-heading>
             <div class="pull-left float-left d-flex w-100">
-              <i *ngIf="item.type == 'curve'" class="fa fa-area-chart fa-fw my-auto" aria-hidden="true"></i>
-              <i *ngIf="item.type == 'pan-tilt'" class="fa fa-arrows-alt fa-fw my-auto" aria-hidden="true"></i>
+              @if (item.type == 'curve') {
+              <i class="fa fa-area-chart fa-fw my-auto" aria-hidden="true"></i>
+              } @if (item.type == 'pan-tilt') {
+              <i class="fa fa-arrows-alt fa-fw my-auto" aria-hidden="true"></i>
+              }
               <span class="ml-2">{{ 'designer.effect.type-' + item.type | translate }}</span>
               <div class="ml-auto mr-2">
                 <i
@@ -25,22 +25,26 @@
                 <i (click)="this.deleteEffect(item); $event.stopPropagation()" class="fa fa-trash fa-fw" aria-hidden="true"></i>
               </div>
               <div class="mr-2">
-                <i *ngIf="item == effectService.selectedEffect" class="fa fa-caret-down fa-fw" aria-hidden="true"></i>
-                <i *ngIf="item != effectService.selectedEffect" class="fa fa-caret-right fa-fw" aria-hidden="true"></i>
+                @if (item == effectService.selectedEffect) {
+                <i class="fa fa-caret-down fa-fw" aria-hidden="true"></i>
+                } @if (item != effectService.selectedEffect) {
+                <i class="fa fa-caret-right fa-fw" aria-hidden="true"></i>
+                }
               </div>
             </div>
           </button>
-
-          <div *ngIf="item.type == 'curve'" style="min-width: 670px">
+          @if (item.type == 'curve') {
+          <div style="min-width: 670px">
             <lib-app-effect-curve [curve]="item" [isSelected]="item == effectService.selectedEffect"></lib-app-effect-curve>
           </div>
-
-          <div *ngIf="item.type == 'pan-tilt'" style="min-width: 500px">
+          } @if (item.type == 'pan-tilt') {
+          <div style="min-width: 500px">
             <lib-app-effect-pan-tilt></lib-app-effect-pan-tilt>
           </div>
+          }
         </accordion-group>
+        }
       </accordion>
-
       <div class="d-flex mx-auto mt-3">
         <div class="dropdown d-flex">
           <a
@@ -54,16 +58,16 @@
           >
             <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.effect.add-new' | translate }}
           </a>
-
           <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
             <a class="dropdown-item" href="#" (click)="addCurveEffect(); (false)">
               <i class="fa fa-area-chart fa-fw" aria-hidden="true"></i> {{ 'designer.effect.curve' | translate }}</a
             >
             <!-- <a class="dropdown-item" href="#" (click)="addPanTiltEffect()">
-              <i class="fa fa-arrows-alt fa-fw" aria-hidden="true"></i> Pan/Tilt</a> -->
+                <i class="fa fa-arrows-alt fa-fw" aria-hidden="true"></i> Pan/Tilt</a> -->
           </div>
         </div>
       </div>
     </div>
   </div>
+  }
 </div>

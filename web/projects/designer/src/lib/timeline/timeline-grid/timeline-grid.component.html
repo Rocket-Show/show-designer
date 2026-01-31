@@ -15,14 +15,15 @@
     </div>
   </div>
 
-  <div *ngIf="gridType == 'musical'" class="form-group row">
+  @if (gridType == 'musical') {
+  <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.timeline.beats-per-minute' | translate }}</label>
     <div class="col-lg-8">
       <input type="text" class="form-control" [ngModel]="beatsPerMinute" (ngModelChange)="beatsPerMinute = $event" />
     </div>
   </div>
-
-  <div *ngIf="gridType == 'musical'" class="form-group row">
+  } @if (gridType == 'musical') {
+  <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.timeline.time-signature' | translate }}</label>
     <div class="col-lg-8">
       <input
@@ -44,8 +45,8 @@
       />
     </div>
   </div>
-
-  <div *ngIf="gridType == 'musical'" class="form-group row">
+  } @if (gridType == 'musical') {
+  <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.timeline.grid-resolution' | translate }}</label>
     <div class="col-lg-8">
       <select class="custom-select" [ngModel]="gridResolution" (ngModelChange)="gridResolution = $event">
@@ -59,13 +60,14 @@
       </select>
     </div>
   </div>
-
-  <div *ngIf="gridType == 'musical'" class="form-group row">
+  } @if (gridType == 'musical') {
+  <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.timeline.grid-offset' | translate }}</label>
     <div class="col-lg-8">
       <input type="text" class="form-control" [ngModel]="gridOffsetMillis" (ngModelChange)="gridOffsetMillis = $event" />
     </div>
   </div>
+  }
 
   <div class="form-group row">
     <label class="col-lg-4 col-form-label"></label>

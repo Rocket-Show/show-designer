@@ -19,9 +19,9 @@
   <div class="card-body h-100 p-0">
     <!-- List of presets -->
     <div class="list-group" [sortablejs]="projectService.project.presets">
+      @for (item of projectService.project.presets; track item; let i = $index) {
       <div
         class="list-group-item"
-        *ngFor="let item of projectService.project.presets; let i = index"
         (click)="selectPreset(i)"
         [class.active-light]="!projectService.project.previewPreset && item == presetService.selectedPreset"
         [class.active]="projectService.project.previewPreset && item == presetService.selectedPreset"
@@ -50,6 +50,7 @@
           </div>
         </div>
       </div>
+      }
     </div>
   </div>
 </div>

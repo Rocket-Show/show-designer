@@ -22,8 +22,8 @@
   <div class="card-body border-secondary p-0">
     <!-- List of scenes -->
     <div class="list-group" [sortablejs]="projectService.project.scenes">
+      @for (scene of projectService.project.scenes; track scene; let i = $index) {
       <div
-        *ngFor="let scene of projectService.project.scenes; let i = index"
         class="list-group-item"
         [class.active-light]="projectService.project.previewPreset && sceneService.sceneIsSelected(scene)"
         [class.active]="!projectService.project.previewPreset && sceneService.sceneIsSelected(scene)"
@@ -45,6 +45,7 @@
           </div>
         </div>
       </div>
+      }
     </div>
   </div>
 </div>

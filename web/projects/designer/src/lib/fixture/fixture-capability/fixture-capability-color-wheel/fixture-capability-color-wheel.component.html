@@ -17,22 +17,23 @@
   </div>
 
   <div class="card-body h-100">
-    <div *ngIf="showContainer">{{ _fixtureProfile.name }} - {{ _channel.name }}</div>
-
-    <div *ngIf="wheel" class="d-flex" style="max-width: 240px; flex-wrap: wrap">
+    @if (showContainer) {
+    <div>{{ _fixtureProfile.name }} - {{ _channel.name }}</div>
+    } @if (wheel) {
+    <div class="d-flex" style="max-width: 240px; flex-wrap: wrap">
+      @for (slot of slotCapabilities; track slot; let i = $index) {
       <div
-        *ngFor="let slot of slotCapabilities; let i = index"
         (click)="selectSlotNumber(slot.capability.slotNumber)"
         class="m-1 color"
         [class.color-selected]="slotCapabilityIsSelected(slot.capability.slotNumber)"
         [ngStyle]="getCapabilityColorStyle(slot)"
       >
-        <div
-          *ngIf="slotCapabilityIsSelected(slot.capability.slotNumber)"
-          (click)="selectSlotNumber(slot.capability.slotNumber)"
-          class="color-selected-inner"
-        ></div>
+        @if (slotCapabilityIsSelected(slot.capability.slotNumber)) {
+        <div (click)="selectSlotNumber(slot.capability.slotNumber)" class="color-selected-inner"></div>
+        }
       </div>
+      }
     </div>
+    }
   </div>
 </div>

@@ -6,37 +6,41 @@
           ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i
         ></a>
 
+        @if (projectService.project.compositions.length > 0) {
         <select
-          *ngIf="projectService.project.compositions.length > 0"
           class="mr-3"
           [ngModel]="timelineService.selectedCompositionIndex"
           (ngModelChange)="selectComposition($event)"
           style="width: 150px; height: 30px"
         >
-          <option *ngFor="let composition of projectService.project.compositions; let i = index" [value]="i">
+          @for (composition of projectService.project.compositions; track composition; let i = $index) {
+          <option [value]="i">
             {{ composition.name }}
           </option>
+          }
         </select>
-
-        <div *ngIf="timelineService.selectedComposition" class="d-flex">
+        } @if (timelineService.selectedComposition) {
+        <div class="d-flex">
           <a href="#" class="btn btn-primary m-0 p-1" (click)="rewind(); (false)"
             ><i class="fa fa-step-backward fa-fw" aria-hidden="true"></i
           ></a>
-          <a *ngIf="timelineService.playState == 'paused'" href="#" class="btn btn-primary m-0 p-1" (click)="play(); (false)"
-            ><i class="fa fa-play fa-fw" aria-hidden="true"></i
-          ></a>
-          <a *ngIf="timelineService.playState == 'playing'" href="#" class="btn btn-primary m-0 p-1" (click)="pause(); (false)"
-            ><i class="fa fa-pause fa-fw" aria-hidden="true"></i
-          ></a>
+          @if (timelineService.playState == 'paused') {
+          <a href="#" class="btn btn-primary m-0 p-1" (click)="play(); (false)"><i class="fa fa-play fa-fw" aria-hidden="true"></i></a>
+          } @if (timelineService.playState == 'playing') {
+          <a href="#" class="btn btn-primary m-0 p-1" (click)="pause(); (false)"><i class="fa fa-pause fa-fw" aria-hidden="true"></i></a>
+          }
         </div>
+        }
       </div>
 
-      <div *ngIf="timelineService.selectedComposition" class="d-flex w-100">
-        <div *ngIf="timelineService.duration" class="my-auto mr-3">
+      @if (timelineService.selectedComposition) {
+      <div class="d-flex w-100">
+        @if (timelineService.duration) {
+        <div class="my-auto mr-3">
           <span style="width: 78px; text-align: left; display: inline-block; margin-left: 5px">{{ timelineService.currentTime }}</span>
           <span style="display: inline-block"></span>- {{ timelineService.duration }}
         </div>
-
+        }
         <div class="my-auto mr-3 ml-auto" style="float: left">
           <i (click)="timelineService.applyZoom(timelineService.zoom - 20)" class="fa fa-search-minus mr-3" aria-hidden="true"></i>
           <mv-slider
@@ -50,7 +54,6 @@
           ></mv-slider>
           <i (click)="timelineService.applyZoom(timelineService.zoom + 20)" class="fa fa-search-plus ml-3" aria-hidden="true"></i>
         </div>
-
         <div class="my-auto mr-3">
           <input
             type="text"
@@ -59,7 +62,6 @@
           />
           - <input type="text" [ngModel]="timelineService.selectedPlaybackRegion?.endMillis" (ngModelChange)="setRegionEndMillis($event)" />
         </div>
-
         <a
           href="#"
           class="btn btn-secondary m-0 py-1 mr-3"
@@ -70,7 +72,6 @@
           triggers="mouseenter:mouseleave"
           ><i class="fa fa-th" aria-hidden="true"></i
         ></a>
-
         <a
           href="#"
           class="btn btn-secondary m-0 py-1 mr-3"
@@ -81,7 +82,6 @@
           triggers="mouseenter:mouseleave"
           ><i class="fa fa-minus-circle" aria-hidden="true"></i
         ></a>
-
         <a
           href="#"
           class="btn btn-secondary m-0 py-1 mr-3"
@@ -92,7 +92,6 @@
           triggers="mouseenter:mouseleave"
           ><i class="fa fa-plus-circle" aria-hidden="true"></i
         ></a>
-
         <a
           href="#"
           class="btn btn-secondary m-0 py-1 mr-3"
@@ -103,7 +102,6 @@
           triggers="mouseenter:mouseleave"
           ><i class="fa fa-trash-o" aria-hidden="true"></i
         ></a>
-
         <a
           href="#"
           class="btn btn-secondary m-0 py-1"
@@ -115,23 +113,27 @@
           ><i class="fa fa-cog" aria-hidden="true"></i
         ></a>
       </div>
+      }
     </div>
 
-    <div *ngIf="timelineService.loadingAudioFile" class="w-100 d-flex">
+    @if (timelineService.loadingAudioFile) {
+    <div class="w-100 d-flex">
       <i class="fa fa-circle-o-notch fa-spin m-auto" style="margin-top: -30px"></i>
     </div>
-
-    <div *ngIf="timelineService.selectedComposition">
+    } @if (timelineService.selectedComposition) {
+    <div>
       <div id="waveform-timeline"></div>
     </div>
-    <div *ngIf="timelineService.selectedComposition" #waveWrapper class="h-100" style="flex: 2; position: relative">
+    } @if (timelineService.selectedComposition) {
+    <div #waveWrapper class="h-100" style="flex: 2; position: relative">
       <div #waveElement id="waveform"></div>
     </div>
-
-    <div *ngIf="projectService.project.compositions.length == 0" class="w-100 d-flex">
+    } @if (projectService.project.compositions.length == 0) {
+    <div class="w-100 d-flex">
       <a href="#" class="m-auto" (click)="addComposition(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.no-compositions' | translate }}</a
       >
     </div>
+    }
   </div>
 </div>
