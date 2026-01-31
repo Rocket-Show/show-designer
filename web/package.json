@@ -67,7 +67,7 @@
     "@types/node": "^12.11.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
-    "angular-eslint": "^21.2.0",
+    "angular-eslint": "^18.4.3",
     "awesome-typescript-loader": "2.2.1",
     "codelyzer": "^5.1.2",
     "eslint": "^8.17.0",
