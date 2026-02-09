@@ -363,7 +363,7 @@ export class FixtureService {
 
   private getAllPixelKeys(profile: FixtureProfile) {
     let result: string[] = [];
-    if(!profile.matrix.pixelKeys) {
+    if (!profile.matrix.pixelKeys) {
       return result;
     }
     for (let pixelKeyX of profile.matrix.pixelKeys) {
@@ -380,7 +380,7 @@ export class FixtureService {
 
   private getAllPixelGroups(profile: FixtureProfile) {
     let result: string[] = [];
-    if(!profile.matrix.pixelGroups) {
+    if (!profile.matrix.pixelGroups) {
       return result;
     }
     for (const property of Object.keys(profile.matrix.pixelGroups)) {
@@ -416,67 +416,127 @@ export class FixtureService {
       // Gets computed into an array of all pixel group keys, ordered by appearance in the JSON file
       result = result.concat(this.getAllPixelGroups(profile));
     } else if (repeatFor[0] === 'eachPixelXYZ') {
-      for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-        for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
-          for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+          for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
+            for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
       }
     } else if (repeatFor[0] === 'eachPixelXZY') {
-      for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-        for (let z = 0; z < profile.matrix.pixelKeys[x][0].length; z++) {
-          for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+          for (let z = 0; z < profile.matrix.pixelKeys[x][0].length; z++) {
+            for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
       }
     } else if (repeatFor[0] === 'eachPixelYXZ') {
-      for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
-        for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-          for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
+          for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+            for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
       }
     } else if (repeatFor[0] === 'eachPixelYZX') {
-      for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
-        for (let z = 0; z < profile.matrix.pixelKeys[0][y].length; z++) {
-          for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
+          for (let z = 0; z < profile.matrix.pixelKeys[0][y].length; z++) {
+            for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
       }
     } else if (repeatFor[0] === 'eachPixelZXY') {
-      for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
-        for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-          for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
+          for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+            for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
       }
     } else if (repeatFor[0] === 'eachPixelZYX') {
-      for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
-        for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
-          for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
-            const pixel = profile.matrix.pixelKeys[x][y][z];
-            if (pixel) {
-              result.push(pixel);
+      if (profile.matrix.pixelCount.length === 3) {
+        for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+            }
+          }
+        }
+      } else {
+        for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
+          for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
+            for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+              const pixel = profile.matrix.pixelKeys[x][y][z];
+              if (pixel) {
+                result.push(pixel);
+              }
             }
           }
         }
