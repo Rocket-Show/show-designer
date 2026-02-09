@@ -177,7 +177,7 @@
   <div class="tab-content h-100" id="v-pills-tabContent">
     <div class="tab-pane h-100 show active" id="v-pills-effect-capabilities-{{ curve?.uuid }}" role="tabpanel">
       <!-- Capabilities-->
-      @for (capability of availableCapabilities; track capability; let i = $index) {
+      @for (capability of availableCapabilities; track $index; let i = $index) {
       <div class="form-check">
         <input
           type="checkbox"

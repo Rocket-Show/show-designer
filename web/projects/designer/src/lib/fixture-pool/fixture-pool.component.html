@@ -101,7 +101,10 @@
       <!-- Fixtures -->
       <div class="card border-secondary" style="height: 235px">
         <div class="card-body p-0">
-          <div class="list-group list-group-flush" [sortablejs]="fixturePool">
+          <!-- TODO sortablejs breaks sortable lists in base designer view, as soon as it disappears -->
+          <!-- Reproduce: select a fixture, deselect a fixture, open pool, close pool without changes, fixture is "half"-selected again -->
+          <!-- <div class="list-group list-group-flush" [sortablejs]="fixturePool"> -->
+          <div class="list-group list-group-flush">
             @for (fixture of fixturePool; track fixture) {
             <div
               class="list-group-item"
@@ -110,9 +113,9 @@
               style="cursor: pointer"
             >
               <div class="row">
-                <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
+                <!-- <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
                   <i class="fa fa-bars" aria-hidden="true"></i>
-                </div>
+                </div> -->
                 <div class="col-auto flex-grow pl-0 my-auto">
                   <p class="mb-0">
                     <span class="icon-{{ fixtureService.getFixtureIconClass(fixtureService.getProfileByUuid(fixture.profileUuid)) }} mr-1">
@@ -167,7 +170,7 @@
 
           <!-- List of DMX channels -->
           <div>
-            @for (channel of dmxChannels; track channel; let i = $index) {
+            @for (channel of dmxChannels; track $index; let i = $index) {
             <div
               class="dmx-channel"
               [class.dmx-channel-occupied]="channelOccupied(i)"
@@ -226,7 +229,7 @@
                   [ngModel]="selectedFixture.dmxFirstChannel"
                   (ngModelChange)="selectedFixture.dmxFirstChannel = $event"
                 >
-                  @for (channel of dmxChannels; track channel; let i = $index) {
+                  @for (channel of dmxChannels; track $index; let i = $index) {
                   <option [ngValue]="i">
                     {{ i + 1 }}
                   </option>

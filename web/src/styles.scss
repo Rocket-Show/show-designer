@@ -1,6 +1,9 @@
 /* Add the theme */
 @import 'theme.scss';
 
+/* Add styling for the tree component */
+@import '@ali-hm/angular-tree-component/css/angular-tree-component.css';
+
 /* Some overrides */
 $enable-rounded: false;
 
@@ -19,12 +22,18 @@ html {
 }
 
 body {
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+  -webkit-touch-callout: none;
+  /* iOS Safari */
+  -webkit-user-select: none;
+  /* Safari */
+  -khtml-user-select: none;
+  /* Konqueror HTML */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently supported by Chrome and Opera */
 }
 
 *:focus {
@@ -99,4 +108,69 @@ dropzone.dz-wrapper > .dropzone {
 .card-intro-active {
   border-color: $orange !important;
   border-width: 2px !important;
+}
+
+/* Tree view */
+tree-viewport {
+  padding: 5px;
+}
+
+.angular-tree-component {
+  .node-content-wrapper {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+    margin-left: 5px;
+  }
+
+  .toggle-children {
+    background-image: none;
+  }
+
+  .toggle-children-wrapper {
+    .toggle-children {
+      transform: none !important;
+    }
+  }
+
+  .toggle-children::before {
+    // folder-o
+    content: '\f114';
+    font-family: 'FontAwesome';
+    font-weight: 900;
+    /* required for FA5 solid */
+    display: inline-block;
+  }
+
+  .toggle-children-wrapper-expanded {
+    .toggle-children::before {
+      // folder-open-o
+      content: '\f115';
+    }
+  }
+
+  // .node-content-wrapper-focused {
+  //   background: unset !important;
+  // }
+
+  // .node-content-wrapper:hover {
+  //   background :
+  // }
+
+  .node-content-wrapper {
+    width: 100%;
+    transition: none;
+  }
+
+  .node-content-wrapper:hover {
+    box-shadow: none !important;
+    background-color: transparent;
+  }
+
+  .node-content-wrapper-active,
+  .node-content-wrapper-focused {
+    box-shadow: none !important;
+    background-color: #906543 !important;
+  }
 }

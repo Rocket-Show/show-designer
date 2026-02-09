@@ -21,7 +21,7 @@
       </div>
       }
       <!-- Color wheels -->
-      @for (entry of colorWheelChannels | keyvalue; track entry; let i = $index) {
+      @for (entry of colorWheelChannels | keyvalue; track $index; let i = $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-color-wheel
           [profile]="entry.key"

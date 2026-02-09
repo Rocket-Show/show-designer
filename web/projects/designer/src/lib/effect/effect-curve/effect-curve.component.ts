@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable, Subscription, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -10,6 +10,7 @@ import { FixtureService } from '../../services/fixture.service';
 import { PresetService } from '../../services/preset.service';
 import { EffectCurve } from './../../models/effect-curve';
 import { AnimationService } from './../../services/animation.service';
+import { EffectService } from '../../services/effect.service';
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -17,7 +18,7 @@ import { AnimationService } from './../../services/animation.service';
   styleUrls: ['./effect-curve.component.css'],
   standalone: false,
 })
-export class EffectCurveComponent implements OnInit {
+export class EffectCurveComponent implements OnInit, OnDestroy {
   private gridUpdateSubscription: Subscription;
   private ctx: any;
   private maxWidth: number;
@@ -42,24 +43,17 @@ export class EffectCurveComponent implements OnInit {
   public availableProfiles: FixtureProfile[] = [];
   public selectedProfiles: FixtureProfile[] = [];
 
+  private effectsOpenChangedSubscription: Subscription;
+
   @Input() curve: EffectCurve;
 
   // whether the effect is currently being edited (open) or not
   @Input()
   set isSelected(value: boolean) {
     if (value) {
-      // start the update timer
-      if (!this.gridUpdateSubscription) {
-        this.gridUpdateSubscription = timer(0, 15).subscribe(() => {
-          this.redraw();
-        });
-      }
+      this.startUpdateTimer();
     } else {
-      // stop the update timer
-      if (this.gridUpdateSubscription) {
-        this.gridUpdateSubscription.unsubscribe();
-        this.gridUpdateSubscription = undefined;
-      }
+      this.stopUpdateTimer();
     }
   }
 
@@ -69,13 +63,26 @@ export class EffectCurveComponent implements OnInit {
     public presetService: PresetService,
     private animationService: AnimationService,
     private fixtureService: FixtureService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private effectService: EffectService,
+    private ngZone: NgZone
   ) {
     this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
     });
 
     this.updateCapabilitiesAndChannels();
+
+    this.effectsOpenChangedSubscription = this.effectService.effectsOpenChanged.subscribe(() => {
+      if (this.effectService.effectsOpen) {
+        this.startUpdateTimer();
+      } else {
+        this.stopUpdateTimer();
+      }
+    });
+    if (this.effectService.effectsOpen) {
+      this.startUpdateTimer();
+    }
   }
 
   ngOnInit() {
@@ -85,6 +92,29 @@ export class EffectCurveComponent implements OnInit {
     this.maxHeight = canvas.height;
 
     this.redraw();
+  }
+
+  ngOnDestroy() {
+    this.stopUpdateTimer();
+    this.effectsOpenChangedSubscription.unsubscribe();
+  }
+
+  private startUpdateTimer() {
+    if (!this.gridUpdateSubscription) {
+      // Avoid triggering change detection with each animation frame -> run outside zone
+      this.ngZone.runOutsideAngular(() => {
+        this.gridUpdateSubscription = timer(0, 15).subscribe(() => {
+          this.redraw();
+        });
+      });
+    }
+  }
+
+  private stopUpdateTimer() {
+    if (this.gridUpdateSubscription) {
+      this.gridUpdateSubscription.unsubscribe();
+      this.gridUpdateSubscription = undefined;
+    }
   }
 
   private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {

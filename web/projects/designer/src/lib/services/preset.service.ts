@@ -162,8 +162,19 @@ export class PresetService {
     // delete some fixtures
     for (const preset of this.projectService.project.presets) {
       for (let i = preset.fixtures.length - 1; i >= 0; i--) {
-        const presetFixture = this.fixtureService.getFixtureByUuid(preset.fixtures[i].fixtureUuid);
-        if (!presetFixture) {
+        const presetFixture = preset.fixtures[i];
+
+        let found = false;
+        for (let projectFixture of this.projectService.project.presetFixtures) {
+          if (
+            presetFixture.fixtureUuid === projectFixture.fixtureUuid &&
+            ((!projectFixture.pixelKey && !presetFixture.pixelKey) || projectFixture.pixelKey === presetFixture.pixelKey)
+          ) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
           preset.fixtures.splice(i, 1);
         }
       }

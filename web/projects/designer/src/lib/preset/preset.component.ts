@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Preset } from '../models/preset';
 import { IntroService } from '../services/intro.service';
@@ -6,6 +6,7 @@ import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { PresetSettingsComponent } from './preset-settings/preset-settings.component';
+import { IActionMapping, ITreeOptions, KEYS, TREE_ACTIONS } from '@ali-hm/angular-tree-component';
 
 @Component({
   selector: 'lib-app-preset',
@@ -14,15 +15,105 @@ import { PresetSettingsComponent } from './preset-settings/preset-settings.compo
   standalone: false,
 })
 export class PresetComponent implements OnInit {
+  treeOptions: ITreeOptions;
+  treeNodes: any;
+
+  @ViewChild('tree')
+  tree: ElementRef;
+
   constructor(
     public presetService: PresetService,
     public sceneService: SceneService,
     public projectService: ProjectService,
     public introService: IntroService,
     private modalService: BsModalService
-  ) {}
+  ) {
+    let actionMapping: IActionMapping = {
+      mouse: {
+        click: (tree, node, $event) => {
+          // block activation for folders (or any condition you want)
+          if (node.data.isFolder) {
+            // optional: make click expand/collapse instead
+            TREE_ACTIONS.TOGGLE_EXPANDED(tree, node, $event);
+            return;
+          }
+
+          TREE_ACTIONS.ACTIVATE(tree, node, $event);
+        },
+      },
+      keys: {
+        [KEYS.ENTER]: (tree, node, $event) => {
+          if (!node.data.isFolder) TREE_ACTIONS.ACTIVATE(tree, node, $event);
+        },
+        [KEYS.SPACE]: (tree, node, $event) => {
+          if (!node.data.isFolder) TREE_ACTIONS.ACTIVATE(tree, node, $event);
+        },
+      },
+    };
+
+    this.treeOptions = {
+      displayField: 'name',
+      isExpandedField: 'expanded',
+      idField: 'uuid',
+      hasChildrenField: 'nodes',
+      // actionMapping: {
+      //   mouse: {
+      //     dblClick: (tree, node, $event) => {
+      //       if (node.hasChildren) TREE_ACTIONS.TOGGLE_EXPANDED(tree, node, $event);
+      //     }
+      //   },
+      //   keys: {
+      //     [KEYS.ENTER]: (tree, node, $event) => {
+      //       node.expandAll();
+      //     }
+      //   }
+      // },
+      actionMapping: actionMapping,
+      nodeHeight: 23,
+      allowDrag: (node) => {
+        return true;
+      },
+      allowDrop: (node, target) => {
+        // only allow dropping into folders or to the root level
+        return !target.parent.data.id || target.parent.data.isFolder;
+      },
+      allowDragoverStyling: true,
+      levelPadding: 10,
+      useVirtualScroll: true,
+      animateExpand: true,
+      scrollOnActivate: true,
+      animateSpeed: 10,
+      animateAcceleration: 1.2,
+      scrollContainer: document.documentElement,
+    };
+
+    this.treeNodes = [
+      {
+        id: 1,
+        name: 'root1',
+        isFolder: true,
+        children: [
+          { id: 2, name: 'child1', isFolder: false },
+          { id: 3, name: 'child2', isFolder: false },
+        ],
+      },
+      {
+        id: 4,
+        name: 'root1',
+        isFolder: true,
+        children: [
+          { id: 5, name: 'child1', isFolder: false },
+          { id: 6, name: 'child2', isFolder: false },
+        ],
+      },
+    ];
+  }
 
   ngOnInit() {}
+
+  onActivate(event: any) {
+    console.log(event);
+  }
 
   selectPreset(index: number) {
     this.projectService.project.previewPreset = true;

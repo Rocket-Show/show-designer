@@ -50,6 +50,7 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { WaitDialogComponent } from './wait-dialog/wait-dialog.component';
 import { WarningDialogComponent } from './warning-dialog/warning-dialog.component';
 import { DropzoneComponent } from './dropzone/dropzone.component';
+import { TreeModule } from '@ali-hm/angular-tree-component';
 
 @NgModule({
   declarations: [
@@ -108,6 +109,7 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
     ToastrModule.forRoot({
       newestOnTop: true,
     }),
+    TreeModule,
   ],
   providers: [provideHttpClient(withInterceptorsFromDi())],
 })

@@ -20,6 +20,7 @@
     "publish": "npm run package && cd dist/designer && npm publish --access public"
   },
   "dependencies": {
+    "@ali-hm/angular-tree-component": "^21.0.3",
     "@angular/animations": "^20.3.16",
     "@angular/common": "^20.3.16",
     "@angular/compiler": "^20.3.16",

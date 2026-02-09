@@ -23,6 +23,7 @@ import { WarningDialogService } from './services/warning-dialog.service';
 import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { HttpErrorResponse } from '@angular/common/http';
+import { EffectService } from './services/effect.service';
 
 @Component({
   selector: 'lib-designer',
@@ -128,7 +129,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private errorDialogService: ErrorDialogService,
     private fixtureService: FixtureService,
     private timelineService: TimelineService,
-    public introService: IntroService
+    public introService: IntroService,
+    private effectService: EffectService
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
@@ -255,6 +257,13 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     } else {
       this.fixtureService.settingsSelection = false;
     }
+
+    if (tab === 'effects') {
+      this.effectService.effectsOpen = true;
+    } else {
+      this.effectService.effectsOpen = false;
+    }
+    this.effectService.effectsOpenChanged.next();
 
     this.currentTab = tab;
   }

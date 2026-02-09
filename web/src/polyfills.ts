@@ -21,12 +21,6 @@ import '@angular/localize/init';
 /***************************************************************************************************
  * Zone JS is required by default for Angular itself.
  */
-
-// Disable change detection cycle on request requestAnimationFrame, which runs 60 times a second in the
-// preview component with threejs.
-// See https://stackoverflow.com/questions/54416133/is-it-possible-to-use-ngzone-noop-for-particular-function-component-in-an
-import './ngzone-flags';
-
 import 'zone.js'; // Included with Angular CLI.
 
 /***************************************************************************************************

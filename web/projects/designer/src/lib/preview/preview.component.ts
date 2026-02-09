@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, NgZone, ViewChild } from '@angular/core';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
@@ -36,7 +36,8 @@ export class PreviewComponent implements AfterViewInit {
     private animationService: AnimationService,
     private previewService: PreviewService,
     private timelineService: TimelineService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private ngZone: NgZone
   ) {
     this.previewService.doUpdateFixtureSetup.subscribe(() => {
       this.syncFixtures();
@@ -274,6 +275,10 @@ export class PreviewComponent implements AfterViewInit {
     this.setupScene();
 
     this.onResize();
-    this.animate(null);
+
+    // Avoid triggering change detection with each animation frame -> run outside zone
+    this.ngZone.runOutsideAngular(() => {
+      this.animate(null);
+    });
   }
 }

@@ -18,6 +18,12 @@
 
   <div class="card-body h-100 p-0">
     <!-- List of presets -->
+    <!-- <tree-root #tree [nodes]="treeNodes" [options]="treeOptions" (activate)="onActivate($event)">
+      <ng-template #treeNodeTemplate let-node let-index="index">
+        <span>{{ node.data.name }}</span>
+      </ng-template>
+    </tree-root> -->
+
     <div class="list-group" [sortablejs]="projectService.project.presets">
       @for (item of projectService.project.presets; track item; let i = $index) {
       <div

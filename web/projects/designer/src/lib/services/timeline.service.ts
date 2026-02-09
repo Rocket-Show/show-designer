@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Observable, Subject, Subscription, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
@@ -51,7 +51,8 @@ export class TimelineService {
     private presetService: PresetService,
     private projectService: ProjectService,
     private http: HttpClient,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private ngZone: NgZone
   ) {
     this.presetService.previewSelectionChanged.subscribe(() => {
       this.selectedPlaybackRegion = undefined;
@@ -149,9 +150,12 @@ export class TimelineService {
   private startTimeUpdater() {
     this.stopTimeUpdater();
 
-    const timeUpdater = timer(0, 40);
-    this.timeUpdateSubscription = timeUpdater.subscribe(() => {
-      this.updateCurrentTime();
+    // Avoid triggering change detection with each animation frame -> run outside zone
+    this.ngZone.runOutsideAngular(() => {
+      const timeUpdater = timer(0, 40);
+      this.timeUpdateSubscription = timeUpdater.subscribe(() => {
+        this.updateCurrentTime();
+      });
     });
   }
 

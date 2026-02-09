@@ -21,7 +21,7 @@
     <div>{{ _fixtureProfile.name }} - {{ _channel.name }}</div>
     } @if (wheel) {
     <div class="d-flex" style="max-width: 240px; flex-wrap: wrap">
-      @for (slot of slotCapabilities; track slot; let i = $index) {
+      @for (slot of slotCapabilities; track $index; let i = $index) {
       <div
         (click)="selectSlotNumber(slot.capability.slotNumber)"
         class="m-1 color"

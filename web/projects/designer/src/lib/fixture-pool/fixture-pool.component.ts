@@ -53,7 +53,7 @@ export class FixturePoolComponent implements OnInit {
     public configService: ConfigService,
     private modalService: BsModalService
   ) {
-    this.fixturePool = [...this.projectService.project.fixtures];
+    this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
     if (this.fixturePool.length > 0) {
       this.selectFixture(this.fixturePool[0]);
@@ -326,13 +326,11 @@ export class FixturePoolComponent implements OnInit {
       }
     }
 
-    this.projectService.project.fixtures = this.fixturePool;
-
-    // remove deleted fixtures from preset fixtures
+    // remove deleted fixtures/pixel keys from preset fixtures
     for (let i = this.projectService.project.presetFixtures.length - 1; i >= 0; i--) {
       let found = false;
       const presetFixture = this.projectService.project.presetFixtures[i];
-      for (let fixture of this.projectService.project.fixtures) {
+      for (let fixture of this.fixturePool) {
         if (presetFixture.fixtureUuid === fixture.uuid) {
           found = true;
           break;
@@ -343,8 +341,24 @@ export class FixturePoolComponent implements OnInit {
       }
     }
 
-    // add the new fixtures to the preset fixtures
-    for (let fixture of this.projectService.project.fixtures) {
+    // If a mode is changed, we need to re-add the fixture to make sure, all pixel keys
+    // are removed/added
+    for (let projectFixture of this.projectService.project.fixtures) {
+      for (let poolFixture of this.fixturePool) {
+        if (poolFixture.profileUuid === projectFixture.profileUuid && poolFixture.modeShortName != projectFixture.modeShortName) {
+          // the mode has changed -> remove it from the presetfixtures
+          for (let i = this.projectService.project.presetFixtures.length - 1; i >= 0; i--) {
+            const presetFixture = this.projectService.project.presetFixtures[i];
+            if (presetFixture.fixtureUuid === poolFixture.uuid) {
+              this.projectService.project.presetFixtures.splice(i, 1);
+            }
+          }
+        }
+      }
+    }
+
+    // add the new fixtures/pixel keys to the preset fixtures
+    for (let fixture of this.fixturePool) {
       let found = false;
       for (let presetFixture of this.projectService.project.presetFixtures) {
         if (presetFixture.fixtureUuid === fixture.uuid) {
@@ -369,6 +383,7 @@ export class FixturePoolComponent implements OnInit {
         }
       }
     }
+    this.projectService.project.fixtures = this.fixturePool;
 
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
