@@ -157,6 +157,13 @@ export class PresetService {
     this.selectedPreset.fixtures = [];
   }
 
+  private presetFixtueEquals(fixture1: PresetFixture, fixture2: PresetFixture): boolean {
+    return (
+      fixture1.fixtureUuid === fixture2.fixtureUuid &&
+      ((!fixture2.pixelKey && !fixture1.pixelKey) || fixture2.pixelKey === fixture1.pixelKey)
+    );
+  }
+
   public removeDeletedFixtures() {
     // after changing the configuration in the fixture pool, we might need to
     // delete some fixtures
@@ -166,10 +173,7 @@ export class PresetService {
 
         let found = false;
         for (let projectFixture of this.projectService.project.presetFixtures) {
-          if (
-            presetFixture.fixtureUuid === projectFixture.fixtureUuid &&
-            ((!projectFixture.pixelKey && !presetFixture.pixelKey) || projectFixture.pixelKey === presetFixture.pixelKey)
-          ) {
+          if (this.presetFixtueEquals(presetFixture, projectFixture)) {
             found = true;
             break;
           }
@@ -497,10 +501,7 @@ export class PresetService {
       // loop over the project fixtures to keep the order
       for (let projectFixture of this.projectService.project.presetFixtures) {
         for (const presetFixture of this.selectedPreset.fixtures) {
-          if (
-            projectFixture.fixtureUuid === presetFixture.fixtureUuid &&
-            ((!projectFixture.pixelKey && !presetFixture.pixelKey) || projectFixture.pixelKey === presetFixture.pixelKey)
-          ) {
+          if (this.presetFixtueEquals(presetFixture, projectFixture)) {
             const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
             if (fixture.profile.uuid === profile.uuid) {
               const exists = modeAndPixelKeys.some(

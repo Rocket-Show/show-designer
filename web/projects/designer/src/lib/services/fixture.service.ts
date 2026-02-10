@@ -400,7 +400,9 @@ export class FixtureService {
       return result;
     } else if (repeatFor[0] === 'eachPixelABC') {
       // Gets computed into an alphanumerically sorted list of all pixelKeys
-      if (profile.matrix.pixelCount.length === 3) {
+      if (profile.matrix.pixelKeys) {
+        result = result.concat(this.getAllPixelKeys(profile));
+      } else if (profile.matrix.pixelCount.length === 3) {
         for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
           for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
             for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
@@ -408,23 +410,13 @@ export class FixtureService {
             }
           }
         }
-      } else {
-        result = result.concat(this.getAllPixelKeys(profile));
       }
       result.sort(this.alphanumericSort);
     } else if (repeatFor[0] === 'eachPixelGroup') {
       // Gets computed into an array of all pixel group keys, ordered by appearance in the JSON file
       result = result.concat(this.getAllPixelGroups(profile));
     } else if (repeatFor[0] === 'eachPixelXYZ') {
-      if (profile.matrix.pixelCount.length === 3) {
-        for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
-            }
-          }
-        }
-      } else {
+      if (profile.matrix.pixelKeys) {
         for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
           for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
             for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
@@ -435,17 +427,17 @@ export class FixtureService {
             }
           }
         }
-      }
-    } else if (repeatFor[0] === 'eachPixelXZY') {
-      if (profile.matrix.pixelCount.length === 3) {
+      } else if (profile.matrix.pixelCount.length === 3) {
         for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
               result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
-      } else {
+      }
+    } else if (repeatFor[0] === 'eachPixelXZY') {
+      if (profile.matrix.pixelKeys) {
         for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
           for (let z = 0; z < profile.matrix.pixelKeys[x][0].length; z++) {
             for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
@@ -456,17 +448,17 @@ export class FixtureService {
             }
           }
         }
-      }
-    } else if (repeatFor[0] === 'eachPixelYXZ') {
-      if (profile.matrix.pixelCount.length === 3) {
-        for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+      } else if (profile.matrix.pixelCount.length === 3) {
+        for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
               result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
-      } else {
+      }
+    } else if (repeatFor[0] === 'eachPixelYXZ') {
+      if (profile.matrix.pixelKeys) {
         for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
           for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
             for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
@@ -477,17 +469,17 @@ export class FixtureService {
             }
           }
         }
-      }
-    } else if (repeatFor[0] === 'eachPixelYZX') {
-      if (profile.matrix.pixelCount.length === 3) {
+      } else if (profile.matrix.pixelCount.length === 3) {
         for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+            for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
               result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
-      } else {
+      }
+    } else if (repeatFor[0] === 'eachPixelYZX') {
+      if (profile.matrix.pixelKeys) {
         for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
           for (let z = 0; z < profile.matrix.pixelKeys[0][y].length; z++) {
             for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
@@ -498,17 +490,17 @@ export class FixtureService {
             }
           }
         }
-      }
-    } else if (repeatFor[0] === 'eachPixelZXY') {
-      if (profile.matrix.pixelCount.length === 3) {
-        for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+      } else if (profile.matrix.pixelCount.length === 3) {
+        for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+          for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
               result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
-      } else {
+      }
+    } else if (repeatFor[0] === 'eachPixelZXY') {
+      if (profile.matrix.pixelKeys) {
         for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
           for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
             for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
@@ -519,17 +511,17 @@ export class FixtureService {
             }
           }
         }
-      }
-    } else if (repeatFor[0] === 'eachPixelZYX') {
-      if (profile.matrix.pixelCount.length === 3) {
+      } else if (profile.matrix.pixelCount.length === 3) {
         for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+          for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+            for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
               result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
-      } else {
+      }
+    } else if (repeatFor[0] === 'eachPixelZYX') {
+      if (profile.matrix.pixelKeys) {
         for (let z = 0; z < profile.matrix.pixelKeys[0][0].length; z++) {
           for (let y = 0; y < profile.matrix.pixelKeys[0].length; y++) {
             for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
@@ -537,6 +529,14 @@ export class FixtureService {
               if (pixel) {
                 result.push(pixel);
               }
+            }
+          }
+        }
+      } else if (profile.matrix.pixelCount.length === 3) {
+        for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
+          for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
+            for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
+              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
             }
           }
         }
