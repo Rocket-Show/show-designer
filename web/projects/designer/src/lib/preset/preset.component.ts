@@ -55,19 +55,8 @@ export class PresetComponent implements OnInit {
       displayField: 'name',
       isExpandedField: 'expanded',
       idField: 'uuid',
-      hasChildrenField: 'nodes',
-      // actionMapping: {
-      //   mouse: {
-      //     dblClick: (tree, node, $event) => {
-      //       if (node.hasChildren) TREE_ACTIONS.TOGGLE_EXPANDED(tree, node, $event);
-      //     }
-      //   },
-      //   keys: {
-      //     [KEYS.ENTER]: (tree, node, $event) => {
-      //       node.expandAll();
-      //     }
-      //   }
-      // },
+      hasChildrenField: 'isFolder',
+      useCheckbox: true,
       actionMapping: actionMapping,
       nodeHeight: 23,
       allowDrag: (node) => {
@@ -78,7 +67,7 @@ export class PresetComponent implements OnInit {
         return !target.parent.data.id || target.parent.data.isFolder;
       },
       allowDragoverStyling: true,
-      levelPadding: 10,
+      levelPadding: 20,
       useVirtualScroll: true,
       animateExpand: true,
       scrollOnActivate: true,
@@ -95,6 +84,15 @@ export class PresetComponent implements OnInit {
         children: [
           { id: 2, name: 'child1', isFolder: false },
           { id: 3, name: 'child2', isFolder: false },
+          {
+            id: 1,
+            name: 'root1',
+            isFolder: true,
+            children: [
+              { id: 2, name: 'child1', isFolder: false },
+              { id: 3, name: 'child2', isFolder: false },
+            ],
+          },
         ],
       },
       {

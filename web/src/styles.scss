@@ -128,7 +128,13 @@ tree-viewport {
     background-image: none;
   }
 
+  .toggle-children-placeholder {
+    width: 20px;
+  }
+
   .toggle-children-wrapper {
+    padding-right: 10px;
+
     .toggle-children {
       transform: none !important;
     }
@@ -172,5 +178,34 @@ tree-viewport {
   .node-content-wrapper-focused {
     box-shadow: none !important;
     background-color: #906543 !important;
+  }
+
+  tree-node-checkbox {
+    padding-top: 2px;
+  }
+
+  .node-wrapper {
+    tree-node-checkbox {
+      order: 2;
+    }
+
+    tree-node-expander {
+      order: 1;
+    }
+
+    .node-content-wrapper {
+      order: 3;
+    }
+  }
+
+  .node-drop-slot.is-dragging-over {
+    background: $gray-700;
+    height: 23px;
+  }
+
+  .node-content-wrapper.is-dragging-over {
+    background: $gray-700;
+    outline: 2px dotted #888;
+    border: none;
   }
 }
