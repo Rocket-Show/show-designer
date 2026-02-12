@@ -117,11 +117,7 @@ tree-viewport {
 
 .angular-tree-component {
   .node-content-wrapper {
-    padding-top: 0;
-    padding-bottom: 0;
-    padding-left: 2px;
-    padding-right: 2px;
-    margin-left: 5px;
+    padding: 0;
   }
 
   .toggle-children {
@@ -129,7 +125,8 @@ tree-viewport {
   }
 
   .toggle-children-placeholder {
-    width: 20px;
+    width: 0;
+    padding: 0;
   }
 
   .toggle-children-wrapper {
@@ -156,14 +153,6 @@ tree-viewport {
     }
   }
 
-  // .node-content-wrapper-focused {
-  //   background: unset !important;
-  // }
-
-  // .node-content-wrapper:hover {
-  //   background :
-  // }
-
   .node-content-wrapper {
     width: 100%;
     transition: none;
@@ -178,24 +167,6 @@ tree-viewport {
   .node-content-wrapper-focused {
     box-shadow: none !important;
     background-color: #906543 !important;
-  }
-
-  tree-node-checkbox {
-    padding-top: 2px;
-  }
-
-  .node-wrapper {
-    tree-node-checkbox {
-      order: 2;
-    }
-
-    tree-node-expander {
-      order: 1;
-    }
-
-    .node-content-wrapper {
-      order: 3;
-    }
   }
 
   .node-drop-slot.is-dragging-over {

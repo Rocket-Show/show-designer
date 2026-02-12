@@ -230,8 +230,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
         onDrag: this.onResize.bind(this),
       });
 
-      Split(['#scenes', '#presets', '#preview'], {
-        sizes: [20, 20, 60],
+      Split(['#scenes', '#scene-arrangement', '#presets', '#preview'], {
+        sizes: [15, 15, 15, 55],
         snapOffset: 0,
         gutterSize: this.splitGutterSizePx,
         onDrag: this.onResize.bind(this),

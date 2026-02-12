@@ -93,6 +93,9 @@
       "multiple-selection": "Multiple selection",
       "live-mode": "Live mode"
     },
+    "scene-arrangement": {
+      "title": "Arrangement"
+    },
     "preset": {
       "title": "Presets",
       "settings-name": "Name",
@@ -216,7 +219,9 @@
       "title-capabilities": "Capabilities, channels and effects",
       "step-capabilities": "The preset contains capabilities (e.g. a dimmer value or a color). But you can also edit the fixture channels manually or even add effects. 🎉",
       "title-scenes": "Scenes",
-      "step-scenes": "One scene contains one or more presets. This allows for complex combinations you can easily use on different places. Higher placed presets overwrite properties from lower placed ones.",
+      "step-scenes": "One scene contains one or more presets. This allows for complex combinations you can easily use on different places.",
+      "title-scene-arrangement": "Scene arrangement",
+      "step-scene-arrangement": "In the scene arrangement, you can define, which presets belong to a scene and how they combine. Higher positioned presets overwrite properties of lower positioned presets. Just drag & drop presets into the arrangement, while a scene is selected.",
       "title-timeline": "Timeline",
       "step-timeline": "You can place scenes on the timeline and play them in sync with an audio file. ⏱ Such a file equals a composition on the Rocket Show device. Your lighting show will be played automatically with your composition, if the names match.",
       "title-finish": "Well done!",

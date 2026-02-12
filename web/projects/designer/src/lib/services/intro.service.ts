@@ -74,7 +74,7 @@ export class IntroService {
       case 'presets':
         this.activeStep = 'capabilities';
         this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 60;
+        this.positionLeftPercentage = 70;
         break;
       case 'capabilities':
         this.activeStep = 'scenes';
@@ -85,6 +85,11 @@ export class IntroService {
         this.activeStep = 'timeline';
         this.positionTopPercentage = 40;
         this.positionLeftPercentage = 50;
+        break;
+      case 'scene-arrangement':
+        this.activeStep = 'timeline';
+        this.positionTopPercentage = 50;
+        this.positionLeftPercentage = 40;
         break;
       case 'timeline':
         this.activeStep = 'finish';
@@ -123,8 +128,13 @@ export class IntroService {
         this.positionTopPercentage = 50;
         this.positionLeftPercentage = 60;
         break;
-      case 'timeline':
+      case 'scene-arrangement':
         this.activeStep = 'scenes';
+        this.positionTopPercentage = 50;
+        this.positionLeftPercentage = 40;
+        break;
+      case 'timeline':
+        this.activeStep = 'scene-arrangement';
         this.positionTopPercentage = 50;
         this.positionLeftPercentage = 40;
         break;

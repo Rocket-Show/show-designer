@@ -51,6 +51,7 @@ import { WaitDialogComponent } from './wait-dialog/wait-dialog.component';
 import { WarningDialogComponent } from './warning-dialog/warning-dialog.component';
 import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeModule } from '@ali-hm/angular-tree-component';
+import { SceneArrangementComponent } from './scene-arrangement/scene-arrangement.component';
 
 @NgModule({
   declarations: [
@@ -69,6 +70,7 @@ import { TreeModule } from '@ali-hm/angular-tree-component';
     EffectComponent,
     FixturePoolComponent,
     PresetComponent,
+    SceneArrangementComponent,
     MasterDimmerComponent,
     FixtureCapabilityDimmerComponent,
     TimelineGridComponent,

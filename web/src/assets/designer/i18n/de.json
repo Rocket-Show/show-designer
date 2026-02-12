@@ -93,6 +93,9 @@
       "multiple-selection": "Mehrfachauswahl",
       "live-mode": "Live Modus"
     },
+    "scene-arrangement": {
+      "title": "Arrangement"
+    },
     "preset": {
       "title": "Presets",
       "settings-name": "Name",
@@ -217,7 +220,9 @@
       "title-capabilities": "Fähigkeiten, Kanäle und Effekte",
       "step-capabilities": "Das Preset enthält eine Reihe von Fähigkeiten (zum Beispiel einen Dimmer-Wert oder eine Farbe). Du kannst aber auch die Kanäle der einzelnen Fixtures manuell editieren, oder sogar Effekte hinzufügen. 🎉",
       "title-scenes": "Szenen",
-      "step-scenes": "Eine Szene enthält ein oder mehrere Presets. Damit kannst du komplexe Kombinationen erstellen und einfach wieder abrufen. Höher platzierte Presets überschreiben die Eigenschaften von darunterliegenden Presets.",
+      "step-scenes": "Eine Szene enthält ein oder mehrere Presets. Damit kannst du komplexe Kombinationen erstellen und einfach wieder abrufen.",
+      "title-scene-arrangement": "Szenen Arrangement",
+      "step-scene-arrangement": "Im Szenen Arrangement definierst du, welche Presets in einer Szene benutzt werden und wie sie aufeinander einwirken. Höher positionierte Presets überschreiben Eigenschaften von tiefer liegenden Presets. Ziehe einfach Presets in das Arrangement, während eine Szene ausgewählt ist.",
       "title-timeline": "Zeitleiste",
       "step-timeline": "In der Zeitleiste kannst du Szenen platzieren und synchronisiert zu einer Audio-Datei abspielen. ⏱ Auf dem Rocket Show-Gerät entspricht diese Datei einer Komposition, die beim Abspielen auch deine Lichtshow automatisch steuert, wenn die Namen identisch sind.",
       "title-finish": "Gut gemacht!",

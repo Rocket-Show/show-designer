@@ -56,7 +56,6 @@ export class PresetComponent implements OnInit {
       isExpandedField: 'expanded',
       idField: 'uuid',
       hasChildrenField: 'isFolder',
-      useCheckbox: true,
       actionMapping: actionMapping,
       nodeHeight: 23,
       allowDrag: (node) => {

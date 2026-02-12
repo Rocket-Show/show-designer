@@ -1,0 +1,22 @@
+<div
+  class="card border-secondary h-100 panel card-intro-preset card-intro-active"
+  [class.card-intro-active]="introService.showStep('scene-arrangement')"
+>
+  <div class="card-header d-flex">
+    <div>
+      {{ 'designer.scene-arrangement.title' | translate }}
+    </div>
+    <div class="ml-auto">
+      <a href="#" class="btn btn-secondary m-0, p-0" (click)="up(); (false)"><i class="fa fa-arrow-up fa-fw" aria-hidden="true"></i></a>
+      <a href="#" class="btn btn-secondary m-0, p-0" (click)="down(); (false)"><i class="fa fa-arrow-down fa-fw" aria-hidden="true"></i></a>
+    </div>
+  </div>
+
+  <div class="card-body h-100 p-0">
+    <tree-root #tree [nodes]="treeNodes" [options]="treeOptions" (activate)="onActivate($event)">
+      <ng-template #treeNodeTemplate let-node let-index="index">
+        <span>{{ node.data.name }}</span>
+      </ng-template>
+    </tree-root>
+  </div>
+</div>

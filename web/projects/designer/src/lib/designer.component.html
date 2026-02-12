@@ -121,6 +121,13 @@
         }
       </div>
 
+      <!-- Scene arrangement -->
+      <div id="scene-arrangement" class="split split-horizontal h-100">
+        @if (projectService.project) {
+        <lib-app-scene-arrangement></lib-app-scene-arrangement>
+        }
+      </div>
+
       <!-- Presets -->
       <div id="presets" class="split split-horizontal h-100">
         @if (projectService.project) {
