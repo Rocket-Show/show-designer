@@ -56,7 +56,9 @@ export class PreviewService implements OnDestroy {
 
       if (
         calculatedFixture.fixture.dmxUniverseUuid === fixtures[fixtureIndex].fixture.dmxUniverseUuid &&
-        calculatedFixture.fixture.dmxFirstChannel === fixtures[fixtureIndex].fixture.dmxFirstChannel
+        calculatedFixture.fixture.dmxFirstChannel === fixtures[fixtureIndex].fixture.dmxFirstChannel &&
+        ((!calculatedFixture.pixelKey && !fixtures[fixtureIndex].pixelKey) ||
+          calculatedFixture.pixelKey === fixtures[fixtureIndex].pixelKey)
       ) {
         return calculatedFixture;
       }
