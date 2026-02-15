@@ -389,6 +389,7 @@ export class FixtureService {
     return result;
   }
 
+  // get pixel keys in order for a specific channel repeatFor
   private getPixelKeysInOrder(profile: FixtureProfile, repeatFor: string[]): string[] {
     let result: string[] = [];
 
@@ -669,6 +670,7 @@ export class FixtureService {
     return channels;
   }
 
+  // get all used pixel keys for all channels in the currently used fixture mode
   fixtureGetUniquePixelKeys(fixture: Fixture): string[] {
     let pixelKeys: Set<string> = new Set();
 
