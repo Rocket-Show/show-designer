@@ -58,17 +58,21 @@ export class PreviewComponent implements AfterViewInit {
     this.fixtures3d = [];
 
     // add all fixtures from the project
+    const fixture3dMap = {
+      [FixtureCategory['Moving Head']]: MovingHead3d,
+      [FixtureCategory['Color Changer']]: ColorChanger3d,
+      [FixtureCategory['Blinder']]: ColorChanger3d,
+    };
+
     for (const fixture of this.fixtureService.cachedFixtures) {
-      switch (fixture.profile.categories[0]) {
-        case FixtureCategory['Moving Head']:
-          this.fixtures3d.push(new MovingHead3d(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene));
-          break;
-        case FixtureCategory['Color Changer']:
-          this.fixtures3d.push(new ColorChanger3d(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene));
-          break;
-        case FixtureCategory['Blinder']:
-          this.fixtures3d.push(new ColorChanger3d(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene));
-          break;
+      const category = fixture.profile.categories.find((c) => fixture3dMap[c]);
+
+      if (category) {
+        const Fixture3dClass = fixture3dMap[category];
+
+        this.fixtures3d.push(new Fixture3dClass(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene));
+      } else {
+        console.warn(`No supported category found for fixture`);
       }
     }
   }
@@ -93,6 +97,7 @@ export class PreviewComponent implements AfterViewInit {
     let positionCount = 0; // Number of fixtures in the same position
     let positionIndex = 1;
 
+    // TODO don't count pixels
     this.projectService.project.presetFixtures.forEach((element, index) => {
       const fixture = this.fixtureService.getFixtureByUuid(element.fixtureUuid);
       if (fixture.positioning === positioning) {
@@ -102,6 +107,7 @@ export class PreviewComponent implements AfterViewInit {
 
     this.projectService.project.presetFixtures.forEach((element, index) => {
       const fixture = this.fixtureService.getFixtureByUuid(element.fixtureUuid);
+
       if (fixture.positioning === positioning) {
         fixture.positionX = xMin + ((xMax - xMin) / (positionCount + 1)) * positionIndex;
         fixture.positionY = yMin + ((yMax - yMin) / (positionCount + 1)) * positionIndex;
