@@ -6,6 +6,7 @@ type Axis = 'x' | 'y' | 'z';
 
 type GroupDef = 'all' | string[] | (Partial<Record<Axis, string[]>> & { name?: string[] });
 
+@Injectable({
   providedIn: 'root',
 })
 export class FixturePixelGroupResolveService {
