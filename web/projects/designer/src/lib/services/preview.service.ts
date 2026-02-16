@@ -57,8 +57,8 @@ export class PreviewService implements OnDestroy {
       if (
         calculatedFixture.fixture.dmxUniverseUuid === fixtures[fixtureIndex].fixture.dmxUniverseUuid &&
         calculatedFixture.fixture.dmxFirstChannel === fixtures[fixtureIndex].fixture.dmxFirstChannel &&
-        ((!calculatedFixture.pixelKey && !fixtures[fixtureIndex].pixelKey) ||
-          calculatedFixture.pixelKey === fixtures[fixtureIndex].pixelKey)
+        ((!calculatedFixture.pixel?.key && !fixtures[fixtureIndex].pixel?.key) ||
+          calculatedFixture.pixel?.key === fixtures[fixtureIndex].pixel?.key)
       ) {
         return calculatedFixture;
       }
@@ -495,7 +495,7 @@ export class PreviewService implements OnDestroy {
 
         for (const preset of presets) {
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
-          const fixtureIndex = this.getFixtureIndex(preset.preset, cachedFixture.fixture.uuid, cachedFixture.pixelKey);
+          const fixtureIndex = this.getFixtureIndex(preset.preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key);
 
           if (fixtureIndex >= 0) {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,

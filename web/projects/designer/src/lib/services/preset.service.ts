@@ -136,13 +136,13 @@ export class PresetService {
         }
       }
 
-      const pixelKeys = this.fixtureService.fixtureGetUniquePixelKeys(fixture);
+      const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
-      for (const pixelKey of pixelKeys) {
-        if (!this.fixtureIsSelected(fixture, pixelKey)) {
+      for (const pixel of pixels) {
+        if (!this.fixtureIsSelected(fixture, pixel.key)) {
           const presetFixture = new PresetFixture();
           presetFixture.fixtureUuid = fixture.uuid;
-          presetFixture.pixelKey = pixelKey;
+          presetFixture.pixelKey = pixel.key;
           this.selectedPreset.fixtures.push(presetFixture);
         }
       }
@@ -505,7 +505,7 @@ export class PresetService {
             const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
             if (fixture.profile.uuid === profile.uuid) {
               const exists = modeAndPixelKeys.some(
-                (item) => (item.mode === fixture.mode && !item.pixelKey && !fixture.pixelKey) || item.pixelKey === fixture.pixelKey
+                (item) => (item.mode === fixture.mode && !item.pixelKey && !fixture.pixel.key) || item.pixelKey === fixture.pixel.key
               );
               if (!exists) {
                 modeAndPixelKeys.push({

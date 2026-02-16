@@ -64,13 +64,16 @@ export class PreviewComponent implements AfterViewInit {
       [FixtureCategory['Blinder']]: ColorChanger3d,
     };
 
+    // TODO group fixtures of the same UUID but with differen pixels into the same fixture to ensure
+    // rotation is aligned
     for (const fixture of this.fixtureService.cachedFixtures) {
       const category = fixture.profile.categories.find((c) => fixture3dMap[c]);
 
       if (category) {
         const Fixture3dClass = fixture3dMap[category];
+        const fixture3d = new Fixture3dClass(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene);
 
-        this.fixtures3d.push(new Fixture3dClass(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene));
+        this.fixtures3d.push(fixture3d);
       } else {
         console.warn(`No supported category found for fixture`);
       }
@@ -94,27 +97,32 @@ export class PreviewComponent implements AfterViewInit {
     zMin: number,
     zMax: number
   ) {
-    let positionCount = 0; // Number of fixtures in the same position
-    let positionIndex = 1;
+    let positionCount = 0; // number of fixtures in the same position (only counting one pixel)
+    let positionIndex = 0;
+    let lastFixtureUuid = undefined; // skip new positioning if it's just a new pixel inside the same fixture
 
-    // TODO don't count pixels
     this.projectService.project.presetFixtures.forEach((element, index) => {
       const fixture = this.fixtureService.getFixtureByUuid(element.fixtureUuid);
-      if (fixture.positioning === positioning) {
+      if (fixture.positioning === positioning && element.fixtureUuid != lastFixtureUuid) {
         positionCount++;
       }
+      lastFixtureUuid = element.fixtureUuid;
     });
 
+    lastFixtureUuid = undefined;
     this.projectService.project.presetFixtures.forEach((element, index) => {
       const fixture = this.fixtureService.getFixtureByUuid(element.fixtureUuid);
 
       if (fixture.positioning === positioning) {
+        if (element.fixtureUuid != lastFixtureUuid) {
+          positionIndex++;
+        }
+
         fixture.positionX = xMin + ((xMax - xMin) / (positionCount + 1)) * positionIndex;
         fixture.positionY = yMin + ((yMax - yMin) / (positionCount + 1)) * positionIndex;
         fixture.positionZ = zMin + ((zMax - zMin) / (positionCount + 1)) * positionIndex;
-
-        positionIndex++;
       }
+      lastFixtureUuid = element.fixtureUuid;
     });
   }
 
@@ -183,7 +191,7 @@ export class PreviewComponent implements AfterViewInit {
       if (this.fixtureService.settingsSelection) {
         fixture3d.isSelected = this.fixtureService.settingsFixtureIsSelected(fixture3d.fixture.fixture);
       } else {
-        fixture3d.isSelected = this.previewService.fixtureIsSelected(fixture3d.fixture.fixture.uuid, fixture3d.fixture.pixelKey, presets);
+        fixture3d.isSelected = this.previewService.fixtureIsSelected(fixture3d.fixture.fixture.uuid, fixture3d.fixture.pixel?.key, presets);
       }
     }
 

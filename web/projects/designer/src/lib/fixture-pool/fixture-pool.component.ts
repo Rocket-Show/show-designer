@@ -373,12 +373,12 @@ export class FixturePoolComponent implements OnInit {
           this.projectService.project.presetFixtures.push(presetFixture);
         }
 
-        const pixelKeys = this.fixtureService.fixtureGetUniquePixelKeys(fixture);
+        const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
-        for (let pixelKey of pixelKeys) {
+        for (let pixel of pixels) {
           const presetFixture = new PresetFixture();
           presetFixture.fixtureUuid = fixture.uuid;
-          presetFixture.pixelKey = pixelKey;
+          presetFixture.pixelKey = pixel.key;
           this.projectService.project.presetFixtures.push(presetFixture);
         }
       }

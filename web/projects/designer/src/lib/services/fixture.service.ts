@@ -17,6 +17,8 @@ import { FixtureWheel } from '../models/fixture-wheel';
 import { FixtureWheelSlot, FixtureWheelSlotType } from '../models/fixture-wheel-slot';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
+import { CachedFixturePixel } from '../models/cached-fixture-pixel';
+import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
 
 @Injectable({
   providedIn: 'root',
@@ -34,7 +36,8 @@ export class FixtureService {
     private projectService: ProjectService,
     private translateService: TranslateService,
     private toastrService: ToastrService,
-    private uuidService: UuidService
+    private uuidService: UuidService,
+    private fixturePixelGroupResolveService: FixturePixelGroupResolveService
   ) {}
 
   getFixtureByUuid(uuid: string): Fixture {
@@ -51,7 +54,7 @@ export class FixtureService {
 
   getCachedFixtureByUuid(uuid: string, pixelKey: string): CachedFixture {
     for (const fixture of this.cachedFixtures) {
-      if (this.fixtureUuidAndPixelKeyEquals(fixture.fixture.uuid, uuid, fixture.pixelKey, pixelKey)) {
+      if (this.fixtureUuidAndPixelKeyEquals(fixture.fixture.uuid, uuid, fixture.pixel?.key, pixelKey)) {
         return fixture;
       }
     }
@@ -62,7 +65,7 @@ export class FixtureService {
     }
 
     for (const fixture of this.cachedFixtures) {
-      if (!fixture.pixelKey && fixture.fixture.uuid === uuid) {
+      if (!fixture.pixel && fixture.fixture.uuid === uuid) {
         return fixture;
       }
     }
@@ -357,65 +360,126 @@ export class FixtureService {
     channels.push(cachedFixtureChannel);
   }
 
-  private alphanumericSort(a: string, b: string): number {
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  private alphanumericSort(a: CachedFixturePixel, b: CachedFixturePixel): number {
+    return a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: 'base' });
   }
 
-  private getAllPixelKeys(profile: FixtureProfile) {
-    let result: string[] = [];
-    if (!profile.matrix.pixelKeys) {
+  private evenlySpacedPosCm(index: number, count: number, size: number): number {
+    if (count <= 0) return 0;
+    if (index < 0 || index >= count) return 0;
+    if (count === 1) return size / 2;
+
+    const step = size / (count + 1); // equal edge margins
+    const pos = (index + 1) * step; // center position
+    return pos;
+  }
+
+  private createPixel(key: string, x: number, y: number, z: number, profile: FixtureProfile): CachedFixturePixel {
+    let pixel = new CachedFixturePixel();
+
+    if (key) {
+      pixel.key = key;
+    } else {
+      // no key available. generate a unique one based on the dimensions
+      pixel.key = 'Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1);
+    }
+
+    pixel.x = x;
+    pixel.y = y;
+    pixel.z = z;
+
+    // calculate the position of the beam, based on the physical dimensions
+
+    // dimensions in mm
+    const widthCm = profile.physical.dimensions[0] / 10;
+    const heightCm = profile.physical.dimensions[1] / 10;
+    const depthCm = profile.physical.dimensions[2] / 10;
+
+    let maxX = 0;
+    let maxY = 0;
+    let maxZ = 0;
+
+    if (profile.matrix.pixelCount) {
+      maxX = profile.matrix.pixelCount[0];
+      maxY = profile.matrix.pixelCount[1];
+      maxZ = profile.matrix.pixelCount[2];
+    } else {
+      maxX = profile.matrix.pixelKeys.length;
+      maxY = profile.matrix.pixelKeys[0].length;
+      maxZ = profile.matrix.pixelKeys[0][0].length;
+    }
+
+    // distribute the pixels with even spacing
+    pixel.positionX = this.evenlySpacedPosCm(x, maxX, widthCm) - widthCm / 2;
+    pixel.positionY = this.evenlySpacedPosCm(y, maxY, heightCm) - heightCm / 2;
+    pixel.positionZ = this.evenlySpacedPosCm(z, maxZ, depthCm) - depthCm / 2;
+
+    return pixel;
+  }
+
+  private getAllPixelKeys(profile: FixtureProfile): CachedFixturePixel[] {
+    let result: CachedFixturePixel[] = [];
+
+    if (!profile.matrix || !profile.matrix.pixelKeys) {
       return result;
     }
-    for (let pixelKeyX of profile.matrix.pixelKeys) {
-      for (let pixelKeyY of pixelKeyX) {
-        for (let pixelKeyZ of pixelKeyY) {
-          if (pixelKeyZ) {
-            result.push(pixelKeyZ);
+    for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
+      for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
+        for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
+          const pixelKey = profile.matrix.pixelKeys[x][y][z];
+          if (pixelKey) {
+            result.push(this.createPixel(pixelKey, x, y, z, profile));
           }
         }
       }
     }
+
     return result;
   }
 
-  private getAllPixelGroups(profile: FixtureProfile) {
-    let result: string[] = [];
-    if (!profile.matrix.pixelGroups) {
+  private getAllPixelsInGroups(profile: FixtureProfile, allPixelKeys: CachedFixturePixel[]): CachedFixturePixel[] {
+    let result: CachedFixturePixel[] = [];
+    if (!profile.matrix || !profile.matrix.pixelGroups) {
       return result;
     }
     for (const property of Object.keys(profile.matrix.pixelGroups)) {
-      result.push(property);
+      result.concat(this.fixturePixelGroupResolveService.resolveGroupPixels(property, profile.matrix.pixelGroups, allPixelKeys));
     }
     return result;
   }
 
-  // get pixel keys in order for a specific channel repeatFor
-  private getPixelKeysInOrder(profile: FixtureProfile, repeatFor: string[]): string[] {
-    let result: string[] = [];
+  // get pixels in order for a specific channel repeatFor
+  private getPixelsInOrder(profile: FixtureProfile, repeatFor: string[]): CachedFixturePixel[] {
+    let allPixelKeys = this.getAllPixelKeys(profile);
+    let result: CachedFixturePixel[] = [];
 
-    // could contain just a single string (e.g. 'eachPixelABC') or
+    // could contain different things
+
     if (repeatFor.length > 1) {
-      // an array of pixel (groups)
-      result = repeatFor;
+      // an array of pixel keys or groups
+      for (let entry of repeatFor) {
+        result = result.concat(this.fixturePixelGroupResolveService.getPixelsForKeyOrGroup(profile, allPixelKeys, entry));
+      }
     } else if (repeatFor.length === 0) {
       return result;
     } else if (repeatFor[0] === 'eachPixelABC') {
       // Gets computed into an alphanumerically sorted list of all pixelKeys
       if (profile.matrix.pixelKeys) {
-        result = result.concat(this.getAllPixelKeys(profile));
+        result = result.concat(allPixelKeys);
+        result.sort(this.alphanumericSort);
+        result.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: 'base' }));
       } else if (profile.matrix.pixelCount.length === 3) {
         for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
           for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
             for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
       }
-      result.sort(this.alphanumericSort);
     } else if (repeatFor[0] === 'eachPixelGroup') {
       // Gets computed into an array of all pixel group keys, ordered by appearance in the JSON file
-      result = result.concat(this.getAllPixelGroups(profile));
+      result = result.concat(this.getAllPixelsInGroups(profile, allPixelKeys));
     } else if (repeatFor[0] === 'eachPixelXYZ') {
       if (profile.matrix.pixelKeys) {
         for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
@@ -423,7 +487,7 @@ export class FixtureService {
             for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -432,7 +496,7 @@ export class FixtureService {
         for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
           for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
             for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -444,7 +508,7 @@ export class FixtureService {
             for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -453,7 +517,7 @@ export class FixtureService {
         for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
           for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
             for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -465,7 +529,7 @@ export class FixtureService {
             for (let z = 0; z < profile.matrix.pixelKeys[x][y].length; z++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -474,7 +538,7 @@ export class FixtureService {
         for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
           for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
             for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -486,7 +550,7 @@ export class FixtureService {
             for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -495,7 +559,7 @@ export class FixtureService {
         for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
           for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
             for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -507,7 +571,7 @@ export class FixtureService {
             for (let y = 0; y < profile.matrix.pixelKeys[x].length; y++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -516,7 +580,7 @@ export class FixtureService {
         for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
           for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
             for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -528,7 +592,7 @@ export class FixtureService {
             for (let x = 0; x < profile.matrix.pixelKeys.length; x++) {
               const pixel = profile.matrix.pixelKeys[x][y][z];
               if (pixel) {
-                result.push(pixel);
+                result.push(this.createPixel(pixel, x, y, z, profile));
               }
             }
           }
@@ -537,7 +601,7 @@ export class FixtureService {
         for (let z = 0; z < profile.matrix.pixelCount[2]; z++) {
           for (let y = 0; y < profile.matrix.pixelCount[1]; y++) {
             for (let x = 0; x < profile.matrix.pixelCount[0]; x++) {
-              result.push('Pixel ' + (x + 1) + '-' + (y + 1) + '-' + (z + 1));
+              result.push(this.createPixel(null, x, y, z, profile));
             }
           }
         }
@@ -590,6 +654,8 @@ export class FixtureService {
 
   getCachedChannels(profile: FixtureProfile, mode: FixtureMode, pixelKey: string): CachedFixtureChannel[] {
     const channels: CachedFixtureChannel[] = [];
+    const allPixelKeys = this.getAllPixelKeys(profile);
+    const allPixelsInGroups = this.getAllPixelsInGroups(profile, allPixelKeys);
 
     if (!mode) {
       return channels;
@@ -604,7 +670,7 @@ export class FixtureService {
         for (const availableChannelName of Object.keys(profile.availableChannels)) {
           if (channel.name === availableChannelName) {
             const availableChannel: FixtureChannel = profile.availableChannels[availableChannelName];
-
+            channelFound = true;
             this.addCachedChannel(channels, availableChannel, availableChannelName, null, profile);
           }
         }
@@ -612,35 +678,35 @@ export class FixtureService {
         // check the template channels, if not found in the available channels
         if (!channelFound) {
           for (const templateChannelName of Object.keys(profile.templateChannels)) {
-            let existingPixelKeys = this.getAllPixelKeys(profile).concat(this.getAllPixelGroups(profile));
+            let existingPixelKeys = allPixelKeys.concat(allPixelsInGroups);
 
             for (const existingPixelKey of existingPixelKeys) {
-              const channelName = this.getChannelNameWithPixelKey(templateChannelName, existingPixelKey);
+              const channelName = this.getChannelNameWithPixelKey(templateChannelName, existingPixelKey.key);
 
               if (channel.name === channelName) {
                 const templateChannel: FixtureChannel = profile.templateChannels[templateChannelName];
 
-                this.addCachedChannel(channels, templateChannel, channelName, existingPixelKey, profile);
+                this.addCachedChannel(channels, templateChannel, channelName, existingPixelKey.key, profile);
               }
             }
           }
         }
       } else {
         // reference a channel through a pixel matrix
-        const availablePixelKeys = this.getPixelKeysInOrder(profile, channel.repeatFor);
+        const availablePixels = this.getPixelsInOrder(profile, channel.repeatFor);
 
         if (channel.channelOrder === 'perPixel') {
           // each channel for each pixel
 
-          for (const availablePixelKey of availablePixelKeys) {
-            if (availablePixelKey === pixelKey) {
+          for (const availablePixel of availablePixels) {
+            if (availablePixel.key === pixelKey) {
               for (const modeTemplateChannelName of channel.templateChannels) {
                 for (const templateChannelName of Object.keys(profile.templateChannels)) {
                   // don't check the fine channels. only add the coarse channel.
                   if (modeTemplateChannelName === templateChannelName) {
                     const templateChannel: FixtureChannel = profile.templateChannels[templateChannelName];
 
-                    this.addCachedChannel(channels, templateChannel, templateChannelName, availablePixelKey, profile);
+                    this.addCachedChannel(channels, templateChannel, templateChannelName, availablePixel.key, profile);
                   }
                 }
               }
@@ -650,14 +716,14 @@ export class FixtureService {
           // each pixel for each channel
 
           for (const modeTemplateChannelName of channel.templateChannels) {
-            for (const availablePixelKey of availablePixelKeys) {
-              if (availablePixelKey === pixelKey) {
+            for (const availablePixel of availablePixels) {
+              if (availablePixel.key === pixelKey) {
                 for (const templateChannelName of Object.keys(profile.templateChannels)) {
                   // don't check the fine channels. only add the coarse channel.
                   if (modeTemplateChannelName === templateChannelName) {
                     const templateChannel: FixtureChannel = profile.templateChannels[templateChannelName];
 
-                    this.addCachedChannel(channels, templateChannel, templateChannelName, availablePixelKey, profile);
+                    this.addCachedChannel(channels, templateChannel, templateChannelName, availablePixel.key, profile);
                   }
                 }
               }
@@ -670,21 +736,23 @@ export class FixtureService {
     return channels;
   }
 
-  // get all used pixel keys for all channels in the currently used fixture mode
-  fixtureGetUniquePixelKeys(fixture: Fixture): string[] {
-    let pixelKeys: Set<string> = new Set();
+  // get all used pixels for all channels in the currently used fixture mode
+  fixtureGetUniquePixels(fixture: Fixture): CachedFixturePixel[] {
+    let pixels: CachedFixturePixel[] = [];
 
     let profile = this.getProfileByUuid(fixture.profileUuid);
     let mode = this.getModeByFixture(profile, fixture);
 
     // add the unique pixel keys
     for (let channel of mode.channels) {
-      this.getPixelKeysInOrder(profile, channel.repeatFor).forEach((str) => {
-        pixelKeys.add(str);
+      this.getPixelsInOrder(profile, channel.repeatFor).forEach((pixel) => {
+        if (pixels.filter((p) => p.key === pixel.key).length === 0) {
+          pixels.push(pixel);
+        }
       });
     }
 
-    return Array.from(pixelKeys);
+    return pixels;
   }
 
   // does the fixture have a general channel without reference to specific pixel keys in the current mode?
@@ -694,7 +762,7 @@ export class FixtureService {
 
     // add the unique pixel keys
     for (let channel of mode.channels) {
-      if (this.getPixelKeysInOrder(profile, channel.repeatFor).length === 0) {
+      if (this.getPixelsInOrder(profile, channel.repeatFor).length === 0) {
         return true;
       }
     }
@@ -717,15 +785,15 @@ export class FixtureService {
         this.cachedFixtures.push(cachedFixture);
       }
 
-      const pixelKeys = this.fixtureGetUniquePixelKeys(fixture);
+      const pixels = this.fixtureGetUniquePixels(fixture);
 
-      for (let pixelKey of pixelKeys) {
+      for (let pixel of pixels) {
         const cachedFixture = new CachedFixture();
         cachedFixture.fixture = fixture;
-        cachedFixture.pixelKey = pixelKey;
+        cachedFixture.pixel = pixel;
         cachedFixture.profile = this.getProfileByUuid(fixture.profileUuid);
         cachedFixture.mode = this.getModeByFixture(cachedFixture.profile, fixture);
-        cachedFixture.channels = this.getCachedChannels(cachedFixture.profile, cachedFixture.mode, pixelKey);
+        cachedFixture.channels = this.getCachedChannels(cachedFixture.profile, cachedFixture.mode, pixel.key);
         this.cachedFixtures.push(cachedFixture);
       }
     }

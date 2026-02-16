@@ -42,12 +42,12 @@ export class ProjectLoadService {
         this.projectService.project.presetFixtures.push(projectFixture);
       }
 
-      const pixelKeys = this.fixtureService.fixtureGetUniquePixelKeys(fixture);
+      const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
-      for (let pixelKey of pixelKeys) {
+      for (let pixelKey of pixels) {
         const projectFixture = new PresetFixture();
         projectFixture.fixtureUuid = fixture.uuid;
-        projectFixture.pixelKey = pixelKey;
+        projectFixture.pixelKey = pixelKey.key;
         this.projectService.project.presetFixtures.push(projectFixture);
       }
     }
@@ -61,12 +61,12 @@ export class ProjectLoadService {
           preset.fixtures.push(presetFixture);
         }
 
-        const pixelKeys = this.fixtureService.fixtureGetUniquePixelKeys(fixture);
+        const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
-        for (let pixelKey of pixelKeys) {
+        for (let pixel of pixels) {
           const presetFixture = new PresetFixture();
           presetFixture.fixtureUuid = fixtureUuid;
-          presetFixture.pixelKey = pixelKey;
+          presetFixture.pixelKey = pixel.key;
           preset.fixtures.push(presetFixture);
         }
       }

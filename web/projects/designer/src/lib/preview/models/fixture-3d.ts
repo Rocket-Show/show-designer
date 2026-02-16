@@ -254,29 +254,53 @@ export abstract class Fixture3d {
 
   protected updatePosition(object: THREE.Object3D) {
     // Update the position
+    const positionX = this.fixture.pixel ? this.fixture.pixel.positionX : 0;
+    const positionY = this.fixture.pixel ? this.fixture.pixel.positionY : 0;
+    const positionZ = this.fixture.pixel ? this.fixture.pixel.positionZ : 0;
+
     switch (this.fixture.fixture.positioning) {
       case Positioning.topFront: {
         object.rotation.x = THREE.MathUtils.degToRad(0);
-        object.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY - 13, this.fixture.fixture.positionZ);
+        object.position.set(
+          this.fixture.fixture.positionX + positionX,
+          this.fixture.fixture.positionY - 13 + positionY,
+          this.fixture.fixture.positionZ + positionZ
+        );
         break;
       }
       case Positioning.bottomFront: {
         object.rotation.x = THREE.MathUtils.degToRad(180);
-        object.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY + 13, this.fixture.fixture.positionZ);
+        object.position.set(
+          this.fixture.fixture.positionX + positionX,
+          this.fixture.fixture.positionY + 13 + positionY,
+          this.fixture.fixture.positionZ + positionZ
+        );
         break;
       }
       case Positioning.topBack: {
         object.rotation.x = THREE.MathUtils.degToRad(0);
-        object.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY - 13, this.fixture.fixture.positionZ);
+        object.position.set(
+          this.fixture.fixture.positionX + positionX,
+          this.fixture.fixture.positionY - 13 + positionY,
+          this.fixture.fixture.positionZ + positionZ
+        );
         break;
       }
       case Positioning.bottomBack: {
         object.rotation.x = THREE.MathUtils.degToRad(180);
-        object.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY + 13, this.fixture.fixture.positionZ);
+        object.position.set(
+          this.fixture.fixture.positionX + positionX,
+          this.fixture.fixture.positionY + 13 + positionY,
+          this.fixture.fixture.positionZ + positionZ
+        );
         break;
       }
       case Positioning.manual: {
-        object.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY, this.fixture.fixture.positionZ);
+        object.position.set(
+          this.fixture.fixture.positionX + positionX,
+          this.fixture.fixture.positionY + positionY,
+          this.fixture.fixture.positionZ + positionZ
+        );
         object.rotation.x = THREE.MathUtils.degToRad(this.fixture.fixture.rotationX);
         object.rotation.y = THREE.MathUtils.degToRad(this.fixture.fixture.rotationY);
         object.rotation.z = THREE.MathUtils.degToRad(this.fixture.fixture.rotationZ);
