@@ -16,5 +16,7 @@ export class FixtureSettingsStageComponent implements OnInit {
   update() {
     this.previewService.updateStage();
     this.changeDetectorRef.detectChanges();
+
+    this.previewService.doUpdateStageAndPositions.next();
   }
 }

@@ -27,6 +27,9 @@ export class PreviewComponent implements AfterViewInit {
 
   private fixtures3d: Fixture3d[] = [];
 
+  // grouping fixture (pixels) into the same fixture to being able to properly rotate around the center
+  private fixtureGroups = new Map<string, THREE.Group>();
+
   @ViewChild('canvas')
   private canvasRef: ElementRef;
 
@@ -57,6 +60,9 @@ export class PreviewComponent implements AfterViewInit {
     }
     this.fixtures3d = [];
 
+    // destroy all groups
+    this.fixtureGroups.clear();
+
     // add all fixtures from the project
     const fixture3dMap = {
       [FixtureCategory['Moving Head']]: MovingHead3d,
@@ -68,12 +74,48 @@ export class PreviewComponent implements AfterViewInit {
     // rotation is aligned
     for (const fixture of this.fixtureService.cachedFixtures) {
       const category = fixture.profile.categories.find((c) => fixture3dMap[c]);
+      const uuid = fixture.fixture.uuid;
+
+      let fixtureGroup = this.fixtureGroups.get(uuid);
+
+      if (!fixtureGroup) {
+        fixtureGroup = new THREE.Group();
+        fixtureGroup.name = `fixture-${uuid}`;
+
+        this.scene.add(fixtureGroup);
+        this.fixtureGroups.set(uuid, fixtureGroup);
+      }
 
       if (category) {
         const Fixture3dClass = fixture3dMap[category];
-        const fixture3d = new Fixture3dClass(this.fixtureService, this.previewService, this.previewMeshService, fixture, this.scene);
 
-        this.fixtures3d.push(fixture3d);
+        if (Fixture3dClass === ColorChanger3d) {
+          const isPixelBar = fixture.profile.categories?.[0] === FixtureCategory['Pixel Bar'];
+
+          const fixture3d = new ColorChanger3d(
+            this.fixtureService,
+            this.previewService,
+            this.previewMeshService,
+            fixture,
+            this.scene,
+            fixtureGroup,
+            !isPixelBar,
+            isPixelBar
+          );
+
+          this.fixtures3d.push(fixture3d);
+        } else {
+          const fixture3d = new Fixture3dClass(
+            this.fixtureService,
+            this.previewService,
+            this.previewMeshService,
+            fixture,
+            this.scene,
+            fixtureGroup
+          );
+
+          this.fixtures3d.push(fixture3d);
+        }
       } else {
         console.warn(`No supported category found for fixture`);
       }
@@ -184,6 +226,11 @@ export class PreviewComponent implements AfterViewInit {
     const calculatedFixtures = this.previewService.getChannelValues(timeMillis, presets);
 
     for (const fixture3d of this.fixtures3d) {
+      // Update the fixture positions
+      if (this.previewService.stageAndPositionsDirty) {
+        fixture3d.updatePosition();
+      }
+
       // Update the fixture properties
       fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue);
 
@@ -197,6 +244,8 @@ export class PreviewComponent implements AfterViewInit {
 
     // Render the scene
     this.render();
+
+    this.previewService.stageAndPositionsDirty = false;
 
     requestAnimationFrame(this.animate.bind(this));
   }

@@ -505,7 +505,7 @@ export class PresetService {
             const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
             if (fixture.profile.uuid === profile.uuid) {
               const exists = modeAndPixelKeys.some(
-                (item) => (item.mode === fixture.mode && !item.pixelKey && !fixture.pixel.key) || item.pixelKey === fixture.pixel.key
+                (item) => (item.mode === fixture.mode && !item.pixelKey && !fixture.pixel?.key) || item.pixelKey === fixture.pixel?.key
               );
               if (!exists) {
                 modeAndPixelKeys.push({

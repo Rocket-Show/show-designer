@@ -18,9 +18,12 @@ export class ColorChanger3d extends Fixture3d {
     public previewService: PreviewService,
     previewMeshService: PreviewMeshService,
     fixture: CachedFixture,
-    scene: any
+    scene: any,
+    fixtureGroup: THREE.Group,
+    hasSpotLight: boolean = true,
+    hasBulb: boolean = false
   ) {
-    super(fixtureService, previewService, fixture, scene, true);
+    super(fixtureService, previewService, fixture, scene, fixtureGroup, hasSpotLight, hasBulb);
 
     forkJoin([previewMeshService.getMesh('color-changer')])
       .pipe(
@@ -37,21 +40,31 @@ export class ColorChanger3d extends Fixture3d {
 
     this.mesh.material = this.previewService.fixtureMaterial;
 
-    this.objectGroup.add(this.spotlightGroup);
+    if (this.hasSpotLight) {
+      this.objectGroup.add(this.spotlightGroup);
+    }
     this.objectGroup.add(this.mesh);
     this.objectGroup.scale.multiplyScalar(9);
-    this.scene.add(this.objectGroup);
+    this.fixtureGroup.add(this.objectGroup);
 
     this.isLoaded = true;
+    this.updatePosition();
   }
 
-  public updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number): void {
+  override updatePosition() {
+    if (!this.isLoaded) {
+      return;
+    }
+
+    super.updatePosition(this.objectGroup);
+  }
+
+  override updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number): void {
     if (!this.isLoaded) {
       return;
     }
 
     super.updatePreview(channelValues, masterDimmerValue);
-    this.updatePosition(this.objectGroup);
 
     // Update the material
     if (this.lastSelected !== this.isSelected) {

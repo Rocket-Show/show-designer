@@ -14,6 +14,9 @@ export abstract class Fixture3d {
 
   protected scene: any;
 
+  // group pixels of the same fixture into one group to be able to rotate properly
+  protected fixtureGroup: THREE.Group;
+
   public fixture: CachedFixture;
   private fixtureHasDimmer = false;
   private fixtureHasColorWheel = false;
@@ -28,22 +31,34 @@ export abstract class Fixture3d {
   public isSelected = false;
   protected isLoaded = false;
 
+  // spotlight
   protected hasSpotLight: boolean = false;
   protected spotLight: THREE.SpotLight;
   protected spotLightBeam: THREE.Mesh;
   protected spotlightGroup: THREE.Object3D;
   protected spotlightMaterial: THREE.ShaderMaterial;
 
+  // glowing bulb
+  private hasBulb: boolean = false;
+  private bulbMaterial: THREE.MeshLambertMaterial;
+  private bulbSphereRadius = 3;
+  private bulbSphere: THREE.Mesh;
+  private blackColor = new THREE.Color(0x000000);
+
   constructor(
     public fixtureService: FixtureService,
     public previewService: PreviewService,
     fixture: CachedFixture,
     scene: any,
-    hasSpotLight: boolean = false
+    fixtureGroup: THREE.Group,
+    hasSpotLight: boolean = false,
+    hasBulb: boolean = false
   ) {
     this.fixture = fixture;
     this.scene = scene;
+    this.fixtureGroup = fixtureGroup;
     this.hasSpotLight = hasSpotLight;
+    this.hasBulb = hasBulb;
 
     // evaluate, various capabilities of this fixture
     for (const cachedChannel of this.fixture.channels) {
@@ -153,6 +168,17 @@ export abstract class Fixture3d {
       spotLightTarget.position.set(0, -10, 0);
       this.createSpotLightBeam();
     }
+
+    if (this.hasBulb) {
+      const bulbGeo = new THREE.SphereGeometry(this.bulbSphereRadius * 1.12, 64, 64);
+      this.bulbMaterial = new THREE.MeshLambertMaterial({
+        color: 0xff00ff,
+        emissive: 0xff00ff,
+      });
+
+      this.bulbSphere = new THREE.Mesh(bulbGeo, this.bulbMaterial);
+      this.fixtureGroup.add(this.bulbSphere);
+    }
   }
 
   protected getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
@@ -166,6 +192,56 @@ export abstract class Fixture3d {
     }
 
     return undefined;
+  }
+
+  updatePosition(object?: THREE.Object3D) {
+    // the offset position (e.g. for single beams inside a fixture)
+    if (object) {
+      object.position.set(
+        this.fixture.pixel ? this.fixture.pixel.positionX : 0,
+        this.fixture.pixel ? this.fixture.pixel.positionY : 0,
+        this.fixture.pixel ? this.fixture.pixel.positionZ : 0
+      );
+    }
+
+    if (this.hasBulb) {
+      this.bulbSphere.position.set(
+        this.fixture.pixel ? this.fixture.pixel.positionX : 0,
+        (this.fixture.pixel ? this.fixture.pixel.positionY : 0) - 15 + this.bulbSphereRadius / 2,
+        this.fixture.pixel ? this.fixture.pixel.positionZ : 0
+      );
+    }
+
+    switch (this.fixture.fixture.positioning) {
+      case Positioning.topFront: {
+        this.fixtureGroup.rotation.x = THREE.MathUtils.degToRad(0);
+        this.fixtureGroup.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY - 13, this.fixture.fixture.positionZ);
+        break;
+      }
+      case Positioning.bottomFront: {
+        this.fixtureGroup.rotation.x = THREE.MathUtils.degToRad(180);
+        this.fixtureGroup.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY + 13, this.fixture.fixture.positionZ);
+        break;
+      }
+      case Positioning.topBack: {
+        this.fixtureGroup.rotation.x = THREE.MathUtils.degToRad(0);
+        this.fixtureGroup.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY - 13, this.fixture.fixture.positionZ);
+        break;
+      }
+      case Positioning.bottomBack: {
+        this.fixtureGroup.rotation.x = THREE.MathUtils.degToRad(180);
+        this.fixtureGroup.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY + 13, this.fixture.fixture.positionZ);
+        break;
+      }
+      case Positioning.manual: {
+        this.fixtureGroup.position.set(this.fixture.fixture.positionX, this.fixture.fixture.positionY, this.fixture.fixture.positionZ);
+
+        this.fixtureGroup.rotation.x = THREE.MathUtils.degToRad(this.fixture.fixture.rotationX);
+        this.fixtureGroup.rotation.y = THREE.MathUtils.degToRad(this.fixture.fixture.rotationY);
+        this.fixtureGroup.rotation.z = THREE.MathUtils.degToRad(this.fixture.fixture.rotationZ);
+        break;
+      }
+    }
   }
 
   // Apply the properties of the base fixture to the preview
@@ -250,62 +326,13 @@ export abstract class Fixture3d {
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
     }
-  }
 
-  protected updatePosition(object: THREE.Object3D) {
-    // Update the position
-    const positionX = this.fixture.pixel ? this.fixture.pixel.positionX : 0;
-    const positionY = this.fixture.pixel ? this.fixture.pixel.positionY : 0;
-    const positionZ = this.fixture.pixel ? this.fixture.pixel.positionZ : 0;
+    if (this.hasBulb) {
+      // Normalize 0–255 → 0–1
+      const intensity = Math.max(this.colorRed, this.colorGreen, this.colorBlue) / 255;
 
-    switch (this.fixture.fixture.positioning) {
-      case Positioning.topFront: {
-        object.rotation.x = THREE.MathUtils.degToRad(0);
-        object.position.set(
-          this.fixture.fixture.positionX + positionX,
-          this.fixture.fixture.positionY - 13 + positionY,
-          this.fixture.fixture.positionZ + positionZ
-        );
-        break;
-      }
-      case Positioning.bottomFront: {
-        object.rotation.x = THREE.MathUtils.degToRad(180);
-        object.position.set(
-          this.fixture.fixture.positionX + positionX,
-          this.fixture.fixture.positionY + 13 + positionY,
-          this.fixture.fixture.positionZ + positionZ
-        );
-        break;
-      }
-      case Positioning.topBack: {
-        object.rotation.x = THREE.MathUtils.degToRad(0);
-        object.position.set(
-          this.fixture.fixture.positionX + positionX,
-          this.fixture.fixture.positionY - 13 + positionY,
-          this.fixture.fixture.positionZ + positionZ
-        );
-        break;
-      }
-      case Positioning.bottomBack: {
-        object.rotation.x = THREE.MathUtils.degToRad(180);
-        object.position.set(
-          this.fixture.fixture.positionX + positionX,
-          this.fixture.fixture.positionY + 13 + positionY,
-          this.fixture.fixture.positionZ + positionZ
-        );
-        break;
-      }
-      case Positioning.manual: {
-        object.position.set(
-          this.fixture.fixture.positionX + positionX,
-          this.fixture.fixture.positionY + positionY,
-          this.fixture.fixture.positionZ + positionZ
-        );
-        object.rotation.x = THREE.MathUtils.degToRad(this.fixture.fixture.rotationX);
-        object.rotation.y = THREE.MathUtils.degToRad(this.fixture.fixture.rotationY);
-        object.rotation.z = THREE.MathUtils.degToRad(this.fixture.fixture.rotationZ);
-        break;
-      }
+      this.bulbMaterial.color.copy(color.clone().lerp(this.blackColor, intensity));
+      this.bulbMaterial.emissive.copy(color.clone().lerp(this.blackColor, intensity));
     }
   }
 
@@ -328,6 +355,9 @@ export abstract class Fixture3d {
   destroy() {
     if (this.hasSpotLight) {
       this.spotlightMaterial.dispose();
+    }
+    if (this.hasBulb) {
+      this.bulbMaterial.dispose();
     }
   }
 }

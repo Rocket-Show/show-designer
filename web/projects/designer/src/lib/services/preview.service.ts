@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { CachedFixture } from '../models/cached-fixture';
 import { EffectCurve } from '../models/effect-curve';
@@ -18,6 +18,10 @@ import { TimelineService } from './timeline.service';
 })
 export class PreviewService implements OnDestroy {
   public doUpdateFixtureSetup: Subject<void> = new Subject();
+  public doUpdateStageAndPositions: Subject<void> = new Subject();
+
+  private updateStageAndPositionsSubscription: Subscription;
+  public stageAndPositionsDirty: boolean = true;
 
   public scene: THREE.Scene;
 
@@ -43,8 +47,12 @@ export class PreviewService implements OnDestroy {
       emissive: 0x0d0d0d,
     });
     this.fixtureSelectedMaterial = new THREE.MeshLambertMaterial({
-      color: 0xff00ff,
-      emissive: 0xff00ff,
+      color: 0x660066,
+      emissive: 0xaa00aa,
+      emissiveIntensity: 0.000000000000000000001,
+    });
+    this.updateStageAndPositionsSubscription = this.doUpdateStageAndPositions.subscribe(() => {
+      this.stageAndPositionsDirty = true;
     });
   }
 

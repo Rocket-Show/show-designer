@@ -76,7 +76,7 @@
           <mv-slider
             style="width: 80px"
             [tooltip]="'hide'"
-            [value]="rotationX ? rotationX : (rotationMin + rotationMax) / 2"
+            [value]="rotationX ? rotationX : 0"
             [min]="rotationMin"
             [max]="rotationMax"
             [step]="1"
@@ -91,26 +91,9 @@
         <div class="my-auto" style="width: 20px; float: left">Y</div>
         <div class="my-auto" style="float: left">
           <mv-slider
-            style="width: 80px; height: 18px"
-            [tooltip]="'hide'"
-            [value]="rotationZ ? rotationZ : (rotationMin + rotationMax) / 2"
-            [min]="rotationMin"
-            [max]="rotationMax"
-            [step]="1"
-            (change)="changeRotationManual('z', $event.newValue)"
-          ></mv-slider>
-        </div>
-        <div class="my-auto">
-          <input [ngModel]="rotationZ" (ngModelChange)="changeRotationManual('z', $event)" type="text" class="slider-input" />
-        </div>
-      </div>
-      <div class="d-flex">
-        <div class="my-auto" style="width: 20px; float: left">Z</div>
-        <div class="my-auto" style="float: left">
-          <mv-slider
             style="width: 80px"
             [tooltip]="'hide'"
-            [value]="rotationY ? rotationY : (rotationMin + rotationMax) / 2"
+            [value]="rotationY ? rotationY : 0"
             [min]="rotationMin"
             [max]="rotationMax"
             [step]="1"
@@ -119,6 +102,23 @@
         </div>
         <div class="my-auto">
           <input [ngModel]="rotationY" (ngModelChange)="changeRotationManual('y', $event)" type="text" class="slider-input" />
+        </div>
+      </div>
+      <div class="d-flex">
+        <div class="my-auto" style="width: 20px; float: left">Z</div>
+        <div class="my-auto" style="float: left">
+          <mv-slider
+            style="width: 80px; height: 18px"
+            [tooltip]="'hide'"
+            [value]="rotationZ ? rotationZ : 0"
+            [min]="rotationMin"
+            [max]="rotationMax"
+            [step]="1"
+            (change)="changeRotationManual('z', $event.newValue)"
+          ></mv-slider>
+        </div>
+        <div class="my-auto">
+          <input [ngModel]="rotationZ" (ngModelChange)="changeRotationManual('z', $event)" type="text" class="slider-input" />
         </div>
       </div>
     </div>

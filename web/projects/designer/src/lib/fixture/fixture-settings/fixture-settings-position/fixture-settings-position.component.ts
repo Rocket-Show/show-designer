@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Positioning } from '../../../models/fixture';
 import { FixtureService } from '../../../services/fixture.service';
 import { PresetService } from '../../../services/preset.service';
+import { PreviewService } from '../../../services/preview.service';
 
 @Component({
   selector: 'lib-app-fixture-settings-position',
@@ -32,13 +33,17 @@ export class FixtureSettingsPositionComponent implements OnInit {
   rotationMin = 0;
   rotationMax = 360;
 
-  constructor(public fixtureService: FixtureService, private presetService: PresetService) {
-    presetService.fixtureSelectionSettingsChanged.subscribe(() => {
+  constructor(public fixtureService: FixtureService, private presetService: PresetService, private previewService: PreviewService) {
+    this.presetService.fixtureSelectionSettingsChanged.subscribe(() => {
       this.updateSelection();
     });
   }
 
   ngOnInit() {}
+
+  private updated() {
+    this.previewService.doUpdateStageAndPositions.next();
+  }
 
   private updateSelection() {
     // get all display values for the selected settings fixtures
@@ -130,6 +135,8 @@ export class FixtureSettingsPositionComponent implements OnInit {
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
       fixture.positioning = positioning;
     }
+
+    this.updated();
   }
 
   changePositionManual(position: string, value: any) {
@@ -166,6 +173,8 @@ export class FixtureSettingsPositionComponent implements OnInit {
         }
       }
     }
+
+    this.updated();
   }
 
   changeRotationManual(rotation: string, value: any) {
@@ -190,5 +199,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
         fixture.rotationZ = +value;
       }
     }
+
+    this.updated();
   }
 }

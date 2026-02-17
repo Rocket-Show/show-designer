@@ -28,9 +28,10 @@ export class MovingHead3d extends Fixture3d {
     public previewService: PreviewService,
     previewMeshService: PreviewMeshService,
     fixture: CachedFixture,
-    scene: any
+    scene: any,
+    fixtureGroup: THREE.Group
   ) {
-    super(fixtureService, previewService, fixture, scene, true);
+    super(fixtureService, previewService, fixture, scene, fixtureGroup, true, true);
 
     forkJoin([
       previewMeshService.getMesh('moving_head_socket'),
@@ -78,18 +79,26 @@ export class MovingHead3d extends Fixture3d {
     // A moving head has about 32 cm in width
     this.objectGroup.scale.multiplyScalar(9);
 
-    this.scene.add(this.objectGroup);
+    this.fixtureGroup.add(this.objectGroup);
 
     this.isLoaded = true;
+    this.updatePosition();
   }
 
-  public updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number): void {
+  override updatePosition() {
+    if (!this.isLoaded) {
+      return;
+    }
+
+    super.updatePosition(this.objectGroup);
+  }
+
+  override updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number): void {
     if (!this.isLoaded) {
       return;
     }
 
     super.updatePreview(channelValues, masterDimmerValue);
-    this.updatePosition(this.objectGroup);
 
     // Apply default settings
     let panStart = 0;
