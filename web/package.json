@@ -40,7 +40,6 @@
     "ngx-bootstrap": "^20.0.2",
     "ngx-bootstrap-slider": "^2.1.0",
     "ngx-dropzone-wrapper": "^16.0.0",
-    "ngx-sortablejs-plus": "^15.0.2",
     "ngx-toastr": "^19.0.0",
     "rmdir-cli": "^2.0.6",
     "rxjs": "^6.2.2",

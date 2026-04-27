@@ -10,7 +10,6 @@ import { AccordionModule } from 'ngx-bootstrap/accordion';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { TypeaheadModule } from 'ngx-bootstrap/typeahead';
 import { DropzoneModule } from 'ngx-dropzone-wrapper';
-import { SortablejsModule } from 'ngx-sortablejs-plus';
 import { ToastrModule } from 'ngx-toastr';
 import { ArraySortPipe } from './array-sort-pipe';
 import { DesignerComponent } from './designer.component';
@@ -51,6 +50,7 @@ import { WaitDialogComponent } from './wait-dialog/wait-dialog.component';
 import { WarningDialogComponent } from './warning-dialog/warning-dialog.component';
 import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeModule } from '@ali-hm/angular-tree-component';
+import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 
 @NgModule({
   declarations: [
@@ -92,6 +92,7 @@ import { TreeModule } from '@ali-hm/angular-tree-component';
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,
     DropzoneComponent,
+    SortablejsDirective,
   ],
   exports: [DesignerComponent],
   imports: [
@@ -104,7 +105,6 @@ import { TreeModule } from '@ali-hm/angular-tree-component';
     AccordionModule,
     PopoverModule,
     TypeaheadModule,
-    SortablejsModule,
     DropzoneModule,
     ToastrModule.forRoot({
       newestOnTop: true,
