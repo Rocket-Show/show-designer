@@ -27,14 +27,12 @@ If the linter fails, you can check and try to automatically fix it with `ng lint
 
 ## Build & publish as NPM package
 
-Use ignore-scripts: https://stackoverflow.com/a/66383890/1925327
-
 ```shell
 cd web
 cd projects/designer
 npm version minor
 cd ../..
-npm run publish --ignore-scripts
+npm run publish
 ```
 
 Tag the version correspondingly.
