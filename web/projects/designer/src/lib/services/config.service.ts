@@ -11,7 +11,6 @@ export class ConfigService {
   public shareAvailable = false;
   public menuHeightPx = 0;
   public languageSwitch = false;
-  public newProjectTemplate = false;
   public livePreview = false;
   public localProfiles = false;
   public intro = false;

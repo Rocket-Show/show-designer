@@ -1,5 +1,6 @@
 import { AfterViewInit, Directive, ElementRef, EventEmitter, Input, NgZone, OnDestroy, Output } from '@angular/core';
-import Sortable, { Options } from 'sortablejs';
+import Sortable from 'sortablejs';
+import type { Options } from 'sortablejs';
 
 interface SortableReorderEvent {
   item?: HTMLElement;

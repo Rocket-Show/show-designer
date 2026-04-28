@@ -70,11 +70,6 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   @Input()
-  set newProjectTemplate(value: boolean) {
-    this.configService.newProjectTemplate = value;
-  }
-
-  @Input()
   set livePreview(value: boolean) {
     this.configService.livePreview = value;
   }
@@ -195,12 +190,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
         }
       );
     } else {
-      if (this.configService.newProjectTemplate) {
-        // load the new project template
-        this.projectLoadService.template();
-      } else {
-        this.projectLoadService.new();
-      }
+      // load the new project template
+      this.projectLoadService.template();
     }
   }
 
