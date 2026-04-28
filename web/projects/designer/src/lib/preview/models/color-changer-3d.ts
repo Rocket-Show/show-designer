@@ -12,6 +12,7 @@ import { PreviewService } from '../../services/preview.service';
 export class ColorChanger3d extends Fixture3d {
   private mesh: THREE.Mesh;
   private objectGroup: THREE.Object3D = new THREE.Object3D();
+  private destroyed = false;
 
   constructor(
     public fixtureService: FixtureService,
@@ -28,6 +29,10 @@ export class ColorChanger3d extends Fixture3d {
     forkJoin([previewMeshService.getMesh('color-changer')])
       .pipe(
         map(([colorChanger]) => {
+          if (this.destroyed) {
+            return;
+          }
+
           this.mesh = colorChanger;
           this.createObjects();
         })
@@ -36,6 +41,10 @@ export class ColorChanger3d extends Fixture3d {
   }
 
   protected createObjects() {
+    if (this.destroyed) {
+      return;
+    }
+
     super.createObjects();
 
     this.mesh.material = this.previewService.fixtureMaterial;
@@ -83,6 +92,10 @@ export class ColorChanger3d extends Fixture3d {
   }
 
   destroy() {
-    this.scene.remove(this.objectGroup);
+    this.destroyed = true;
+
+    if (this.objectGroup.parent) {
+      this.objectGroup.parent.remove(this.objectGroup);
+    }
   }
 }

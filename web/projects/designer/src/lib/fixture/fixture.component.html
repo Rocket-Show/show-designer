@@ -17,7 +17,7 @@
   <div class="card-body h-100 p-0">
     <!-- List of fixtures -->
     @if (presetService.selectedPreset) {
-    <div class="list-group" [sortablejs]="projectService.project.presetFixtures">
+    <div class="list-group" [sortablejs]="projectService.project.presetFixtures" [sortablejsOptions]="fixtureSortableOptions">
       @for (presetFixture of projectService.project.presetFixtures; track presetFixture) {
       <div class="list-group-item" [class.inactive-list-item]="!fixtureIsSelected(presetFixture)">
         <div class="row d-flex" (click)="selectFixture($event, presetFixture)" style="cursor: pointer">

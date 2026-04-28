@@ -236,7 +236,7 @@ export class TimelineService {
     }
   }
 
-  private seeekWithTimeline(e: any) {
+  private seekWithTimeline(e: any) {
     // taken from wavesurfer -> drawer -> handleEvent
     const clientX = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
     const bbox = this.waveSurfer.timeline.wrapper.getBoundingClientRect();
@@ -266,6 +266,7 @@ export class TimelineService {
     setTimeout(() => {
       this.waveSurfer.seekTo(progress);
       this.detectChanges.next();
+      this.presetService.previewLive(this.selectedComposition.name, Math.round(progress * this.waveSurfer.backend.getDuration() * 1000));
     }, 0);
   }
 
@@ -497,12 +498,12 @@ export class TimelineService {
           // seek on timeline-click
           this.waveSurfer.timeline.wrapper.addEventListener('mousedown', (e: any) => {
             this.timelineClicking = true;
-            this.seeekWithTimeline(e);
+            this.seekWithTimeline(e);
           });
 
           this.waveSurfer.timeline.wrapper.addEventListener('mousemove', (e: any) => {
             if (this.timelineClicking) {
-              this.seeekWithTimeline(e);
+              this.seekWithTimeline(e);
             }
           });
 

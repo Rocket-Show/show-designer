@@ -38,6 +38,7 @@ export class PresetService {
 
   livePreviewTimer: any;
   liveChangePending = false;
+  livePreviewPendingPositionMillis: number;
 
   constructor(
     private effectService: EffectService,
@@ -545,17 +546,18 @@ export class PresetService {
       return;
     }
 
-    // collect all changes and delay them to not flood the backend
-    // (except play events. they need to be delivered always)
-    if (this.livePreviewTimer && !compositionName) {
-      this.liveChangePending = true;
-      return;
-    }
-
     let position = positionMillis;
 
     if (position === undefined) {
       position = Math.round(this.animationService.timeMillis);
+    }
+
+    // collect all changes and delay them to not flood the backend
+    // (except play events. they need to be delivered always)
+    if (this.livePreviewTimer && !compositionName) {
+      this.livePreviewPendingPositionMillis = position;
+      this.liveChangePending = true;
+      return;
     }
 
     this.http
@@ -568,8 +570,14 @@ export class PresetService {
       this.livePreviewTimer = setTimeout(() => {
         this.livePreviewTimer = undefined;
         if (this.liveChangePending) {
+          const pendingPosition = this.livePreviewPendingPositionMillis !== undefined ? this.livePreviewPendingPositionMillis : position;
+          this.livePreviewPendingPositionMillis = undefined;
+
           this.http
-            .post('preview?positionMillis=' + position + '&compositionName=' + compositionName, JSON.stringify(this.projectService.project))
+            .post(
+              'preview?positionMillis=' + pendingPosition + '&compositionName=' + compositionName,
+              JSON.stringify(this.projectService.project)
+            )
             .subscribe();
         }
       }, 50);

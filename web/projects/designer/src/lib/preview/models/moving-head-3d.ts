@@ -22,6 +22,7 @@ export class MovingHead3d extends Fixture3d {
   private objectGroup: THREE.Object3D = new THREE.Object3D();
 
   private lastBeamAngleDegrees: number;
+  private destroyed = false;
 
   constructor(
     public fixtureService: FixtureService,
@@ -31,7 +32,7 @@ export class MovingHead3d extends Fixture3d {
     scene: any,
     fixtureGroup: THREE.Group
   ) {
-    super(fixtureService, previewService, fixture, scene, fixtureGroup, true, true);
+    super(fixtureService, previewService, fixture, scene, fixtureGroup, true, false);
 
     forkJoin([
       previewMeshService.getMesh('moving_head_socket'),
@@ -40,6 +41,10 @@ export class MovingHead3d extends Fixture3d {
     ])
       .pipe(
         map(([socket, arm, head]) => {
+          if (this.destroyed) {
+            return;
+          }
+
           this.socket = socket;
           this.arm = arm;
           this.head = head;
@@ -51,6 +56,10 @@ export class MovingHead3d extends Fixture3d {
   }
 
   protected createObjects() {
+    if (this.destroyed) {
+      return;
+    }
+
     super.createObjects();
 
     this.socket.material = this.previewService.fixtureMaterial;
@@ -161,6 +170,10 @@ export class MovingHead3d extends Fixture3d {
   }
 
   destroy() {
-    this.scene.remove(this.objectGroup);
+    this.destroyed = true;
+
+    if (this.objectGroup.parent) {
+      this.objectGroup.parent.remove(this.objectGroup);
+    }
   }
 }

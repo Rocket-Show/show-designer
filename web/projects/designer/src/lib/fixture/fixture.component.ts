@@ -6,6 +6,7 @@ import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { PresetFixture } from '../models/preset-fixture';
+import type { Options } from 'sortablejs';
 
 @Component({
   selector: 'lib-app-fixture',
@@ -14,6 +15,10 @@ import { PresetFixture } from '../models/preset-fixture';
   standalone: false,
 })
 export class FixtureComponent implements OnInit {
+  fixtureSortableOptions: Options = {
+    onUpdate: () => this.fixtureListReordered(),
+  };
+
   constructor(
     public projectService: ProjectService,
     public presetService: PresetService,
@@ -64,6 +69,10 @@ export class FixtureComponent implements OnInit {
   selectNone() {
     this.presetService.selectNoFixtures();
     this.presetService.fixtureSelectionChanged.next();
+  }
+
+  fixtureListReordered() {
+    this.presetService.previewLive();
   }
 
   openFixturePool() {

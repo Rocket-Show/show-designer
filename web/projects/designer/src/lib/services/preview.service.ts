@@ -535,6 +535,7 @@ export class PreviewService implements OnDestroy {
   }
 
   public updateFixtureSetup() {
+    this.stageAndPositionsDirty = true;
     this.doUpdateFixtureSetup.next();
   }
 

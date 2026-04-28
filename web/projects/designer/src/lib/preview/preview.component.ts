@@ -61,6 +61,9 @@ export class PreviewComponent implements AfterViewInit {
     this.fixtures3d = [];
 
     // destroy all groups
+    for (const fixtureGroup of this.fixtureGroups.values()) {
+      this.scene.remove(fixtureGroup);
+    }
     this.fixtureGroups.clear();
 
     // add all fixtures from the project
