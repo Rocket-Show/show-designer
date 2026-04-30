@@ -14,6 +14,7 @@ import { ProjectService } from '../services/project.service';
 import { UuidService } from '../services/uuid.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { PresetFixture } from '../models/preset-fixture';
+import { LivePreviewService } from '../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-fixture-pool',
@@ -51,7 +52,8 @@ export class FixturePoolComponent implements OnInit {
     private toastrService: ToastrService,
     private presetService: PresetService,
     public configService: ConfigService,
-    private modalService: BsModalService
+    private modalService: BsModalService,
+    private livePreviewService: LivePreviewService
   ) {
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
@@ -390,7 +392,7 @@ export class FixturePoolComponent implements OnInit {
     this.previewService.updateFixtureSetup();
     this.presetService.updateFixtureSelection();
     this.presetService.fixtureSelectionChanged.next();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
 
     this.onClose.next(1);
     this.bsModalRef.hide();

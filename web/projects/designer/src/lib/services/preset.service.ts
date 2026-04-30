@@ -1,4 +1,3 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
@@ -9,13 +8,12 @@ import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureProfile } from '../models/fixture-profile';
 import { Preset } from '../models/preset';
-import { AnimationService } from './animation.service';
-import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { FixtureService } from './fixture.service';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
+import { LivePreviewService } from './live-preview.service';
 
 @Injectable({
   providedIn: 'root',
@@ -36,18 +34,12 @@ export class PresetService {
   // because detectChanges is not enough to trigger different components.
   fixtureColorChanged: Subject<void> = new Subject<void>();
 
-  livePreviewTimer: any;
-  liveChangePending = false;
-  livePreviewPendingPositionMillis: number;
-
   constructor(
     private effectService: EffectService,
     private uuidService: UuidService,
     private projectService: ProjectService,
     private fixtureService: FixtureService,
-    private configService: ConfigService,
-    private http: HttpClient,
-    private animationService: AnimationService
+    private livePreviewService: LivePreviewService
   ) {}
 
   getPresetByUuid(uuid: string): Preset {
@@ -441,7 +433,7 @@ export class PresetService {
     this.projectService.project.selectedPresetUuid = this.projectService.project.presets[index].uuid;
     this.autoOpenFirstEffect();
     this.previewSelectionChanged.next();
-    this.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   autoOpenFirstEffect() {
@@ -539,56 +531,5 @@ export class PresetService {
     });
 
     return availableChannels;
-  }
-
-  previewLive(compositionName: string = '', positionMillis?: number) {
-    if (!this.configService.livePreview) {
-      return;
-    }
-
-    let position = positionMillis;
-
-    if (position === undefined) {
-      position = Math.round(this.animationService.timeMillis);
-    }
-
-    // collect all changes and delay them to not flood the backend
-    // (except play events. they need to be delivered always)
-    if (this.livePreviewTimer && !compositionName) {
-      this.livePreviewPendingPositionMillis = position;
-      this.liveChangePending = true;
-      return;
-    }
-
-    this.http
-      .post('preview?positionMillis=' + position + '&compositionName=' + compositionName, JSON.stringify(this.projectService.project))
-      .subscribe();
-
-    this.liveChangePending = false;
-
-    if (!compositionName) {
-      this.livePreviewTimer = setTimeout(() => {
-        this.livePreviewTimer = undefined;
-        if (this.liveChangePending) {
-          const pendingPosition = this.livePreviewPendingPositionMillis !== undefined ? this.livePreviewPendingPositionMillis : position;
-          this.livePreviewPendingPositionMillis = undefined;
-
-          this.http
-            .post(
-              'preview?positionMillis=' + pendingPosition + '&compositionName=' + compositionName,
-              JSON.stringify(this.projectService.project)
-            )
-            .subscribe();
-        }
-      }, 50);
-    }
-  }
-
-  stopPreviewPlay() {
-    if (!this.configService.livePreview) {
-      return;
-    }
-
-    this.http.post('stop-preview-play', null).subscribe();
   }
 }

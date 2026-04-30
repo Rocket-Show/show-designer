@@ -6,13 +6,13 @@ import { Composition } from '../models/composition';
 import { ConfigService } from '../services/config.service';
 import { HotkeyTargetExcludeService } from '../services/hotkey-target-exclude.service';
 import { IntroService } from '../services/intro.service';
-import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { TimelineService } from '../services/timeline.service';
 import { UuidService } from '../services/uuid.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
 import { CompositionSettingsComponent } from './composition-settings/composition-settings.component';
 import { TimelineGridComponent } from './timeline-grid/timeline-grid.component';
+import { LivePreviewService } from '../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-timeline',
@@ -40,8 +40,8 @@ export class TimelineComponent implements OnInit, AfterViewInit {
     private warningDialogService: WarningDialogService,
     private http: HttpClient,
     private configService: ConfigService,
-    private presetService: PresetService,
-    public introService: IntroService
+    public introService: IntroService,
+    private livePreviewService: LivePreviewService
   ) {
     this.timelineService.waveSurferReady.subscribe(() => {
       this.onResize();
@@ -82,7 +82,7 @@ export class TimelineComponent implements OnInit, AfterViewInit {
 
   play() {
     this.timelineService.playState = 'playing';
-    this.presetService.previewLive(
+    this.livePreviewService.previewLive(
       this.timelineService.selectedComposition.name,
       Math.round(this.timelineService.waveSurfer.getCurrentTime() * 1000)
     );
@@ -91,7 +91,7 @@ export class TimelineComponent implements OnInit, AfterViewInit {
 
   pause() {
     this.timelineService.playState = 'paused';
-    this.presetService.stopPreviewPlay();
+    this.livePreviewService.stopPreviewPlay();
     this.timelineService.waveSurfer.pause();
   }
 

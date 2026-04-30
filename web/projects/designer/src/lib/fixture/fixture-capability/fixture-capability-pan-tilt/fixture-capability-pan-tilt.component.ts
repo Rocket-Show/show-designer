@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FixtureCapabilityType } from '../../../models/fixture-capability';
 import { PresetService } from '../../../services/preset.service';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-fixture-capability-pan-tilt',
@@ -9,7 +10,11 @@ import { PresetService } from '../../../services/preset.service';
   standalone: false,
 })
 export class FixtureCapabilityPanTiltComponent implements OnInit {
-  constructor(private presetService: PresetService, private changeDetectorRef: ChangeDetectorRef) {}
+  constructor(
+    private presetService: PresetService,
+    private changeDetectorRef: ChangeDetectorRef,
+    private livePreviewService: LivePreviewService
+  ) {}
 
   ngOnInit() {}
 
@@ -40,7 +45,7 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
 
     this.presetService.setCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Pan, value);
     this.changeDetectorRef.detectChanges();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   getValueTilt(): number {
@@ -70,7 +75,7 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
 
     this.presetService.setCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Tilt, value);
     this.changeDetectorRef.detectChanges();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   changeActive(active: boolean) {
@@ -82,6 +87,6 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
       this.presetService.deleteCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Tilt);
       this.changeDetectorRef.detectChanges();
     }
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 }

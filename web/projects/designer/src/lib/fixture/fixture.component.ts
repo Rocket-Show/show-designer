@@ -7,6 +7,7 @@ import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { PresetFixture } from '../models/preset-fixture';
 import type { Options } from 'sortablejs';
+import { LivePreviewService } from '../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-fixture',
@@ -24,7 +25,8 @@ export class FixtureComponent implements OnInit {
     public presetService: PresetService,
     private fixturePoolService: FixturePoolService,
     public fixtureService: FixtureService,
-    public introService: IntroService
+    public introService: IntroService,
+    private livePreviewService: LivePreviewService
   ) {}
 
   ngOnInit() {}
@@ -57,7 +59,7 @@ export class FixtureComponent implements OnInit {
       // select fixtures for the current preset
       this.presetService.switchFixtureSelection(fixture, presetFixture.pixelKey);
       this.presetService.fixtureSelectionChanged.next();
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
@@ -72,7 +74,7 @@ export class FixtureComponent implements OnInit {
   }
 
   fixtureListReordered() {
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   openFixturePool() {

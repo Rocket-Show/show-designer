@@ -2,7 +2,7 @@
   <div class="mb-2">
     <select
       [ngModel]="curve.curveType"
-      (ngModelChange)="curve.curveType = $event; presetService.previewLive()"
+      (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()"
       style="width: 200px; height: 20px"
     >
       <option [value]="'sine'">
@@ -31,7 +31,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); presetService.previewLive()"
+        (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.lengthMillis"
         style="width: 80px"
         [tooltip]="'hide'"
@@ -55,7 +55,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); presetService.previewLive()"
+        (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.amplitude"
         style="width: 80px"
         [tooltip]="'hide'"
@@ -75,7 +75,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); presetService.previewLive()"
+        (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.position"
         style="width: 80px; height: 18px"
         [tooltip]="'hide'"
@@ -96,7 +96,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); presetService.previewLive()"
+        (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phaseMillis"
         style="width: 80px; height: 18px"
         [tooltip]="'hide'"
@@ -119,7 +119,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); presetService.previewLive()"
+        (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phasingMillis"
         style="width: 80px; height: 18px"
         [tooltip]="'hide'"

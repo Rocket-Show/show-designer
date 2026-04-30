@@ -7,6 +7,7 @@ import { EffectService } from '../services/effect.service';
 import { PresetService } from '../services/preset.service';
 import { UuidService } from '../services/uuid.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
+import { LivePreviewService } from '../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-effect',
@@ -19,7 +20,8 @@ export class EffectComponent implements OnInit {
     private uuidService: UuidService,
     public presetService: PresetService,
     public effectService: EffectService,
-    private warningDialogService: WarningDialogService
+    private warningDialogService: WarningDialogService,
+    public livePreviewService: LivePreviewService
   ) {}
 
   ngOnInit() {}
@@ -36,7 +38,7 @@ export class EffectComponent implements OnInit {
     const effect = new EffectCurve();
     effect.uuid = this.uuidService.getUuid();
     this.addEffect(effect);
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   addPanTiltEffect() {
@@ -60,7 +62,7 @@ export class EffectComponent implements OnInit {
         map((result) => {
           if (result) {
             this.presetService.selectedPreset.effects.splice(this.presetService.selectedPreset.effects.indexOf(effect), 1);
-            this.presetService.previewLive();
+            this.livePreviewService.previewLive();
           }
         })
       )

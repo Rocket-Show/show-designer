@@ -15,7 +15,7 @@
               <span class="ml-2">{{ 'designer.effect.type-' + item.type | translate }}</span>
               <div class="ml-auto mr-2">
                 <i
-                  (click)="item.visible = !item.visible; presetService.previewLive(); $event.stopPropagation()"
+                  (click)="item.visible = !item.visible; livePreviewService.previewLive(); $event.stopPropagation()"
                   class="fa fa-eye fa-fw"
                   [class.text-primary]="item.visible"
                   aria-hidden="true"

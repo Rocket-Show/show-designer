@@ -16,13 +16,14 @@ import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
+import { TimelineStateService } from './timeline-state.service';
+import { LivePreviewService } from './live-preview.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TimelineService {
   public waveSurfer: WaveSurfer;
-  public playState = 'paused';
 
   public zoom = 0;
   private timeUpdateSubscription: Subscription;
@@ -36,10 +37,6 @@ export class TimelineService {
   public waveSurferReady: Subject<void> = new Subject();
   public detectChanges: Subject<void> = new Subject();
 
-  // the current composition
-  public selectedComposition: Composition;
-  public selectedCompositionIndex: number;
-
   // can we add new compositions based on an external pool and
   // should new compositions not available in this pool be added there?
   public externalCompositionsAvailable = false;
@@ -52,7 +49,9 @@ export class TimelineService {
     private projectService: ProjectService,
     private http: HttpClient,
     private configService: ConfigService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private timelineStateService: TimelineStateService,
+    private livePreviewService: LivePreviewService
   ) {
     this.presetService.previewSelectionChanged.subscribe(() => {
       this.selectedPlaybackRegion = undefined;
@@ -64,6 +63,30 @@ export class TimelineService {
     this.sceneService.sceneSelected.subscribe(() => {
       this.redrawAllRegions();
     });
+  }
+
+  get playState(): string {
+    return this.timelineStateService.playState;
+  }
+
+  set playState(playState: string) {
+    this.timelineStateService.playState = playState;
+  }
+
+  get selectedComposition(): Composition {
+    return this.timelineStateService.selectedComposition;
+  }
+
+  set selectedComposition(selectedComposition: Composition) {
+    this.timelineStateService.selectedComposition = selectedComposition;
+  }
+
+  get selectedCompositionIndex(): number {
+    return this.timelineStateService.selectedCompositionIndex;
+  }
+
+  set selectedCompositionIndex(selectedCompositionIndex: number) {
+    this.timelineStateService.selectedCompositionIndex = selectedCompositionIndex;
   }
 
   private redrawAllRegions() {
@@ -266,7 +289,10 @@ export class TimelineService {
     setTimeout(() => {
       this.waveSurfer.seekTo(progress);
       this.detectChanges.next();
-      this.presetService.previewLive(this.selectedComposition.name, Math.round(progress * this.waveSurfer.backend.getDuration() * 1000));
+      this.livePreviewService.previewLive(
+        this.selectedComposition.name,
+        Math.round(progress * this.waveSurfer.backend.getDuration() * 1000)
+      );
     }, 0);
   }
 
@@ -342,7 +368,7 @@ export class TimelineService {
       this.drawRegion(scenePlaybackRegion, this.sceneService.selectedScenes[0]);
     }
 
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   private getSnapToGridInterval(): number {
@@ -551,7 +577,7 @@ export class TimelineService {
 
       this.waveSurfer.on('region-updated', (region: any) => {
         this.detectChanges.next();
-        this.presetService.previewLive();
+        this.livePreviewService.previewLive();
       });
     }, 0);
   }
@@ -742,7 +768,7 @@ export class TimelineService {
       }
     }
 
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   getPresetsInTime(timeMillis: number): PresetRegionScene[] {

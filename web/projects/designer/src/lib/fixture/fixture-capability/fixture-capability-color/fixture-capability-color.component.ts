@@ -4,6 +4,7 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../../../models/f
 import { FixtureCapabilityValue } from '../../../models/fixture-capability-value';
 import { FixtureService } from '../../../services/fixture.service';
 import { PresetService } from '../../../services/preset.service';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 declare var iro: any;
 
@@ -24,7 +25,12 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
 
   private updateSubscription: Subscription;
 
-  constructor(private presetService: PresetService, private fixtureService: FixtureService, private changeDetectorRef: ChangeDetectorRef) {
+  constructor(
+    private presetService: PresetService,
+    private fixtureService: FixtureService,
+    private changeDetectorRef: ChangeDetectorRef,
+    private livePreviewService: LivePreviewService
+  ) {
     this.updateSubscription = this.presetService.previewSelectionChanged.subscribe(() => {
       this.update();
       this.changeDetectorRef.detectChanges();
@@ -147,7 +153,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
       }
       this.changeDetectorRef.detectChanges();
       this.presetService.fixtureColorChanged.next();
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
@@ -161,7 +167,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
       this.setPickerColor(255, 255, 255);
       this.color = '#ffffff';
     }
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   changeColor(color: any) {

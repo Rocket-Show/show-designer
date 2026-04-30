@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
+import { LivePreviewService } from '../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-master-dimmer',
@@ -9,7 +9,11 @@ import { ProjectService } from '../services/project.service';
   standalone: false,
 })
 export class MasterDimmerComponent implements OnInit {
-  constructor(public projectService: ProjectService, private changeDetectorRef: ChangeDetectorRef, private presetService: PresetService) {}
+  constructor(
+    public projectService: ProjectService,
+    private changeDetectorRef: ChangeDetectorRef,
+    private livePreviewService: LivePreviewService
+  ) {}
 
   ngOnInit() {}
 
@@ -24,7 +28,7 @@ export class MasterDimmerComponent implements OnInit {
 
     this.projectService.project.masterDimmerValue = value;
     this.changeDetectorRef.detectChanges();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   getValue(): number {

@@ -6,6 +6,7 @@ import { EffectService } from './effect.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
+import { LivePreviewService } from './live-preview.service';
 
 @Injectable({
   providedIn: 'root',
@@ -23,7 +24,8 @@ export class SceneService {
     private uuidService: UuidService,
     private effectService: EffectService,
     private presetService: PresetService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private livePreviewService: LivePreviewService
   ) {}
 
   sceneIsSelected(scene: Scene): boolean {
@@ -122,7 +124,7 @@ export class SceneService {
       this.projectService.project.selectedSceneUuids.push(scene.uuid);
     }
     this.presetService.previewSelectionChanged.next();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
 
     this.sceneSelected.next();
   }

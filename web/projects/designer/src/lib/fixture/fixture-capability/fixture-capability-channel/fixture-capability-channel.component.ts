@@ -3,6 +3,7 @@ import { CachedFixtureCapability } from '../../../models/cached-fixture-capabili
 import { CachedFixtureChannel } from '../../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../../models/fixture-profile';
 import { PresetService } from '../../../services/preset.service';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-fixture-capability-channel',
@@ -42,7 +43,7 @@ export class FixtureCapabilityChannelComponent implements OnInit {
   @Input()
   capabilityIndex: number;
 
-  constructor(private presetService: PresetService) {}
+  constructor(private presetService: PresetService, private livePreviewService: LivePreviewService) {}
 
   private updateChannel() {
     this.selectedCapability = this._channel.capabilities[0];
@@ -216,7 +217,7 @@ export class FixtureCapabilityChannelComponent implements OnInit {
         }, 30);
       }
     }
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   private calculateTemplateValue() {
@@ -240,7 +241,7 @@ export class FixtureCapabilityChannelComponent implements OnInit {
       this.value = undefined;
       this.calculateTemplateValue();
     }
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   capabilitySelected() {

@@ -7,6 +7,7 @@ import { FixtureProfile } from '../../../models/fixture-profile';
 import { FixtureWheel } from '../../../models/fixture-wheel';
 import { FixtureService } from '../../../services/fixture.service';
 import { PresetService } from '../../../services/preset.service';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-fixture-capability-color-wheel',
@@ -41,7 +42,12 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
   @Input()
   showContainer = false;
 
-  constructor(public presetService: PresetService, private changeDetectorRef: ChangeDetectorRef, private fixtureService: FixtureService) {}
+  constructor(
+    public presetService: PresetService,
+    private changeDetectorRef: ChangeDetectorRef,
+    private fixtureService: FixtureService,
+    private livePreviewService: LivePreviewService
+  ) {}
 
   ngOnInit() {
     this.colorChangeSubscription = this.presetService.fixtureColorChanged.subscribe(() => {
@@ -178,7 +184,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       );
     }
 
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   selectSlotNumber(slotNumber: number) {
@@ -191,6 +197,6 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       this.wheelName,
       this._fixtureProfile.uuid
     );
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 }

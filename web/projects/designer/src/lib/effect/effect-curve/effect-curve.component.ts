@@ -11,6 +11,7 @@ import { PresetService } from '../../services/preset.service';
 import { EffectCurve } from './../../models/effect-curve';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
+import { LivePreviewService } from '../../services/live-preview.service';
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -65,7 +66,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private fixtureService: FixtureService,
     private translate: TranslateService,
     private effectService: EffectService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    public livePreviewService: LivePreviewService
   ) {
     this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
@@ -347,7 +349,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   getChannelName(profileName: string, channelName: string) {
@@ -403,41 +405,41 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
   }
 
   setLengthMillis(value: any) {
     if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisMax) {
       this.curve.lengthMillis = +value;
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
   setAmplitude(value: any) {
     if (!isNaN(value) && value >= this.amplitudeMin && value <= this.amplitudeMax) {
       this.curve.amplitude = +value;
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
   setPosition(value: any) {
     if (!isNaN(value) && value >= this.percentageMin && value <= this.percentageMax) {
       this.curve.position = +value;
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
   setPhaseMillis(value: any) {
     if (!isNaN(value) && value >= this.phaseMillisMin && value <= this.phaseMillisMax) {
       this.curve.phaseMillis = +value;
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 
   setPhasingMillis(value: any) {
     if (!isNaN(value) && value >= this.phasingMillisMin && value <= this.phasingMillisMax) {
       this.curve.phasingMillis = +value;
-      this.presetService.previewLive();
+      this.livePreviewService.previewLive();
     }
   }
 }

@@ -15,6 +15,7 @@ import { TimelineService } from './timeline.service';
 import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { WarningDialogService } from './warning-dialog.service';
+import { LivePreviewService } from './live-preview.service';
 
 @Injectable({
   providedIn: 'root',
@@ -31,7 +32,8 @@ export class ProjectLoadService {
     private timelineService: TimelineService,
     private router: Router,
     private activatedRoute: ActivatedRoute,
-    private warningDialogService: WarningDialogService
+    private warningDialogService: WarningDialogService,
+    private livePreviewService: LivePreviewService
   ) {}
 
   private migrateToVersion2() {
@@ -97,7 +99,7 @@ export class ProjectLoadService {
     this.presetService.fixtureSelectionChanged.next();
     this.presetService.autoOpenFirstEffect();
     this.previewService.updateStage();
-    this.presetService.previewLive();
+    this.livePreviewService.previewLive();
     this.sceneService.selectPresetFromSelectedScene();
   }
 
