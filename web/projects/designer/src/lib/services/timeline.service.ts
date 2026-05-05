@@ -420,6 +420,9 @@ export class TimelineService {
         // barWidth: 2,
         height: 1,
         interact: false,
+        xhr: {
+          credentials: 'include',
+        },
         // Use for timelines without sound. Wave will be displayed
         // wrong, but should work for a dummy audio without any waves.
         // duration: 400,

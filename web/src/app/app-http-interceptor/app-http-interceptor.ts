@@ -29,8 +29,10 @@ export class AppHttpInterceptor implements HttpInterceptor {
       req = req.clone({ headers: req.headers.set('Content-Type', 'application/json') });
     }
 
+    // use withCredentials to send the JSESSIONCOOKIE with each request
     const clonedRequest: HttpRequest<any> = req.clone({
       url: newUrl,
+      withCredentials: true,
     });
 
     return next.handle(clonedRequest);

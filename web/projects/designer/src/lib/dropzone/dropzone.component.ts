@@ -63,6 +63,7 @@ export class DropzoneComponent {
       forceChunking: this.configService.dropzoneChunking,
       parallelUploads: 1,
       maxFiles: this._maxFiles,
+      withCredentials: true,
       previewTemplate: `
       <div class="dz-preview dz-file-preview">
         <!-- The attachment details -->
