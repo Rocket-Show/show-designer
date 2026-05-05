@@ -64,6 +64,7 @@ export class DropzoneComponent {
       parallelUploads: 1,
       maxFiles: this._maxFiles,
       withCredentials: true,
+      chunkSize: 2 * 1024 * 1024, // 2 MB
       previewTemplate: `
       <div class="dz-preview dz-file-preview">
         <!-- The attachment details -->
