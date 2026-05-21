@@ -15,6 +15,7 @@ import { UuidService } from '../services/uuid.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from '../services/live-preview.service';
+import { UniverseConfig } from '../models/universe-config';
 
 @Component({
   selector: 'lib-app-fixture-pool',
@@ -42,6 +43,14 @@ export class FixturePoolComponent implements OnInit {
 
   public updatingProfiles: boolean;
 
+  // Universes the user can choose from. In "free edit" mode the user can
+  // extend this list at runtime; otherwise it is provided by the host
+  // application through the ConfigService.
+  public universes: UniverseConfig[] = [];
+
+  // Name buffer for the "add universe" input shown when freeUniverseEdit is true.
+  public newUniverseName = '';
+
   constructor(
     public bsModalRef: BsModalRef,
     public fixtureService: FixtureService,
@@ -57,8 +66,51 @@ export class FixturePoolComponent implements OnInit {
   ) {
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
+    // Initialise the universe list from the config. We keep a local copy so
+    // edits done in free-edit mode don't bleed into the config until the user
+    // confirms with OK (see `ok()` below).
+    this.universes = structuredClone(this.configService.universes || []);
+
     if (this.fixturePool.length > 0) {
       this.selectFixture(this.fixturePool[0]);
+    }
+  }
+
+  get freeUniverseEdit(): boolean {
+    return this.configService.freeUniverseEdit;
+  }
+
+  addUniverse(name: string) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) {
+      return;
+    }
+    const universe: UniverseConfig = {
+      uuid: this.uuidService.getUuid(),
+      name: trimmed,
+    };
+    this.universes.push(universe);
+    this.newUniverseName = '';
+
+    // If the currently selected fixture has no universe yet, auto-assign
+    // the freshly created one for convenience.
+    if (this.selectedFixture && !this.selectedFixture.dmxUniverseUuid) {
+      this.selectedFixture.dmxUniverseUuid = universe.uuid;
+    }
+  }
+
+  removeUniverse(universe: UniverseConfig) {
+    const index = this.universes.findIndex((u) => u.uuid === universe.uuid);
+    if (index < 0) {
+      return;
+    }
+    this.universes.splice(index, 1);
+
+    // Clear the universe assignment from any fixture that referenced it.
+    for (const fixture of this.fixturePool) {
+      if (fixture.dmxUniverseUuid === universe.uuid) {
+        fixture.dmxUniverseUuid = undefined;
+      }
     }
   }
 
@@ -386,6 +438,12 @@ export class FixturePoolComponent implements OnInit {
       }
     }
     this.projectService.project.fixtures = this.fixturePool;
+
+    // Persist any locally edited universes back to the config when the
+    // host application has opted in to free editing.
+    if (this.configService.freeUniverseEdit) {
+      this.configService.universes = this.universes;
+    }
 
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();

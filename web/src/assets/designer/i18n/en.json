@@ -143,6 +143,8 @@
       "first-channel": "Channel",
       "channels": "channels",
       "universe": "Universe",
+      "add-universe": "Add universe",
+      "universe-name": "Universe name",
       "no-free-space": "There is no space left anymore in the current universe to add this fixture.",
       "no-free-space-title": "No space left",
       "channel-occupied": "The current configuration contains overlapping channels.",
