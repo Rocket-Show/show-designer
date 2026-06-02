@@ -235,6 +235,21 @@
               </div>
             </div>
             <div class="form-group row">
+              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.universe' | translate }}</label>
+              <div class="col-lg-9">
+                <select
+                  class="custom-select"
+                  [disabled]="universes.length === 0"
+                  [ngModel]="selectedFixture.dmxUniverseUuid"
+                  (ngModelChange)="selectedFixture.dmxUniverseUuid = $event"
+                >
+                  @for (universe of universes; track universe.uuid) {
+                  <option [ngValue]="universe.uuid">{{ universe.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.first-channel' | translate }}</label>
               <div class="col-lg-9">
                 <select

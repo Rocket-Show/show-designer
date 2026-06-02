@@ -278,9 +278,13 @@ export class FixturePoolComponent implements OnInit {
 
       if (index >= fixture.dmxFirstChannel && index < fixture.dmxFirstChannel + channelCount) {
         if (occupiedFixture) {
-          if (occupiedFixture.dmxFirstChannel !== fixture.dmxFirstChannel || occupiedFixture.modeShortName !== fixture.modeShortName) {
-            // fixtures are allowed to overlap, if they start at the same channel and
-            // use the same mode. otherwise it's not allowed.
+          if (
+            occupiedFixture.dmxFirstChannel !== fixture.dmxFirstChannel ||
+            occupiedFixture.modeShortName !== fixture.modeShortName ||
+            occupiedFixture.dmxUniverseUuid !== fixture.dmxUniverseUuid
+          ) {
+            // fixtures are allowed to overlap, if they start at the same channel,
+            // use the same mode and belong to the same universe. otherwise it's not allowed.
             return true;
           }
         } else {
