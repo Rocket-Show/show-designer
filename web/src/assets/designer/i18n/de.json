@@ -158,7 +158,9 @@
       "create-fixture-from-profile-file": "Von Profil-Datei erstellen",
       "create-from-local-profile": "Von Profil-Datei erstellen",
       "create-fixture-from-profile-file-dialog-title": "OFL Profil-Datei auswählen",
-      "invalid-fixture-profile-file": "Das ist keine gültige OFL Profil-Datei. Bitte wähle eine gültige OFL Profil-Datei."
+      "invalid-fixture-profile-file": "Das ist keine gültige OFL Profil-Datei. Bitte wähle eine gültige OFL Profil-Datei.",
+      "edit-universes": "Universen bearbeiten",
+      "edit-universes-title": "Universen bearbeiten"
     },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",

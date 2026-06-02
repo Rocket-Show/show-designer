@@ -889,7 +889,7 @@ export class FixtureService {
     return -1;
   }
 
-  addFixture(profile: FixtureProfile, fixturePool: Fixture[]): Fixture {
+  addFixture(profile: FixtureProfile, fixturePool: Fixture[], channelPool?: Fixture[]): Fixture {
     const fixture = new Fixture();
 
     fixture.uuid = this.uuidService.getUuid();
@@ -919,7 +919,7 @@ export class FixtureService {
 
     const mode = this.getModeByFixture(profile, fixture);
     const channelCount = this.getModeChannelCount(profile, mode);
-    const firstChannel = this.getNextFreeDmxChannel(fixturePool, channelCount);
+    const firstChannel = this.getNextFreeDmxChannel(channelPool ?? fixturePool, channelCount);
 
     if (firstChannel >= 0) {
       fixture.dmxFirstChannel = firstChannel;

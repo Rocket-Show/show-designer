@@ -18,6 +18,7 @@ import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt
 import { EffectComponent } from './effect/effect.component';
 import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
+import { FixturePoolEditUniversesComponent } from './fixture-pool/fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { FixturePoolComponent } from './fixture-pool/fixture-pool.component';
 import { FixtureCapabilityChannelComponent } from './fixture/fixture-capability/fixture-capability-channel/fixture-capability-channel.component';
 import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capability/fixture-capability-color-wheel/fixture-capability-color-wheel.component';
@@ -91,6 +92,7 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     SceneSettingsComponent,
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,
+    FixturePoolEditUniversesComponent,
     DropzoneComponent,
     SortablejsDirective,
   ],
