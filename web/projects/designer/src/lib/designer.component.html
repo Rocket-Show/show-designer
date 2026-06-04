@@ -85,13 +85,13 @@
           {{ 'designer.misc.language' | translate }}
         </a>
         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="settingsDropdown">
-          <a class="dropdown-item" href="#" (click)="switchLanguage('en'); (false)" target="_blank">English</a>
           <a class="dropdown-item" href="#" (click)="switchLanguage('de'); (false)" target="_blank">Deutsch</a>
+          <a class="dropdown-item" href="#" (click)="switchLanguage('en'); (false)" target="_blank">English</a>
           <a class="dropdown-item" href="#" (click)="switchLanguage('es'); (false)" target="_blank">Español</a>
-          <a class="dropdown-item" href="#" (click)="switchLanguage('it'); (false)" target="_blank">Italiano</a>
           <a class="dropdown-item" href="#" (click)="switchLanguage('fr'); (false)" target="_blank">Français</a>
-          <a class="dropdown-item" href="#" (click)="switchLanguage('zh'); (false)" target="_blank">中文</a>
+          <a class="dropdown-item" href="#" (click)="switchLanguage('it'); (false)" target="_blank">Italiano</a>
           <a class="dropdown-item" href="#" (click)="switchLanguage('pt'); (false)" target="_blank">Português</a>
+          <a class="dropdown-item" href="#" (click)="switchLanguage('zh'); (false)" target="_blank">中文</a>
         </div>
       </li>
       } @if (configService.loginAvailable && !userService.isLoggedIn()) {
