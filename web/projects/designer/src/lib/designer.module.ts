@@ -50,7 +50,7 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { WaitDialogComponent } from './wait-dialog/wait-dialog.component';
 import { WarningDialogComponent } from './warning-dialog/warning-dialog.component';
 import { DropzoneComponent } from './dropzone/dropzone.component';
-import { TreeModule } from '@ali-hm/angular-tree-component';
+import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 
 @NgModule({
@@ -95,6 +95,7 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     FixturePoolEditUniversesComponent,
     DropzoneComponent,
     SortablejsDirective,
+    TreeComponent,
   ],
   exports: [DesignerComponent],
   imports: [
@@ -111,7 +112,6 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     ToastrModule.forRoot({
       newestOnTop: true,
     }),
-    TreeModule,
   ],
   providers: [provideHttpClient(withInterceptorsFromDi())],
 })

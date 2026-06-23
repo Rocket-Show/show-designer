@@ -18,11 +18,11 @@
 
   <div class="card-body h-100 p-0">
     <!-- List of presets -->
-    <!-- <tree-root #tree [nodes]="treeNodes" [options]="treeOptions" (activate)="onActivate($event)">
-      <ng-template #treeNodeTemplate let-node let-index="index">
-        <span>{{ node.data.name }}</span>
+    <!-- <lib-tree [nodes]="treeNodes" (activate)="onActivate($event)">
+      <ng-template #nodeTemplate let-node>
+        <span>{{ node.name }}</span>
       </ng-template>
-    </tree-root> -->
+    </lib-tree> -->
 
     <div class="list-group" [sortablejs]="projectService.project.presets">
       @for (item of projectService.project.presets; track item; let i = $index) {

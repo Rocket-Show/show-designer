@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+.tree {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  /* avoid selecting text while shift/ctrl clicking */
+  user-select: none;
+}
+
+.tree-node {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 23px;
+  line-height: 23px;
+  padding-left: var(--tree-indent, 4px);
+  padding-right: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tree-node:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.tree-node.selected {
+  background-color: #906543;
+}
+
+.tree-node.dragging {
+  opacity: 0.4;
+}
+
+/* lift the active drop target above its neighbours so the indicator line,
+   which sits on the row boundary, is never painted under the next row */
+.tree-node.drop-before,
+.tree-node.drop-after,
+.tree-node.drop-inside {
+  z-index: 1;
+}
+
+.tree-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  margin-right: 5px;
+  text-align: center;
+}
+
+.tree-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* drop indicator: a single line centred on the row boundary and indented to the
+   target's level, so "after a row" and "before the next sibling" coincide */
+.tree-node.drop-before::before,
+.tree-node.drop-after::after {
+  content: '';
+  position: absolute;
+  left: var(--tree-drop-indent, var(--tree-indent, 4px));
+  right: 4px;
+  height: 2px;
+  background-color: #d39661;
+  pointer-events: none;
+}
+
+.tree-node.drop-before::before {
+  top: -1px;
+}
+
+.tree-node.drop-after::after {
+  bottom: -1px;
+}
+
+.tree-node.drop-inside {
+  outline: 2px solid #d39661;
+  outline-offset: -2px;
+}
+
+/* trailing strip below the last row: a drop target for "after the last folder",
+   at the root level. grows to fill any spare space so it is easy to hit */
+.tree-tail {
+  flex: 1 1 auto;
+  min-height: 16px;
+}
+
+.tree-tail.drop-tail::before {
+  content: '';
+  display: block;
+  height: 2px;
+  margin: 0 4px;
+  background-color: #d39661;
+}
