@@ -1,0 +1,34 @@
+<div class="tree" (dragend)="onDragEnd()">
+  @for (flat of flatNodes; track flat.node) {
+  <div
+    class="tree-node"
+    [class.selected]="isSelected(flat.node)"
+    [class.dragging]="isDragging(flat.node)"
+    [class.drop-before]="drop?.row === flat.node && drop?.zone === 'before'"
+    [class.drop-after]="drop?.row === flat.node && drop?.zone === 'after'"
+    [class.drop-inside]="drop?.row === flat.node && drop?.zone === 'inside'"
+    [style.--tree-indent]="indentPx(flat.level)"
+    [style.--tree-drop-indent]="drop?.row === flat.node ? drop.indent + 'px' : null"
+    [attr.draggable]="allowDrag(flat.node)"
+    (click)="onRowClick(flat, $event)"
+    (dragstart)="onDragStart(flat, $event)"
+    (dragover)="onDragOver(flat, $event)"
+    (drop)="onDrop(flat, $event)"
+  >
+    <i
+      class="tree-icon fa"
+      [class.fa-folder-open-o]="flat.node.isFolder && flat.node.expanded"
+      [class.fa-folder-o]="flat.node.isFolder && !flat.node.expanded"
+      [class.fa-file-o]="!flat.node.isFolder"
+      aria-hidden="true"
+    ></i>
+    <span class="tree-label">
+      <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>
+    </span>
+  </div>
+  }
+
+  <div class="tree-tail" [class.drop-tail]="dropTail" (dragover)="onTailDragOver($event)" (drop)="onTailDrop($event)"></div>
+</div>
+
+<ng-template #defaultTemplate let-node>{{ node.name }}</ng-template>

@@ -3,10 +3,14 @@ include_once 'database.php';
 
 $compositionFileDirectory = 'composition-files';
 
-// Allow from any origin
+// Allow from any origin. When credentials are included (withCredentials on the
+// client), the spec forbids the '*' wildcard, so the requesting origin must be
+// echoed back instead. Vary: Origin keeps caches from serving one origin's
+// response to another.
 if (isset($_SERVER['HTTP_ORIGIN'])) {
-    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
     header('Access-Control-Allow-Credentials: true');
+    header('Vary: Origin');
 }
 
 // Access-Control headers are received during OPTIONS requests
@@ -42,8 +46,8 @@ function error($errorMessage = 'internal', $status = 500)
     $error = array(
         'error' => $errorMessage
     );
-    echo json_encode(utf8ize($error));
     http_response_code($status);
+    echo json_encode(utf8ize($error));
     exit();
 }
 

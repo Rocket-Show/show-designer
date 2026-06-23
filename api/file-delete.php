@@ -16,6 +16,4 @@ if ($result->num_rows > 0) {
     deleteCompositionFile($conn, $compositionFileDirectory, $row['id']);
 }
 
-http_response_code(200);
-
 mysqli_close($conn);

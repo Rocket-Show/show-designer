@@ -24,6 +24,7 @@ import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EffectService } from './services/effect.service';
+import { UniverseConfig } from './models/universe-config';
 
 @Component({
   selector: 'lib-designer',
@@ -93,6 +94,16 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   @Input()
   set dropzoneChunking(value: boolean) {
     this.configService.dropzoneChunking = value;
+  }
+
+  @Input()
+  set universes(value: UniverseConfig[]) {
+    this.configService.universes = value || [];
+  }
+
+  @Input()
+  set freeUniverseEdit(value: boolean) {
+    this.configService.freeUniverseEdit = value;
   }
 
   // the size of the menu used in the designer

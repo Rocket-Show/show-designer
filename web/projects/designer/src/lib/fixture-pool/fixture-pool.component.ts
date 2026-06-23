@@ -13,8 +13,10 @@ import { PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
 import { UuidService } from '../services/uuid.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
+import { FixturePoolEditUniversesComponent } from './fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from '../services/live-preview.service';
+import { UniverseConfig } from '../models/universe-config';
 
 @Component({
   selector: 'lib-app-fixture-pool',
@@ -42,6 +44,15 @@ export class FixturePoolComponent implements OnInit {
 
   public updatingProfiles: boolean;
 
+  // Universes the user can choose from. In "free edit" mode the user can
+  // extend this list at runtime; otherwise it is provided by the host
+  // application through the ConfigService.
+  public universes: UniverseConfig[] = [];
+
+  // The currently active universe. The channel map and fixture list are
+  // filtered to only show fixtures belonging to this universe.
+  public selectedUniverse: UniverseConfig;
+
   constructor(
     public bsModalRef: BsModalRef,
     public fixtureService: FixtureService,
@@ -57,8 +68,47 @@ export class FixturePoolComponent implements OnInit {
   ) {
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
-    if (this.fixturePool.length > 0) {
-      this.selectFixture(this.fixturePool[0]);
+    // Initialise the universe list from the config. We keep a local copy so
+    // edits done in free-edit mode don't bleed into the config until the user
+    // confirms with OK (see `ok()` below).
+    this.universes = structuredClone(this.configService.universes || []);
+
+    if (this.universes.length === 0 && this.configService.freeUniverseEdit) {
+      this.universes.push({ uuid: this.uuidService.getUuid(), name: 'Universe 1' });
+    }
+
+    if (this.universes.length > 0) {
+      this.selectedUniverse = this.universes[0];
+    }
+
+    const firstVisible = this.currentUniverseFixtures[0] ?? this.fixturePool[0];
+    if (firstVisible) {
+      this.selectFixture(firstVisible);
+    }
+  }
+
+  get freeUniverseEdit(): boolean {
+    return this.configService.freeUniverseEdit;
+  }
+
+  /** Fixtures belonging to the currently selected universe. */
+  get currentUniverseFixtures(): Fixture[] {
+    if (!this.selectedUniverse) {
+      return this.fixturePool;
+    }
+    return this.fixturePool.filter((f) => f.dmxUniverseUuid === this.selectedUniverse.uuid);
+  }
+
+  /** Fixtures used for channel-map calculations (same as currentUniverseFixtures). */
+  private get channelFixtures(): Fixture[] {
+    return this.currentUniverseFixtures;
+  }
+
+  selectUniverse(universe: UniverseConfig) {
+    this.selectedUniverse = universe;
+    // Deselect the current fixture if it doesn't belong to the new universe.
+    if (this.selectedFixture && this.selectedFixture.dmxUniverseUuid !== universe?.uuid) {
+      this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
     }
   }
 
@@ -122,8 +172,9 @@ export class FixturePoolComponent implements OnInit {
     // minimal profile passed from the search.
     this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe(() => {
       const profile = this.fixtureService.getProfileByUuid(searchProfile.uuid);
-      const newFixture = this.fixtureService.addFixture(profile, this.fixturePool);
+      const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
       if (newFixture) {
+        newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
         this.selectFixture(newFixture);
       }
     });
@@ -137,7 +188,7 @@ export class FixturePoolComponent implements OnInit {
     fixture.name = originalFixture.name;
     fixture.modeShortName = originalFixture.modeShortName;
     fixture.dmxFirstChannel = originalFixture.dmxFirstChannel;
-    fixture.dmxUniverseUuid = originalFixture.dmxUniverseUuid;
+    fixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
 
     this.fixturePool.push(fixture);
     this.selectFixture(fixture);
@@ -154,8 +205,8 @@ export class FixturePoolComponent implements OnInit {
       }
     }
 
-    if (!this.selectedFixture && this.fixturePool && this.fixturePool.length > 0) {
-      this.selectFixture((this.selectedFixture = this.fixturePool[0]));
+    if (!this.selectedFixture) {
+      this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
     }
 
     // remove unused profiles
@@ -176,7 +227,7 @@ export class FixturePoolComponent implements OnInit {
   }
 
   channelOccupied(index: number): boolean {
-    for (const fixture of this.fixturePool) {
+    for (const fixture of this.channelFixtures) {
       const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
       const mode = this.fixtureService.getModeByFixture(profile, fixture);
       const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
@@ -190,7 +241,7 @@ export class FixturePoolComponent implements OnInit {
   }
 
   channelOccupiedStart(index: number): boolean {
-    for (const fixture of this.fixturePool) {
+    for (const fixture of this.channelFixtures) {
       if (index === fixture.dmxFirstChannel) {
         return true;
       }
@@ -200,7 +251,7 @@ export class FixturePoolComponent implements OnInit {
   }
 
   channelOccupiedEnd(index: number): boolean {
-    for (const fixture of this.fixturePool) {
+    for (const fixture of this.channelFixtures) {
       const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
       const mode = this.fixtureService.getModeByFixture(profile, fixture);
       const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
@@ -214,18 +265,26 @@ export class FixturePoolComponent implements OnInit {
   }
 
   channelOverlapped(index: number): boolean {
+    return this.channelOverlappedInFixtures(index, this.channelFixtures);
+  }
+
+  private channelOverlappedInFixtures(index: number, fixtures: Fixture[]): boolean {
     let occupiedFixture: Fixture;
 
-    for (const fixture of this.fixturePool) {
+    for (const fixture of fixtures) {
       const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
       const mode = this.fixtureService.getModeByFixture(profile, fixture);
       const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
 
       if (index >= fixture.dmxFirstChannel && index < fixture.dmxFirstChannel + channelCount) {
         if (occupiedFixture) {
-          if (occupiedFixture.dmxFirstChannel !== fixture.dmxFirstChannel || occupiedFixture.modeShortName !== fixture.modeShortName) {
-            // fixtures are allowed to overlap, if they start at the same channel and
-            // use the same mode. otherwise it's not allowed.
+          if (
+            occupiedFixture.dmxFirstChannel !== fixture.dmxFirstChannel ||
+            occupiedFixture.modeShortName !== fixture.modeShortName ||
+            occupiedFixture.dmxUniverseUuid !== fixture.dmxUniverseUuid
+          ) {
+            // fixtures are allowed to overlap, if they start at the same channel,
+            // use the same mode and belong to the same universe. otherwise it's not allowed.
             return true;
           }
         } else {
@@ -244,7 +303,7 @@ export class FixturePoolComponent implements OnInit {
 
     // find a dragging fixture and select it, but don't change the selection, if the
     // currently selected fixture might also be selected (on overlapped fixtures)
-    for (const fixture of this.fixturePool) {
+    for (const fixture of this.channelFixtures) {
       const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
       const mode = this.fixtureService.getModeByFixture(profile, fixture);
       const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
@@ -314,17 +373,20 @@ export class FixturePoolComponent implements OnInit {
   }
 
   ok() {
-    // don't allow OK if overlapping fixtures exist
-    for (let i = 0; i < this.dmxChannels.length; i++) {
-      if (this.channelOverlapped(i)) {
-        const msg = 'designer.fixture-pool.channel-occupied';
-        const title = 'designer.fixture-pool.channel-occupied-title';
+    // don't allow OK if overlapping fixtures exist within any universe
+    for (const universe of this.universes) {
+      const universeFixtures = this.fixturePool.filter((f) => f.dmxUniverseUuid === universe.uuid);
+      for (let i = 0; i < this.dmxChannels.length; i++) {
+        if (this.channelOverlappedInFixtures(i, universeFixtures)) {
+          const msg = 'designer.fixture-pool.channel-occupied';
+          const title = 'designer.fixture-pool.channel-occupied-title';
 
-        this.translateService.get([msg, title]).subscribe((result) => {
-          this.toastrService.error(result[msg], result[title]);
-        });
+          this.translateService.get([msg, title]).subscribe((result) => {
+            this.toastrService.error(result[msg], result[title]);
+          });
 
-        return;
+          return;
+        }
       }
     }
 
@@ -387,6 +449,12 @@ export class FixturePoolComponent implements OnInit {
     }
     this.projectService.project.fixtures = this.fixturePool;
 
+    // Persist any locally edited universes back to the config when the
+    // host application has opted in to free editing.
+    if (this.configService.freeUniverseEdit) {
+      this.configService.universes = this.universes;
+    }
+
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
     this.previewService.updateFixtureSetup();
@@ -436,10 +504,47 @@ export class FixturePoolComponent implements OnInit {
       });
   }
 
+  openEditUniverses() {
+    const ref = this.modalService.show(FixturePoolEditUniversesComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      initialState: { universes: structuredClone(this.universes) },
+    });
+    (ref.content as FixturePoolEditUniversesComponent).onClose.subscribe((result) => {
+      if (!result) return;
+
+      // Clear fixture universe assignments for any removed universe
+      for (const universe of this.universes) {
+        if (!result.find((u) => u.uuid === universe.uuid)) {
+          for (const fixture of this.fixturePool) {
+            if (fixture.dmxUniverseUuid === universe.uuid) {
+              fixture.dmxUniverseUuid = undefined;
+            }
+          }
+        }
+      }
+
+      this.universes = result;
+
+      // Re-anchor selectedUniverse to the new object reference from result.
+      // The modal works on a structuredClone, so all objects have new references.
+      const stillSelected = this.universes.find((u) => u.uuid === this.selectedUniverse?.uuid);
+      if (stillSelected) {
+        this.selectedUniverse = stillSelected;
+      } else {
+        this.selectedUniverse = this.universes[0] ?? undefined;
+        this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
+      }
+    });
+  }
+
   createFixtureFromProfileFile() {
     const bsModalRef = this.modalService.show(FixturePoolCreateFromFileComponent, { keyboard: true, ignoreBackdropClick: false });
     (bsModalRef.content as FixturePoolCreateFromFileComponent).onClose.subscribe((profile: FixtureProfile) => {
-      const newFixture = this.fixtureService.addFixture(profile, this.fixturePool);
+      const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
+      if (newFixture) {
+        newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
+      }
       this.selectFixture(newFixture);
     });
   }

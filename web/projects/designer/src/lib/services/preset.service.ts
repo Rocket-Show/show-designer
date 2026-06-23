@@ -95,6 +95,7 @@ export class PresetService {
         const projectFixture = this.fixtureService.getFixtureByUuid(this.selectedPreset.fixtures[i].fixtureUuid);
         if (
           projectFixture.dmxFirstChannel === fixture.dmxFirstChannel &&
+          projectFixture.dmxUniverseUuid === fixture.dmxUniverseUuid &&
           ((!this.selectedPreset.fixtures[i].pixelKey && !pixelKey) || this.selectedPreset.fixtures[i].pixelKey === pixelKey)
         ) {
           this.selectedPreset.fixtures.splice(i, 1);
@@ -104,7 +105,7 @@ export class PresetService {
       for (const projectPresetFixture of this.projectService.project.presetFixtures) {
         if ((!projectPresetFixture.pixelKey && !pixelKey) || projectPresetFixture.pixelKey === pixelKey) {
           const projectFixture = this.fixtureService.getFixtureByUuid(projectPresetFixture.fixtureUuid);
-          if (projectFixture.dmxFirstChannel === fixture.dmxFirstChannel) {
+          if (projectFixture.dmxFirstChannel === fixture.dmxFirstChannel && projectFixture.dmxUniverseUuid === fixture.dmxUniverseUuid) {
             const presetFixture = new PresetFixture();
             presetFixture.fixtureUuid = projectPresetFixture.fixtureUuid;
             presetFixture.pixelKey = pixelKey;
@@ -187,6 +188,7 @@ export class PresetService {
         for (const projectFixture of this.projectService.project.fixtures) {
           if (
             projectFixture.dmxFirstChannel === fixture.dmxFirstChannel &&
+            projectFixture.dmxUniverseUuid === fixture.dmxUniverseUuid &&
             !this.fixtureIsSelected(projectFixture, presetFixture.pixelKey, preset)
           ) {
             const newPresetFixture = new PresetFixture();

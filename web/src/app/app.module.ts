@@ -7,7 +7,6 @@ import { AccordionModule } from 'ngx-bootstrap/accordion';
 import { ModalModule } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { TypeaheadModule } from 'ngx-bootstrap/typeahead';
-import { SortablejsModule } from 'ngx-sortablejs-plus';
 import { DesignerModule } from 'projects/designer/src/public_api';
 import { AppHttpInterceptor } from 'src/app/app-http-interceptor/app-http-interceptor';
 import { AppComponent } from './app.component';
@@ -28,10 +27,6 @@ import { AppComponent } from './app.component';
     AccordionModule.forRoot(),
     PopoverModule.forRoot(),
     TypeaheadModule.forRoot(),
-    SortablejsModule.forRoot({
-      animation: 300,
-      handle: '.list-sort-handle',
-    }),
   ],
   providers: [
     AppHttpInterceptor,

@@ -1,0 +1,45 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.fixture-pool.edit-universes-title' | translate }}</h4>
+  <button type="button" class="close pull-right" aria-label="Close" (click)="cancel()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <!-- Add universe -->
+  <div class="input-group mb-3">
+    <input
+      type="text"
+      class="form-control"
+      maxlength="200"
+      [(ngModel)]="newUniverseName"
+      (keydown.enter)="addUniverse(); $event.stopPropagation(); $event.preventDefault()"
+      placeholder="{{ 'designer.fixture-pool.universe-name' | translate }}"
+    />
+    <div class="input-group-append">
+      <button type="button" class="btn btn-secondary" [disabled]="!newUniverseName || !newUniverseName.trim()" (click)="addUniverse()">
+        <i class="fa fa-plus" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Sortable universe list -->
+  <ul class="list-group" [sortablejs]="universes">
+    @for (universe of universes; track universe.uuid) {
+    <li class="list-group-item d-flex align-items-center py-1">
+      <div class="list-sort-handle mr-2" style="cursor: move; cursor: -webkit-grabbing">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+      </div>
+      <span class="flex-grow-1">{{ universe.name }}</span>
+      <button class="btn btn-primary btn-sm" type="button" (click)="removeUniverse(universe)">
+        <i class="fa fa-minus" aria-hidden="true"></i>
+      </button>
+    </li>
+    }
+  </ul>
+</div>
+<div class="modal-footer">
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">
+    {{ 'designer.misc.cancel' | translate }}
+  </a>
+  <button type="button" class="btn btn-primary" (click)="ok()">{{ 'designer.misc.ok' | translate }}</button>
+</div>

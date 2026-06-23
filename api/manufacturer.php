@@ -21,6 +21,4 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 echo json_encode(utf8ize($manufacturers));
 
-http_response_code(200);
-
 mysqli_close($conn);

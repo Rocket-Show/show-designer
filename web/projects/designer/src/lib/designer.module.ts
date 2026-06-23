@@ -18,6 +18,7 @@ import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt
 import { EffectComponent } from './effect/effect.component';
 import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
+import { FixturePoolEditUniversesComponent } from './fixture-pool/fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { FixturePoolComponent } from './fixture-pool/fixture-pool.component';
 import { FixtureCapabilityChannelComponent } from './fixture/fixture-capability/fixture-capability-channel/fixture-capability-channel.component';
 import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capability/fixture-capability-color-wheel/fixture-capability-color-wheel.component';
@@ -49,7 +50,7 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { WaitDialogComponent } from './wait-dialog/wait-dialog.component';
 import { WarningDialogComponent } from './warning-dialog/warning-dialog.component';
 import { DropzoneComponent } from './dropzone/dropzone.component';
-import { TreeModule } from '@ali-hm/angular-tree-component';
+import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 
 @NgModule({
@@ -91,8 +92,10 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     SceneSettingsComponent,
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,
+    FixturePoolEditUniversesComponent,
     DropzoneComponent,
     SortablejsDirective,
+    TreeComponent,
   ],
   exports: [DesignerComponent],
   imports: [
@@ -109,7 +112,6 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     ToastrModule.forRoot({
       newestOnTop: true,
     }),
-    TreeModule,
   ],
   providers: [provideHttpClient(withInterceptorsFromDi())],
 })
