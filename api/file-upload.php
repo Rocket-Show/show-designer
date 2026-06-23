@@ -52,6 +52,4 @@ if (in_array($fileExtension, $allowed)) {
     error('format-not-allowed');
 }
 
-http_response_code(200);
-
 mysqli_close($conn);

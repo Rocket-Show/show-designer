@@ -203,6 +203,4 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
 }
 
-http_response_code(200);
-
 mysqli_close($conn);

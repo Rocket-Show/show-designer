@@ -18,6 +18,4 @@ if (!$result) {
 $row = mysqli_fetch_assoc($result);
 echo $row["object"];
 
-http_response_code(200);
-
 mysqli_close($conn);

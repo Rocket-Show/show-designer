@@ -27,6 +27,4 @@ if ($result->num_rows > 0) {
     error('wrong-credentials', 400);
 }
 
-http_response_code(200);
-
 mysqli_close($conn);
