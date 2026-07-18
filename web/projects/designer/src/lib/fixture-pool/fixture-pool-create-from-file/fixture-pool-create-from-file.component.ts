@@ -41,11 +41,7 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
           // validate the file
           const text = event.target.result;
           const json = JSON.parse(text);
-          if (
-            json['$schema'].match(
-              'https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/schema-(.*)/schemas/fixture.json'
-            )
-          ) {
+          if (json['$schema'].match(/open-fixture-library\/(?:schema-(.*?)|master)\/schemas\/fixture\.json/)) {
             // create the metadata from the file. we don't have the corresponding
             // manufacturer-file, therefore we just assume the attributes from the
             // fixture-file.
