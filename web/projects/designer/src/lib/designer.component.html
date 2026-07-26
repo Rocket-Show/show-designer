@@ -71,6 +71,16 @@
       </li>
     </ul>
 
+    <!-- Project name shown in the middle, editable inline -->
+    @if (projectService.project) {
+    <lib-app-inline-edit
+      class="project-name d-none d-md-inline-flex"
+      [value]="projectService.project.name"
+      [placeholder]="'designer.project.name' | translate"
+      (valueChange)="setProjectName($event)"
+    ></lib-app-inline-edit>
+    }
+
     <ul class="navbar-nav">
       @if (configService.shareAvailable) {
       <li class="nav-item d-none d-md-flex" data-toggle="collapse">

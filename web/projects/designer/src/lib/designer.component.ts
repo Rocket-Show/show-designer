@@ -274,6 +274,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.fixturePoolService.open();
   }
 
+  setProjectName(name: string) {
+    if (this.projectService.project) {
+      this.projectService.project.name = name;
+    }
+  }
+
   projectNew() {
     this.warningDialogService
       .show('designer.misc.warning-proceed-unsaved')
