@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
 import { UserService } from './user.service';
+import { ConfigService } from './config.service';
 
 @Injectable({
   providedIn: 'root',
@@ -24,7 +25,8 @@ export class ProjectService {
     private router: Router,
     private activatedRoute: ActivatedRoute,
     private translateService: TranslateService,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private configService: ConfigService
   ) {}
 
   private saveApi(project: Project): Observable<object> {
@@ -52,6 +54,12 @@ export class ProjectService {
 
   save(project: Project) {
     // tries to save the project and returns, whether it has been saved or not
+
+    if (this.configService.freeUniverseEdit) {
+      // persist the freely edited universes together with the project
+      project.universes = this.configService.universes;
+    }
+
     this.saveApi(project).subscribe(
       () => {
         const msg = 'designer.project.save-success';

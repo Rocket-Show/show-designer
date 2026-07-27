@@ -16,6 +16,7 @@ import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { WarningDialogService } from './warning-dialog.service';
 import { LivePreviewService } from './live-preview.service';
+import { ConfigService } from './config.service';
 
 @Injectable({
   providedIn: 'root',
@@ -33,7 +34,8 @@ export class ProjectLoadService {
     private router: Router,
     private activatedRoute: ActivatedRoute,
     private warningDialogService: WarningDialogService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    private configService: ConfigService
   ) {}
 
   private migrateToVersion2() {
@@ -91,8 +93,37 @@ export class ProjectLoadService {
     }
   }
 
+  private setupUniverses() {
+    if (this.configService.freeUniverseEdit) {
+      // when the user manages universes freely, the project itself stores the
+      // universes -> use them as the working list
+      this.configService.universes = this.projectService.project.universes;
+
+      // ensure a default universe exists
+      if (this.configService.universes.length === 0) {
+        this.configService.universes.push({ uuid: this.uuidService.getUuid(), name: 'Universe 1' });
+      }
+    }
+
+    if (this.configService.universes.length === 0) {
+      // no universe available to assign the fixtures to (e.g. the host
+      // application did not provide any)
+      return;
+    }
+
+    // assign all fixtures without a universe to the first (default) universe
+    const defaultUniverseUuid = this.configService.universes[0].uuid;
+
+    for (const fixture of this.projectService.project.fixtures) {
+      if (!fixture.dmxUniverseUuid) {
+        fixture.dmxUniverseUuid = defaultUniverseUuid;
+      }
+    }
+  }
+
   private afterLoad() {
     this.migrateFromOldProject();
+    this.setupUniverses();
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
     this.previewService.updateFixtureSetup();

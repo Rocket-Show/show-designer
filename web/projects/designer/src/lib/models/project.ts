@@ -4,6 +4,7 @@ import { FixtureProfile } from './fixture-profile';
 import { Preset } from './preset';
 import { PresetFixture } from './preset-fixture';
 import { Scene } from './scene';
+import { UniverseConfig } from './universe-config';
 
 export class Project {
   public id: number;
@@ -38,6 +39,10 @@ export class Project {
 
   // the fixtures and pixel keys in order to be selectable
   public presetFixtures: PresetFixture[] = [];
+
+  // the universes (name + uuid) the project's fixtures are assigned to
+  // (used when the user manages universes freely, see freeUniverseEdit)
+  public universes: UniverseConfig[] = [];
 
   public scenes: Scene[] = [];
   public presets: Preset[] = [];
@@ -89,6 +94,12 @@ export class Project {
     if (data.presetFixtures) {
       for (const presetFixture of data.presetFixtures) {
         this.presetFixtures.push(new PresetFixture(presetFixture));
+      }
+    }
+
+    if (data.universes) {
+      for (const universe of data.universes) {
+        this.universes.push({ uuid: universe.uuid, name: universe.name });
       }
     }
 

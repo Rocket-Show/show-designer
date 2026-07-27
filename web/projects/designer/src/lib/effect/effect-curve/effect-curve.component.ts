@@ -141,17 +141,19 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     for (const presetFixture of this.presetService.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
       const firstDmxChannelAndFixtureUuid = {
+        dmxUniverseUuid: fixture.dmxUniverseUuid,
         firstDmxChannel: fixture.dmxFirstChannel,
         pixelKey: presetFixture.pixelKey,
       };
 
       const exists = countedFirstDmxChannelPixelKey.some(
         (item) =>
+          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
           item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
           ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
       );
 
-      // don't count it, if it has the same DMX address and pixel key (if available),
+      // don't count it, if it has the same DMX universe, address and pixel key (if available),
       // as an already counted one
       if (!exists) {
         count++;

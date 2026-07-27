@@ -184,17 +184,19 @@ export class PreviewService implements OnDestroy {
 
           const fixture = this.fixtureService.getFixtureByUuid(projectFixture.fixtureUuid);
           const firstDmxChannelAndFixtureUuid = {
+            dmxUniverseUuid: fixture.dmxUniverseUuid,
             firstDmxChannel: fixture.dmxFirstChannel,
             pixelKey: projectFixture.pixelKey,
           };
 
           const exists = countedFirstDmxChannelPixelKey.some(
             (item) =>
+              item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
               item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
               ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
           );
 
-          // don't count fixtures on the same channel as already counted ones
+          // don't count fixtures on the same universe and channel as already counted ones
           if (!exists) {
             index++;
             countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
