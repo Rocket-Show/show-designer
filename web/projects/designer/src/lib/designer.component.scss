@@ -29,6 +29,14 @@
   .navbar-nav {
     flex-direction: row !important;
   }
+  // center the editable project name horizontally in the navbar
+  .navbar .project-name {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+  }
 
   .navbar-expand-lg {
     flex-flow: row nowrap !important;
