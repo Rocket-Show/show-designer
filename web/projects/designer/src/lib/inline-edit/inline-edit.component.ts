@@ -21,13 +21,22 @@ export class InlineEditComponent {
   // whether we are currently in edit mode
   editing = false;
 
-  // the value being edited (only applied on accept)
+  // the value being edited (only applied when the field is left)
   editValue: string;
 
   @ViewChild('editInput')
   editInput: ElementRef<HTMLInputElement>;
 
+  // keep the input about as wide as its content, so entering the edit mode does not move things around
+  get inputSize(): number {
+    return Math.max((this.editValue || this.placeholder).length, 10);
+  }
+
   startEdit() {
+    if (this.editing) {
+      return;
+    }
+
     this.editValue = this.value;
     this.editing = true;
 
@@ -40,16 +49,23 @@ export class InlineEditComponent {
     });
   }
 
-  accept() {
+  // store the value as soon as the field is left
+  save() {
     if (!this.editing) {
       return;
     }
 
-    this.value = this.editValue;
     this.editing = false;
+
+    if (this.editValue === this.value) {
+      return;
+    }
+
+    this.value = this.editValue;
     this.valueChange.emit(this.value);
   }
 
+  // discard the changes, e.g. when escape has been pressed
   cancel() {
     this.editing = false;
   }

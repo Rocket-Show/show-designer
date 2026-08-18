@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 
 import { InlineEditComponent } from './inline-edit.component';
 
@@ -11,7 +10,7 @@ describe('InlineEditComponent', () => {
 
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      imports: [FormsModule, TranslateModule.forRoot(), PopoverModule.forRoot()],
+      imports: [FormsModule, TranslateModule.forRoot()],
       declarations: [InlineEditComponent],
     }).compileComponents();
   }));
@@ -26,18 +25,31 @@ describe('InlineEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit the new value on accept', () => {
+  it('should emit the new value when the field is left', () => {
     component.value = 'old';
     let emitted: string;
     component.valueChange.subscribe((value) => (emitted = value));
 
     component.startEdit();
     component.editValue = 'new';
-    component.accept();
+    component.save();
 
-    expect(component.editing).toBeFalse();
+    expect(component.editing).toBeFalsy();
     expect(component.value).toBe('new');
     expect(emitted).toBe('new');
+  });
+
+  it('should not emit when the value did not change', () => {
+    component.value = 'old';
+    let emitted: string;
+    component.valueChange.subscribe((value) => (emitted = value));
+
+    component.startEdit();
+    component.save();
+
+    expect(component.editing).toBeFalsy();
+    expect(component.value).toBe('old');
+    expect(emitted).toBeUndefined();
   });
 
   it('should keep the original value on cancel', () => {
@@ -49,7 +61,10 @@ describe('InlineEditComponent', () => {
     component.editValue = 'new';
     component.cancel();
 
-    expect(component.editing).toBeFalse();
+    // leaving the field afterwards must not store the discarded value anymore
+    component.save();
+
+    expect(component.editing).toBeFalsy();
     expect(component.value).toBe('old');
     expect(emitted).toBeUndefined();
   });
