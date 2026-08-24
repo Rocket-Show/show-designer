@@ -1,17 +1,19 @@
 .curve-grid {
-  background-color: black;
-  border: 1px solid white;
+  background-color: var(--sd-bg);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius);
 }
 
 .applying-to {
-  overflow-y: scroll;
+  overflow-y: auto;
   height: 130px !important;
-  background-color: #222;
-  border: 1px solid white;
-  padding: 0.5rem;
+  background-color: var(--sd-surface-2);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius);
+  padding: var(--sd-space-2);
 }
 
 /* fix padding bottom in overflow */
 .applying-to .form-check:last-child {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sd-space-2);
 }

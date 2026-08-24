@@ -1,10 +1,6 @@
 <div class="mr-3" style="float: left">
   <div class="mb-2">
-    <select
-      [ngModel]="curve.curveType"
-      (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()"
-      style="width: 200px; height: 20px"
-    >
+    <select [ngModel]="curve.curveType" (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()" style="width: 200px">
       <option [value]="'sine'">
         {{ 'designer.effect.curve-sine' | translate }}
       </option>
@@ -77,7 +73,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.position"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="percentageMin"
         [max]="percentageMax"
@@ -98,7 +94,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phaseMillis"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phaseMillisMin"
         [max]="phaseMillisMax"
@@ -121,7 +117,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phasingMillis"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phasingMillisMin"
         [max]="phasingMillisMax"

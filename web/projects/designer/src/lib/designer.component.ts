@@ -107,7 +107,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   // the size of the menu used in the designer
-  private designerMenuSizePx = 20;
+  private designerMenuSizePx = 34;
 
   private splitGutterSizePx = 13;
 

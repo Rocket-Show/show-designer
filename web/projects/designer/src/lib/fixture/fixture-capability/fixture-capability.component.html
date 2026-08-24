@@ -42,17 +42,17 @@
     </div>
     } @if (projectService.project.fixtures.length == 0) {
     <div class="m-auto">
-      <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures' | translate }}</p>
+      <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures' | translate }}</p>
     </div>
     } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length == 0
     ) {
     <div class="m-auto">
-      <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
+      <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
     } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length > 0
     && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
     <div class="m-auto">
-      <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
+      <p class="m-auto text-muted">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
     </div>
     }
   </div>

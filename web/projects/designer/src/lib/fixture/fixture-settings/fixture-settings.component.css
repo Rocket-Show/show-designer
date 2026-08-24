@@ -2,22 +2,29 @@
   display: flex;
   float: left;
   width: 28px;
-  border: 1px solid white;
+  border: 1px solid var(--sd-border-strong);
   margin-left: -1px;
   margin-bottom: -1px;
+  color: var(--sd-text-muted);
+  font-size: 0.6875rem;
 }
 
 .dmx-channel-occupied {
-  background-color: #fd7e14;
+  background-color: var(--sd-primary);
+  color: #fff;
   border-left: none;
   border-right: none;
   cursor: move;
 }
 
 .dmx-channel-occupied-start {
-  border-left: 1px solid white;
+  border-left: 1px solid var(--sd-primary);
+  border-top-left-radius: var(--sd-radius);
+  border-bottom-left-radius: var(--sd-radius);
 }
 
 .dmx-channel-occupied-end {
-  border-right: 1px solid white;
+  border-right: 1px solid var(--sd-primary);
+  border-top-right-radius: var(--sd-radius);
+  border-bottom-right-radius: var(--sd-radius);
 }

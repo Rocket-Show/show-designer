@@ -1,133 +1,373 @@
-// Global styles
-.modal-full {
-  max-width: unset !important;
-  margin: 1.75rem !important;
-}
+@import './styles/tokens';
 
-// Make the modals appear in front of the threejs debug information boxes
-.modal {
-  z-index: 10001;
-}
+// ---------------------------------------------------------------------------
+// Shared chrome
+//
+// Buttons, form controls, lists, cards and sliders look the same wherever they
+// appear. Modals are rendered at body level rather than inside #designer, so
+// this lives in a mixin that both scopes pull in.
+// ---------------------------------------------------------------------------
 
-// Styles only for the designer
-#designer {
-  // reduce base font size a little bit
-  font-size: 14px;
+@mixin sd-chrome {
+  // ---- Cards -------------------------------------------------------------
 
-  .nav-link {
-    cursor: pointer;
-  }
-  // dropdown menus should appear over the 3d preview
-  .dropdown-menu {
-    z-index: 100000;
-  }
-  // no row wrapping for the designer (it's not responsive anyway)
-  .row {
-    flex-wrap: unset;
+  .card {
+    background-color: $sd-surface-1;
+    border: 1px solid $sd-border;
+    border-radius: $sd-radius-lg;
   }
 
-  .navbar-nav {
-    flex-direction: row !important;
-  }
-  // center the editable project name horizontally in the navbar
-  .navbar .project-name {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
+  // panels hold edge-to-edge lists, whose square rows would otherwise poke out
+  // through the card's rounded corners
+  .card.panel {
+    overflow: hidden;
   }
 
-  .navbar-expand-lg {
-    flex-flow: row nowrap !important;
-    justify-content: flex-start !important;
-  }
-
-  .navbar-expand-lg .navbar-nav .nav-link {
-    padding-right: 0.5rem !important;
-    padding-left: 0.5rem !important;
-  }
-
-  .list-group-item.active {
-    color: #fff !important;
-    background-color: #fd7e14 !important;
-    border-color: #fd7e14 !important;
-  }
-
-  *:focus {
-    outline: none;
-  }
-
-  select {
-    font-size: 0.8rem;
-    cursor: pointer;
-  }
-
-  input {
-    font-size: 0.7rem;
-    background-color: transparent;
-    color: white;
-    border: 1px solid;
-  }
-
-  input,
-  select {
-    border-color: #dee2e6;
-  }
-
-  .list-group-item {
-    padding: 0.3rem 1.25rem;
-    border-left: none;
-    border-right: none;
-  }
-
-  .nav-pills .nav-link.active,
-  .nav-pills .show > .nav-link {
-    background-color: #444;
-  }
-
-  .nav a,
-  .panel-title .btn-link {
-    color: white !important;
-  }
-
-  .accordion-toggle .btn,
-  .accordion-toggle button {
-    padding: 0;
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: $sd-space-2;
+    min-height: 30px;
+    margin-bottom: 0;
+    padding: 0 $sd-space-3;
+    background-color: $sd-surface-2;
+    border-bottom: 1px solid $sd-border;
+    border-radius: ($sd-radius-lg - 1px) ($sd-radius-lg - 1px) 0 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: $sd-text;
+    line-height: 1.4;
   }
 
   .card-body {
     overflow: auto;
-    padding: 0.8rem /* $spacer */;
+    padding: $sd-space-3;
   }
 
-  .card-header {
+  .card-footer {
+    padding: $sd-space-2 $sd-space-3;
+    background-color: transparent;
+    border-top: 1px solid $sd-border;
+  }
+
+  // icon-only actions in a panel header
+  .card-header .btn,
+  .card-header a.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-height: 0;
+    padding: 0 !important;
+    border: none;
+    border-radius: $sd-radius-sm;
+    background-color: transparent;
+    color: $sd-text-muted;
+    font-size: 0.8125rem;
+    transition: color 0.12s ease, background-color 0.12s ease;
+
+    &:hover,
+    &:focus {
+      color: $sd-text;
+      background-color: $sd-surface-4;
+      box-shadow: none;
+    }
+
+    &.text-primary {
+      color: $sd-primary-text !important;
+    }
+  }
+
+  // keep the controls that live in a header at their normal metrics
+  .card-header input,
+  .card-header select {
+    font-weight: 400;
+  }
+
+  // the header is a flex row now, so float-based alignment needs a margin
+  .card-header .pull-right,
+  .card-header .ml-auto {
+    margin-left: auto;
+  }
+
+  // ---- Buttons -----------------------------------------------------------
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: $sd-control-height;
+    padding: 0 $sd-space-3;
+    border-radius: $sd-radius;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  }
+
+  .btn-sm {
+    min-height: $sd-control-height-sm;
+    padding: 0 $sd-space-2;
+    font-size: 0.75rem;
+    border-radius: $sd-radius-sm;
+  }
+
+  .btn-primary {
+    background-color: $sd-primary;
+    border-color: $sd-primary;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+      background-color: $sd-primary-hover;
+      border-color: $sd-primary-hover;
+      color: #fff;
+    }
+
+    &:active,
+    &:not(:disabled):not(.disabled):active {
+      background-color: $sd-primary-active;
+      border-color: $sd-primary-active;
+    }
+  }
+
+  .btn-secondary {
+    background-color: $sd-surface-3;
+    border-color: $sd-border-strong;
+    color: $sd-text;
+
+    &:hover,
+    &:focus {
+      background-color: $sd-surface-4;
+      border-color: $sd-border-strong;
+      color: $sd-text;
+    }
+
+    &:active,
+    &:not(:disabled):not(.disabled):active {
+      background-color: $sd-surface-4;
+      border-color: $sd-border-strong;
+    }
+  }
+
+  .btn-link {
+    color: $sd-text;
+
+    &:hover {
+      color: $sd-primary-text;
+    }
+  }
+
+  .btn-group > .btn {
+    border-radius: $sd-radius;
+  }
+
+  // ---- Form controls -----------------------------------------------------
+
+  input,
+  select,
+  textarea,
+  .form-control,
+  .custom-select {
+    height: $sd-control-height;
+    padding: 0 $sd-space-2;
+    background-color: $sd-surface-2;
+    border: 1px solid $sd-border-strong;
+    border-radius: $sd-radius;
+    color: $sd-text;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    transition: border-color 0.12s ease, background-color 0.12s ease;
+
+    &:hover:not(:disabled):not([readonly]) {
+      border-color: $sd-text-dim;
+    }
+
+    &:focus {
+      background-color: $sd-surface-2;
+      border-color: $sd-primary;
+      color: $sd-text;
+      box-shadow: none;
+      outline: none;
+    }
+
+    &:disabled,
+    &[readonly] {
+      background-color: $sd-surface-1;
+      border-color: $sd-border;
+      color: $sd-text-dim;
+      cursor: not-allowed;
+    }
+
+    &::placeholder {
+      color: $sd-text-dim;
+    }
+  }
+
+  textarea,
+  textarea.form-control {
+    height: auto;
+    padding: $sd-space-2;
+    line-height: 1.5;
+  }
+
+  // custom chevron, so the native control matches the rest of the palette
+  select,
+  .custom-select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: $sd-space-6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2399a1ac' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M4 6.5l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right $sd-space-2 center;
+    background-size: 14px 14px;
+
+    option {
+      background-color: $sd-surface-2;
+      color: $sd-text;
+    }
+  }
+
+  .input-group-text {
+    height: $sd-control-height;
+    padding: 0 $sd-space-2;
+    background-color: $sd-surface-3;
+    border: 1px solid $sd-border-strong;
+    border-radius: $sd-radius;
+    color: $sd-text-muted;
+    font-size: 0.8125rem;
+  }
+
+  // small numeric / hex readouts next to the faders
+  .sd-value-input {
+    width: 64px;
+    text-align: center;
+    font-family: 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0 $sd-space-1;
+  }
+
+  .sd-value-input-hex {
+    width: 72px;
+  }
+
+  .sd-value-input-time {
+    width: 88px;
+  }
+
+  label {
+    margin-bottom: 0;
+    color: $sd-text-muted;
+    font-size: 0.8125rem;
+  }
+
+  .col-form-label {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: $sd-control-height;
+  }
+
+  .form-group {
+    margin-bottom: $sd-space-3;
+  }
+
+  // ---- Checkboxes and radios ---------------------------------------------
+
+  .form-check {
+    position: relative;
+    display: block;
+    min-height: 18px;
+    padding-left: 24px;
     margin-bottom: 0;
   }
 
-  .card-header {
-    padding: 0.4rem;
+  .form-check-label {
+    color: $sd-text;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    cursor: pointer;
   }
 
-  .panel-body {
-    background-color: #303030;
+  input[type='checkbox'],
+  input[type='radio'] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    background-color: $sd-surface-3;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    border: 1px solid $sd-border-strong;
+    border-radius: $sd-radius-sm;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+
+    &:hover:not(:disabled) {
+      border-color: $sd-text-dim;
+      background-color: $sd-surface-4;
+    }
+
+    &:checked {
+      background-color: $sd-primary;
+      border-color: $sd-primary;
+
+      &:hover {
+        background-color: $sd-primary-hover;
+        border-color: $sd-primary-hover;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
   }
 
-  .list-group-item.active-light {
-    background-color: #906542;
-    border-color: #906542;
+  input[type='checkbox']:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' d='M5.5 10.5l3 3 6-6'/%3E%3C/svg%3E");
   }
 
-  .inactive-list-item {
-    opacity: 0.3;
+  input[type='checkbox']:indeterminate {
+    background-color: $sd-primary;
+    border-color: $sd-primary;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath stroke='%23fff' stroke-width='2.6' stroke-linecap='round' d='M6 10h8'/%3E%3C/svg%3E");
   }
 
+  input[type='radio'] {
+    border-radius: 50%;
+
+    &:checked {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3E%3Ccircle r='2' fill='%23fff'/%3E%3C/svg%3E");
+    }
+  }
+
+  .form-check-input {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    margin: 0;
+    transform: translateY(-50%);
+  }
+
+  // checkbox rendered through an icon font (used in the fixture pool)
   span.bigcheck-target {
     font-family: FontAwesome; /* use an icon font for the checkbox */
+    color: $sd-text-muted;
   }
 
   input[type='checkbox'].bigcheck {
-    position: relative;
+    position: absolute;
     left: -999em; /* hide the real checkbox */
   }
 
@@ -135,16 +375,544 @@
     content: '\f096'; /* In fontawesome, is an open square (fa-square-o) */
   }
 
+  input[type='checkbox'].bigcheck:checked + span.bigcheck-target {
+    color: $sd-primary;
+  }
+
   input[type='checkbox'].bigcheck:checked + span.bigcheck-target:after {
     content: '\f046'; /* fontawesome checked box (fa-check-square-o) */
   }
+
+  // ---- Lists -------------------------------------------------------------
+
+  .list-group-item {
+    display: flex;
+    align-items: center;
+    min-height: $sd-row-height;
+    padding: 0.3125rem $sd-space-3;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid $sd-border;
+    color: $sd-text;
+    white-space: nowrap;
+    transition: background-color 0.12s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    > .row {
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    .row > div {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // the item that is currently being output
+  .list-group-item.active {
+    background-color: $sd-primary-soft-strong !important;
+    border-color: $sd-border !important;
+    color: #ffd0a8 !important;
+    box-shadow: inset 3px 0 0 $sd-primary;
+
+    &:hover {
+      background-color: rgba(253, 126, 20, 0.34) !important;
+    }
+  }
+
+  // selected, but something else is being output
+  .list-group-item.active-light {
+    background-color: $sd-primary-soft;
+    border-color: $sd-border;
+    color: $sd-text;
+    box-shadow: inset 3px 0 0 rgba(253, 126, 20, 0.5);
+
+    &:hover {
+      background-color: $sd-primary-soft-hover;
+    }
+  }
+
+  .inactive-list-item {
+    opacity: 0.4;
+  }
+
+  .list-sort-handle {
+    color: $sd-text-dim;
+
+    &:hover {
+      color: $sd-text-muted;
+    }
+  }
+
+  // ---- Tabs and pills ----------------------------------------------------
+
+  .nav a,
+  .panel-title .btn-link {
+    color: $sd-text;
+  }
+
+  .nav-tabs {
+    border-bottom: 1px solid $sd-border;
+
+    .nav-link {
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      color: $sd-text-muted;
+      padding: $sd-space-2 $sd-space-3;
+
+      &:hover {
+        color: $sd-text;
+        border-bottom-color: $sd-border-strong;
+      }
+
+      &.active {
+        background-color: transparent;
+        color: $sd-text;
+        border-bottom-color: $sd-primary;
+      }
+    }
+  }
+
+  // ---- Sliders -----------------------------------------------------------
+
+  .slider {
+    cursor: pointer;
+  }
+
+  .slider.slider-horizontal {
+    height: 20px;
+  }
+
+  .slider-track,
+  .slider-track-low,
+  .slider-track-high,
+  .slider-selection {
+    border-radius: 3px !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .slider-track {
+    background-color: $sd-surface-4 !important;
+  }
+
+  .slider-track-low,
+  .slider-track-high {
+    background-color: transparent !important;
+  }
+
+  .slider-selection {
+    background-color: $sd-primary !important;
+  }
+
+  // every vertical fader in the designer is reversed (max at the top), so the
+  // filled part of the track is the one below the handle, not the selection
+  .slider-vertical {
+    .slider-selection {
+      background-color: transparent !important;
+    }
+
+    .slider-track-high {
+      background-color: $sd-primary !important;
+    }
+  }
+
+  .slider-horizontal .slider-track {
+    height: 4px !important;
+    margin-top: -2px !important;
+  }
+
+  .slider-vertical .slider-track {
+    width: 4px !important;
+    margin-left: 4px !important;
+  }
+
+  .slider-handle {
+    width: 14px !important;
+    height: 14px !important;
+    background-color: #eef1f5 !important;
+    background-image: none !important;
+    border: none;
+    box-shadow: $sd-shadow-1, 0 0 0 1px rgba(0, 0, 0, 0.35) !important;
+    transition: transform 0.1s ease, background-color 0.12s ease;
+
+    &:hover {
+      background-color: #fff !important;
+      transform: scale(1.12);
+    }
+  }
+
+  .slider-vertical .slider-handle {
+    margin-left: -1px !important;
+  }
+
+  .slider-horizontal .slider-handle {
+    margin-top: 1px !important;
+  }
+
+  .slider-input,
+  .slider-input-readonly {
+    width: 64px;
+    margin-left: $sd-space-2;
+    text-align: center;
+    font-family: 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0 $sd-space-1;
+  }
+
+  .slider-input-readonly {
+    color: $sd-text-dim;
+    border-color: $sd-border;
+  }
+
+  // ---- Alerts, badges and progress ---------------------------------------
+
+  .alert {
+    padding: $sd-space-3 $sd-space-4;
+    border-radius: $sd-radius;
+    border: 1px solid $sd-border-strong;
+    background-color: $sd-surface-2;
+    color: $sd-text;
+    font-size: 0.8125rem;
+  }
+
+  .alert-primary {
+    border-color: rgba(253, 126, 20, 0.4);
+    background-color: $sd-primary-soft;
+    color: $sd-text;
+  }
+
+  .alert-success {
+    border-color: rgba(46, 184, 114, 0.4);
+    background-color: rgba(46, 184, 114, 0.14);
+    color: $sd-text;
+  }
+
+  .alert-danger {
+    border-color: rgba(229, 84, 75, 0.4);
+    background-color: rgba(229, 84, 75, 0.14);
+    color: $sd-text;
+  }
+
+  .progress {
+    height: 6px;
+    background-color: $sd-surface-3;
+    border-radius: 3px;
+  }
+
+  .progress-bar {
+    background-color: $sd-primary;
+  }
+
+  // ---- Tables ------------------------------------------------------------
+
+  .table {
+    color: $sd-text;
+
+    th,
+    td {
+      border-top-color: $sd-border;
+      padding: $sd-space-2 $sd-space-3;
+    }
+
+    thead th {
+      border-bottom-color: $sd-border;
+      color: $sd-text-muted;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Overlays
+//
+// Modals, dropdowns and popovers are rendered at body level.
+// ---------------------------------------------------------------------------
+
+.modal-full {
+  max-width: unset !important;
+  margin: $sd-space-5 !important;
+}
+
+// Make the modals appear in front of the threejs debug information boxes
+.modal {
+  z-index: 10001;
+
+  @include sd-chrome;
+}
+
+.modal-backdrop {
+  background-color: #05060a;
+
+  &.show {
+    opacity: 0.65;
+  }
+}
+
+.modal-content {
+  background-color: $sd-surface-1;
+  border: 1px solid $sd-border;
+  border-radius: $sd-radius-lg;
+  box-shadow: $sd-shadow-3;
+  overflow: hidden;
+}
+
+.modal-header {
+  align-items: center;
+  padding: $sd-space-3 $sd-space-5;
+  background-color: $sd-surface-2;
+  border-bottom: 1px solid $sd-border;
+}
+
+.modal-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $sd-text;
+  line-height: 1.4;
+}
+
+.modal-body {
+  padding: $sd-space-5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $sd-space-2;
+  padding: $sd-space-3 $sd-space-5;
+  background-color: transparent;
+  border-top: 1px solid $sd-border;
+
+  > * {
+    margin: 0;
+  }
+}
+
+// the simple dialogs render a .card inside the modal shell, so that card has to
+// stay flat and its header has to read as the dialog title
+.modal .card-modal .card {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.modal .card-modal .card-header {
+  padding: $sd-space-3 $sd-space-5;
+  font-size: 0.9375rem;
+}
+
+.modal .card-modal .card-body {
+  padding: $sd-space-5;
+}
+
+.modal .card-modal .card-footer {
+  padding: $sd-space-3 $sd-space-5;
+}
+
+.modal .close,
+.card-modal .close {
+  padding: 0;
+  margin: 0 0 0 auto;
+  width: 26px;
+  height: 26px;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  color: $sd-text-muted;
+  border-radius: $sd-radius-sm;
+  opacity: 1;
+  transition: color 0.12s ease, background-color 0.12s ease;
+
+  &:hover {
+    color: $sd-text;
+    background-color: $sd-surface-3;
+    opacity: 1;
+  }
+}
+
+.dropdown-menu {
+  // dropdown menus should appear over the 3d preview
+  z-index: 100000;
+  padding: $sd-space-1;
+  background-color: $sd-surface-2;
+  border: 1px solid $sd-border;
+  border-radius: $sd-radius;
+  box-shadow: $sd-shadow-2;
+  font-size: 0.8125rem;
+}
+
+.dropdown-item {
+  padding: 0.3125rem $sd-space-2;
+  border-radius: $sd-radius-sm;
+  color: $sd-text;
+
+  &:hover,
+  &:focus {
+    background-color: $sd-surface-3;
+    color: $sd-text;
+  }
+
+  &.active,
+  &:active {
+    background-color: $sd-primary;
+    color: #fff;
+  }
+
+  .fa {
+    color: $sd-text-muted;
+    margin-right: $sd-space-1;
+  }
+
+  &:hover .fa {
+    color: $sd-text;
+  }
+}
+
+.dropdown-divider {
+  border-top-color: $sd-border;
+}
+
+.popover {
+  background-color: $sd-surface-3;
+  border: 1px solid $sd-border-strong;
+  border-radius: $sd-radius;
+  box-shadow: $sd-shadow-2;
+  font-size: 0.75rem;
+}
+
+.popover-body {
+  padding: 0.3125rem $sd-space-2;
+  color: $sd-text;
+}
+
+.popover-header {
+  background-color: $sd-surface-4;
+  border-bottom-color: $sd-border-strong;
+  color: $sd-text;
+}
+
+.bs-popover-right > .arrow::after,
+.bs-popover-auto[x-placement^='right'] > .arrow::after {
+  border-right-color: $sd-surface-3;
+}
+
+.bs-popover-left > .arrow::after,
+.bs-popover-auto[x-placement^='left'] > .arrow::after {
+  border-left-color: $sd-surface-3;
+}
+
+.bs-popover-bottom > .arrow::after,
+.bs-popover-auto[x-placement^='bottom'] > .arrow::after {
+  border-bottom-color: $sd-surface-3;
+}
+
+.bs-popover-top > .arrow::after,
+.bs-popover-auto[x-placement^='top'] > .arrow::after {
+  border-top-color: $sd-surface-3;
+}
+
+.bs-popover-right > .arrow::before,
+.bs-popover-auto[x-placement^='right'] > .arrow::before {
+  border-right-color: $sd-border-strong;
+}
+
+.bs-popover-left > .arrow::before,
+.bs-popover-auto[x-placement^='left'] > .arrow::before {
+  border-left-color: $sd-border-strong;
+}
+
+.bs-popover-bottom > .arrow::before,
+.bs-popover-auto[x-placement^='bottom'] > .arrow::before {
+  border-bottom-color: $sd-border-strong;
+}
+
+.bs-popover-top > .arrow::before,
+.bs-popover-auto[x-placement^='top'] > .arrow::before {
+  border-top-color: $sd-border-strong;
+}
+
+// ---------------------------------------------------------------------------
+// Designer
+// ---------------------------------------------------------------------------
+
+#designer {
+  font-size: 0.8125rem;
+  color: $sd-text;
+  background-color: $sd-bg;
+
+  @include sd-chrome;
+
+  // -------------------------------------------------------------------------
+  // Layout
+  // -------------------------------------------------------------------------
+
+  // no row wrapping for the designer (it's not responsive anyway)
+  .row {
+    flex-wrap: unset;
+  }
+
+  .capability-container {
+    padding: 0;
+    /* Required to fix vertical scroll in Chrome and Firefox.
+        Also see: https://stackoverflow.com/questions/14962468/flexbox-and-vertical-scroll-in-a-full-height-app-using-newer-flexbox-api */
+    height: 0;
+  }
+
   /* Style the splitters */
+  .gutter {
+    background-color: transparent;
+    position: relative;
+
+    // a hairline in the middle of the gutter, so the panels read as separated
+    // without the gutter itself getting visually heavy
+    &::after {
+      content: '';
+      position: absolute;
+      background-color: transparent;
+      border-radius: 2px;
+      transition: background-color 0.15s ease;
+    }
+
+    &:hover::after {
+      background-color: $sd-border-strong;
+    }
+  }
+
   .gutter.gutter-horizontal {
     cursor: ew-resize;
+
+    &::after {
+      top: 25%;
+      bottom: 25%;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-50%);
+    }
   }
 
   .gutter.gutter-vertical {
     cursor: ns-resize;
+
+    &::after {
+      left: 25%;
+      right: 25%;
+      top: 50%;
+      height: 2px;
+      transform: translateY(-50%);
+    }
   }
 
   .split-horizontal,
@@ -161,120 +929,96 @@
     overflow-y: hidden;
     overflow-x: hidden;
   }
+
   /* The main panels */
   .panel {
     background-color: transparent;
   }
-  /* Sliders */
-  .slider {
+
+  .panel-body {
+    background-color: $sd-surface-2;
+  }
+
+  // -------------------------------------------------------------------------
+  // Navbar
+  // -------------------------------------------------------------------------
+
+  .navbar {
+    height: 34px;
+    padding: 0 $sd-space-2;
+    background-color: $sd-surface-1 !important;
+    border-bottom: 1px solid $sd-border;
+  }
+
+  .navbar-nav {
+    flex-direction: row !important;
+    align-items: center;
+  }
+
+  .navbar-expand-lg {
+    flex-flow: row nowrap !important;
+    justify-content: flex-start !important;
+  }
+
+  .nav-link {
     cursor: pointer;
   }
 
-  .slider-horizontal .slider-track {
-    height: 2px !important;
-    margin-top: -2px !important;
+  .navbar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 24px;
+    padding: 0 $sd-space-2 !important;
+    border-radius: $sd-radius-sm;
+    color: $sd-text-muted;
+    font-size: 0.8125rem;
+    transition: color 0.12s ease, background-color 0.12s ease;
+
+    &:hover,
+    &:focus {
+      color: $sd-text;
+      background-color: $sd-surface-3;
+    }
+
+    &.text-primary {
+      color: $sd-primary-text !important;
+
+      &:hover {
+        color: $sd-primary-hover !important;
+      }
+    }
   }
 
-  .slider-vertical .slider-track {
-    width: 2px !important;
-    margin-left: 4px !important;
+  .navbar .nav-item.show > .nav-link {
+    color: $sd-text;
+    background-color: $sd-surface-3;
   }
 
-  .slider-track,
-  .slider-track-low,
-  .slider-track-high,
-  .slider-selection {
-    background-color: white !important;
-    border-radius: 0 !important;
-    background-image: none !important;
-    box-shadow: none !important;
+  // bootstrap only makes navbar dropdowns absolute from the lg breakpoint up,
+  // which leaves them pushing the navbar apart on medium screens
+  .navbar-nav .dropdown-menu {
+    position: absolute;
+    float: none;
   }
 
-  .slider-handle {
-    width: 13px !important;
-    height: 13px !important;
-    background-color: white !important;
-    background-image: none !important;
-    border: 1px solid #303030;
+  .navbar .dropdown-toggle::after {
+    margin-left: 0.125rem;
+    opacity: 0.6;
   }
 
-  .slider-vertical .slider-handle {
-    margin-left: 4px !important;
+  // center the editable project name horizontally in the navbar
+  .navbar .project-name {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: $sd-text;
   }
 
-  .slider-horizontal .slider-handle {
-    margin-top: 2px !important;
-  }
-
-  .slider-input {
-    width: 35px;
-    margin-left: 8px;
-    text-align: center;
-  }
-
-  .slider-input-readonly {
-    width: 35px;
-    margin-left: 8px;
-    text-align: center;
-    color: darkgray;
-    border-color: gray;
-  }
-
-  .capability-container {
-    padding: 0;
-    /* Required to fix vertical scroll in Chrome and Firefox.
-        Also see: https://stackoverflow.com/questions/14962468/flexbox-and-vertical-scroll-in-a-full-height-app-using-newer-flexbox-api */
-    height: 0;
-  }
-
-  accordion-group > div {
-    border: none !important;
-  }
-  /* Popover */
-  .popover {
-    background-color: white;
-  }
-
-  .popover-body {
-    color: black;
-  }
-
-  .bs-popover-right .arrow::after,
-  .bs-popover-auto[x-placement^='right'] .arrow::after {
-    border-right-color: white;
-  }
-
-  .bs-popover-left .arrow::after,
-  .bs-popover-auto[x-placement^='left'] .arrow::after {
-    border-left-color: white;
-  }
-
-  .bs-popover-bottom .arrow::after,
-  .bs-popover-auto[x-placement^='bottom'] .arrow::after {
-    border-bottom-color: white;
-  }
-
-  .bs-popover-top .arrow::after,
-  .bs-popover-auto[x-placement^='top'] .arrow::after {
-    border-top-color: white;
-  }
-  /* Color wheel */
-  .iro__wheel,
-  .iro__slider {
-    cursor: pointer;
-  }
-  /* The pan-tilt-grid */
-  .pan-tilt-grid path {
-    fill: none;
-    stroke: white;
-    stroke-width: 10px;
-  }
-
-  .pan-tilt-grid circle {
-    fill: steelblue;
-    stroke: #fff;
-    stroke-width: 3px;
-  }
+  // -------------------------------------------------------------------------
+  // Capability rail and accordions
+  // -------------------------------------------------------------------------
 
   .capability {
     overflow: visible;
@@ -283,15 +1027,87 @@
   .capability-deactivated {
     opacity: 0.4;
   }
-  /* Wavesurfer */
+
+  // the vertical icon rail next to the capabilities
+  .nav-pills {
+    background-color: $sd-surface-1;
+    border: 1px solid $sd-border;
+    border-radius: $sd-radius-lg;
+    padding: $sd-space-1;
+    gap: 2px;
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      padding: 0 !important;
+      border-radius: $sd-radius;
+      color: $sd-text-muted;
+      transition: color 0.12s ease, background-color 0.12s ease;
+
+      &:hover {
+        color: $sd-text;
+        background-color: $sd-surface-3;
+      }
+    }
+
+    .nav-link.active,
+    .show > .nav-link {
+      background-color: $sd-primary-soft-strong;
+      color: $sd-primary-text;
+    }
+  }
+
+  .accordion-toggle .btn,
+  .accordion-toggle button {
+    padding: 0;
+  }
+
+  accordion-group > div {
+    border: none !important;
+  }
+
+  // -------------------------------------------------------------------------
+  // Color wheel
+  // -------------------------------------------------------------------------
+
+  .iro__wheel,
+  .iro__slider {
+    cursor: pointer;
+  }
+
+  // -------------------------------------------------------------------------
+  // Pan/tilt grid
+  // -------------------------------------------------------------------------
+
+  .pan-tilt-grid path {
+    fill: none;
+    stroke: $sd-text-muted;
+    stroke-width: 10px;
+  }
+
+  .pan-tilt-grid circle {
+    fill: $sd-primary;
+    stroke: $sd-surface-1;
+    stroke-width: 3px;
+  }
+
+  // -------------------------------------------------------------------------
+  // Wavesurfer
+  // -------------------------------------------------------------------------
+
   /* Display the regions in front of the played part*/
   .wavesurfer-region {
     z-index: 5 !important;
+    border-radius: $sd-radius-sm;
   }
 
   .wavesurfer-region[data-region-selected='true'] {
     z-index: 6 !important;
   }
+
   /* Style the presets */
   .wavesurfer-region[data-region-preset='true'] {
     height: 50% !important;
@@ -300,14 +1116,16 @@
 
   .wavesurfer-region[data-region-name]:after {
     content: attr(data-region-name);
-    margin-left: 20px;
+    margin-left: $sd-space-5;
+    font-size: 0.75rem;
   }
+
   /* Wavesurfer region handle styles */
   .wavesurfer-handle {
     width: 10px !important;
     max-width: 10px !important;
-    border: 1px solid #ddd;
-    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.15);
     box-sizing: border-box;
     opacity: 0;
     cursor: unset !important;
@@ -328,8 +1146,8 @@
     display: block;
     position: absolute;
     z-index: 1;
-    border-top: 1px solid #fff;
-    border-bottom: 1px solid #fff;
+    border-top: 1px solid rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.7);
     height: 4px;
     left: 5%;
     right: 5%;
@@ -340,6 +1158,7 @@
   .wavesurfer-handle:before {
     margin-top: -3px;
   }
+
   /* Allow scrolling of the wavesurfer timeline, but hide the scroll bars */
   timeline {
     overflow: scroll !important;
@@ -352,17 +1171,19 @@
   timeline::-webkit-scrollbar {
     height: 0 !important;
   }
+
   /* Display the wavesurfer cursor over the timeline */
   cursor {
     top: -20px !important;
   }
+
   /* Change the progress line color and add the cursor */
   wave {
-    border-right-color: #fd7e14 !important;
+    border-right-color: $sd-primary !important;
     cursor: col-resize;
 
     canvas {
-      opacity: 0.2;
+      opacity: 0.35;
     }
   }
 }

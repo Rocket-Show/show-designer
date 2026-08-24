@@ -18,11 +18,10 @@
     <div class="d-flex h-100 mr-3" style="flex-direction: column">
       <div class="mb-4 w-100 d-flex">
         <input
-          class="mx-auto"
+          class="mx-auto sd-value-input"
           type="text"
           [ngModel]="getValueTextPan() >= 0 ? getValueTextPan() : 0"
           (ngModelChange)="setValuePan($event / 100)"
-          style="width: 42px; height: 20px; text-align: center; font-size: 12px; font-family: monospace"
         />
       </div>
 
@@ -45,11 +44,10 @@
     <div class="d-flex h-100" style="flex-direction: column">
       <div class="mb-4 w-100 d-flex">
         <input
-          class="mx-auto"
+          class="mx-auto sd-value-input"
           type="text"
           [ngModel]="getValueTextTilt() >= 0 ? getValueTextTilt() : 0"
           (ngModelChange)="setValueTilt($event / 100)"
-          style="width: 42px; height: 20px; text-align: center; font-size: 12px; font-family: monospace"
         />
       </div>
 

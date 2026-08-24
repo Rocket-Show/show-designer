@@ -11,7 +11,7 @@
           class="mr-3"
           [ngModel]="timelineService.selectedCompositionIndex"
           (ngModelChange)="selectComposition($event)"
-          style="width: 150px; height: 30px"
+          style="width: 150px"
         >
           @for (composition of projectService.project.compositions; track composition; let i = $index) {
           <option [value]="i">
@@ -57,10 +57,17 @@
         <div class="my-auto mr-3">
           <input
             type="text"
+            class="sd-value-input sd-value-input-time"
             [ngModel]="timelineService.selectedPlaybackRegion?.startMillis"
             (ngModelChange)="setRegionStartMillis($event)"
           />
-          - <input type="text" [ngModel]="timelineService.selectedPlaybackRegion?.endMillis" (ngModelChange)="setRegionEndMillis($event)" />
+          -
+          <input
+            type="text"
+            class="sd-value-input sd-value-input-time"
+            [ngModel]="timelineService.selectedPlaybackRegion?.endMillis"
+            (ngModelChange)="setRegionEndMillis($event)"
+          />
         </div>
         <a
           href="#"
