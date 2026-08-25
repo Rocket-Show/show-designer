@@ -4,7 +4,7 @@
     <div class="m-3">
       <accordion [closeOthers]="true">
         @for (item of presetService.selectedPreset.effects; track item; let i = $index) {
-        <accordion-group [isOpen]="effectService.selectedEffect == item" (isOpenChange)="openEffect(item, $event)" style="margin-top: 1px">
+        <accordion-group [isOpen]="effectService.selectedEffect == item" (isOpenChange)="openEffect(item, $event)">
           <button class="btn btn-link btn-block clearfix" accordion-heading>
             <div class="pull-left float-left d-flex w-100">
               @if (item.type == 'curve') {

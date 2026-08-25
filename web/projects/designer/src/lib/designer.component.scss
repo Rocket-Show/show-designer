@@ -161,7 +161,23 @@
   }
 
   .btn-group > .btn {
-    border-radius: $sd-radius;
+    border-radius: 0;
+
+    &:first-child {
+      border-top-left-radius: $sd-radius;
+      border-bottom-left-radius: $sd-radius;
+    }
+
+    &:last-child {
+      border-top-right-radius: $sd-radius;
+      border-bottom-right-radius: $sd-radius;
+    }
+  }
+
+  // hairline between adjacent buttons, so a run of same-coloured buttons still
+  // reads as separate controls
+  .btn-group > .btn + .btn {
+    border-left: 1px solid rgba(0, 0, 0, 0.25);
   }
 
   // ---- Form controls -----------------------------------------------------
@@ -191,6 +207,11 @@
       color: $sd-text;
       box-shadow: none;
       outline: none;
+    }
+
+    // :focus above clears the ring for mouse use, so put it back for the keyboard
+    &:focus-visible {
+      box-shadow: $sd-focus-ring;
     }
 
     &:disabled,
@@ -245,6 +266,9 @@
   // small numeric / hex readouts next to the faders
   .sd-value-input {
     width: 64px;
+    // the master dimmer pane can be narrower than the field's own width
+    min-width: 0;
+    max-width: 100%;
     text-align: center;
     font-family: 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
     font-size: 0.75rem;
@@ -393,6 +417,9 @@
     background-color: transparent;
     border: none;
     border-bottom: 1px solid $sd-border;
+    // the card clips to its own radius, so a rounded first/last row would only
+    // show as a notch against the card's square inner edge
+    border-radius: 0;
     color: $sd-text;
     white-space: nowrap;
     transition: background-color 0.12s ease;
@@ -447,6 +474,10 @@
   }
 
   .list-sort-handle {
+    // the handle sits in a bootstrap column, whose 15px gutter would indent the
+    // row well past the panel header's own padding
+    padding-left: 0;
+    padding-right: $sd-space-2;
     color: $sd-text-dim;
 
     &:hover {
@@ -490,10 +521,6 @@
     cursor: pointer;
   }
 
-  .slider.slider-horizontal {
-    height: 20px;
-  }
-
   .slider-track,
   .slider-track-low,
   .slider-track-high,
@@ -528,19 +555,9 @@
     }
   }
 
-  .slider-horizontal .slider-track {
-    height: 4px !important;
-    margin-top: -2px !important;
-  }
-
-  .slider-vertical .slider-track {
-    width: 4px !important;
-    margin-left: 4px !important;
-  }
-
   .slider-handle {
-    width: 14px !important;
-    height: 14px !important;
+    width: $sd-slider-handle-size !important;
+    height: $sd-slider-handle-size !important;
     background-color: #eef1f5 !important;
     background-image: none !important;
     border: none;
@@ -553,12 +570,37 @@
     }
   }
 
-  .slider-vertical .slider-handle {
-    margin-left: -1px !important;
+  // bootstrap-slider's own metrics assume a 10 px track and a 20 px handle and
+  // centre them with hard-coded margins. Recentre both on the slider's midline
+  // instead, so the handle sits on the track at our sizes.
+  .slider.slider-horizontal {
+    height: 20px;
+
+    .slider-track {
+      height: $sd-slider-track-size !important;
+      top: 50% !important;
+      margin-top: (-$sd-slider-track-size * 0.5) !important;
+    }
+
+    .slider-handle {
+      top: 50% !important;
+      margin-top: (-$sd-slider-handle-size * 0.5) !important;
+      margin-left: (-$sd-slider-handle-size * 0.5) !important;
+    }
   }
 
-  .slider-horizontal .slider-handle {
-    margin-top: 1px !important;
+  .slider.slider-vertical {
+    .slider-track {
+      width: $sd-slider-track-size !important;
+      left: 50% !important;
+      margin-left: (-$sd-slider-track-size * 0.5) !important;
+    }
+
+    .slider-handle {
+      left: 50% !important;
+      margin-left: (-$sd-slider-handle-size * 0.5) !important;
+      margin-top: (-$sd-slider-handle-size * 0.5) !important;
+    }
   }
 
   .slider-input,
@@ -939,6 +981,12 @@
     background-color: $sd-surface-2;
   }
 
+  // the master dimmer is the narrowest pane, so it gets tighter side padding
+  #masterDimmer .card-body {
+    padding-left: $sd-space-2;
+    padding-right: $sd-space-2;
+  }
+
   // -------------------------------------------------------------------------
   // Navbar
   // -------------------------------------------------------------------------
@@ -1060,13 +1108,119 @@
     }
   }
 
-  .accordion-toggle .btn,
-  .accordion-toggle button {
-    padding: 0;
+  // a rail that butts against the panel it switches, rather than floating next
+  // to it: rounded on the outside only, sharing its right edge with the panel
+  .nav-pills.nav-pills-attached {
+    border-radius: $sd-radius-lg 0 0 $sd-radius-lg;
   }
 
-  accordion-group > div {
-    border: none !important;
+  // hairline above an icon that belongs to its own group
+  .nav-pills .nav-link.nav-link-divider {
+    position: relative;
+    margin-top: $sd-space-2;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: 3px;
+      right: 3px;
+      height: 1px;
+      background-color: $sd-border;
+    }
+  }
+
+  // the 3d preview fills its card with a square canvas, which would otherwise
+  // paint over the card's rounded corners
+  #preview .card {
+    overflow: hidden;
+  }
+
+  // the tab panel is attached to the rail, so it has to start at the pane's own
+  // left edge: no pane padding, and no negative row gutter pulling it further
+  #capabilities > .row {
+    margin-left: 0;
+  }
+
+  // the tab panel the main rail is attached to
+  #capabilities .tab-pane > * > .card {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  // the header is a flex row, so the accordion's title wrapper has to grow for
+  // the heading's own right-aligned actions to reach the edge
+  .card-header .panel-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // ngx-bootstrap renders every accordion group as a card, so its heading
+  // button arrives inside a .card-header and would otherwise be squashed into
+  // the square icon button meant for panel header actions
+  .accordion-toggle .btn,
+  .accordion-toggle button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    color: $sd-text;
+    text-align: left;
+
+    // the header itself provides the hover feedback; without this the button
+    // lights up as an inset lighter block that does not fill the header
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: transparent;
+      box-shadow: none;
+      color: $sd-text;
+    }
+  }
+
+  // stacked accordion items should read as one list, not a pile of separately
+  // rounded pills, so only the outer corners of the whole stack are rounded
+  accordion-group {
+    display: block;
+
+    .card {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background-color: transparent;
+      // the body can be wider than the panel and has to stay scrollable
+      overflow: visible;
+    }
+
+    .card-header {
+      border-radius: 0;
+      cursor: pointer;
+      transition: background-color 0.12s ease;
+
+      &:hover {
+        background-color: $sd-surface-3;
+      }
+    }
+
+    + accordion-group .card-header {
+      border-top: 1px solid $sd-border;
+    }
+
+    &:first-of-type .card-header {
+      border-top-left-radius: $sd-radius-lg;
+      border-top-right-radius: $sd-radius-lg;
+    }
+
+    // the last header only closes off the stack while its own body is collapsed
+    &:last-of-type:not(.panel-open) .card-header {
+      border-bottom-left-radius: $sd-radius-lg;
+      border-bottom-right-radius: $sd-radius-lg;
+    }
   }
 
   // -------------------------------------------------------------------------

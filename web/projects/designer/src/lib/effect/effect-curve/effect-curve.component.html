@@ -1,4 +1,4 @@
-<div class="mr-3" style="float: left">
+<div class="mr-3">
   <div class="mb-2">
     <select [ngModel]="curve.curveType" (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()" style="width: 200px">
       <option [value]="'sine'">
@@ -20,7 +20,7 @@
   </div>
 </div>
 
-<div class="mr-4" style="float: left">
+<div class="mr-4">
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ 'designer.effect.curve-length' | translate }}
@@ -134,8 +134,8 @@
 </div>
 
 <!-- Menu for the capabilities and channels-->
-<div class="col col-auto p-0" style="margin-right: 1px; width: 50px; float: left">
-  <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+<div class="col col-auto p-0 effect-tab-rail">
+  <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     <a
       class="nav-link px-3 active"
       id="v-pills-effect-capabilities-tab"
@@ -169,7 +169,7 @@
   </div>
 </div>
 
-<div class="h-100" class="applying-to">
+<div class="applying-to">
   <div class="tab-content h-100" id="v-pills-tabContent">
     <div class="tab-pane h-100 show active" id="v-pills-effect-capabilities-{{ curve?.uuid }}" role="tabpanel">
       <!-- Capabilities-->

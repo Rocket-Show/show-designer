@@ -1,8 +1,8 @@
 <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('timeline')">
   <div class="card-body h-100 d-flex" style="flex-flow: column; overflow: unset">
     <div class="d-flex pb-3">
-      <div class="btn-group mr-3 my-auto" role="group" style="float: left">
-        <a href="#" class="btn btn-primary m-0 p-1 mr-3" (click)="addComposition(); (false)"
+      <div class="d-flex mr-3 my-auto" style="float: left">
+        <a href="#" class="btn btn-secondary m-0 p-1 mr-3" (click)="addComposition(); (false)"
           ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i
         ></a>
 
@@ -20,7 +20,29 @@
           }
         </select>
         } @if (timelineService.selectedComposition) {
-        <div class="d-flex">
+        <div class="btn-group mr-3" role="group">
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="removeComposition(); (false)"
+            popover="{{ 'designer.timeline.remove-composition' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-trash-o" aria-hidden="true"></i
+          ></a>
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="compositionSettings(); (false)"
+            popover="{{ 'designer.timeline.composition-settings' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-cog" aria-hidden="true"></i
+          ></a>
+        </div>
+        <div class="btn-group" role="group">
           <a href="#" class="btn btn-primary m-0 p-1" (click)="rewind(); (false)"
             ><i class="fa fa-step-backward fa-fw" aria-hidden="true"></i
           ></a>
@@ -69,55 +91,37 @@
             (ngModelChange)="setRegionEndMillis($event)"
           />
         </div>
-        <a
-          href="#"
-          class="btn btn-secondary m-0 py-1 mr-3"
-          (click)="openGridSettings(); (false)"
-          popover="{{ 'designer.timeline.grid' | translate }}"
-          container="body"
-          placement="top"
-          triggers="mouseenter:mouseleave"
-          ><i class="fa fa-th" aria-hidden="true"></i
-        ></a>
-        <a
-          href="#"
-          class="btn btn-secondary m-0 py-1 mr-3"
-          (click)="removeRegion(); (false)"
-          popover="{{ 'designer.timeline.remove-region' | translate }}"
-          container="body"
-          placement="top"
-          triggers="mouseenter:mouseleave"
-          ><i class="fa fa-minus-circle" aria-hidden="true"></i
-        ></a>
-        <a
-          href="#"
-          class="btn btn-secondary m-0 py-1 mr-3"
-          (click)="addRegion(); (false)"
-          popover="{{ 'designer.timeline.add-region' | translate }}"
-          container="body"
-          placement="top"
-          triggers="mouseenter:mouseleave"
-          ><i class="fa fa-plus-circle" aria-hidden="true"></i
-        ></a>
-        <a
-          href="#"
-          class="btn btn-secondary m-0 py-1 mr-3"
-          (click)="removeComposition(); (false)"
-          popover="{{ 'designer.timeline.remove-composition' | translate }}"
-          container="body"
-          placement="top"
-          triggers="mouseenter:mouseleave"
-          ><i class="fa fa-trash-o" aria-hidden="true"></i
-        ></a>
+        <div class="btn-group mr-3" role="group">
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="addRegion(); (false)"
+            popover="{{ 'designer.timeline.add-region' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-file-o" aria-hidden="true"></i
+          ></a>
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="removeRegion(); (false)"
+            popover="{{ 'designer.timeline.remove-region' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-trash" aria-hidden="true"></i
+          ></a>
+        </div>
         <a
           href="#"
           class="btn btn-secondary m-0 py-1"
-          (click)="compositionSettings(); (false)"
-          popover="{{ 'designer.timeline.composition-settings' | translate }}"
+          (click)="openGridSettings(); (false)"
+          popover="{{ 'designer.timeline.grid' | translate }}"
           container="body"
           placement="left"
           triggers="mouseenter:mouseleave"
-          ><i class="fa fa-cog" aria-hidden="true"></i
+          ><i class="fa fa-th" aria-hidden="true"></i
         ></a>
       </div>
       }

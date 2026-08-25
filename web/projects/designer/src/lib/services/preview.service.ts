@@ -13,6 +13,15 @@ import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
 import { TimelineService } from './timeline.service';
 
+// Colours for the 3d preview. These mirror the design tokens in
+// lib/styles/_tokens.scss, which SCSS cannot hand to three.js.
+export const PREVIEW_BACKGROUND_COLOR = 0x131519; // --sd-bg
+export const PREVIEW_STAGE_COLOR = 0x0f1115;
+export const PREVIEW_FIXTURE_COLOR = 0x0f1115;
+export const PREVIEW_FIXTURE_EMISSIVE = 0x0d0e11;
+export const PREVIEW_FIXTURE_SELECTED_COLOR = 0x7a3a05; // --sd-primary, darkened
+export const PREVIEW_FIXTURE_SELECTED_EMISSIVE = 0xfd7e14; // --sd-primary
+
 @Injectable({
   providedIn: 'root',
 })
@@ -38,17 +47,17 @@ export class PreviewService implements OnDestroy {
     private projectService: ProjectService
   ) {
     this.stageMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0d0d0d,
+      color: PREVIEW_STAGE_COLOR,
       // roughness: 0.5,
       // metalness: 0.5,
     });
     this.fixtureMaterial = new THREE.MeshLambertMaterial({
-      color: 0x0d0d0d,
-      emissive: 0x0d0d0d,
+      color: PREVIEW_FIXTURE_COLOR,
+      emissive: PREVIEW_FIXTURE_EMISSIVE,
     });
     this.fixtureSelectedMaterial = new THREE.MeshLambertMaterial({
-      color: 0x660066,
-      emissive: 0xaa00aa,
+      color: PREVIEW_FIXTURE_SELECTED_COLOR,
+      emissive: PREVIEW_FIXTURE_SELECTED_EMISSIVE,
       emissiveIntensity: 0.000000000000000000001,
     });
     this.updateStageAndPositionsSubscription = this.doUpdateStageAndPositions.subscribe(() => {

@@ -207,7 +207,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   private calcTotalMenuHeight() {
-    this.totalMenuHeightPx = this.designerMenuSizePx + this.splitGutterSizePx + this.configService.menuHeightPx;
+    // split.js already subtracts the gutters from the rows themselves, so
+    // reserving another gutter here only left dead space under the timeline
+    this.totalMenuHeightPx = this.designerMenuSizePx + this.configService.menuHeightPx;
   }
 
   private onResize() {

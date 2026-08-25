@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
-import { PreviewService } from '../services/preview.service';
+import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
 import { TimelineService } from '../services/timeline.service';
 import { Positioning } from './../models/fixture';
@@ -302,7 +302,8 @@ export class PreviewComponent implements AfterViewInit {
   }
 
   private setupScene() {
-    // this.scene.background = new THREE.Color(0x080808);
+    // match the surrounding panels instead of the renderer's default black
+    this.scene.background = new THREE.Color(PREVIEW_BACKGROUND_COLOR);
     // this.scene.fog	= new THREE.FogExp2( 0x000000, 0.1 );
 
     this.previewService.scene = this.scene;

@@ -60,6 +60,12 @@ $sd-control-height: 28px;
 $sd-control-height-sm: 22px;
 $sd-row-height: 28px;
 
+// Slider metrics. Both the track and the handle are centred on the slider's
+// own axis, so these two can change independently without knocking the handle
+// off the track.
+$sd-slider-track-size: 4px;
+$sd-slider-handle-size: 14px;
+
 // Elevation
 $sd-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
 $sd-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
