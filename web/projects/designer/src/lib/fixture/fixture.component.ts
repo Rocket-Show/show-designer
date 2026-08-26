@@ -61,12 +61,13 @@ export class FixtureComponent implements OnInit, OnDestroy {
     );
   }
 
-  switchGlobalFixtureOrder(useGlobalFixtureOrder: boolean) {
+  // the preset either brings its own fixture order or follows the global one of the project
+  switchCustomFixtureOrder(customFixtureOrder: boolean) {
     if (!this.presetService.selectedPreset) {
       return;
     }
 
-    this.presetService.setUseGlobalFixtureOrder(this.presetService.selectedPreset, useGlobalFixtureOrder);
+    this.presetService.setUseGlobalFixtureOrder(this.presetService.selectedPreset, !customFixtureOrder);
     this.updateOtherFixtures();
   }
 

@@ -106,7 +106,7 @@
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
-      "global-order": "Global order",
+      "custom-order": "Custom order",
       "no-fixtures-selected": "Select at least one fixture for this preset",
       "no-capabilities-available": "There are no capabilities available for the selected fixtures. Please use the channels-tab.",
       "no-fixtures-settings-selected": "Select at least one fixture",
