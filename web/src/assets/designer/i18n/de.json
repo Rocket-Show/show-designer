@@ -107,6 +107,8 @@
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
       "custom-order": "Eigene Reihenfolge",
+      "select-none": "Nichts auswählen",
+      "select-all": "Alle auswählen",
       "no-fixtures-selected": "Wähle für dieses Preset mindestens eine Fixture aus",
       "no-capabilities-available": "Für die ausgewählten Fixtures sind keine Fähigkeiten verfügbar. Bitte benutze den Channels-Tab.",
       "no-fixtures-settings-selected": "Wähle mindestens ein Fixture aus",

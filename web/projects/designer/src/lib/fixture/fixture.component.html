@@ -1,26 +1,48 @@
 <div class="card border-secondary h-100 panel" [class.card-intro-active]="introService.showStep('fixtures')">
   <div class="card-header d-flex">
     <div>Fixtures</div>
-    <div class="ml-auto d-flex">
+    <div class="ml-auto">
       @if (presetService.selectedPreset && !fixtureService.settingsSelection) {
-      <div class="form-check my-auto mr-2">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="customFixtureOrder"
-          [ngModel]="!presetService.selectedPreset.useGlobalFixtureOrder"
-          (ngModelChange)="switchCustomFixtureOrder($event)"
-        />
-        <label class="form-check-label" for="customFixtureOrder">{{ 'designer.fixture.custom-order' | translate }}</label>
-      </div>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        [class.text-primary]="usePresetOrder()"
+        popover="{{ 'designer.fixture.custom-order' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="switchCustomFixtureOrder(!usePresetOrder()); (false)"
+        ><i class="fa fa-list-ol fa-fw" aria-hidden="true"></i
+      ></a>
       }
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="selectNone(); (false)"
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.fixture.select-none' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="selectNone(); (false)"
         ><i class="fa fa-square-o fa-fw" aria-hidden="true"></i
       ></a>
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="selectAll(); (false)"
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.fixture.select-all' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="selectAll(); (false)"
         ><i class="fa fa-check-square-o fa-fw" aria-hidden="true"></i
       ></a>
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="openFixturePool(); (false)"
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.navigation.fixture-pool' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="openFixturePool(); (false)"
         ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
       ></a>
     </div>

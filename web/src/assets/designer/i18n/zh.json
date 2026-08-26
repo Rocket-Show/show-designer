@@ -107,6 +107,8 @@
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
       "custom-order": "自定义顺序",
+      "select-none": "取消全选",
+      "select-all": "全选",
       "no-fixtures-selected": "请为此预设至少选择一个灯具",
       "no-capabilities-available": "所选灯具没有可用功能。请使用通道选项卡。",
       "no-fixtures-settings-selected": "请至少选择一个灯具",

@@ -107,6 +107,8 @@
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",
       "custom-order": "Orden personalizado",
+      "select-none": "No seleccionar ninguno",
+      "select-all": "Seleccionar todos",
       "no-fixtures-selected": "Selecciona al menos un fixture para este preajuste",
       "no-capabilities-available": "No hay capacidades disponibles para los fixtures seleccionados. Por favor usa la pestaña de canales.",
       "no-fixtures-settings-selected": "Selecciona al menos un fixture",
