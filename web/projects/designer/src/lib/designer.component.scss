@@ -833,6 +833,10 @@
   border-radius: $sd-radius;
   box-shadow: $sd-shadow-2;
   font-size: 0.75rem;
+  // the popovers only explain the icon they belong to and are shown while hovering
+  // it. Without this, they swallow the clicks for whatever they cover, e.g. the
+  // first row of the list below a panel header.
+  pointer-events: none;
 }
 
 .popover-body {

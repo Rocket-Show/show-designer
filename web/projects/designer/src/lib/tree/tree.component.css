@@ -19,6 +19,8 @@
   padding-left: var(--tree-indent, 4px);
   padding-right: var(--sd-space-1);
   border-radius: var(--sd-radius-sm);
+  /* keep the rounded rows apart, so neighbouring selected ones stay distinguishable */
+  margin-bottom: 2px;
   color: var(--sd-text);
   cursor: pointer;
   white-space: nowrap;
@@ -84,11 +86,11 @@
 }
 
 .tree-node.drop-before::before {
-  top: -1px;
+  top: -2px;
 }
 
 .tree-node.drop-after::after {
-  bottom: -1px;
+  bottom: -2px;
 }
 
 .tree-node.drop-inside {
