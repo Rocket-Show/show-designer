@@ -415,8 +415,8 @@ export class TimelineService {
     setTimeout(() => {
       this.waveSurfer = WaveSurfer.create({
         container: '#waveform',
-        waveColor: 'white',
-        progressColor: 'white',
+        waveColor: '#8b939e',
+        progressColor: '#8b939e',
         // barWidth: 2,
         height: 1,
         interact: false,
@@ -443,8 +443,8 @@ export class TimelineService {
           }),
           TimeLinePlugin.create({
             container: '#waveform-timeline',
-            primaryFontColor: '#fff',
-            secondaryFontColor: '#fff',
+            primaryFontColor: '#99a1ac',
+            secondaryFontColor: '#6b7280',
             offset: this.getSnapToGridOffset(),
             formatTimeCallback: this.formatTimeCallback.bind(this),
             timeInterval: this.timeInterval.bind(this),

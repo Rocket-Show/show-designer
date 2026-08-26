@@ -1,17 +1,39 @@
 .curve-grid {
-  background-color: black;
-  border: 1px solid white;
+  background-color: var(--sd-bg);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius);
+}
+
+/* the columns are laid out as a flex row so they all take the height of the
+   tallest one, rather than each sizing to its own content */
+:host {
+  display: flex;
+  align-items: stretch;
 }
 
 .applying-to {
-  overflow-y: scroll;
-  height: 130px !important;
-  background-color: #222;
-  border: 1px solid white;
-  padding: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* a definite cross size comes from the stretch, so this can scroll */
+  overflow-y: auto;
+  background-color: var(--sd-surface-2);
+  border: 1px solid var(--sd-border);
+  /* square on the left: the rail is attached there */
+  border-radius: 0 var(--sd-radius-lg) var(--sd-radius-lg) 0;
+  padding: var(--sd-space-2);
+}
+
+.effect-tab-rail {
+  flex: 0 0 auto;
+  /* pull the panel over the rail's right border so they share one divider */
+  margin-right: -1px;
+}
+
+.effect-tab-rail .nav-pills {
+  height: 100%;
 }
 
 /* fix padding bottom in overflow */
 .applying-to .form-check:last-child {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sd-space-2);
 }

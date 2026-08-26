@@ -6,13 +6,7 @@
     </div>
 
     <div class="mb-4 w-100 d-flex">
-      <input
-        class="mx-auto"
-        type="text"
-        [ngModel]="getValue()"
-        (ngModelChange)="setValue($event / 100)"
-        style="width: 42px; height: 23px; text-align: center; font-size: 12px; font-family: monospace"
-      />
+      <input class="mx-auto sd-value-input" type="text" [ngModel]="getValue()" (ngModelChange)="setValue($event / 100)" />
     </div>
 
     <div class="h-100 w-100 d-flex">
@@ -52,13 +46,7 @@
     </div>
 
     <div class="mb-4 d-flex my-auto">
-      <input
-        class="mx-auto"
-        type="text"
-        [ngModel]="getValue()"
-        (ngModelChange)="setValue($event / 100)"
-        style="width: 42px; height: 23px; text-align: center; font-size: 12px; font-family: monospace"
-      />
+      <input class="mx-auto sd-value-input" type="text" [ngModel]="getValue()" (ngModelChange)="setValue($event / 100)" />
     </div>
   </div>
 </div>

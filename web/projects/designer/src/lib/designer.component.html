@@ -4,10 +4,7 @@
 <!-- <div style="height: calc(100% - 33px)"> -->
 <div id="designer" [ngStyle]="{ height: 'calc(100% - ' + totalMenuHeightPx + 'px)' }">
   <!-- Navigation -->
-  <nav
-    class="navbar navbar-expand-lg navbar-light bg-light border-secondary"
-    style="border-bottom: 1px solid #444; height: 20px; z-index: 9999"
-  >
+  <nav class="navbar navbar-expand-lg navbar-light bg-light" style="z-index: 9999">
     <!-- Menu buttons -->
     <ul class="navbar-nav mr-auto">
       <li class="nav-item dropdown">
@@ -70,6 +67,16 @@
         </div>
       </li>
     </ul>
+
+    <!-- Project name shown in the middle, editable inline -->
+    @if (projectService.project) {
+    <lib-app-inline-edit
+      class="project-name d-none d-md-inline-flex"
+      [value]="projectService.project.name"
+      [placeholder]="'designer.project.name' | translate"
+      (valueChange)="setProjectName($event)"
+    ></lib-app-inline-edit>
+    }
 
     <ul class="navbar-nav">
       @if (configService.shareAvailable) {
@@ -148,8 +155,8 @@
     <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
       <!-- Menu for the capabilities, channels, effects and settings -->
       @if (projectService.project) {
-      <div class="col col-auto p-0" style="margin-right: -1px">
-        <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+      <div class="col col-auto p-0 h-100" style="margin-right: -1px">
+        <div class="nav flex-column nav-pills nav-pills-attached h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
           <a
             class="nav-link px-3 active"
             (click)="openTab('capabilities')"
@@ -199,7 +206,7 @@
             <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
           </a>
           <a
-            class="nav-link px-3"
+            class="nav-link px-3 nav-link-divider"
             (click)="openTab('settings')"
             id="v-pills-settings-tab"
             popover="{{ 'designer.misc.settings' | translate }}"
@@ -211,7 +218,6 @@
             role="tab"
             aria-controls="v-pills-settings"
             aria-selected="false"
-            style="border-top: 1px solid #444"
           >
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
           </a>
@@ -219,7 +225,7 @@
       </div>
       }
 
-      <div id="capabilities" class="split split-horizontal h-100" style="padding-left: 1rem">
+      <div id="capabilities" class="split split-horizontal h-100">
         @if (projectService.project) {
         <div class="row h-100">
           <!-- Content for the capabilities, channels, effects and settings -->
@@ -259,7 +265,7 @@
     </div>
 
     <!-- Timeline -->
-    <div id="row3" class="split split-vertical clearfix px-3 pb-3" style="padding-bottom: 20px">
+    <div id="row3" class="split split-vertical clearfix px-3 pb-3">
       @if (projectService.project) {
       <lib-app-timeline></lib-app-timeline>
       }

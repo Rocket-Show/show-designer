@@ -107,7 +107,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   // the size of the menu used in the designer
-  private designerMenuSizePx = 20;
+  private designerMenuSizePx = 34;
 
   private splitGutterSizePx = 13;
 
@@ -207,7 +207,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   private calcTotalMenuHeight() {
-    this.totalMenuHeightPx = this.designerMenuSizePx + this.splitGutterSizePx + this.configService.menuHeightPx;
+    // split.js already subtracts the gutters from the rows themselves, so
+    // reserving another gutter here only left dead space under the timeline
+    this.totalMenuHeightPx = this.designerMenuSizePx + this.configService.menuHeightPx;
   }
 
   private onResize() {
@@ -272,6 +274,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   openFixturePool() {
     this.fixturePoolService.open();
+  }
+
+  setProjectName(name: string) {
+    if (this.projectService.project) {
+      this.projectService.project.name = name;
+    }
   }
 
   projectNew() {

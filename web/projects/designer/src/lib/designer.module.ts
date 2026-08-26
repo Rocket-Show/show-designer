@@ -52,6 +52,7 @@ import { WarningDialogComponent } from './warning-dialog/warning-dialog.componen
 import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
+import { InlineEditComponent } from './inline-edit/inline-edit.component';
 
 @NgModule({
   declarations: [
@@ -96,6 +97,7 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     DropzoneComponent,
     SortablejsDirective,
     TreeComponent,
+    InlineEditComponent,
   ],
   exports: [DesignerComponent],
   imports: [

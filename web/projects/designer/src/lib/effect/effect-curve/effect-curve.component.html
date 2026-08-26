@@ -1,10 +1,6 @@
-<div class="mr-3" style="float: left">
+<div class="mr-3">
   <div class="mb-2">
-    <select
-      [ngModel]="curve.curveType"
-      (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()"
-      style="width: 200px; height: 20px"
-    >
+    <select [ngModel]="curve.curveType" (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()" style="width: 200px">
       <option [value]="'sine'">
         {{ 'designer.effect.curve-sine' | translate }}
       </option>
@@ -27,7 +23,7 @@
   </div>
 </div>
 
-<div class="mr-4" style="float: left">
+<div class="mr-4">
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ 'designer.effect.curve-length' | translate }}
@@ -80,7 +76,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.position"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="percentageMin"
         [max]="percentageMax"
@@ -101,7 +97,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phaseMillis"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phaseMillisMin"
         [max]="phaseMillisMax"
@@ -125,7 +121,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phasingCycles"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phasingCyclesMin"
         [max]="phasingCyclesMax"
@@ -140,7 +136,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phasingMillis"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phasingMillisMin"
         [max]="phasingMillisMax"
@@ -152,7 +148,7 @@
     </div>
     }
     <div class="my-auto ml-1">
-      <select [ngModel]="curve.phasingMode" (ngModelChange)="setPhasingMode($event)" style="height: 20px">
+      <select [ngModel]="curve.phasingMode" (ngModelChange)="setPhasingMode($event)">
         <option [value]="'millis'">
           {{ 'designer.misc.ms' | translate }}
         </option>
@@ -171,7 +167,7 @@
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
         [(value)]="curve.phasingGroupSize"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phasingGroupSizeMin"
         [max]="phasingGroupSizeMax"
@@ -185,8 +181,8 @@
 </div>
 
 <!-- Menu for the capabilities and channels-->
-<div class="col col-auto p-0" style="margin-right: 1px; width: 50px; float: left">
-  <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+<div class="col col-auto p-0 effect-tab-rail">
+  <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     <a
       class="nav-link px-3 active"
       id="v-pills-effect-capabilities-tab"
@@ -220,7 +216,7 @@
   </div>
 </div>
 
-<div class="h-100" class="applying-to">
+<div class="applying-to">
   <div class="tab-content h-100" id="v-pills-tabContent">
     <div class="tab-pane h-100 show active" id="v-pills-effect-capabilities-{{ curve?.uuid }}" role="tabpanel">
       <!-- Capabilities-->

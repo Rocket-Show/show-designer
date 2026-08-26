@@ -19,11 +19,10 @@
   <div class="card-body h-100 d-flex" style="flex-direction: column">
     <div class="mb-4 w-100 d-flex">
       <input
-        class="mx-auto"
+        class="mx-auto sd-value-input"
         type="text"
         [ngModel]="getValueText() >= 0 ? getValueText() : 0"
         (ngModelChange)="setValue($event / 100)"
-        style="width: 42px; height: 20px; text-align: center; font-size: 12px; font-family: monospace"
       />
     </div>
 

@@ -1,0 +1,40 @@
+.inline-edit {
+  // keep the whole control on a single line and vertically centered
+  line-height: 1;
+
+  .inline-edit-value,
+  .inline-edit-input {
+    // both modes use the same metrics, so switching them does not move anything
+    font: inherit;
+    line-height: 1;
+    padding: 1px 4px;
+    border: 1px solid transparent;
+    max-width: 300px;
+  }
+
+  .inline-edit-value {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: text;
+
+    // only hint at the editable field as soon as the user points at it
+    &:hover,
+    &:focus {
+      border-color: color-mix(in srgb, currentColor 30%, transparent);
+    }
+  }
+
+  .inline-edit-placeholder {
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  .inline-edit-input {
+    // blend into the surrounding text, just a little bit more pronounced than on hover
+    color: inherit;
+    background-color: transparent;
+    border-color: color-mix(in srgb, currentColor 60%, transparent);
+  }
+}

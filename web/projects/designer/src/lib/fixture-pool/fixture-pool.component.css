@@ -1,15 +1,14 @@
-.list-group-item {
-  padding: 0.3rem 1.25rem;
-}
-
 .dmx-channel {
   display: flex;
   float: left;
+  position: relative;
   width: 28px;
-  border: 1px solid white;
+  border: 1px solid var(--sd-border);
   margin-left: -1px;
   margin-bottom: -1px;
   padding-bottom: 2px;
+  color: var(--sd-text-dim);
+  font-size: 0.6875rem;
 
   -webkit-touch-callout: none;
   /* iOS Safari */
@@ -26,32 +25,63 @@
 }
 
 .dmx-channel-occupied {
-  background-color: #63462e;
-  border-left: none;
-  border-right: none;
+  /* the bar below draws the outline, so the grid line is hidden underneath it */
+  border-color: transparent;
+  color: var(--sd-text);
   cursor: move;
 }
 
-.dmx-channel-occupied-start {
-  border-left: 1px solid white;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+/* The channels of one fixture read as a single translucent bar. It is drawn as
+   an overlay rather than as the cells' own background because the cells overlap
+   by 1px so their grid borders collapse, and a translucent background would
+   stack in that overlap and draw a false divider inside the run. Starting the
+   overlay 1px in makes consecutive cells meet exactly instead of overlapping. */
+.dmx-channel-occupied::after {
+  content: '';
+  position: absolute;
+  /* Rows overlap by 1px too, and a float paints as one unit including its
+     positioned descendants, so the row below would paint over the last pixel of
+     this bar and cut off its bottom edge. Stopping at the padding box keeps the
+     bar inside the band this row actually owns. */
+  top: -1px;
+  bottom: 0;
+  left: 0;
+  right: -1px;
+  background-color: var(--sd-primary-soft-strong);
+  border-top: 1px solid var(--sd-primary);
+  border-bottom: 1px solid var(--sd-primary);
+  pointer-events: none;
 }
 
-.dmx-channel-occupied-end {
-  border-right: 1px solid white;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
+/* The ends of a run are capped by the outline and the corner radius. They sit
+   flush on their channel, so a bar covers exactly the channels it occupies. */
+.dmx-channel-occupied-start::after {
+  border-left: 1px solid var(--sd-primary);
+  border-top-left-radius: var(--sd-radius);
+  border-bottom-left-radius: var(--sd-radius);
+}
+
+.dmx-channel-occupied-end::after {
+  border-right: 1px solid var(--sd-primary);
+  border-top-right-radius: var(--sd-radius);
+  border-bottom-right-radius: var(--sd-radius);
 }
 
 .dmx-channel-selected {
-  background-color: #fd7e14;
+  color: #fff;
+}
+
+.dmx-channel-selected::after {
+  background-color: var(--sd-primary);
 }
 
 .dmx-channel-overlapped {
-  background-color: red;
-  border: 1px solid red;
-  cursor: move;
+  color: #fff;
+}
+
+.dmx-channel-overlapped::after {
+  background-color: rgba(229, 84, 75, 0.55);
+  border-color: var(--sd-danger);
 }
 
 .card {
