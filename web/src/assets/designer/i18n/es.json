@@ -96,6 +96,11 @@
       "settings-fade-out-post": "Después",
       "live-mode": "Modo en directo"
     },
+    "preview": {
+      "scene": "Escena",
+      "preset": "Preajuste",
+      "switch": "Cambiar entre escena y preajuste"
+    },
     "preset": {
       "title": "Preajustes",
       "add": "Añadir preajuste",

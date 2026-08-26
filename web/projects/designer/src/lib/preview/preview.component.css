@@ -1,0 +1,42 @@
+:host {
+  position: relative;
+  display: block;
+}
+
+/* sits on top of the 3d preview, in its upper left corner */
+.preview-target {
+  position: absolute;
+  top: var(--sd-space-2);
+  left: var(--sd-space-2);
+  right: var(--sd-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-1);
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--sd-space-2));
+  padding: 2px var(--sd-space-2) 2px var(--sd-space-1);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.preview-target:hover {
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+/* the name of the scenes/preset being previewed, which can get long */
+.preview-target-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--sd-text);
+}
+
+.preview-target:hover .preview-target-name {
+  color: var(--sd-primary-text);
+}

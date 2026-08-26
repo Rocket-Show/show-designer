@@ -450,7 +450,6 @@
     background-color: $sd-primary-soft-strong !important;
     border-color: $sd-border !important;
     color: #ffd0a8 !important;
-    box-shadow: inset 3px 0 0 $sd-primary;
 
     &:hover {
       background-color: rgba(253, 126, 20, 0.34) !important;
@@ -462,7 +461,6 @@
     background-color: $sd-primary-soft;
     border-color: $sd-border;
     color: $sd-text;
-    box-shadow: inset 3px 0 0 rgba(253, 126, 20, 0.5);
 
     &:hover {
       background-color: $sd-primary-soft-hover;

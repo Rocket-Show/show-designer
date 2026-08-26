@@ -96,6 +96,11 @@
       "settings-fade-out-post": "Depois",
       "live-mode": "Modo ao vivo"
     },
+    "preview": {
+      "scene": "Cena",
+      "preset": "Predefinição",
+      "switch": "Alternar entre cena e predefinição"
+    },
     "preset": {
       "title": "Predefinições",
       "add": "Adicionar predefinição",

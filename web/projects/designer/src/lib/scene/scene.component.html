@@ -29,6 +29,7 @@
   <div class="card-body border-secondary p-0 overflow-auto">
     <!-- The scenes with their presets, ordered as they are layered in the scene -->
     <lib-tree
+      [class.selection-inactive]="projectService.project.previewPreset"
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
       [allowDrop]="allowDrop"

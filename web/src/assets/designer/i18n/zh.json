@@ -96,6 +96,11 @@
       "settings-fade-out-post": "之后",
       "live-mode": "实时模式"
     },
+    "preview": {
+      "scene": "场景",
+      "preset": "预设",
+      "switch": "在场景和预设之间切换"
+    },
     "preset": {
       "title": "预设",
       "add": "添加预设",

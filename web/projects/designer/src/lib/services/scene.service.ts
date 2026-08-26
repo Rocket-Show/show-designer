@@ -121,7 +121,9 @@ export class SceneService {
     // in this case
     for (const scene of this.selectedScenes) {
       for (const presetUuid of scene.presetUuids) {
-        firstPresetUuid = presetUuid;
+        if (firstPresetUuid === undefined) {
+          firstPresetUuid = presetUuid;
+        }
 
         if (presetUuid === this.presetService.selectedPreset?.uuid) {
           // a preset of a currently selected scene is already selected -> do nothing

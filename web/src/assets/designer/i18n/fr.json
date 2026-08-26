@@ -96,6 +96,11 @@
       "settings-fade-out-post": "Après",
       "live-mode": "Mode live"
     },
+    "preview": {
+      "scene": "Scène",
+      "preset": "Préréglage",
+      "switch": "Basculer entre scène et préréglage"
+    },
     "preset": {
       "title": "Préréglages",
       "add": "Ajouter un préréglage",

@@ -490,6 +490,13 @@ export class PresetService {
     return false;
   }
 
+  // switch between previewing the selected scenes and the preset being edited
+  setPreviewPreset(previewPreset: boolean) {
+    this.projectService.project.previewPreset = previewPreset;
+    this.previewSelectionChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
   selectPreset(index: number) {
     this.effectService.selectedEffect = undefined;
     this.selectedPreset = this.projectService.project.presets[index];

@@ -4,8 +4,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
+import { PresetService } from '../services/preset.service';
 import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
+import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
 import { Positioning } from './../models/fixture';
 import { AnimationService } from './../services/animation.service';
@@ -39,7 +41,9 @@ export class PreviewComponent implements AfterViewInit {
     private animationService: AnimationService,
     private previewService: PreviewService,
     private timelineService: TimelineService,
-    private projectService: ProjectService,
+    public projectService: ProjectService,
+    private presetService: PresetService,
+    private sceneService: SceneService,
     private ngZone: NgZone
   ) {
     this.previewService.doUpdateFixtureSetup.subscribe(() => {
@@ -333,6 +337,20 @@ export class PreviewComponent implements AfterViewInit {
     this.scene.add(lights[2]);
 
     this.previewService.updateFixtureSetup();
+  }
+
+  // the name of what is currently being previewed: the selected scenes or the preset
+  // which is being edited
+  previewName(): string {
+    if (this.projectService.project.previewPreset) {
+      return this.presetService.selectedPreset ? this.presetService.selectedPreset.name : '';
+    }
+
+    return this.sceneService.selectedScenes.map((scene) => scene.name).join(', ');
+  }
+
+  switchPreviewPreset() {
+    this.presetService.setPreviewPreset(!this.projectService.project.previewPreset);
   }
 
   ngAfterViewInit(): void {

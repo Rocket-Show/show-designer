@@ -96,6 +96,11 @@
       "settings-fade-out-post": "Danach",
       "live-mode": "Live Modus"
     },
+    "preview": {
+      "scene": "Szene",
+      "preset": "Preset",
+      "switch": "Zwischen Szene und Preset wechseln"
+    },
     "preset": {
       "title": "Presets",
       "add": "Preset hinzufügen",

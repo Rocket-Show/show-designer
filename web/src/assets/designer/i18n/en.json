@@ -96,6 +96,11 @@
       "settings-fade-out-post": "After",
       "live-mode": "Live mode"
     },
+    "preview": {
+      "scene": "Scene",
+      "preset": "Preset",
+      "switch": "Switch between scene and preset"
+    },
     "preset": {
       "title": "Presets",
       "add": "Add preset",
