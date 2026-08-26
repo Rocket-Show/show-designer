@@ -91,18 +91,18 @@ export class PreviewService implements OnDestroy {
       } else {
         // Preview the selected scenes
         for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
-          for (const scene of this.sceneService.selectedScenes) {
-            if (scene.uuid === this.projectService.project.scenes[sceneIndex].uuid) {
-              for (let presetIndex = this.projectService.project.presets.length - 1; presetIndex >= 0; presetIndex--) {
-                for (const presetUuid of scene.presetUuids) {
-                  // Loop over the presets in the preset service to retain the preset order
-                  if (presetUuid === this.projectService.project.presets[presetIndex].uuid) {
-                    presets.push(new PresetRegionScene(this.projectService.project.presets[presetIndex], undefined, scene));
-                    break;
-                  }
-                }
-              }
-            }
+          const scene = this.projectService.project.scenes[sceneIndex];
+
+          if (!this.sceneService.sceneIsSelected(scene)) {
+            continue;
+          }
+
+          // the presets are ordered inside their scene: the first one is the topmost
+          // layer -> process it last, so it overwrites the ones below it
+          const scenePresets = this.sceneService.getScenePresets(scene);
+
+          for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
+            presets.push(new PresetRegionScene(scenePresets[presetIndex], undefined, scene));
           }
         }
       }
@@ -167,43 +167,43 @@ export class PreviewService implements OnDestroy {
       return undefined;
     }
 
-    // Loop over the global fixtures to retain the order
-    for (const projectFixture of this.projectService.project.presetFixtures) {
-      for (const presetFixture of preset.fixtures) {
-        if (
-          this.presetService.fixtureUuidAndPixelKeyEquals(
-            projectFixture.fixtureUuid,
-            presetFixture.fixtureUuid,
-            projectFixture.pixelKey,
-            presetFixture.pixelKey
-          )
-        ) {
-          if (this.presetService.fixtureUuidAndPixelKeyEquals(projectFixture.fixtureUuid, fixtureUuid, projectFixture.pixelKey, pixelKey)) {
-            return index;
-          }
+    // either the global fixture order of the project or the preset's own one defines
+    // the order to chase in (avoid building up a list here, this runs for every
+    // fixture of every active preset on every frame)
+    const orderedFixtures = preset.useGlobalFixtureOrder ? this.projectService.project.presetFixtures : preset.fixtures;
 
-          const fixture = this.fixtureService.getFixtureByUuid(projectFixture.fixtureUuid);
-          const firstDmxChannelAndFixtureUuid = {
-            dmxUniverseUuid: fixture.dmxUniverseUuid,
-            firstDmxChannel: fixture.dmxFirstChannel,
-            pixelKey: projectFixture.pixelKey,
-          };
+    for (const orderedFixture of orderedFixtures) {
+      // when using the global order, skip all fixtures which are not in this preset
+      const presetFixture = preset.useGlobalFixtureOrder
+        ? this.presetService.getPresetFixture(preset, orderedFixture.fixtureUuid, orderedFixture.pixelKey)
+        : orderedFixture;
 
-          const exists = countedFirstDmxChannelPixelKey.some(
-            (item) =>
-              item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-              item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-              ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-          );
+      if (!presetFixture) {
+        continue;
+      }
 
-          // don't count fixtures on the same universe and channel as already counted ones
-          if (!exists) {
-            index++;
-            countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
-          }
+      if (this.presetService.fixtureUuidAndPixelKeyEquals(presetFixture.fixtureUuid, fixtureUuid, presetFixture.pixelKey, pixelKey)) {
+        return index;
+      }
 
-          break;
-        }
+      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+      const firstDmxChannelAndFixtureUuid = {
+        dmxUniverseUuid: fixture.dmxUniverseUuid,
+        firstDmxChannel: fixture.dmxFirstChannel,
+        pixelKey: presetFixture.pixelKey,
+      };
+
+      const exists = countedFirstDmxChannelPixelKey.some(
+        (item) =>
+          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
+          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
+          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
+      );
+
+      // don't count fixtures on the same universe and channel as already counted ones
+      if (!exists) {
+        index++;
+        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
       }
     }
 

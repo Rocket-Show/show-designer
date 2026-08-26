@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
 import { UserService } from './user.service';
@@ -17,7 +17,10 @@ export class ProjectService {
   public project: Project;
 
   // the project-file versions used in this version of the designer (older ones will be migrated, newer ones are not supported)
-  public currentProjectVersion = 2;
+  public currentProjectVersion = 3;
+
+  // fires, when another project has been loaded, created or imported
+  public projectChanged: Subject<void> = new Subject<void>();
 
   constructor(
     private http: HttpClient,

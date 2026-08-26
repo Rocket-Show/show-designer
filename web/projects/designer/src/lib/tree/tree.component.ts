@@ -1,4 +1,17 @@
-import { Component, ContentChild, EventEmitter, Input, OnChanges, Output, SimpleChanges, TemplateRef } from '@angular/core';
+import {
+  Component,
+  ContentChild,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Output,
+  SimpleChanges,
+  TemplateRef,
+} from '@angular/core';
+import { Subscription } from 'rxjs';
+import { TreeDragService } from './tree-drag.service';
 
 export interface TreeNode {
   id?: string | number;
@@ -31,10 +44,12 @@ interface DropTarget {
 
 /**
  * A lightweight, dependency-free tree:
- *  - collapsible folders (closed/open folder icon)
+ *  - collapsible folders (click the folder icon to open/close them)
  *  - multi selection (ctrl/cmd to toggle, shift to select a range)
  *  - native HTML5 drag & drop, dropping before/after a node or into a folder,
  *    moving the whole current selection at once
+ *  - accepting nodes dragged in from the outside (see TreeDragService), which are
+ *    inserted instead of moved
  */
 @Component({
   selector: 'lib-tree',
@@ -42,12 +57,15 @@ interface DropTarget {
   styleUrls: ['./tree.component.css'],
   standalone: false,
 })
-export class TreeComponent implements OnChanges {
+export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // the tree data (mutated in place when nodes are dragged around)
   @Input() nodes: TreeNode[] = [];
 
   // currently selected nodes (two-way bindable)
   @Input() selectedNodes: TreeNode[] = [];
+
+  // treat a plain click like a ctrl-click (for devices without a keyboard)
+  @Input() additiveSelection = false;
 
   // decide whether a node may be dragged
   @Input() allowDrag: (node: TreeNode) => boolean = () => true;
@@ -82,6 +100,33 @@ export class TreeComponent implements OnChanges {
   private selection = new Set<TreeNode>();
   private lastClickedIndex: number | null = null;
   private flatByNode = new Map<TreeNode, FlatNode>();
+  private externalDragEnded: Subscription | undefined;
+
+  constructor(private treeDragService: TreeDragService) {}
+
+  ngOnInit(): void {
+    // an external drag ends on its source element, so this tree never sees the
+    // dragend event itself -> clean up the drop indicator from here
+    this.externalDragEnded = this.treeDragService.ended.subscribe(() => {
+      if (!this.draggingNodes.length) {
+        this.clearIndicator();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.externalDragEnded?.unsubscribe();
+  }
+
+  // the nodes of the drag currently in progress, no matter whether they are dragged
+  // inside this tree or in from the outside
+  private get activeNodes(): TreeNode[] {
+    return this.draggingNodes.length ? this.draggingNodes : this.treeDragService.nodes;
+  }
+
+  private get externalDrag(): boolean {
+    return !this.draggingNodes.length && this.treeDragService.nodes.length > 0;
+  }
 
   indentPx(level: number): string {
     return this.indent(level) + 'px';
@@ -106,7 +151,9 @@ export class TreeComponent implements OnChanges {
     return this.draggingNodes.includes(node);
   }
 
-  toggleExpand(node: TreeNode): void {
+  toggleExpand(node: TreeNode, event?: MouseEvent): void {
+    // toggling a folder is not a selection change
+    event?.stopPropagation();
     node.expanded = !node.expanded;
     this.rebuild();
   }
@@ -119,7 +166,7 @@ export class TreeComponent implements OnChanges {
 
     if (event.shiftKey && this.lastClickedIndex !== null) {
       this.selectRange(this.lastClickedIndex, index, event.ctrlKey || event.metaKey);
-    } else if (event.ctrlKey || event.metaKey) {
+    } else if (event.ctrlKey || event.metaKey || this.additiveSelection) {
       if (this.selection.has(node)) {
         this.selection.delete(node);
       } else {
@@ -127,16 +174,12 @@ export class TreeComponent implements OnChanges {
       }
       this.lastClickedIndex = index;
     } else {
-      // plain click: folders toggle, leaves activate; either way select just this row
-      if (node.isFolder) {
-        this.toggleExpand(node);
-      }
+      // plain click: select just this row and activate it (folders are opened and
+      // closed with their icon, so they can be selected without collapsing them)
       this.selection.clear();
       this.selection.add(node);
       this.lastClickedIndex = index;
-      if (!node.isFolder) {
-        this.activate.emit(node);
-      }
+      this.activate.emit(node);
     }
 
     this.selectedNodesChange.emit([...this.selection]);
@@ -180,7 +223,7 @@ export class TreeComponent implements OnChanges {
   }
 
   onDragOver(flat: FlatNode, event: DragEvent): void {
-    if (!this.draggingNodes.length) {
+    if (!this.activeNodes.length) {
       return;
     }
 
@@ -193,7 +236,7 @@ export class TreeComponent implements OnChanges {
     // preventDefault marks this as a valid drop location
     event.preventDefault();
     if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.dropEffect = this.externalDrag ? 'copy' : 'move';
     }
     this.drop = resolved;
     this.dropTail = false;
@@ -202,7 +245,8 @@ export class TreeComponent implements OnChanges {
   onDrop(flat: FlatNode, event: DragEvent): void {
     event.preventDefault();
     if (this.drop) {
-      this.moveNodes(this.draggingNodes, this.drop.ref, this.drop.zone);
+      // nodes dragged in from the outside are inserted, not moved away from their list
+      this.moveNodes(this.activeNodes, this.drop.ref, this.drop.zone, !this.externalDrag);
       this.nodesChange.emit(this.nodes);
     }
     this.endDrag();
@@ -211,12 +255,12 @@ export class TreeComponent implements OnChanges {
   // The strip below the last row: drop after the last folder, at the root level.
   // (The last folder has no following row to act as a "before" drop target.)
   onTailDragOver(event: DragEvent): void {
-    if (!this.draggingNodes.length) {
+    if (!this.activeNodes.length || !this.canDropAtRoot()) {
       return;
     }
     event.preventDefault();
     if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.dropEffect = this.externalDrag ? 'copy' : 'move';
     }
     this.drop = null;
     this.dropTail = true;
@@ -224,9 +268,12 @@ export class TreeComponent implements OnChanges {
 
   onTailDrop(event: DragEvent): void {
     event.preventDefault();
-    if (this.draggingNodes.length) {
-      this.detachAll(this.draggingNodes);
-      this.nodes.push(...this.draggingNodes);
+    if (this.activeNodes.length && this.canDropAtRoot()) {
+      const dropped = this.activeNodes;
+      if (!this.externalDrag) {
+        this.detachAll(dropped);
+      }
+      this.nodes.push(...dropped);
       this.nodesChange.emit(this.nodes);
     }
     this.endDrag();
@@ -238,6 +285,7 @@ export class TreeComponent implements OnChanges {
 
   private endDrag(): void {
     this.draggingNodes = [];
+    this.treeDragService.nodes = [];
     this.clearIndicator();
     this.rebuild();
   }
@@ -306,21 +354,31 @@ export class TreeComponent implements OnChanges {
   }
 
   private canDrop(ref: TreeNode, zone: TreeDropZone): boolean {
-    if (this.draggingNodes.includes(ref)) {
+    const dragged = this.activeNodes;
+
+    if (dragged.includes(ref)) {
       return false;
     }
     // cannot drop a node into its own subtree
-    if (this.draggingNodes.some((dragged) => this.contains(dragged, ref))) {
+    if (dragged.some((node) => this.contains(node, ref))) {
       return false;
     }
     if (zone === 'inside' && !ref.isFolder) {
       return false;
     }
-    return this.allowDrop(this.draggingNodes, ref, zone);
+    return this.allowDrop(dragged, ref, zone);
   }
 
-  private moveNodes(dragged: TreeNode[], ref: TreeNode, zone: TreeDropZone): void {
-    this.detachAll(dragged);
+  // dropping on the trailing strip appends to the root level, after the last node
+  private canDropAtRoot(): boolean {
+    const last = this.nodes[this.nodes.length - 1];
+    return !last || this.canDrop(last, 'after');
+  }
+
+  private moveNodes(dragged: TreeNode[], ref: TreeNode, zone: TreeDropZone, detach = true): void {
+    if (detach) {
+      this.detachAll(dragged);
+    }
 
     if (zone === 'inside') {
       ref.children = ref.children ?? [];

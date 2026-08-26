@@ -24,6 +24,9 @@ export class PresetService {
   // fires, when the current preview element has changed (scene/preset)
   previewSelectionChanged: Subject<void> = new Subject<void>();
 
+  // fires, when presets have been added or removed
+  presetsChanged: Subject<void> = new Subject<void>();
+
   // fires, when the fixture selection has changed
   fixtureSelectionChanged: Subject<void> = new Subject<void>();
 
@@ -62,6 +65,29 @@ export class PresetService {
     }
 
     return null;
+  }
+
+  // all fixtures of a preset in the order they are chased in: either the global
+  // order of the project or the preset's own one
+  getOrderedPresetFixtures(preset: Preset): PresetFixture[] {
+    if (!preset.useGlobalFixtureOrder) {
+      return preset.fixtures;
+    }
+
+    return this.projectService.project.presetFixtures.filter((projectFixture) =>
+      this.getPresetFixture(preset, projectFixture.fixtureUuid, projectFixture.pixelKey)
+    );
+  }
+
+  setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
+    if (!useGlobalFixtureOrder) {
+      // start from the order which has been in effect so far, so the chasing does
+      // not change just because the preset got its own order
+      preset.fixtures = this.getOrderedPresetFixtures(preset).map((presetFixture) => new PresetFixture(presetFixture));
+    }
+
+    preset.useGlobalFixtureOrder = useGlobalFixtureOrder;
+    this.livePreviewService.previewLive();
   }
 
   fixtureIsSelected(fixture: Fixture, pixelKey: string, preset?: Preset): boolean {
@@ -461,7 +487,27 @@ export class PresetService {
     }
 
     this.projectService.project.presets.splice(highestSelectedPresetIndex, 0, preset);
+    this.presetsChanged.next();
     this.selectPreset(highestSelectedPresetIndex);
+  }
+
+  removePreset(preset: Preset): void {
+    const index = this.projectService.project.presets.indexOf(preset);
+
+    if (index < 0) {
+      return;
+    }
+
+    this.projectService.project.presets.splice(index, 1);
+    this.presetsChanged.next();
+
+    if (this.projectService.project.presets.length > 0) {
+      this.selectPreset(0);
+    } else {
+      this.selectedPreset = undefined;
+      this.projectService.project.selectedPresetUuid = undefined;
+      this.previewSelectionChanged.next();
+    }
   }
 
   // return all fixture profiles used in the current preset selection

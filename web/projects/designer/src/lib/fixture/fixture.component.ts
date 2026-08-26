@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Fixture } from '../models/fixture';
 import { FixturePoolService } from '../services/fixture-pool.service';
 import { FixtureService } from '../services/fixture.service';
@@ -15,10 +16,16 @@ import { LivePreviewService } from '../services/live-preview.service';
   styleUrls: ['./fixture.component.css'],
   standalone: false,
 })
-export class FixtureComponent implements OnInit {
+export class FixtureComponent implements OnInit, OnDestroy {
   fixtureSortableOptions: Options = {
     onUpdate: () => this.fixtureListReordered(),
   };
+
+  // the fixtures which are not part of the current preset (only used, when the preset
+  // brings its own fixture order)
+  otherFixtures: PresetFixture[] = [];
+
+  private subscriptions: Subscription[] = [];
 
   constructor(
     public projectService: ProjectService,
@@ -29,7 +36,52 @@ export class FixtureComponent implements OnInit {
     private livePreviewService: LivePreviewService
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.updateOtherFixtures();
+
+    this.subscriptions.push(
+      this.presetService.fixtureSelectionChanged.subscribe(() => this.updateOtherFixtures()),
+      this.presetService.previewSelectionChanged.subscribe(() => this.updateOtherFixtures()),
+      this.projectService.projectChanged.subscribe(() => this.updateOtherFixtures())
+    );
+  }
+
+  ngOnDestroy() {
+    for (const subscription of this.subscriptions) {
+      subscription.unsubscribe();
+    }
+  }
+
+  // does the current preset define its own fixture order?
+  usePresetOrder(): boolean {
+    return (
+      !!this.presetService.selectedPreset &&
+      !this.presetService.selectedPreset.useGlobalFixtureOrder &&
+      !this.fixtureService.settingsSelection
+    );
+  }
+
+  switchGlobalFixtureOrder(useGlobalFixtureOrder: boolean) {
+    if (!this.presetService.selectedPreset) {
+      return;
+    }
+
+    this.presetService.setUseGlobalFixtureOrder(this.presetService.selectedPreset, useGlobalFixtureOrder);
+    this.updateOtherFixtures();
+  }
+
+  private updateOtherFixtures() {
+    const preset = this.presetService.selectedPreset;
+
+    if (!preset) {
+      this.otherFixtures = [];
+      return;
+    }
+
+    this.otherFixtures = this.projectService.project.presetFixtures.filter(
+      (projectFixture) => !this.presetService.getPresetFixture(preset, projectFixture.fixtureUuid, projectFixture.pixelKey)
+    );
+  }
 
   fixtureName(presetFixture: PresetFixture) {
     let name: string;
@@ -66,11 +118,13 @@ export class FixtureComponent implements OnInit {
   selectAll() {
     this.presetService.selectAllFixtures();
     this.presetService.fixtureSelectionChanged.next();
+    this.livePreviewService.previewLive();
   }
 
   selectNone() {
     this.presetService.selectNoFixtures();
     this.presetService.fixtureSelectionChanged.next();
+    this.livePreviewService.previewLive();
   }
 
   fixtureListReordered() {

@@ -12,7 +12,14 @@ export class Preset {
   // all related fixtures
   // OBSOLETE: replaced with fixtures
   fixtureUuids: string[] = [];
+
+  // all related fixtures, in the order they are chased in (only relevant, if
+  // useGlobalFixtureOrder is false)
   fixtures: PresetFixture[] = [];
+
+  // chase the fixtures in the global order (project.presetFixtures) instead of
+  // this preset's own order
+  useGlobalFixtureOrder = true;
 
   // the selected values
   fixtureChannelValues: FixtureChannelValue[] = [];
@@ -79,5 +86,8 @@ export class Preset {
     this.fadeOutMillis = data.fadeOutMillis;
     this.fadeInPre = data.fadeInPre;
     this.fadeOutPost = data.fadeOutPost;
+
+    // projects before version 3 did not know a preset-specific fixture order
+    this.useGlobalFixtureOrder = data.useGlobalFixtureOrder !== false;
   }
 }

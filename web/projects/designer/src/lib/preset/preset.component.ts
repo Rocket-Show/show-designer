@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Preset } from '../models/preset';
+import { Scene } from '../models/scene';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
+import { TreeDragService } from '../tree/tree-drag.service';
 import { PresetSettingsComponent } from './preset-settings/preset-settings.component';
-import { TreeNode } from '../tree/tree.component';
+import type { Options } from 'sortablejs';
 
 @Component({
   selector: 'lib-app-preset',
@@ -15,74 +17,72 @@ import { TreeNode } from '../tree/tree.component';
   standalone: false,
 })
 export class PresetComponent implements OnInit {
-  treeNodes: TreeNode[] = [
-    {
-      id: 1,
-      name: 'root1',
-      isFolder: true,
-      children: [
-        { id: 2, name: 'child1', isFolder: false },
-        { id: 3, name: 'child2', isFolder: false },
-      ],
-    },
-    {
-      id: 4,
-      name: 'root2',
-      isFolder: true,
-      children: [
-        { id: 5, name: 'child1', isFolder: false },
-        { id: 6, name: 'child2', isFolder: false },
-      ],
-    },
-  ];
+  // this list only organizes the presets. Their order does not influence the
+  // playback anymore, the scenes define it -> let sortablejs use its own drag
+  // implementation, so the presets can be dragged into the scene tree natively
+  presetSortableOptions: Options = {
+    forceFallback: true,
+  };
 
   constructor(
     public presetService: PresetService,
     public sceneService: SceneService,
     public projectService: ProjectService,
     public introService: IntroService,
+    private treeDragService: TreeDragService,
     private modalService: BsModalService
   ) {}
 
   ngOnInit() {}
-
-  onActivate(node: TreeNode) {
-    console.log(node);
-  }
 
   selectPreset(index: number) {
     this.projectService.project.previewPreset = true;
     this.presetService.selectPreset(index);
   }
 
-  enableCheckbox(): boolean {
-    return this.sceneService.selectedScenes && this.sceneService.selectedScenes.length === 1;
+  // the presets can only be added to/removed from a single selected scene
+  private singleSelectedScene(): Scene {
+    if (this.sceneService.selectedScenes && this.sceneService.selectedScenes.length === 1) {
+      return this.sceneService.selectedScenes[0];
+    }
+
+    return undefined;
   }
 
-  activatePreset(active: boolean, index: number) {
-    if (this.sceneService.selectedScenes && this.sceneService.selectedScenes.length === 1) {
-      const uuid = this.projectService.project.presets[index].uuid;
+  enableCheckbox(): boolean {
+    return !!this.singleSelectedScene();
+  }
 
-      if (active) {
-        // Activate a new uuid
-        this.sceneService.selectedScenes[0].presetUuids.push(uuid);
-      } else {
-        // Remove the uuid
-        for (let i = 0; i < this.sceneService.selectedScenes[0].presetUuids.length; i++) {
-          if (this.sceneService.selectedScenes[0].presetUuids[i] === uuid) {
-            this.sceneService.selectedScenes[0].presetUuids.splice(i, 1);
-            return;
-          }
-        }
-      }
+  activatePreset(active: boolean, preset: Preset) {
+    const scene = this.singleSelectedScene();
+
+    if (!scene) {
+      return;
+    }
+
+    if (active) {
+      // add it as the topmost layer of the scene
+      this.sceneService.addPresetToScene(scene, preset, 0);
+    } else {
+      this.sceneService.removePresetFromScene(scene, preset);
     }
   }
 
   addPreset() {
+    const scene = this.singleSelectedScene();
+
+    // insert the new preset right above the currently selected one, or on top of
+    // the scene, if the selected preset is not part of it
+    let index = 0;
+
+    if (scene && this.presetService.selectedPreset) {
+      index = Math.max(scene.presetUuids.indexOf(this.presetService.selectedPreset.uuid), 0);
+    }
+
     this.presetService.addPreset();
 
-    if (this.sceneService.selectedScenes && this.sceneService.selectedScenes.length === 1) {
-      this.sceneService.selectedScenes[0].presetUuids.push(this.presetService.selectedPreset.uuid);
+    if (scene) {
+      this.sceneService.addPresetToScene(scene, this.presetService.selectedPreset, index);
     }
   }
 
@@ -91,12 +91,29 @@ export class PresetComponent implements OnInit {
       return;
     }
 
-    this.projectService.project.presets.splice(this.projectService.project.presets.indexOf(this.presetService.selectedPreset), 1);
-    this.presetService.selectPreset(0);
+    const preset = this.presetService.selectedPreset;
+
+    this.sceneService.removePresetFromAllScenes(preset);
+    this.presetService.removePreset(preset);
+  }
+
+  // dragging a preset into the scene tree adds it to a scene (it stays in this list)
+  onDragStart(preset: Preset, event: DragEvent) {
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'copy';
+      // required for Firefox to start a native drag
+      event.dataTransfer.setData('text/plain', preset.name ?? '');
+    }
+
+    this.treeDragService.start([{ id: preset.uuid, isFolder: false, preset }]);
+  }
+
+  onDragEnd() {
+    this.treeDragService.end();
   }
 
   openSettings(preset: Preset) {
-    const bsModalRef = this.modalService.show(PresetSettingsComponent, {
+    this.modalService.show(PresetSettingsComponent, {
       keyboard: true,
       ignoreBackdropClick: false,
       class: '',

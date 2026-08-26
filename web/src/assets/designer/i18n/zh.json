@@ -105,6 +105,7 @@
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
+      "global-order": "全局顺序",
       "no-fixtures-selected": "请为此预设至少选择一个灯具",
       "no-capabilities-available": "所选灯具没有可用功能。请使用通道选项卡。",
       "no-fixtures-settings-selected": "请至少选择一个灯具",

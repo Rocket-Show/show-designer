@@ -105,6 +105,7 @@
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
+      "global-order": "Ordem global",
       "no-fixtures-selected": "Selecione pelo menos um fixture para esta predefinição",
       "no-capabilities-available": "Não existem capacidades disponíveis para os fixtures selecionados. Por favor use o separador de canais.",
       "no-fixtures-settings-selected": "Selecione pelo menos um fixture",

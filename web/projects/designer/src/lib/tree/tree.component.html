@@ -20,7 +20,10 @@
       [class.fa-folder-open-o]="flat.node.isFolder && flat.node.expanded"
       [class.fa-folder-o]="flat.node.isFolder && !flat.node.expanded"
       [class.fa-file-o]="!flat.node.isFolder"
+      [class.tree-icon-toggle]="flat.node.isFolder"
+      draggable="false"
       aria-hidden="true"
+      (click)="flat.node.isFolder && toggleExpand(flat.node, $event)"
     ></i>
     <span class="tree-label">
       <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>

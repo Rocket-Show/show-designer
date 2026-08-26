@@ -20,6 +20,9 @@ export class SceneService {
   sceneDeleted: Subject<void> = new Subject<void>();
   sceneSelected: Subject<void> = new Subject<void>();
 
+  // fires, when scenes have been added/removed or their presets have changed
+  scenesChanged: Subject<void> = new Subject<void>();
+
   constructor(
     private uuidService: UuidService,
     private effectService: EffectService,
@@ -36,6 +39,63 @@ export class SceneService {
     }
 
     return false;
+  }
+
+  // all presets of a scene in their layer order: the first one is the topmost
+  // layer, overwriting the values of the ones below it
+  getScenePresets(scene: Scene): Preset[] {
+    const presets: Preset[] = [];
+
+    for (const uuid of scene.presetUuids) {
+      const preset = this.presetService.getPresetByUuid(uuid);
+
+      // a preset can only be once in a scene
+      if (preset && presets.indexOf(preset) < 0) {
+        presets.push(preset);
+      }
+    }
+
+    return presets;
+  }
+
+  addPresetToScene(scene: Scene, preset: Preset, index?: number) {
+    if (scene.presetUuids.indexOf(preset.uuid) >= 0) {
+      // already in this scene
+      return;
+    }
+
+    if (index === undefined || index < 0 || index > scene.presetUuids.length) {
+      index = scene.presetUuids.length;
+    }
+
+    scene.presetUuids.splice(index, 0, preset.uuid);
+    this.scenesChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  removePresetFromScene(scene: Scene, preset: Preset) {
+    const index = scene.presetUuids.indexOf(preset.uuid);
+
+    if (index < 0) {
+      return;
+    }
+
+    scene.presetUuids.splice(index, 1);
+    this.scenesChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // remove a preset from all scenes (e.g. after it has been deleted)
+  removePresetFromAllScenes(preset: Preset) {
+    for (const scene of this.projectService.project.scenes) {
+      for (let i = scene.presetUuids.length - 1; i >= 0; i--) {
+        if (scene.presetUuids[i] === preset.uuid) {
+          scene.presetUuids.splice(i, 1);
+        }
+      }
+    }
+
+    this.scenesChanged.next();
   }
 
   presetIsSelected(preset: Preset): boolean {
@@ -81,7 +141,7 @@ export class SceneService {
       for (const presetUuid of scene.presetUuids) {
         firstPresetUuid = presetUuid;
 
-        if (presetUuid === this.presetService.selectedPreset.uuid) {
+        if (presetUuid === this.presetService.selectedPreset?.uuid) {
           // a preset of a currently selected scene is already selected -> do nothing
           return;
         }
@@ -101,20 +161,32 @@ export class SceneService {
   }
 
   selectScene(index: number) {
-    this.effectService.selectedEffect = undefined;
-
     if (index >= this.projectService.project.scenes.length) {
-      this.selectedScenes = [];
-    } else {
-      if (this.multipleSelection) {
-        this.switchSceneSelection(this.projectService.project.scenes[index]);
-      } else {
-        this.selectedScenes = [];
-        this.selectedScenes.push(this.projectService.project.scenes[index]);
-      }
+      this.selectScenes([]);
+      return;
     }
 
-    this.selectPresetFromSelectedScene();
+    const scene = this.projectService.project.scenes[index];
+
+    if (this.multipleSelection) {
+      this.effectService.selectedEffect = undefined;
+      this.switchSceneSelection(scene);
+      this.selectScenes(this.selectedScenes);
+    } else {
+      this.selectScenes([scene]);
+    }
+  }
+
+  // select the passed scenes and, if passed, the preset to be edited inside them
+  selectScenes(scenes: Scene[], preset?: Preset) {
+    this.effectService.selectedEffect = undefined;
+    this.selectedScenes = scenes;
+
+    if (preset) {
+      this.presetService.selectPreset(this.projectService.project.presets.indexOf(preset));
+    } else {
+      this.selectPresetFromSelectedScene();
+    }
 
     // preview the complete scene
     this.projectService.project.previewPreset = false;
@@ -151,6 +223,7 @@ export class SceneService {
     }
 
     this.projectService.project.scenes.splice(highestSelectedSceneIndex, 0, scene);
+    this.scenesChanged.next();
     this.selectScene(highestSelectedSceneIndex);
   }
 
@@ -167,8 +240,12 @@ export class SceneService {
 
     // remove the scene
     this.projectService.project.scenes.splice(this.projectService.project.scenes.indexOf(scene), 1);
+    this.scenesChanged.next();
+
     if (this.projectService.project.scenes.length > 0) {
       this.selectScene(0);
+    } else {
+      this.selectedScenes = [];
     }
 
     this.sceneDeleted.next();

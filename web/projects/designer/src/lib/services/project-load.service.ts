@@ -79,12 +79,46 @@ export class ProjectLoadService {
     this.projectService.project.version = 2;
   }
 
+  private migrateToVersion3() {
+    // the presets of a scene and the fixtures of a preset are ordered per scene/preset
+    // now. Until now, the global lists defined both orders -> sort them accordingly, so
+    // the projects still look exactly the same.
+    for (const scene of this.projectService.project.scenes) {
+      scene.presetUuids = this.projectService.project.presets
+        .filter((preset) => scene.presetUuids.indexOf(preset.uuid) >= 0)
+        .map((preset) => preset.uuid);
+    }
+
+    for (const preset of this.projectService.project.presets) {
+      preset.fixtures.sort((fixture1, fixture2) => this.globalFixtureIndex(fixture1) - this.globalFixtureIndex(fixture2));
+      preset.useGlobalFixtureOrder = true;
+    }
+
+    this.projectService.project.version = 3;
+  }
+
+  private globalFixtureIndex(presetFixture: PresetFixture): number {
+    return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
+      this.presetService.fixtureUuidAndPixelKeyEquals(
+        projectFixture.fixtureUuid,
+        presetFixture.fixtureUuid,
+        projectFixture.pixelKey,
+        presetFixture.pixelKey
+      )
+    );
+  }
+
   private migrateFromOldProject() {
     let migrated = false;
 
     if (!this.projectService.project.version) {
       // Migrate from version 1
       this.migrateToVersion2();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 3) {
+      this.migrateToVersion3();
       migrated = true;
     }
 
@@ -123,6 +157,7 @@ export class ProjectLoadService {
 
   private afterLoad() {
     this.migrateFromOldProject();
+    this.projectService.projectChanged.next();
     this.setupUniverses();
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();

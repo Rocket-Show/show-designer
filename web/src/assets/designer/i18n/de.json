@@ -105,6 +105,7 @@
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
+      "global-order": "Globale Reihenfolge",
       "no-fixtures-selected": "Wähle für dieses Preset mindestens eine Fixture aus",
       "no-capabilities-available": "Für die ausgewählten Fixtures sind keine Fähigkeiten verfügbar. Bitte benutze den Channels-Tab.",
       "no-fixtures-settings-selected": "Wähle mindestens ein Fixture aus",

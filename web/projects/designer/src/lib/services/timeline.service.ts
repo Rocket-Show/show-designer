@@ -781,26 +781,24 @@ export class TimelineService {
     for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
       const scene = this.projectService.project.scenes[sceneIndex];
 
+      // the presets are ordered inside their scene: the first one is the topmost
+      // layer -> process it last, so it overwrites the ones below it
+      const scenePresets = this.sceneService.getScenePresets(scene);
+
       for (const region of this.selectedComposition.scenePlaybackRegions) {
         if (region.sceneUuid === scene.uuid) {
-          for (let presetIndex = this.projectService.project.presets.length - 1; presetIndex >= 0; presetIndex--) {
-            for (const presetUuid of scene.presetUuids) {
-              if (presetUuid === this.projectService.project.presets[presetIndex].uuid) {
-                const preset = this.presetService.getPresetByUuid(presetUuid);
+          for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
+            const preset = scenePresets[presetIndex];
 
-                if (preset) {
-                  let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
-                  let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
+            let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
+            let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
 
-                  // extend the running time, if fading is done outside the boundaries
-                  presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
-                  presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
+            // extend the running time, if fading is done outside the boundaries
+            presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
+            presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
 
-                  if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
-                    activePresets.push(new PresetRegionScene(preset, region, scene));
-                  }
-                }
-              }
+            if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
+              activePresets.push(new PresetRegionScene(preset, region, scene));
             }
           }
         }

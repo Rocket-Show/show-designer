@@ -1,7 +1,19 @@
 <div class="card border-secondary h-100 panel" [class.card-intro-active]="introService.showStep('fixtures')">
   <div class="card-header d-flex">
     <div>Fixtures</div>
-    <div class="ml-auto">
+    <div class="ml-auto d-flex">
+      @if (presetService.selectedPreset && !fixtureService.settingsSelection) {
+      <div class="form-check my-auto mr-2">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="globalFixtureOrder"
+          [ngModel]="presetService.selectedPreset.useGlobalFixtureOrder"
+          (ngModelChange)="switchGlobalFixtureOrder($event)"
+        />
+        <label class="form-check-label" for="globalFixtureOrder">{{ 'designer.fixture.global-order' | translate }}</label>
+      </div>
+      }
       <a href="#" class="btn btn-secondary m-0, p-0" (click)="selectNone(); (false)"
         ><i class="fa fa-square-o fa-fw" aria-hidden="true"></i
       ></a>
@@ -14,34 +26,30 @@
     </div>
   </div>
 
-  <div class="card-body h-100 p-0">
+  <div class="card-body h-100 p-0 overflow-auto">
     <!-- List of fixtures -->
-    @if (presetService.selectedPreset) {
-    <div class="list-group" [sortablejs]="projectService.project.presetFixtures" [sortablejsOptions]="fixtureSortableOptions">
-      @for (presetFixture of projectService.project.presetFixtures; track presetFixture) {
-      <div class="list-group-item" [class.inactive-list-item]="!fixtureIsSelected(presetFixture)">
-        <div class="row d-flex" (click)="selectFixture($event, presetFixture)" style="cursor: pointer">
-          <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
-            <i class="fa fa-bars" aria-hidden="true"></i>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="active" [ngModel]="fixtureIsSelected(presetFixture)" />
-          </div>
-          <div>
-            <span
-              class="icon-{{
-                fixtureService.getFixtureIconClass(
-                  fixtureService.getProfileByUuid(fixtureService.getFixtureByUuid(presetFixture.fixtureUuid).profileUuid)
-                )
-              }} mr-1"
-            ></span>
-            {{ fixtureName(presetFixture) }}
-          </div>
-        </div>
-      </div>
+    @if (presetService.selectedPreset) { @if (usePresetOrder()) {
+    <!-- The fixtures of this preset, in the order this preset chases them in -->
+    <div class="list-group" [sortablejs]="presetService.selectedPreset.fixtures" [sortablejsOptions]="fixtureSortableOptions">
+      @for (presetFixture of presetService.selectedPreset.fixtures; track presetFixture) {
+      <ng-container *ngTemplateOutlet="fixtureRow; context: { $implicit: presetFixture, sortable: true }"></ng-container>
       }
     </div>
-    } @if (projectService.project.presetFixtures.length == 0) {
+
+    <!-- The remaining fixtures of the project, in the global order -->
+    <div class="list-group">
+      @for (presetFixture of otherFixtures; track presetFixture) {
+      <ng-container *ngTemplateOutlet="fixtureRow; context: { $implicit: presetFixture, sortable: false }"></ng-container>
+      }
+    </div>
+    } @else {
+    <!-- All fixtures of the project, in the global order -->
+    <div class="list-group" [sortablejs]="projectService.project.presetFixtures" [sortablejsOptions]="fixtureSortableOptions">
+      @for (presetFixture of projectService.project.presetFixtures; track presetFixture) {
+      <ng-container *ngTemplateOutlet="fixtureRow; context: { $implicit: presetFixture, sortable: true }"></ng-container>
+      }
+    </div>
+    } } @if (projectService.project.presetFixtures.length == 0) {
     <div class="w-100 h-100 d-flex p-3 text-center">
       <a href="#" class="m-auto" (click)="openFixturePool(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.fixture.no-fixtures' | translate }}</a
@@ -50,3 +58,32 @@
     }
   </div>
 </div>
+
+<ng-template #fixtureRow let-presetFixture let-sortable="sortable">
+  <div class="list-group-item" [class.inactive-list-item]="!fixtureIsSelected(presetFixture)" [class.no-sortjs]="!sortable">
+    <div class="row d-flex" (click)="selectFixture($event, presetFixture)" style="cursor: pointer">
+      @if (sortable) {
+      <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+      </div>
+      } @else {
+      <div class="col-auto my-auto">
+        <i class="fa fa-bars invisible" aria-hidden="true"></i>
+      </div>
+      }
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="active" [ngModel]="fixtureIsSelected(presetFixture)" />
+      </div>
+      <div>
+        <span
+          class="icon-{{
+            fixtureService.getFixtureIconClass(
+              fixtureService.getProfileByUuid(fixtureService.getFixtureByUuid(presetFixture.fixtureUuid).profileUuid)
+            )
+          }} mr-1"
+        ></span>
+        {{ fixtureName(presetFixture) }}
+      </div>
+    </div>
+  </div>
+</ng-template>
