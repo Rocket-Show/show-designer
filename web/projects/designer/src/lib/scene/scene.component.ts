@@ -186,8 +186,12 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.sceneService.selectScenes(scenes, preset);
   }
 
-  // the "-" button removes whatever is selected: a preset from its scene or the
+  // the trash button removes whatever is selected: a preset from its scene or the
   // scene itself
+  removeLabel(): string {
+    return this.selectedNodes.some((node) => node.preset) ? 'designer.scene.remove-preset' : 'designer.scene.remove';
+  }
+
   remove() {
     const presetNode = this.selectedNodes.find((node) => node.preset);
 

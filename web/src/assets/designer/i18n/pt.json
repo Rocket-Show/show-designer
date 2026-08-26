@@ -87,15 +87,19 @@
     },
     "scene": {
       "title": "Cenas",
+      "add": "Adicionar cena",
+      "remove": "Eliminar cena",
+      "remove-preset": "Remover predefinição da cena",
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Antes",
       "settings-fade-out-post": "Depois",
-      "multiple-selection": "Seleção múltipla",
       "live-mode": "Modo ao vivo"
     },
     "preset": {
       "title": "Predefinições",
+      "add": "Adicionar predefinição",
+      "remove": "Eliminar predefinição",
       "settings-name": "Nome",
       "settings-start": "Início",
       "settings-end": "Fim",

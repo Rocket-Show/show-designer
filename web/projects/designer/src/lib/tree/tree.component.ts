@@ -64,9 +64,6 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // currently selected nodes (two-way bindable)
   @Input() selectedNodes: TreeNode[] = [];
 
-  // treat a plain click like a ctrl-click (for devices without a keyboard)
-  @Input() additiveSelection = false;
-
   // decide whether a node may be dragged
   @Input() allowDrag: (node: TreeNode) => boolean = () => true;
 
@@ -166,7 +163,7 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
 
     if (event.shiftKey && this.lastClickedIndex !== null) {
       this.selectRange(this.lastClickedIndex, index, event.ctrlKey || event.metaKey);
-    } else if (event.ctrlKey || event.metaKey || this.additiveSelection) {
+    } else if (event.ctrlKey || event.metaKey) {
       if (this.selection.has(node)) {
         this.selection.delete(node);
       } else {

@@ -87,15 +87,19 @@
     },
     "scene": {
       "title": "场景",
+      "add": "添加场景",
+      "remove": "删除场景",
+      "remove-preset": "从场景中移除预设",
       "settings-fade-in": "淡入",
       "settings-fade-out": "淡出",
       "settings-fade-in-pre": "之前",
       "settings-fade-out-post": "之后",
-      "multiple-selection": "多选",
       "live-mode": "实时模式"
     },
     "preset": {
       "title": "预设",
+      "add": "添加预设",
+      "remove": "删除预设",
       "settings-name": "名称",
       "settings-start": "开始",
       "settings-end": "结束",

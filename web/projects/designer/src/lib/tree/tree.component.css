@@ -32,7 +32,6 @@
 .tree-node.selected {
   background-color: var(--sd-primary-soft-strong);
   color: #ffd0a8;
-  box-shadow: inset 3px 0 0 var(--sd-primary);
 }
 
 .tree-node.dragging {

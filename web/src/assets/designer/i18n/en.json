@@ -87,15 +87,19 @@
     },
     "scene": {
       "title": "Scenes",
+      "add": "Add scene",
+      "remove": "Delete scene",
+      "remove-preset": "Remove preset from scene",
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Before",
       "settings-fade-out-post": "After",
-      "multiple-selection": "Multiple selection",
       "live-mode": "Live mode"
     },
     "preset": {
       "title": "Presets",
+      "add": "Add preset",
+      "remove": "Delete preset",
       "settings-name": "Name",
       "settings-start": "Start",
       "settings-end": "End",

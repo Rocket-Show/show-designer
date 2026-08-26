@@ -7,15 +7,22 @@
       <a
         href="#"
         class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
-        [class.text-primary]="sceneService.multipleSelection == true"
-        (click)="sceneService.multipleSelection = !sceneService.multipleSelection; (false)"
-        ><i class="fa fa-object-group fa-fw" aria-hidden="true"></i
+        popover="{{ removeLabel() | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="remove(); (false)"
+        ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
       ></a>
-      <a href="#" class="d-none d-md-inline-block btn btn-secondary m-0 p-0" (click)="remove(); (false)"
-        ><i class="fa fa-minus-circle fa-fw" aria-hidden="true"></i
-      ></a>
-      <a href="#" class="d-none d-md-inline-block btn btn-secondary m-0 p-0" (click)="sceneService.addScene(); (false)"
-        ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i
+      <a
+        href="#"
+        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.scene.add' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="sceneService.addScene(); (false)"
+        ><i class="fa fa-plus fa-fw" aria-hidden="true"></i
       ></a>
     </div>
   </div>
@@ -24,7 +31,6 @@
     <lib-tree
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
-      [additiveSelection]="sceneService.multipleSelection"
       [allowDrop]="allowDrop"
       (selectedNodesChange)="onSelectedNodesChange($event)"
       (nodesChange)="onNodesChange($event)"

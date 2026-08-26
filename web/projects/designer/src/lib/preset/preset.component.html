@@ -7,11 +7,25 @@
       {{ 'designer.preset.title' | translate }}
     </div>
     <div class="ml-auto">
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="removePreset(); (false)"
-        ><i class="fa fa-minus-circle fa-fw" aria-hidden="true"></i
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.preset.remove' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="removePreset(); (false)"
+        ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
       ></a>
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="addPreset(); (false)"
-        ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.preset.add' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="addPreset(); (false)"
+        ><i class="fa fa-plus fa-fw" aria-hidden="true"></i
       ></a>
     </div>
   </div>

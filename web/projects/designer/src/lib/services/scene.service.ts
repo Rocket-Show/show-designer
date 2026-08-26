@@ -15,8 +15,6 @@ export class SceneService {
   selectedScenes: Scene[] = [];
   sceneColors: string[] = ['#945fda', '#61da5f', '#5fc3da', '#dad65f', '#da5f5f', '#246db7'];
 
-  multipleSelection = false;
-
   sceneDeleted: Subject<void> = new Subject<void>();
   sceneSelected: Subject<void> = new Subject<void>();
 
@@ -112,22 +110,6 @@ export class SceneService {
     return false;
   }
 
-  switchSceneSelection(scene: Scene) {
-    // Select a scene if not yet selected or unselect it otherwise
-    if (this.sceneIsSelected(scene)) {
-      for (let i = 0; i < this.selectedScenes.length; i++) {
-        if (this.selectedScenes[i].uuid === scene.uuid) {
-          this.selectedScenes.splice(i, 1);
-          return;
-        }
-      }
-    } else {
-      this.selectedScenes.push(scene);
-    }
-
-    this.sceneSelected.next();
-  }
-
   selectPresetFromSelectedScene() {
     // select the first preset of the scene, if no preset of the current scene is already
     // selected to make sure, the user does not edit a preset which is not even
@@ -166,15 +148,7 @@ export class SceneService {
       return;
     }
 
-    const scene = this.projectService.project.scenes[index];
-
-    if (this.multipleSelection) {
-      this.effectService.selectedEffect = undefined;
-      this.switchSceneSelection(scene);
-      this.selectScenes(this.selectedScenes);
-    } else {
-      this.selectScenes([scene]);
-    }
+    this.selectScenes([this.projectService.project.scenes[index]]);
   }
 
   // select the passed scenes and, if passed, the preset to be edited inside them

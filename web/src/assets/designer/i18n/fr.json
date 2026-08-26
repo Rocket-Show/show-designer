@@ -87,15 +87,19 @@
     },
     "scene": {
       "title": "Scènes",
+      "add": "Ajouter une scène",
+      "remove": "Supprimer la scène",
+      "remove-preset": "Retirer le préréglage de la scène",
       "settings-fade-in": "Fondu entrant",
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
       "settings-fade-out-post": "Après",
-      "multiple-selection": "Sélection multiple",
       "live-mode": "Mode live"
     },
     "preset": {
       "title": "Préréglages",
+      "add": "Ajouter un préréglage",
+      "remove": "Supprimer le préréglage",
       "settings-name": "Nom",
       "settings-start": "Début",
       "settings-end": "Fin",
