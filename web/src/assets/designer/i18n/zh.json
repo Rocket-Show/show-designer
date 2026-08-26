@@ -172,6 +172,8 @@
       "curve-position": "位置",
       "curve-phase": "相位",
       "curve-chase": "追逐",
+      "curve-chase-spread": "分布",
+      "curve-chase-group": "分组",
       "delete-warning": "您真的要删除此效果吗？",
       "curve-sine": "正弦波",
       "curve-square": "方波",

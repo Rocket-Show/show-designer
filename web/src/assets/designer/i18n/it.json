@@ -172,6 +172,8 @@
       "curve-position": "Posizione",
       "curve-phase": "Fase",
       "curve-chase": "Chase",
+      "curve-chase-spread": "Distribuisci",
+      "curve-chase-group": "Gruppo",
       "delete-warning": "Vuoi davvero eliminare questo effetto?",
       "curve-sine": "Sinusoide",
       "curve-square": "Quadra",

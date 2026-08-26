@@ -405,6 +405,7 @@ export class PreviewService implements OnDestroy {
   private mixEffects(
     timeMillis: number,
     fixtureIndex: number,
+    fixtureCount: number,
     preset: PresetRegionScene,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
@@ -441,7 +442,8 @@ export class PreviewService implements OnDestroy {
                   const fixtureChannelValue = new FixtureChannelValue();
                   fixtureChannelValue.channelName = cachedChannel.name;
                   fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                  fixtureChannelValue.value = cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex);
+                  fixtureChannelValue.value =
+                    cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
                   this.mixChannelValue(values, fixtureChannelValue, intensityPercentage);
                 }
               }
@@ -457,7 +459,8 @@ export class PreviewService implements OnDestroy {
                     const fixtureChannelValue = new FixtureChannelValue();
                     fixtureChannelValue.channelName = cachedChannel.name;
                     fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                    fixtureChannelValue.value = cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex);
+                    fixtureChannelValue.value =
+                      cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
                     this.mixChannelValue(values, fixtureChannelValue, intensityPercentage);
                   }
                 }
@@ -477,6 +480,16 @@ export class PreviewService implements OnDestroy {
   public getChannelValues(timeMillis: number, presets: PresetRegionScene[]): Map<CachedFixture, FixtureChannelValue[]> {
     // Loop over all relevant presets and calc the property values from the presets (capabilities, channels and effects)
     const calculatedFixtures = new Map<CachedFixture, FixtureChannelValue[]>();
+
+    // the number of chase steps per preset (needed by the effects to spread themselves
+    // over all fixtures of their preset)
+    const fixtureCounts = new Map<Preset, number>();
+
+    for (const preset of presets) {
+      if (!fixtureCounts.has(preset.preset)) {
+        fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
+      }
+    }
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
@@ -514,7 +527,7 @@ export class PreviewService implements OnDestroy {
 
             this.mixCapabilityValues(preset, cachedFixture, values, intensityPercentage);
             this.mixChannelValues(preset, cachedFixture, values, intensityPercentage);
-            this.mixEffects(timeMillis, fixtureIndex, preset, cachedFixture, values, intensityPercentage);
+            this.mixEffects(timeMillis, fixtureIndex, fixtureCounts.get(preset.preset), preset, cachedFixture, values, intensityPercentage);
           }
         }
       }

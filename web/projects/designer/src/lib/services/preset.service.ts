@@ -79,6 +79,41 @@ export class PresetService {
     );
   }
 
+  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
+  // and pixel key are the same lamp and therefore count only once
+  getPresetFixtureCount(preset: Preset): number {
+    let count = 0;
+    const countedFirstDmxChannelPixelKey: any[] = [];
+
+    for (const presetFixture of preset.fixtures) {
+      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+
+      if (!fixture) {
+        continue;
+      }
+
+      const firstDmxChannelAndFixtureUuid = {
+        dmxUniverseUuid: fixture.dmxUniverseUuid,
+        firstDmxChannel: fixture.dmxFirstChannel,
+        pixelKey: presetFixture.pixelKey,
+      };
+
+      const exists = countedFirstDmxChannelPixelKey.some(
+        (item) =>
+          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
+          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
+          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
+      );
+
+      if (!exists) {
+        count++;
+        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
+      }
+    }
+
+    return count;
+  }
+
   setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
     if (!useGlobalFixtureOrder) {
       // start from the order which has been in effect so far, so the chasing does

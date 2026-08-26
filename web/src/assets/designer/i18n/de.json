@@ -173,6 +173,8 @@
       "curve-position": "Position",
       "curve-phase": "Phase",
       "curve-chase": "Chase",
+      "curve-chase-spread": "Verteilen",
+      "curve-chase-group": "Gruppe",
       "delete-warning": "Möchtest du diesen Effekt wirklich löschen?",
       "curve-sine": "Sinus",
       "curve-square": "Rechteck",

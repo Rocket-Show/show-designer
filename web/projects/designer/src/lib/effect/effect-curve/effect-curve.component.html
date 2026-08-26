@@ -11,12 +11,15 @@
       <option [value]="'square'">
         {{ 'designer.effect.curve-square' | translate }}
       </option>
-      <!-- <option [value]="'triangle'">
-    {{ 'designer.effect.curve-triangle' | translate }}</option>
-    <option [value]="'sawtooth'">
-    {{ 'designer.effect.curve-sawtooth' | translate }}</option>
-    <option [value]="'reverse-sawtooth'">
-    {{ 'designer.effect.curve-reverse-sawtooth' | translate }}</option> -->
+      <option [value]="'triangle'">
+        {{ 'designer.effect.curve-triangle' | translate }}
+      </option>
+      <option [value]="'sawtooth'">
+        {{ 'designer.effect.curve-sawtooth' | translate }}
+      </option>
+      <option [value]="'reverse-sawtooth'">
+        {{ 'designer.effect.curve-reverse-sawtooth' | translate }}
+      </option>
     </select>
   </div>
   <div>
@@ -117,6 +120,22 @@
     <div class="my-auto" style="width: 100px; float: left">
       {{ 'designer.effect.curve-chase' | translate }}
     </div>
+    @if (curve.phasingMode === 'spread') {
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        (change)="redraw(); livePreviewService.previewLive()"
+        [(value)]="curve.phasingCycles"
+        style="width: 80px; height: 18px"
+        [tooltip]="'hide'"
+        [min]="phasingCyclesMin"
+        [max]="phasingCyclesMax"
+        [step]="0.05"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.phasingCycles" (ngModelChange)="setPhasingCycles($event); redraw()" />
+    </div>
+    } @else {
     <div class="my-auto" style="float: left">
       <mv-slider
         (change)="redraw(); livePreviewService.previewLive()"
@@ -131,8 +150,36 @@
     <div class="my-auto">
       <input type="text" class="slider-input" [ngModel]="curve.phasingMillis" (ngModelChange)="setPhasingMillis($event); redraw()" />
     </div>
+    }
     <div class="my-auto ml-1">
-      {{ 'designer.misc.ms' | translate }}
+      <select [ngModel]="curve.phasingMode" (ngModelChange)="setPhasingMode($event)" style="height: 20px">
+        <option [value]="'millis'">
+          {{ 'designer.misc.ms' | translate }}
+        </option>
+        <option [value]="'spread'">
+          {{ 'designer.effect.curve-chase-spread' | translate }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.curve-chase-group' | translate }}
+    </div>
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        (change)="redraw(); livePreviewService.previewLive()"
+        [(value)]="curve.phasingGroupSize"
+        style="width: 80px; height: 18px"
+        [tooltip]="'hide'"
+        [min]="phasingGroupSizeMin"
+        [max]="phasingGroupSizeMax"
+        [step]="1"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.phasingGroupSize" (ngModelChange)="setPhasingGroupSize($event); redraw()" />
     </div>
   </div>
 </div>

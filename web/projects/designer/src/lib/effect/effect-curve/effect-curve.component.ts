@@ -33,8 +33,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public percentageMax = 1;
   public phaseMillisMin = -1000;
   public phaseMillisMax = 1000;
-  public phasingMillisMin = 0;
+  public phasingMillisMin = -1000;
   public phasingMillisMax = 1000;
+  public phasingCyclesMin = -4;
+  public phasingCyclesMax = 4;
+  public phasingGroupSizeMin = 1;
+  public phasingGroupSizeMax = 16;
 
   // the selected capabilities
   public availableCapabilities: FixtureCapability[] = [];
@@ -135,33 +139,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   private getPhasingCount(): number {
-    let count = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
-
-    for (const presetFixture of this.presetService.selectedPreset.fixtures) {
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
-
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      // don't count it, if it has the same DMX universe, address and pixel key (if available),
-      // as an already counted one
-      if (!exists) {
-        count++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
-      }
+    if (!this.presetService.selectedPreset) {
+      return 0;
     }
 
-    return count;
+    return this.presetService.getPresetFixtureCount(this.presetService.selectedPreset);
   }
 
   redraw() {
@@ -209,20 +191,17 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
 
     // draw the phasing values (chase), if required
-    let phasingCount = 0;
+    const phasingCount = this.getPhasingCount();
 
-    if (this.curve.phasingMillis > 0 && this.presetService.selectedPreset) {
-      phasingCount = this.getPhasingCount();
+    if (this.curve.getPhasingMillis(1, phasingCount) === 0) {
+      return;
     }
 
     for (let i = 1; i < phasingCount; i++) {
-      this.drawCurrentValue(
-        (this.animationService.timeMillis - i * this.curve.phasingMillis) % durationMillis,
-        3,
-        width,
-        durationMillis,
-        maxHeight
-      );
+      // the phasing can be negative, which the modulo has to be normalized for
+      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(i, phasingCount);
+
+      this.drawCurrentValue(((phasedMillis % durationMillis) + durationMillis) % durationMillis, 3, width, durationMillis, maxHeight);
     }
   }
 
@@ -443,5 +422,25 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       this.curve.phasingMillis = +value;
       this.livePreviewService.previewLive();
     }
+  }
+
+  setPhasingCycles(value: any) {
+    if (!isNaN(value) && value >= this.phasingCyclesMin && value <= this.phasingCyclesMax) {
+      this.curve.phasingCycles = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhasingGroupSize(value: any) {
+    if (!isNaN(value) && value >= this.phasingGroupSizeMin && value <= this.phasingGroupSizeMax) {
+      this.curve.phasingGroupSize = Math.round(+value);
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhasingMode(phasingMode: string) {
+    this.curve.phasingMode = phasingMode;
+    this.redraw();
+    this.livePreviewService.previewLive();
   }
 }
