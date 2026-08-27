@@ -60,10 +60,12 @@ export class HardwarePromoService {
     localStorage.setItem(STORAGE_BAR_DISMISSED, 'true');
   }
 
-  // The link to the hardware, tagged with the place it was clicked, so it
-  // is possible to tell which of the hints actually work.
+  // The link to the hardware, tagged with the place it was clicked, so it is
+  // possible to tell which of the hints actually work. It leads to the product
+  // overview rather than to a single product: Rocket Show is free software, so
+  // building the hardware yourself is a legitimate way to get real output too.
   link(placement: string): string {
-    const utm = 'utm_source=designer&utm_medium=app&utm_campaign=spark';
-    return 'https://rocketshow.net/spark?' + utm + '&utm_content=' + encodeURIComponent(placement);
+    const utm = 'utm_source=designer&utm_medium=app&utm_campaign=hardware';
+    return 'https://rocketshow.net/products?' + utm + '&utm_content=' + encodeURIComponent(placement);
   }
 }
