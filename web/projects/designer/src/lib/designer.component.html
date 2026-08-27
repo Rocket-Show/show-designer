@@ -155,7 +155,7 @@
     <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
       <!-- Menu for the capabilities, channels, effects and settings -->
       @if (projectService.project) {
-      <div class="col col-auto p-0 h-100" style="margin-right: -1px">
+      <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
         <div class="nav flex-column nav-pills nav-pills-attached h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
           <a
             class="nav-link px-3 active"
@@ -222,6 +222,11 @@
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
           </a>
         </div>
+
+        <!-- which preset the panels on the right are editing -->
+        @if (presetService.selectedPreset) {
+        <div class="edit-target">{{ presetService.selectedPreset.name }}</div>
+        }
       </div>
       }
 

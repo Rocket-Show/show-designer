@@ -6,9 +6,5 @@
   <i class="fa fa-fw" [class.fa-headphones]="soloPreset()" [class.fa-folder-open-o]="!soloPreset()" aria-hidden="true"></i>
   <span class="preview-target-type">{{ (soloPreset() ? 'designer.preview.solo' : 'designer.preview.scene') | translate }}</span>
   <span class="preview-target-name">{{ previewName() }}</span>
-  @if (editedPresetName()) {
-  <span class="preview-target-editing">{{ 'designer.preview.editing' | translate }}</span>
-  <span class="preview-target-name">{{ editedPresetName() }}</span>
-  }
 </div>
 }

@@ -810,6 +810,31 @@
   }
 }
 
+.tab-rail {
+  position: relative;
+}
+
+// the name of the preset the capability/channel/effect panels edit, along their tab
+// rail: reads bottom-up next to the panels it belongs to
+.edit-target {
+  position: absolute;
+  bottom: $sd-space-3;
+  left: 0;
+  right: 0;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: calc(100% - 200px);
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: $sd-text-muted;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  user-select: none;
+  pointer-events: none;
+}
+
 .dropdown-divider {
   border-top-color: $sd-border;
 }

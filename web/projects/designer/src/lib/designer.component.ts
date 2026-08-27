@@ -14,6 +14,7 @@ import { FixturePoolService } from './services/fixture-pool.service';
 import { FixtureService } from './services/fixture.service';
 import { HotkeyTargetExcludeService } from './services/hotkey-target-exclude.service';
 import { IntroService } from './services/intro.service';
+import { PresetService } from './services/preset.service';
 import { ProjectLoadService } from './services/project-load.service';
 import { ProjectService } from './services/project.service';
 import { TimelineService } from './services/timeline.service';
@@ -136,6 +137,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private fixtureService: FixtureService,
     private timelineService: TimelineService,
     public introService: IntroService,
+    public presetService: PresetService,
     private effectService: EffectService
   ) {
     this.configService.menuHeightChanged.subscribe(() => {

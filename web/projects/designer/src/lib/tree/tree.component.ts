@@ -64,6 +64,9 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // currently selected nodes (two-way bindable)
   @Input() selectedNodes: TreeNode[] = [];
 
+  // the node the last plain click went to, marked apart from the selection
+  @Input() focusedNode: TreeNode | undefined;
+
   // decide whether a node may be dragged
   @Input() allowDrag: (node: TreeNode) => boolean = () => true;
 
@@ -215,6 +218,12 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
 
     // drag the whole selection, but never a node together with its own ancestor
     this.draggingNodes = this.removeNested([...this.selection]);
+
+    // the grabbed node itself is dropped by removeNested, if one of its ancestors is
+    // selected as well -> drag only what was grabbed in that case, never something else
+    if (!this.draggingNodes.includes(node)) {
+      this.draggingNodes = [node];
+    }
 
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';

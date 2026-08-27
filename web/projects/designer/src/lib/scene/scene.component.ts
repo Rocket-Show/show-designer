@@ -23,11 +23,15 @@ export class SceneComponent implements OnInit, OnDestroy {
   treeNodes: TreeNode[] = [];
   selectedNodes: TreeNode[] = [];
 
+  // the row which was clicked last, marked apart from the selection: it is what the
+  // trash button acts on
+  focusedNode: TreeNode = undefined;
+
   private subscriptions: Subscription[] = [];
 
   // what the trash button acts on: the scene or the preset which was clicked last
-  private removeScene: Scene = undefined;
-  private removePreset: Preset = undefined;
+  private targetScene: Scene = undefined;
+  private targetPreset: Preset = undefined;
 
   constructor(
     public sceneService: SceneService,
@@ -104,6 +108,7 @@ export class SceneComponent implements OnInit, OnDestroy {
     }
 
     this.selectedNodes = selectedNodes;
+    this.updateFocusedNode();
   }
 
   // scenes stay at the root level, presets only live inside a scene and only once
@@ -169,8 +174,23 @@ export class SceneComponent implements OnInit, OnDestroy {
 
   // a row was clicked -> it becomes what the trash button acts on
   onActivate(node: TreeNode) {
-    this.removeScene = node.scene;
-    this.removePreset = node.preset;
+    this.targetScene = node.scene;
+    this.targetPreset = node.preset;
+    this.updateFocusedNode();
+  }
+
+  private updateFocusedNode() {
+    this.focusedNode = undefined;
+
+    for (const sceneNode of this.treeNodes) {
+      if (sceneNode.scene !== this.targetScene) {
+        continue;
+      }
+
+      const presetNode = (sceneNode.children ?? []).find((node: TreeNode) => node.preset === this.targetPreset);
+      this.focusedNode = presetNode || sceneNode;
+      return;
+    }
   }
 
   onSelectedNodesChange(nodes: TreeNode[]) {
@@ -214,24 +234,24 @@ export class SceneComponent implements OnInit, OnDestroy {
   // the trash button removes whatever is selected: a preset from its scene or the
   // scene itself
   removeLabel(): string {
-    return this.removePreset ? 'designer.scene.remove-preset' : 'designer.scene.remove';
+    return this.targetPreset ? 'designer.scene.remove-preset' : 'designer.scene.remove';
   }
 
   remove() {
-    if (this.removePreset && this.removeScene) {
-      this.sceneService.removePresetFromScene(this.removeScene, this.removePreset);
-      this.removePreset = undefined;
+    if (this.targetPreset && this.targetScene) {
+      this.sceneService.removePresetFromScene(this.targetScene, this.targetPreset);
+      this.targetPreset = undefined;
       return;
     }
 
-    const scene = this.removeScene || this.sceneService.selectedScenes[0];
+    const scene = this.targetScene || this.sceneService.selectedScenes[0];
 
     if (!scene) {
       return;
     }
 
     this.sceneService.removeScene(scene);
-    this.removeScene = undefined;
+    this.targetScene = undefined;
   }
 
   openSettings(scene: Scene) {

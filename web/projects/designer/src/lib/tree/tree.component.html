@@ -3,6 +3,7 @@
   <div
     class="tree-node"
     [class.selected]="isSelected(flat.node)"
+    [class.focused]="flat.node === focusedNode"
     [class.dragging]="isDragging(flat.node)"
     [class.drop-before]="drop?.row === flat.node && drop?.zone === 'before'"
     [class.drop-after]="drop?.row === flat.node && drop?.zone === 'after'"

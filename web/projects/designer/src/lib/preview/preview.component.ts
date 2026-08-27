@@ -353,15 +353,6 @@ export class PreviewComponent implements AfterViewInit {
     return this.sceneService.selectedScenes.map((scene) => scene.name).join(', ');
   }
 
-  // the preset being edited, as long as it is not the one being played anyway
-  editedPresetName(): string {
-    if (this.soloPreset() || !this.presetService.selectedPreset) {
-      return '';
-    }
-
-    return this.presetService.selectedPreset.name;
-  }
-
   ngAfterViewInit(): void {
     this.setupRenderer();
     this.setupCamera();

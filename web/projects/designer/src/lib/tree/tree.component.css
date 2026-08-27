@@ -36,6 +36,12 @@
   color: #ffd0a8;
 }
 
+/* the row a click went to last: what the panel's buttons act on */
+.tree-node.focused {
+  outline: 1px solid var(--sd-primary);
+  outline-offset: -1px;
+}
+
 .tree-node.dragging {
   opacity: 0.4;
 }
