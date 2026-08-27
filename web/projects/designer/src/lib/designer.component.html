@@ -249,6 +249,11 @@
       >
         @if (projectService.project) {
         <div class="row h-100 flex-nowrap">
+          <!-- which step of the selected preset these panels are editing -->
+          <div class="col col-auto p-0 h-100">
+            <lib-app-preset-step></lib-app-preset-step>
+          </div>
+
           <!-- Content for the capabilities, channels, effects and settings -->
           <div class="col px-0 h-100">
             <div class="tab-content h-100" id="v-pills-tabContent">
@@ -265,11 +270,6 @@
                 <lib-app-fixture-settings></lib-app-fixture-settings>
               </div>
             </div>
-          </div>
-
-          <!-- which step of the selected preset these panels are editing -->
-          <div class="col col-auto p-0 h-100">
-            <lib-app-preset-step></lib-app-preset-step>
           </div>
         </div>
         }

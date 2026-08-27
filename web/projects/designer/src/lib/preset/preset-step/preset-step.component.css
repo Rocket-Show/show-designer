@@ -9,8 +9,7 @@
   /* two of the header-sized icon actions fit side by side */
   width: 54px;
   border: 1px solid var(--sd-border);
-  border-left: 0;
-  border-radius: 0 var(--sd-radius-lg) var(--sd-radius-lg) 0;
+  border-right: 0;
   background-color: var(--sd-surface-1);
   overflow: hidden;
 }
