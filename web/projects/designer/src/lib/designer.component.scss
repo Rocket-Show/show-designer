@@ -1203,22 +1203,30 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     overflow: hidden;
   }
 
-  // the tab panel is attached to the rails on its left, so it has to start at the
-  // pane's own edge: no pane padding, and no negative row gutter pulling it further
+  // the tab panel is attached to the rail on one side and carries the steps on the
+  // other, so it has to reach both edges of its pane: no pane padding, and no negative
+  // row gutter pulling it further
   #capabilities > .row {
     margin-left: 0;
+    margin-right: 0;
   }
 
   // the panel has to be able to shrink below the width of what it holds, or a wide
-  // channel list would push the rails beside it out of the pane
+  // channel list would push the steps beside it out of the pane
   #capabilities > .row > .col {
     min-width: 0;
   }
 
-  // the tab panel the rails are attached to
+  // the tab panel the rail is attached to
   #capabilities .tab-pane > * > .card {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
+  }
+
+  // ... and which the steps continue on its other side, while they are shown
+  #capabilities.has-steps .tab-pane > * > .card {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
   // the header is a flex row, so the accordion's title wrapper has to grow for

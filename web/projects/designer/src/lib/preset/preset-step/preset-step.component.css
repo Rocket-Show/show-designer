@@ -3,11 +3,16 @@
   height: 100%;
 }
 
-/* a strip along the preset list, holding the steps of the preset selected in it */
+/* the far edge of the panel which edits the steps, carrying on its card: the panel
+   squares off the corners they share (see #capabilities.has-steps) */
 .step-list {
   /* two of the header-sized icon actions fit side by side */
   width: 54px;
-  border-left: 1px solid var(--sd-border);
+  border: 1px solid var(--sd-border);
+  border-left: 0;
+  border-radius: 0 var(--sd-radius-lg) var(--sd-radius-lg) 0;
+  background-color: var(--sd-surface-1);
+  overflow: hidden;
 }
 
 .step-list-actions {
