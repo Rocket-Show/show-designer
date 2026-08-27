@@ -16,16 +16,16 @@
     (dragover)="onDragOver(flat, $event)"
     (drop)="onDrop(flat, $event)"
   >
-    @if (!flat.node.toggleOnClick) {
+    <!-- always rendered, so rows of different kinds line up at the same level;
+         rows that toggle on click carry the slot without a glyph -->
     <i
       class="tree-caret fa"
-      [class.fa-caret-down]="flat.node.isFolder && flat.node.expanded"
-      [class.fa-caret-right]="flat.node.isFolder && !flat.node.expanded"
+      [class.fa-caret-down]="showCaret(flat.node) && flat.node.expanded"
+      [class.fa-caret-right]="showCaret(flat.node) && !flat.node.expanded"
       draggable="false"
       aria-hidden="true"
-      (click)="flat.node.isFolder && toggleExpand(flat.node, $event)"
+      (click)="showCaret(flat.node) && toggleExpand(flat.node, $event)"
     ></i>
-    }
     <i class="tree-icon fa {{ nodeIcon(flat.node) }}" draggable="false" aria-hidden="true"></i>
     <span class="tree-label">
       <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>

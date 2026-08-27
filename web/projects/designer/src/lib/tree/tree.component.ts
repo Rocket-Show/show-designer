@@ -21,8 +21,8 @@ export interface TreeNode {
   // font awesome class of the type icon, and the one to use while the node is open
   icon?: string;
   iconOpen?: string;
-  // the icon already shows whether the node is open (a folder) -> no caret in front of
-  // it, and a plain click on the row opens and closes it
+  // the icon already shows whether the node is open (a folder) -> no caret glyph in
+  // front of it, and a plain click on the row opens and closes it
   toggleOnClick?: boolean;
   children?: TreeNode[];
   // allow arbitrary extra payload on a node
@@ -170,6 +170,12 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     return node.isFolder ? 'fa-folder-o' : 'fa-file-o';
   }
 
+  // a row whose own icon already shows whether it is open carries no caret, but keeps
+  // its slot, so the type icons of all rows on the same level line up
+  showCaret(node: TreeNode): boolean {
+    return !!node.isFolder && !node.toggleOnClick;
+  }
+
   isSelected(node: TreeNode): boolean {
     return this.selection.has(node);
   }
@@ -272,8 +278,11 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       return;
     }
 
-    const resolved = this.resolveDrop(flat, event.currentTarget as HTMLElement, event.clientX, event.clientY);
-    if (!this.canDrop(resolved.ref, resolved.zone)) {
+    const resolved = this.resolveDrop(flat, event.currentTarget as HTMLElement, event.clientX, event.clientY).find((candidate) =>
+      this.canDrop(candidate.ref, candidate.zone)
+    );
+
+    if (!resolved) {
       this.clearIndicator();
       return;
     }
@@ -346,33 +355,51 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     this.dropTail = false;
   }
 
-  // Resolve the hovered row + cursor position into a drop target.
+  // Resolve the hovered row + cursor position into drop targets, the preferred one
+  // first:
   //  - top of a row        -> before it
   //  - middle of a folder  -> inside it
   //  - bottom of a row     -> after it (see afterRow for the inside/outside choice)
   // An expanded, non-empty folder has no "after" band on its header: dropping
   // after such a folder happens at the bottom of its last child instead, so the
   // indicator lands at the folder's visual end rather than under its header.
-  private resolveDrop(flat: FlatNode, row: HTMLElement, clientX: number, clientY: number): DropTarget {
+  // A row may refuse the dragged nodes next to it and still take them in, or the
+  // other way round (a preset has no place between two scenes, only inside one; a
+  // scene cannot go into another scene). The fallbacks make the whole row a target
+  // for whatever is being dragged, instead of only the band the cursor is in.
+  private resolveDrop(flat: FlatNode, row: HTMLElement, clientX: number, clientY: number): DropTarget[] {
     const node = flat.node;
     const rect = row.getBoundingClientRect();
     const offset = clientY - rect.top;
+    const indent = this.indent(flat.level);
+
+    const before: DropTarget = { row: node, zone: 'before', ref: node, indent };
+    const inside: DropTarget = { row: node, zone: 'inside', ref: node, indent };
+    const beside = () => (offset < rect.height / 2 ? before : this.afterRow(flat, clientX, rect.left));
 
     if (node.isFolder) {
       if (offset < rect.height * 0.3) {
-        return { row: node, zone: 'before', ref: node, indent: this.indent(flat.level) };
+        return [before, inside];
       }
+
       const expandedWithChildren = !!node.expanded && !!node.children?.length;
+
       if (expandedWithChildren || offset <= rect.height * 0.7) {
-        return { row: node, zone: 'inside', ref: node, indent: this.indent(flat.level) };
+        return [inside, beside()];
       }
-      return this.afterRow(flat, clientX, rect.left);
+
+      return [this.afterRow(flat, clientX, rect.left), inside];
     }
 
-    if (offset < rect.height / 2) {
-      return { row: node, zone: 'before', ref: node, indent: this.indent(flat.level) };
-    }
-    return this.afterRow(flat, clientX, rect.left);
+    // a leaf: next to it, or into the folder an outdented drop points at, when the
+    // nodes cannot be placed beside it
+    const next = beside();
+
+    return next.ref !== node && next.ref.isFolder ? [next, this.insideOf(next.ref)] : [next];
+  }
+
+  private insideOf(folder: TreeNode): DropTarget {
+    return { row: folder, zone: 'inside', ref: folder, indent: this.indent(this.flatByNode.get(folder)?.level ?? 0) };
   }
 
   // "after" the hovered row. When the row is the last child of its subtree, the
@@ -435,7 +462,14 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       ref.children = ref.children ?? [];
       ref.children.push(...dragged);
       ref.isFolder = true;
-      ref.expanded = true;
+
+      // a closed folder has to open, otherwise the drop looks like it did nothing.
+      // Tell the host about it, so it is remembered like any other open folder.
+      if (!ref.expanded) {
+        ref.expanded = true;
+        this.nodeExpandedChange.emit(ref);
+      }
+
       return;
     }
 

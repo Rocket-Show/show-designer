@@ -119,6 +119,11 @@ export class SceneComponent implements OnInit, OnDestroy {
       return [node.preset];
     }
 
+    // a scene stands for itself, not for the presets it plays
+    if (node.scene) {
+      return [];
+    }
+
     const presets: Preset[] = [];
 
     for (const child of node.children ?? []) {
@@ -147,7 +152,13 @@ export class SceneComponent implements OnInit, OnDestroy {
 
     const targetScene: Scene = target.scene;
 
-    if (!targetScene || (zone === 'inside' && !target.isFolder)) {
+    if (!targetScene) {
+      return false;
+    }
+
+    // a preset lives inside a scene: drop it onto the scene itself, or next to one of
+    // its presets. Between two scenes it would belong to none of them.
+    if (target.isFolder !== (zone === 'inside')) {
       return false;
     }
 
