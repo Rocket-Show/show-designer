@@ -1,25 +1,39 @@
 @if (presetService.selectedPreset && presetService.selectedStep) {
-<div class="step-strip d-flex">
-  <a
-    href="#"
-    class="btn btn-secondary m-0 p-0 mr-2 flex-shrink-0"
-    [class.text-primary]="presetService.stepPreviewRunning"
-    popover="{{ 'designer.preset.steps-run' | translate }}"
-    container="body"
-    placement="top"
-    triggers="mouseenter:mouseleave"
-    (click)="switchStepPreview(); (false)"
-    ><i
-      class="fa fa-fw"
-      [class.fa-play]="!presetService.stepPreviewRunning"
-      [class.fa-pause]="presetService.stepPreviewRunning"
-      aria-hidden="true"
-    ></i
-  ></a>
+<div class="step-rail d-flex flex-column h-100">
+  <!-- what the sequence as a whole does -->
+  <div class="step-rail-actions d-flex">
+    <a
+      href="#"
+      class="btn btn-secondary m-0 p-0"
+      [class.text-primary]="presetService.stepPreviewRunning"
+      popover="{{ 'designer.preset.steps-run' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="switchStepPreview(); (false)"
+      ><i
+        class="fa fa-fw"
+        [class.fa-play]="!presetService.stepPreviewRunning"
+        [class.fa-pause]="presetService.stepPreviewRunning"
+        aria-hidden="true"
+      ></i
+    ></a>
+    <a
+      href="#"
+      class="btn btn-secondary m-0 p-0"
+      [class.text-primary]="presetService.selectedPreset.stepsLoop"
+      popover="{{ 'designer.preset.steps-loop' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="switchLoop(); (false)"
+      ><i class="fa fa-repeat fa-fw" aria-hidden="true"></i
+    ></a>
+  </div>
 
   <!-- the states this preset runs through, in the order they are reached. The
-       capability, channel and effect panels below edit the selected one. -->
-  <div class="steps d-flex">
+       capability, channel and effect panels edit the selected one. -->
+  <div class="steps flex-grow-1">
     @for (step of presetService.selectedPreset.steps; track step.uuid; let i = $index) {
     <div
       class="step"
@@ -27,23 +41,23 @@
       (click)="selectStep(step)"
       (dblclick)="openSettings(step)"
     >
+      @if (i > 0 && step.transitionMillis > 0) {
+      <div class="step-transition text-truncate"><i class="fa fa-long-arrow-down" aria-hidden="true"></i> {{ step.transitionMillis }}</div>
+      }
       <div class="step-name text-truncate">{{ step.name || ('designer.preset.step' | translate) + ' ' + (i + 1) }}</div>
-      <div class="step-time text-truncate">
-        @if (step.transitionMillis > 0 && i > 0) {
-        <i class="fa fa-long-arrow-right" aria-hidden="true"></i> {{ step.transitionMillis }} {{ 'designer.misc.ms' | translate }} &middot;
-        }{{ step.startMillis }} {{ 'designer.misc.ms' | translate }}
-      </div>
+      <div class="step-time text-truncate">{{ step.startMillis }} {{ 'designer.misc.ms' | translate }}</div>
     </div>
     }
   </div>
 
-  <div class="ml-auto d-flex flex-shrink-0">
+  <!-- what the steps themselves can be done with -->
+  <div class="step-rail-actions d-flex">
     <a
       href="#"
       class="btn btn-secondary m-0 p-0"
       popover="{{ 'designer.preset.step-add' | translate }}"
       container="body"
-      placement="top"
+      placement="left"
       triggers="mouseenter:mouseleave"
       (click)="addStep(); (false)"
       ><i class="fa fa-plus fa-fw" aria-hidden="true"></i
@@ -53,7 +67,7 @@
       class="btn btn-secondary m-0 p-0"
       popover="{{ 'designer.preset.step-settings' | translate }}"
       container="body"
-      placement="top"
+      placement="left"
       triggers="mouseenter:mouseleave"
       (click)="openSettings(presetService.selectedStep); (false)"
       ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
@@ -64,21 +78,10 @@
       [class.disabled]="presetService.selectedPreset.steps.length < 2"
       popover="{{ 'designer.preset.step-remove' | translate }}"
       container="body"
-      placement="top"
+      placement="left"
       triggers="mouseenter:mouseleave"
       (click)="deleteStep(); (false)"
       ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
-    ></a>
-    <a
-      href="#"
-      class="btn btn-secondary m-0 p-0"
-      [class.text-primary]="presetService.selectedPreset.stepsLoop"
-      popover="{{ 'designer.preset.steps-loop' | translate }}"
-      container="body"
-      placement="top"
-      triggers="mouseenter:mouseleave"
-      (click)="switchLoop(); (false)"
-      ><i class="fa fa-repeat fa-fw" aria-hidden="true"></i
     ></a>
   </div>
 </div>

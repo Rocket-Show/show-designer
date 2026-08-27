@@ -1,26 +1,44 @@
 :host {
   display: block;
+  height: 100%;
 }
 
-.step-strip {
-  align-items: center;
-  padding: var(--sd-space-1) var(--sd-space-2);
-  border-bottom: 1px solid var(--sd-border);
+/* attached to the right edge of the panel it belongs to, the way the tab rail is
+   attached to its left one: rounded on the outside only */
+.step-rail {
+  width: 92px;
+  border: 1px solid var(--sd-border);
+  border-left: 0;
+  border-radius: 0 var(--sd-radius-lg) var(--sd-radius-lg) 0;
   background-color: var(--sd-surface-1);
+  overflow: hidden;
 }
 
-/* the steps take whatever room is left and scroll sideways once they outgrow it */
+.step-rail-actions {
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: var(--sd-space-1) 0;
+}
+
+.step-rail-actions:first-child {
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.step-rail-actions:last-child {
+  border-top: 1px solid var(--sd-border);
+}
+
+/* the steps take the room between the two action rows and scroll once they outgrow it */
 .steps {
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--sd-space-1);
 }
 
 .step {
-  flex: 0 0 auto;
-  max-width: 160px;
   padding: 2px var(--sd-space-2);
-  margin-right: var(--sd-space-1);
+  margin-bottom: var(--sd-space-1);
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius-sm);
   background-color: var(--sd-surface-2);
@@ -42,16 +60,18 @@
 
 .step-name {
   font-size: 0.8rem;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
-/* when the step is reached and, in front of it, how long it travels to get there */
-.step-time {
+/* when the step is reached and, above it, how long it travels to get there */
+.step-time,
+.step-transition {
   font-size: 0.7rem;
-  line-height: 1.1;
+  line-height: 1.2;
   color: var(--sd-text-dim);
 }
 
-.step-selected .step-time {
+.step-selected .step-time,
+.step-selected .step-transition {
   color: var(--sd-primary-text);
 }

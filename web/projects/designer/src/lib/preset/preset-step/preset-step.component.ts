@@ -41,8 +41,13 @@ export class PresetStepComponent {
   }
 
   openSettings(step: PresetStep) {
-    const bsModalRef = this.modalService.show(PresetStepSettingsComponent, { keyboard: true, ignoreBackdropClick: false });
-    bsModalRef.content.preset = this.presetService.selectedPreset;
-    bsModalRef.content.step = step;
+    // the modal reads both of them in ngOnInit, which runs while it is created:
+    // handing them over afterwards would be too late
+    this.modalService.show(PresetStepSettingsComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      class: '',
+      initialState: { preset: this.presetService.selectedPreset, step },
+    });
   }
 }
