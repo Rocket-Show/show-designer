@@ -61,55 +61,60 @@
     </div>
   </div>
 
-  <div class="card-body h-100 p-0 overflow-auto">
-    <!-- All presets of the project, grouped in folders. Their order only organizes this
+  <div class="card-body h-100 p-0 d-flex">
+    <div class="preset-tree flex-grow-1 overflow-auto">
+      <!-- All presets of the project, grouped in folders. Their order only organizes this
          list: the scenes define in which order their presets are layered. Drag a preset
          into a scene of the scene tree to add it there. -->
-    <lib-tree
-      [nodes]="treeNodes"
-      [selectedNodes]="selectedNodes"
-      [focusedNode]="focusedNode"
-      [publishDrag]="true"
-      [allowDrop]="allowDrop"
-      (selectedNodesChange)="onSelectedNodesChange($event)"
-      (nodesChange)="onNodesChange($event)"
-      (nodeExpandedChange)="onNodeExpandedChange($event)"
-      (activate)="onActivate($event)"
-    >
-      <ng-template #nodeTemplate let-node>
-        @if (node.folder) {
-        <div class="d-flex">
-          <div class="my-auto text-truncate" (click)="$event.stopPropagation()">
-            <lib-app-inline-edit [value]="node.folder.name" (valueChange)="node.folder.name = $event"></lib-app-inline-edit>
+      <lib-tree
+        [nodes]="treeNodes"
+        [selectedNodes]="selectedNodes"
+        [focusedNode]="focusedNode"
+        [publishDrag]="true"
+        [allowDrop]="allowDrop"
+        (selectedNodesChange)="onSelectedNodesChange($event)"
+        (nodesChange)="onNodesChange($event)"
+        (nodeExpandedChange)="onNodeExpandedChange($event)"
+        (activate)="onActivate($event)"
+      >
+        <ng-template #nodeTemplate let-node>
+          @if (node.folder) {
+          <div class="d-flex">
+            <div class="my-auto text-truncate" (click)="$event.stopPropagation()">
+              <lib-app-inline-edit [value]="node.folder.name" (valueChange)="node.folder.name = $event"></lib-app-inline-edit>
+            </div>
           </div>
-        </div>
-        } @else {
-        <div class="d-flex" [class.inactive-list-item]="!sceneService.presetIsSelected(node.preset)">
-          <div class="form-check my-auto mr-1">
-            <input
-              type="checkbox"
-              [disabled]="!enableCheckbox()"
-              class="form-check-input"
-              [ngModel]="sceneService.presetIsSelected(node.preset)"
-              (ngModelChange)="activatePreset($event, node.preset)"
-              (click)="$event.stopPropagation()"
-            />
+          } @else {
+          <div class="d-flex" [class.inactive-list-item]="!sceneService.presetIsSelected(node.preset)">
+            <div class="form-check my-auto mr-1">
+              <input
+                type="checkbox"
+                [disabled]="!enableCheckbox()"
+                class="form-check-input"
+                [ngModel]="sceneService.presetIsSelected(node.preset)"
+                (ngModelChange)="activatePreset($event, node.preset)"
+                (click)="$event.stopPropagation()"
+              />
+            </div>
+            <div class="my-auto text-truncate">
+              {{ node.preset.name }}
+            </div>
+            <div class="my-auto ml-auto mr-2 d-flex">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm py-0 px-1"
+                (click)="$event.stopPropagation(); openSettings(node); (false)"
+              >
+                ...
+              </button>
+            </div>
           </div>
-          <div class="my-auto text-truncate">
-            {{ node.preset.name }}
-          </div>
-          <div class="my-auto ml-auto mr-2 d-flex">
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm py-0 px-1"
-              (click)="$event.stopPropagation(); openSettings(node); (false)"
-            >
-              ...
-            </button>
-          </div>
-        </div>
-        }
-      </ng-template>
-    </lib-tree>
+          }
+        </ng-template>
+      </lib-tree>
+    </div>
+
+    <!-- the steps the selected preset runs through -->
+    <lib-app-preset-step></lib-app-preset-step>
   </div>
 </div>

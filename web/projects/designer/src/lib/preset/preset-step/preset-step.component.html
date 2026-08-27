@@ -1,23 +1,7 @@
-@if (presetService.selectedPreset && presetService.selectedStep) {
-<div class="step-rail d-flex flex-column h-100" [class.step-rail-collapsed]="!presetService.stepRailVisible">
-  <!-- the rail folds itself away while the steps are not being worked on -->
-  <div class="step-rail-actions d-flex">
-    <a
-      href="#"
-      class="btn btn-secondary"
-      [class.text-primary]="presetService.stepRailVisible"
-      popover="{{ 'designer.preset.steps' | translate }}"
-      container="body"
-      placement="right"
-      triggers="mouseenter:mouseleave"
-      (click)="presetService.stepRailVisible = !presetService.stepRailVisible; (false)"
-      ><i class="fa fa-list-ol fa-fw" aria-hidden="true"></i
-    ></a>
-  </div>
-
-  @if (presetService.stepRailVisible) {
+@if (presetService.stepsVisible && presetService.selectedPreset && presetService.selectedStep) {
+<div class="step-list d-flex flex-column h-100">
   <!-- what the sequence as a whole does -->
-  <div class="step-rail-actions d-flex">
+  <div class="step-list-actions d-flex">
     <a
       href="#"
       class="btn btn-secondary"
@@ -47,7 +31,7 @@
     ></a>
   </div>
 
-  <!-- the states this preset runs through, in the order they are reached. The
+  <!-- the states the selected preset runs through, in the order they are reached. The
        capability, channel and effect panels edit the selected one, and the one the
        preset is on while it runs is marked along its edge. -->
   <div class="steps flex-grow-1">
@@ -79,7 +63,7 @@
   </div>
 
   <!-- what the selected step can be done with -->
-  <div class="step-rail-actions d-flex">
+  <div class="step-list-actions d-flex">
     <a
       href="#"
       class="btn btn-secondary"
@@ -102,6 +86,5 @@
       ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
     ></a>
   </div>
-  }
 </div>
 }

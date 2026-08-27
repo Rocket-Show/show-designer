@@ -221,6 +221,18 @@
           >
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
           </a>
+          <a
+            class="nav-link px-3 nav-link-divider"
+            href="#"
+            [class.text-primary]="presetService.stepsVisible"
+            popover="{{ 'designer.preset.steps' | translate }}"
+            container="body"
+            placement="right"
+            triggers="mouseenter:mouseleave"
+            (click)="presetService.stepsVisible = !presetService.stepsVisible; (false)"
+          >
+            <i class="fa fa-list-ol fa-fw" aria-hidden="true"></i>
+          </a>
         </div>
 
         <!-- which preset the panels on the right are editing -->
@@ -233,11 +245,6 @@
       <div id="capabilities" class="split split-horizontal h-100">
         @if (projectService.project) {
         <div class="row h-100 flex-nowrap">
-          <!-- which step of the selected preset the panels beside it are editing -->
-          <div class="col col-auto p-0 h-100">
-            <lib-app-preset-step></lib-app-preset-step>
-          </div>
-
           <!-- Content for the capabilities, channels, effects and settings -->
           <div class="col pl-0 h-100">
             <div class="tab-content h-100" id="v-pills-tabContent">

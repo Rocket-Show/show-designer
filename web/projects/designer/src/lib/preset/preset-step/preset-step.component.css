@@ -3,39 +3,25 @@
   height: 100%;
 }
 
-/* attached to the left edge of the panel it belongs to, between it and the tab rail:
-   rounded on neither side, since it sits between the two */
-.step-rail {
+/* a strip along the preset list, holding the steps of the preset selected in it */
+.step-list {
   /* two of the header-sized icon actions fit side by side */
   width: 54px;
-  border-top: 1px solid var(--sd-border);
-  border-bottom: 1px solid var(--sd-border);
-  background-color: var(--sd-surface-1);
-  overflow: hidden;
+  border-left: 1px solid var(--sd-border);
 }
 
-.step-rail-actions {
+.step-list-actions {
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: center;
   padding: var(--sd-space-1) 0;
 }
 
-.step-rail-actions:first-child,
-.step-rail-actions:nth-child(2) {
+.step-list-actions:first-child {
   border-bottom: 1px solid var(--sd-border);
 }
 
-/* folded away, the rail is only the icon which unfolds it again */
-.step-rail-collapsed {
-  width: 28px;
-}
-
-.step-rail-collapsed .step-rail-actions:first-child {
-  border-bottom: 0;
-}
-
-.step-rail-actions:last-child {
+.step-list-actions:last-child {
   border-top: 1px solid var(--sd-border);
 }
 

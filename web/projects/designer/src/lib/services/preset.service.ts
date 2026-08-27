@@ -817,8 +817,8 @@ export class PresetService {
   // on a clock of its own rather than being told about it.
   activeStep: PresetStep;
 
-  // show the step rail beside the panels it belongs to
-  stepRailVisible = true;
+  // show the steps of the selected preset beside the preset list
+  stepsVisible = true;
 
   // run the steps of the selected preset in the preview instead of holding the step
   // being edited, so that the sequence can be watched without a composition
