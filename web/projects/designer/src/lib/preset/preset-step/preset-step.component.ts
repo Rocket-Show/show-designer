@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { PresetStep } from '../../models/preset-step';
+import { getTransitionStartMillis, PresetStep } from '../../models/preset-step';
 import { LivePreviewService } from '../../services/live-preview.service';
 import { PresetService } from '../../services/preset.service';
 import { PresetStepSettingsComponent } from './preset-step-settings/preset-step-settings.component';
@@ -11,8 +12,53 @@ import { PresetStepSettingsComponent } from './preset-step-settings/preset-step-
   styleUrls: ['./preset-step.component.css'],
   standalone: false,
 })
-export class PresetStepComponent {
-  constructor(public presetService: PresetService, private livePreviewService: LivePreviewService, private modalService: BsModalService) {}
+export class PresetStepComponent implements OnInit, OnDestroy {
+  // the step the preset is on while it runs, which the preview works out on every
+  // frame outside of Angular
+  activeStep: PresetStep;
+
+  private activeStepTimer: any;
+
+  constructor(
+    public presetService: PresetService,
+    private livePreviewService: LivePreviewService,
+    private modalService: BsModalService,
+    private translateService: TranslateService,
+    private changeDetectorRef: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
+
+  ngOnInit() {
+    // reading the playing step on a clock of its own keeps the rail off the render
+    // loop: it redraws when the step changes, not on every frame
+    this.ngZone.runOutsideAngular(() => {
+      this.activeStepTimer = setInterval(() => {
+        if (this.activeStep !== this.presetService.activeStep) {
+          this.activeStep = this.presetService.activeStep;
+          this.ngZone.run(() => this.changeDetectorRef.detectChanges());
+        }
+      }, 100);
+    });
+  }
+
+  ngOnDestroy() {
+    clearInterval(this.activeStepTimer);
+  }
+
+  // a step only shows its number, so its times are read on the way past it
+  stepDescription(step: PresetStep, index: number): string {
+    const millis = this.translateService.instant('designer.misc.ms');
+    const reached = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
+
+    if (index === 0) {
+      return reached;
+    }
+
+    const previous = this.presetService.selectedPreset.steps[index - 1];
+    const transitionMillis = step.startMillis - getTransitionStartMillis(step, step.startMillis, previous.startMillis);
+
+    return reached + ', ' + this.translateService.instant('designer.preset.step-transition') + ': ' + transitionMillis + ' ' + millis;
+  }
 
   selectStep(step: PresetStep) {
     this.presetService.selectStep(step);

@@ -30,9 +30,11 @@ export class Project {
   // the step of the selected preset the panels are editing
   public selectedStepUuid: string;
 
-  // watch the steps of the selected preset run instead of holding the one being edited.
-  // Only travels to the live preview, it is never loaded back from a project.
+  // watch the steps of the selected preset run instead of holding the one being edited,
+  // and the point on the clock the run was started from. Both only travel to the live
+  // preview, they are never loaded back from a project.
   public stepPreviewRunning = false;
+  public stepPreviewStartMillis = 0;
 
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
@@ -87,6 +89,7 @@ export class Project {
 
     // never open a project watching the steps run (see stepPreviewRunning)
     this.stepPreviewRunning = false;
+    this.stepPreviewStartMillis = 0;
     this.previewPreset = data.previewPreset;
     this.selectedCompositionUuid = data.selectedCompositionUuid;
 

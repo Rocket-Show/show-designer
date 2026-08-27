@@ -69,6 +69,16 @@ describe('getStepMarkers', () => {
     expect(markers[2].transitionWidthPercentage).toBe(20);
   });
 
+  it('should span the whole gap for a step without a transition of its own', () => {
+    const sequence = preset(step(0), step(5000));
+    sequence.steps[1].transitionMillis = undefined;
+
+    const markers = getStepMarkers(sequence, scene('preset'), region(0, 10000));
+
+    expect(markers[1].transitionLeftPercentage).toBe(0);
+    expect(markers[1].transitionWidthPercentage).toBe(50);
+  });
+
   it('should give the first step nothing to travel over', () => {
     const markers = getStepMarkers(preset(step(0, 1000), step(5000)), scene('preset'), region(0, 10000));
 

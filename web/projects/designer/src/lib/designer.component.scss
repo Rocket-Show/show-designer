@@ -50,9 +50,11 @@
     border-top: 1px solid $sd-border;
   }
 
-  // icon-only actions in a panel header
+  // icon-only actions in a panel header and in the step rail
   .card-header .btn,
-  .card-header a.btn {
+  .card-header a.btn,
+  .step-rail .btn,
+  .step-rail a.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -821,9 +823,9 @@
 // These describe the icon block and belong with the .nav-pills rules that draw it.
 $sd-rail-icon-size: 30px;
 $sd-rail-icon-gap: 2px;
-// the rail's top border and padding, its four icons, the gaps between them, and the
-// wider gap above the one that stands apart
-$sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail-icon-gap + $sd-space-2;
+// the rail's top border and padding, its five icons, the gaps between them, and the
+// wider gaps above the two that stand apart
+$sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail-icon-gap + 2 * $sd-space-2;
 
 .tab-rail {
   position: relative;
@@ -1201,25 +1203,22 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
     overflow: hidden;
   }
 
-  // the tab panel is attached to a rail on either side, so it has to start and end
-  // at the pane's own edges: no pane padding, and no negative row gutter pulling it
-  // further
+  // the tab panel is attached to the rails on its left, so it has to start at the
+  // pane's own edge: no pane padding, and no negative row gutter pulling it further
   #capabilities > .row {
     margin-left: 0;
-    margin-right: 0;
   }
 
-  // the tab panel the main rail is attached to
+  // the panel has to be able to shrink below the width of what it holds, or a wide
+  // channel list would push the rails beside it out of the pane
+  #capabilities > .row > .col {
+    min-width: 0;
+  }
+
+  // the tab panel the rails are attached to
   #capabilities .tab-pane > * > .card {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-  }
-
-  // the step rail is attached to the panel's other edge in the same way, but only
-  // while a preset is being edited: without one there is no rail to attach to
-  #capabilities.has-step-rail .tab-pane > * > .card {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
   }
 
   // the header is a flex row, so the accordion's title wrapper has to grow for

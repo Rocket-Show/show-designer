@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { PresetStep } from '../models/preset-step';
+import { getTransitionStartMillis, PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { UuidService } from './uuid.service';
@@ -39,7 +39,6 @@ export class PresetStepService {
     const step = new PresetStep(template ? JSON.parse(JSON.stringify(template)) : undefined);
 
     step.uuid = this.uuidService.getUuid();
-    step.name = undefined;
 
     // place it after the last step, as far behind it as the step before that one was
     const steps = preset.steps;
@@ -122,6 +121,7 @@ export class PresetStepService {
       return state;
     }
 
+    state.currentStep = step;
     state.fixtureChannelValues = step.fixtureChannelValues;
     state.fixtureCapabilityValues = step.fixtureCapabilityValues;
 
@@ -132,10 +132,8 @@ export class PresetStepService {
     return state;
   }
 
-  // the values the preset applies at the passed time, relative to its own start.
-  // forceLoop runs the sequence over and over even when the preset does not loop,
-  // which is what the designer watches while it edits the steps.
-  public getStateAtMillis(preset: Preset, presetTimeMillis: number, forceLoop: boolean = false): PresetStepState {
+  // the values the preset applies at the passed time, relative to its own start
+  public getStateAtMillis(preset: Preset, presetTimeMillis: number): PresetStepState {
     const steps = preset.steps;
 
     if (!steps || steps.length === 0) {
@@ -155,7 +153,7 @@ export class PresetStepService {
     let timeMillis = presetTimeMillis;
     let loopMillis = 0;
 
-    if (preset.stepsLoop || forceLoop) {
+    if (preset.stepsLoop) {
       loopMillis = this.getStepsLoopMillis(preset);
 
       if (loopMillis > 0) {
@@ -197,8 +195,7 @@ export class PresetStepService {
       return this.getStepState(current);
     }
 
-    // the transition never reaches back past the step it starts from
-    const transitionStartMillis = Math.max(targetStartMillis - target.transitionMillis, current.startMillis);
+    const transitionStartMillis = getTransitionStartMillis(target, targetStartMillis, current.startMillis);
 
     if (timeMillis <= transitionStartMillis || targetStartMillis <= transitionStartMillis) {
       return this.getStepState(current);
@@ -244,6 +241,9 @@ export class PresetStepService {
 
   private interpolate(from: PresetStep, to: PresetStep, position: number): PresetStepState {
     const state = new PresetStepState();
+
+    // the preset is on the step it is travelling from until it arrives
+    state.currentStep = from;
 
     // A value only one of the two steps carries is held as it is: a step not naming a
     // channel means it does not drive that channel, not that it drives it to zero.

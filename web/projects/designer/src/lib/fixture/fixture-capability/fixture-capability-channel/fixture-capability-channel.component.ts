@@ -41,6 +41,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   private updateTimer: any;
   private capabilityValuesChangedSubscription: Subscription;
   private effectsChangedSubscription: Subscription;
+  private stepsChangedSubscription: Subscription;
 
   @Input()
   profile: FixtureProfile;
@@ -65,6 +66,11 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     });
 
     this.effectsChangedSubscription = this.effectService.effectsChanged.subscribe(() => {
+      this.scheduleUpdate();
+    });
+
+    // the channels carry their values per step as well, so they follow the selection
+    this.stepsChangedSubscription = this.presetService.stepsChanged.subscribe(() => {
       this.scheduleUpdate();
     });
   }
@@ -251,6 +257,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.capabilityValuesChangedSubscription.unsubscribe();
     this.effectsChangedSubscription.unsubscribe();
+    this.stepsChangedSubscription.unsubscribe();
     clearTimeout(this.updateTimer);
     clearTimeout(this.valueSetTimer);
   }

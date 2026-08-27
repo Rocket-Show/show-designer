@@ -17,6 +17,7 @@ import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from './live-preview.service';
+import { AnimationService } from './animation.service';
 
 @Injectable({
   providedIn: 'root',
@@ -61,7 +62,8 @@ export class PresetService {
     private uuidService: UuidService,
     private projectService: ProjectService,
     private fixtureService: FixtureService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    private animationService: AnimationService
   ) {}
 
   getPresetByUuid(uuid: string): Preset {
@@ -810,6 +812,14 @@ export class PresetService {
     this.livePreviewService.previewLive();
   }
 
+  // the step the selected preset is on while it plays, which is what its rail marks.
+  // The preview works it out on every frame, outside of Angular, so the rail reads it
+  // on a clock of its own rather than being told about it.
+  activeStep: PresetStep;
+
+  // show the step rail beside the panels it belongs to
+  stepRailVisible = true;
+
   // run the steps of the selected preset in the preview instead of holding the step
   // being edited, so that the sequence can be watched without a composition
   get stepPreviewRunning(): boolean {
@@ -817,9 +827,15 @@ export class PresetService {
   }
 
   setStepPreviewRunning(running: boolean) {
+    // the run starts at the first step rather than wherever the clock happens to stand
+    this.projectService.project.stepPreviewStartMillis = this.animationService.timeMillis;
     this.projectService.project.stepPreviewRunning = running;
     this.stepsChanged.next();
     this.livePreviewService.previewLive();
+  }
+
+  get stepPreviewStartMillis(): number {
+    return this.projectService.project ? this.projectService.project.stepPreviewStartMillis : 0;
   }
 
   autoOpenFirstEffect() {

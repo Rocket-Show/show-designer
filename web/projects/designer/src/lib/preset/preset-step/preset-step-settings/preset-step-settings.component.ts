@@ -16,10 +16,14 @@ export class PresetStepSettingsComponent implements OnInit {
   preset: Preset;
   step: PresetStep;
 
-  name: string;
   startMillis: number;
   transitionMillis: number;
   transitionCurve: TransitionCurveType;
+
+  // which step of the preset this is, and how long it has to travel from the one
+  // before it while it carries no transition time of its own
+  stepNumber: number;
+  wholeGapMillis: number;
 
   // how much of each effect of the preset this step lets through, in percent and in the
   // order the preset holds its effects in
@@ -30,10 +34,13 @@ export class PresetStepSettingsComponent implements OnInit {
   constructor(public bsModalRef: BsModalRef, private presetService: PresetService) {}
 
   ngOnInit() {
-    this.name = this.step.name;
     this.startMillis = this.step.startMillis;
     this.transitionMillis = this.step.transitionMillis;
     this.transitionCurve = this.step.transitionCurve;
+
+    const index = this.preset.steps.indexOf(this.step);
+    this.stepNumber = index + 1;
+    this.wholeGapMillis = index > 0 ? this.step.startMillis - this.preset.steps[index - 1].startMillis : 0;
 
     for (const effect of this.preset.effects) {
       this.effectAmounts.push(Math.round(this.step.getEffectAmount(effect.uuid) * 100));
@@ -41,12 +48,14 @@ export class PresetStepSettingsComponent implements OnInit {
   }
 
   ok() {
-    this.step.name = this.name;
-
     if (!isNaN(this.startMillis) && this.startMillis >= 0) {
       this.step.startMillis = +this.startMillis;
     }
-    if (!isNaN(this.transitionMillis) && this.transitionMillis >= 0) {
+
+    // an empty time lets the step travel over the whole gap to the one before it
+    if (this.transitionMillis === undefined || this.transitionMillis === null || (this.transitionMillis as any) === '') {
+      this.step.transitionMillis = undefined;
+    } else if (!isNaN(this.transitionMillis) && this.transitionMillis >= 0) {
       this.step.transitionMillis = +this.transitionMillis;
     }
 

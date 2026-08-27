@@ -15,7 +15,9 @@ describe('PresetStepService', () => {
     service = TestBed.inject(PresetStepService);
   });
 
-  // a step driving one channel to the passed value, reached at startMillis
+  // a step driving one channel to the passed value, reached at startMillis. Without a
+  // transition of its own a step travels over the whole gap, so the cases which want a
+  // jump ask for one.
   function step(startMillis: number, value: number, transitionMillis: number = 0): PresetStep {
     const presetStep = new PresetStep();
     presetStep.uuid = 'step-' + startMillis;
@@ -126,10 +128,29 @@ describe('PresetStepService', () => {
     expect(dimmerAt(sequence, 1500)).toBe(200);
   });
 
-  it('should run the sequence for a preset which does not loop when asked to', () => {
-    const sequence = preset(step(0, 100), step(500, 200), step(1000, 300));
+  it('should travel over the whole gap for a step without a transition of its own', () => {
+    const sequence = preset(step(0, 100), step(1000, 200));
+    sequence.steps[1].transitionMillis = undefined;
 
-    expect(service.getStateAtMillis(sequence, 2000, true).fixtureChannelValues[0].value).toBe(200);
+    expect(dimmerAt(sequence, 0)).toBe(100);
+    expect(dimmerAt(sequence, 500)).toBe(150);
+    expect(dimmerAt(sequence, 1000)).toBe(200);
+  });
+
+  it('should jump for a step whose transition was set to nothing', () => {
+    const sequence = preset(step(0, 100), step(1000, 200, 0));
+
+    expect(dimmerAt(sequence, 999)).toBe(100);
+    expect(dimmerAt(sequence, 1000)).toBe(200);
+  });
+
+  it('should name the step it is on', () => {
+    const sequence = preset(step(0, 100), step(1000, 200, 400));
+
+    expect(service.getStateAtMillis(sequence, 500).currentStep).toBe(sequence.steps[0]);
+    // it is still travelling away from the first step until it arrives at the second
+    expect(service.getStateAtMillis(sequence, 800).currentStep).toBe(sequence.steps[0]);
+    expect(service.getStateAtMillis(sequence, 1000).currentStep).toBe(sequence.steps[1]);
   });
 
   it('should hold a value only one of the two steps carries', () => {

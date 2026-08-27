@@ -7,15 +7,15 @@ import { TransitionCurveType } from './transition-curve';
 // its playing time; a preset with a single step is the static look it has always been.
 export class PresetStep {
   uuid: string;
-  name: string;
 
   // when this step is fully reached, relative to the start of the preset. The
   // transition runs over the time before it, so a step lands on its millisecond (and
   // with it on its beat) instead of only starting to move there.
   startMillis = 0;
 
-  // how the values travel from the previous step to this one (0 = jump)
-  transitionMillis = 0;
+  // how long the values travel from the previous step to this one: undefined = the
+  // whole time since that step, 0 = a jump
+  transitionMillis: number;
   transitionCurve: TransitionCurveType = 'linear';
 
   // the selected values
@@ -31,9 +31,8 @@ export class PresetStep {
     }
 
     this.uuid = data.uuid;
-    this.name = data.name;
     this.startMillis = data.startMillis || 0;
-    this.transitionMillis = data.transitionMillis || 0;
+    this.transitionMillis = data.transitionMillis === null ? undefined : data.transitionMillis;
     this.transitionCurve = data.transitionCurve || 'linear';
 
     if (data.fixtureChannelValues) {
@@ -64,4 +63,19 @@ export class PresetStep {
 
     return 1;
   }
+}
+
+// Where the transition into a step starts: the whole time since the step before it,
+// unless the step carries a shorter time of its own. A transition never reaches back
+// past the step it starts from, and the first step has nothing to travel from.
+export function getTransitionStartMillis(step: PresetStep, reachedMillis: number, previousReachedMillis: number): number {
+  if (previousReachedMillis === undefined) {
+    return reachedMillis;
+  }
+
+  if (step.transitionMillis === undefined) {
+    return previousReachedMillis;
+  }
+
+  return Math.max(reachedMillis - step.transitionMillis, previousReachedMillis);
 }

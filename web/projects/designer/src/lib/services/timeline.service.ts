@@ -751,7 +751,7 @@ export class TimelineService {
       }
 
       const tick = this.createStepMarker('step-marker step-marker-tick', marker.leftPercentage, selected);
-      tick.setAttribute('data-step-name', marker.step.name || String(index + 1));
+      tick.setAttribute('data-step-name', String(index + 1));
       region.element.appendChild(tick);
     });
   }

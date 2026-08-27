@@ -7,6 +7,7 @@ import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
+import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { FixtureService } from './fixture.service';
@@ -239,11 +240,16 @@ export class PreviewService implements OnDestroy {
   // panels are editing one step of the selected preset, so that is the one to show:
   // the sequence only runs on the timeline, or when the designer asks to watch it.
   private getPresetStepState(preset: PresetRegionScene, timeMillis: number): PresetStepState {
-    if (!preset.region && !this.presetService.stepPreviewRunning) {
-      return this.presetStepService.getStepState(this.presetService.getEditStep(preset.preset));
+    if (preset.region) {
+      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.getPresetStartMillis(preset));
     }
 
-    return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.getPresetStartMillis(preset), !preset.region);
+    if (this.presetService.stepPreviewRunning) {
+      // the sequence was started by hand, so it runs from the point it was started at
+      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.presetService.stepPreviewStartMillis);
+    }
+
+    return this.presetStepService.getStepState(this.presetService.getEditStep(preset.preset));
   }
 
   private getPresetIntensity(preset: PresetRegionScene, timeMillis: number): number {
@@ -495,6 +501,9 @@ export class PreviewService implements OnDestroy {
     // playing preset is what this is keyed by.
     const presetStates = new Map<PresetRegionScene, PresetStepState>();
 
+    // which step the preset being edited is on, for its rail to mark while it runs
+    let activeStep: PresetStep;
+
     for (const preset of presets) {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
@@ -505,7 +514,13 @@ export class PreviewService implements OnDestroy {
       if (!this.presetStepService.stepsArePhased(preset.preset)) {
         presetStates.set(preset, this.getPresetStepState(preset, timeMillis));
       }
+
+      if (preset.preset === this.presetService.selectedPreset && (preset.region || this.presetService.stepPreviewRunning)) {
+        activeStep = (presetStates.get(preset) || this.getPresetStepState(preset, timeMillis)).currentStep;
+      }
     }
+
+    this.presetService.activeStep = activeStep;
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];

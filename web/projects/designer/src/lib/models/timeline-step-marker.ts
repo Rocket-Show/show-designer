@@ -1,5 +1,5 @@
 import { Preset } from './preset';
-import { PresetStep } from './preset-step';
+import { getTransitionStartMillis, PresetStep } from './preset-step';
 import { Scene } from './scene';
 import { ScenePlaybackRegion } from './scene-playback-region';
 
@@ -42,10 +42,8 @@ export function getStepMarkers(preset: Preset, scene: Scene, scenePlaybackRegion
   for (const step of preset.steps) {
     const reachedMillis = presetStartMillis + step.startMillis;
 
-    // the transition never reaches back past the step it starts from, the same way the
-    // preset itself plays it
-    const transitionStartMillis =
-      previousReachedMillis === undefined ? reachedMillis : Math.max(reachedMillis - step.transitionMillis, previousReachedMillis);
+    // the transition is placed the same way the preset itself plays it
+    const transitionStartMillis = getTransitionStartMillis(step, reachedMillis, previousReachedMillis);
 
     markers.push({
       step,
