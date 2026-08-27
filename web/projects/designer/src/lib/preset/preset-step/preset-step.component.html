@@ -6,6 +6,7 @@
       href="#"
       class="btn btn-secondary"
       [class.text-primary]="presetService.stepPreviewRunning"
+      [class.disabled]="presetService.selectedPreset.steps.length < 2"
       popover="{{ 'designer.preset.steps-run' | translate }}"
       container="body"
       placement="left"
@@ -67,6 +68,16 @@
     <a
       href="#"
       class="btn btn-secondary"
+      popover="{{ 'designer.preset.step-settings' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="openSettings(presetService.selectedStep); (false)"
+      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+    ></a>
+    <a
+      href="#"
+      class="btn btn-secondary"
       [class.disabled]="presetService.selectedPreset.steps.length < 2"
       popover="{{ 'designer.preset.step-remove' | translate }}"
       container="body"
@@ -74,16 +85,6 @@
       triggers="mouseenter:mouseleave"
       (click)="deleteStep(); (false)"
       ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
-    ></a>
-    <a
-      href="#"
-      class="btn btn-secondary"
-      popover="{{ 'designer.preset.step-settings' | translate }}"
-      container="body"
-      placement="left"
-      triggers="mouseenter:mouseleave"
-      (click)="openSettings(presetService.selectedStep); (false)"
-      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
     ></a>
   </div>
 </div>

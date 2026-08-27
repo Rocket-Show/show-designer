@@ -33,6 +33,10 @@ export class PresetStepComponent implements OnInit, OnDestroy {
     // loop: it redraws when the step changes, not on every frame
     this.ngZone.runOutsideAngular(() => {
       this.activeStepTimer = setInterval(() => {
+        if (this.presetService.stepPreviewRunning && this.presetService.stepPreviewFinished()) {
+          this.ngZone.run(() => this.presetService.setStepPreviewRunning(false));
+        }
+
         if (this.activeStep !== this.presetService.activeStep) {
           this.activeStep = this.presetService.activeStep;
           this.ngZone.run(() => this.changeDetectorRef.detectChanges());
