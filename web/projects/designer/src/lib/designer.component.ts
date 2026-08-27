@@ -8,6 +8,7 @@ import { ProjectBrowserComponent } from './project/project-browser/project-brows
 import { ProjectImportComponent } from './project/project-import/project-import.component';
 import { ProjectSaveComponent } from './project/project-save/project-save.component';
 import { ProjectShareComponent } from './project/project-share/project-share.component';
+import { ColorService } from './services/color.service';
 import { ConfigService } from './services/config.service';
 import { ErrorDialogService } from './services/error-dialog.service';
 import { FixturePoolService } from './services/fixture-pool.service';
@@ -145,6 +146,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private timelineService: TimelineService,
     public introService: IntroService,
     public presetService: PresetService,
+    public colorService: ColorService,
     private effectService: EffectService,
     private hardwarePromoService: HardwarePromoService
   ) {
