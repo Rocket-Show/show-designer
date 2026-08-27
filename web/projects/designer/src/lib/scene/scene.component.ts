@@ -69,6 +69,7 @@ export class SceneComponent implements OnInit, OnDestroy {
         id: scene.uuid,
         isFolder: true,
         expanded: scene.expanded !== false,
+        icon: 'fa-picture-o',
         scene,
         children: [],
       };
@@ -77,6 +78,7 @@ export class SceneComponent implements OnInit, OnDestroy {
         sceneNode.children.push({
           id: scene.uuid + '/' + preset.uuid,
           isFolder: false,
+          icon: 'fa-lightbulb-o',
           scene,
           preset,
         });

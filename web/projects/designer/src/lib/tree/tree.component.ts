@@ -18,6 +18,9 @@ export interface TreeNode {
   name?: string;
   isFolder?: boolean;
   expanded?: boolean;
+  // font awesome class of the type icon, and the one to use while the node is open
+  icon?: string;
+  iconOpen?: string;
   children?: TreeNode[];
   // allow arbitrary extra payload on a node
   [key: string]: any;
@@ -144,6 +147,20 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       this.selection = new Set(this.selectedNodes ?? []);
     }
     this.rebuild();
+  }
+
+  // the type icon of a node: the host says what a row is, the caret next to it says
+  // whether it is open
+  nodeIcon(node: TreeNode): string {
+    if (node.isFolder && node.expanded && node.iconOpen) {
+      return node.iconOpen;
+    }
+
+    if (node.icon) {
+      return node.icon;
+    }
+
+    return node.isFolder ? 'fa-folder-o' : 'fa-file-o';
   }
 
   isSelected(node: TreeNode): boolean {

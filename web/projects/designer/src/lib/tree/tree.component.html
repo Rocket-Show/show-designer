@@ -17,15 +17,14 @@
     (drop)="onDrop(flat, $event)"
   >
     <i
-      class="tree-icon fa"
-      [class.fa-folder-open-o]="flat.node.isFolder && flat.node.expanded"
-      [class.fa-folder-o]="flat.node.isFolder && !flat.node.expanded"
-      [class.fa-file-o]="!flat.node.isFolder"
-      [class.tree-icon-toggle]="flat.node.isFolder"
+      class="tree-caret fa"
+      [class.fa-caret-down]="flat.node.isFolder && flat.node.expanded"
+      [class.fa-caret-right]="flat.node.isFolder && !flat.node.expanded"
       draggable="false"
       aria-hidden="true"
       (click)="flat.node.isFolder && toggleExpand(flat.node, $event)"
     ></i>
+    <i class="tree-icon fa {{ nodeIcon(flat.node) }}" draggable="false" aria-hidden="true"></i>
     <span class="tree-label">
       <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>
     </span>

@@ -54,6 +54,15 @@
   z-index: 1;
 }
 
+/* opens and closes an expandable row, so its type icon can stay what it is */
+.tree-caret {
+  flex: 0 0 auto;
+  width: 10px;
+  text-align: center;
+  color: var(--sd-text-dim);
+  cursor: pointer;
+}
+
 .tree-icon {
   flex: 0 0 auto;
   width: 16px;
@@ -62,12 +71,9 @@
   color: var(--sd-text-muted);
 }
 
+.tree-node.selected .tree-caret,
 .tree-node.selected .tree-icon {
   color: inherit;
-}
-
-.tree-icon-toggle {
-  cursor: pointer;
 }
 
 .tree-label {
