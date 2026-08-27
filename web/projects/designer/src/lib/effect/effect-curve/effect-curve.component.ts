@@ -1,7 +1,6 @@
 import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable, Subscription, timer } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { EffectCurveProfileChannels } from '../../models/effect-curve-profile-channel';
 import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
@@ -13,6 +12,25 @@ import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
 
+// a capability checkbox, prepared for the template. the name and the checked state are
+// calculated whenever they change instead of on each change detection cycle, because the
+// sliders trigger change detection with each mouse move.
+export interface CurveCapabilityOption {
+  id: string;
+  name: string;
+  checked: boolean;
+  capability: FixtureCapability;
+}
+
+// a channel checkbox, prepared for the template (see CurveCapabilityOption)
+export interface CurveChannelOption {
+  id: string;
+  name: string;
+  checked: boolean;
+  profile: FixtureProfile;
+  channel: CachedFixtureChannel;
+}
+
 @Component({
   selector: 'lib-app-effect-curve',
   templateUrl: './effect-curve.component.html',
@@ -20,7 +38,7 @@ import { LivePreviewService } from '../../services/live-preview.service';
   standalone: false,
 })
 export class EffectCurveComponent implements OnInit, OnDestroy {
-  private gridUpdateSubscription: Subscription;
+  private animationFrameId: number;
   private ctx: any;
   private maxWidth: number;
   private maxHeight: number;
@@ -40,25 +58,39 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public phasingGroupSizeMin = 1;
   public phasingGroupSizeMax = 16;
 
-  // the selected capabilities
-  public availableCapabilities: FixtureCapability[] = [];
+  // the capabilities to choose from
+  public capabilityOptions: CurveCapabilityOption[] = [];
 
-  // the selected channels
-  public availableChannels: Map<FixtureProfile, CachedFixtureChannel[]> = new Map<FixtureProfile, CachedFixtureChannel[]>();
+  // the channels to choose from
+  public channelOptions: CurveChannelOption[] = [];
+
+  private availableChannels: Map<FixtureProfile, CachedFixtureChannel[]> = new Map<FixtureProfile, CachedFixtureChannel[]>();
   public availableProfiles: FixtureProfile[] = [];
   public selectedProfiles: FixtureProfile[] = [];
 
   private effectsOpenChangedSubscription: Subscription;
+  private fixtureSelectionChangedSubscription: Subscription;
+  private langChangeSubscription: Subscription;
+
+  // whether this effect is the one currently opened in the accordion
+  private effectSelected = false;
+
+  // the number of fixtures the chase is distributed over. calculating it walks over all
+  // fixtures of the project, which is far too expensive to repeat on each animation frame.
+  private phasingCount = 0;
+  private phasingCountMillis: number;
 
   @Input() curve: EffectCurve;
 
   // whether the effect is currently being edited (open) or not
   @Input()
   set isSelected(value: boolean) {
+    this.effectSelected = value;
+
     if (value) {
-      this.startUpdateTimer();
+      this.startAnimation();
     } else {
-      this.stopUpdateTimer();
+      this.stopAnimation();
     }
   }
 
@@ -73,22 +105,26 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private ngZone: NgZone,
     public livePreviewService: LivePreviewService
   ) {
-    this.presetService.fixtureSelectionChanged.subscribe(() => {
+    this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
+
+      // the chase is spread over the fixtures of the preset
+      this.phasingCountMillis = undefined;
+    });
+
+    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
+      this.updateOptionNames();
     });
 
     this.updateCapabilitiesAndChannels();
 
     this.effectsOpenChangedSubscription = this.effectService.effectsOpenChanged.subscribe(() => {
       if (this.effectService.effectsOpen) {
-        this.startUpdateTimer();
+        this.startAnimation();
       } else {
-        this.stopUpdateTimer();
+        this.stopAnimation();
       }
     });
-    if (this.effectService.effectsOpen) {
-      this.startUpdateTimer();
-    }
   }
 
   ngOnInit() {
@@ -101,25 +137,38 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.stopUpdateTimer();
+    this.stopAnimation();
     this.effectsOpenChangedSubscription.unsubscribe();
+    this.fixtureSelectionChangedSubscription.unsubscribe();
+    this.langChangeSubscription.unsubscribe();
   }
 
-  private startUpdateTimer() {
-    if (!this.gridUpdateSubscription) {
-      // Avoid triggering change detection with each animation frame -> run outside zone
-      this.ngZone.runOutsideAngular(() => {
-        this.gridUpdateSubscription = timer(0, 15).subscribe(() => {
-          this.redraw();
-        });
-      });
+  private startAnimation() {
+    if (this.animationFrameId !== undefined) {
+      return;
     }
+
+    // only the effect opened in the accordion of the opened effects tab is visible
+    if (!this.effectSelected || !this.effectService.effectsOpen) {
+      return;
+    }
+
+    // Avoid triggering change detection with each animation frame -> run outside zone.
+    // requestAnimationFrame draws exactly once per frame and pauses in background tabs.
+    this.ngZone.runOutsideAngular(() => {
+      const animate = () => {
+        this.redraw();
+        this.animationFrameId = requestAnimationFrame(animate);
+      };
+
+      this.animationFrameId = requestAnimationFrame(animate);
+    });
   }
 
-  private stopUpdateTimer() {
-    if (this.gridUpdateSubscription) {
-      this.gridUpdateSubscription.unsubscribe();
-      this.gridUpdateSubscription = undefined;
+  private stopAnimation() {
+    if (this.animationFrameId !== undefined) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
     }
   }
 
@@ -143,10 +192,23 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       return 0;
     }
 
-    return this.presetService.getPresetFixtureCount(this.presetService.selectedPreset);
+    // cache the count for a moment. it also depends on the addresses of the fixtures, which
+    // can be changed without notifying this component.
+    const nowMillis = Date.now();
+
+    if (this.phasingCountMillis === undefined || nowMillis - this.phasingCountMillis > 500) {
+      this.phasingCount = this.presetService.getPresetFixtureCount(this.presetService.selectedPreset);
+      this.phasingCountMillis = nowMillis;
+    }
+
+    return this.phasingCount;
   }
 
   redraw() {
+    if (!this.ctx) {
+      return;
+    }
+
     this.ctx.clearRect(0, 0, this.maxWidth, this.maxHeight);
     this.ctx.fillStyle = '#fff';
     this.ctx.strokeStyle = '#fff';
@@ -156,36 +218,34 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.lineWidth = width;
 
-    let oldX: number;
-    let oldY: number;
-
-    let step = 50;
-
-    if (length < 500) {
-      step = 5;
-    }
-
     const durationMillis = this.curve.lengthMillis * Math.max(Math.round(4 - this.curve.lengthMillis / 1000), 1);
     const maxHeight = this.maxHeight - width * 2;
 
-    // draw the curve
-    for (let i = -step * 2; i < durationMillis + step * 2; i += step) {
-      const val = 1 - this.curve.getValueAtMillis(i);
+    // sample the curve once per pixel of the grid. a finer resolution only produces line
+    // segments the canvas cannot resolve anyway.
+    const samples = Math.ceil(this.maxWidth);
+    const stepMillis = durationMillis / samples;
+
+    // draw the whole curve as a single path. stroking each segment on its own is by far the
+    // most expensive part of the redraw and the redraw runs on each animation frame.
+    this.ctx.beginPath();
+
+    for (let i = -2; i <= samples + 2; i++) {
+      const millis = i * stepMillis;
+      const val = 1 - this.curve.getValueAtMillis(millis);
 
       // Scale the values to the grid dimensions
-      const x = (this.maxWidth * i) / durationMillis;
+      const x = (this.maxWidth * millis) / durationMillis;
       const y = maxHeight * val + width;
 
-      if (oldY) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(oldX, oldY);
+      if (i === -2) {
+        this.ctx.moveTo(x, y);
+      } else {
         this.ctx.lineTo(x, y);
-        this.ctx.stroke();
       }
-
-      oldX = x;
-      oldY = y;
     }
+
+    this.ctx.stroke();
 
     // draw the current value
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
@@ -207,6 +267,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   private calculateChannelCapabilities() {
     this.availableChannels = this.presetService.getSelectedProfileChannels(this.selectedProfiles);
+    this.updateChannelOptions();
   }
 
   changeProfileSelection($event: any, profile: FixtureProfile) {
@@ -219,42 +280,55 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.calculateChannelCapabilities();
   }
 
+  profileChecked(profile: FixtureProfile): boolean {
+    return this.selectedProfiles.indexOf(profile) >= 0;
+  }
+
   private updateCapabilitiesAndChannels() {
     // capabilities
-    this.availableCapabilities = [];
+    const availableCapabilities: FixtureCapability[] = [];
 
     if (this.presetService.hasCapabilityDimmer()) {
       const capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Intensity;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
 
     if (this.presetService.hasCapabilityColor()) {
       let capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Red;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Green;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Blue;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
 
     if (this.presetService.hasCapabilityPanTilt()) {
       let capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Pan;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Tilt;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
+
+    this.capabilityOptions = availableCapabilities.map((capability, index) => ({
+      id: 'capability_' + this.curve?.uuid + '_' + index,
+      name: '',
+      checked: this.capabilityChecked(capability),
+      capability,
+    }));
+
+    this.updateCapabilityNames();
 
     // calculate all profiles
     this.availableProfiles = this.presetService.getSelectedProfiles();
@@ -266,26 +340,48 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.calculateChannelCapabilities();
   }
 
-  getCapabilityName(capability: FixtureCapability): Observable<string> {
-    return this.translate
-      .get(['designer.fixtureCapabilityType.' + capability.type, 'designer.fixtureCapabilityColor.' + capability.color])
-      .pipe(
-        map((result: string) => {
-          let name = '';
-          name += result['designer.fixtureCapabilityType.' + capability.type];
+  private updateChannelOptions() {
+    const channelOptions: CurveChannelOption[] = [];
+    let profileIndex = 0;
 
-          if (capability.color) {
-            name += ', ' + result['designer.fixtureCapabilityColor.' + capability.color];
-          } else {
-            return name;
-          }
+    this.availableChannels.forEach((channels: CachedFixtureChannel[], profile: FixtureProfile) => {
+      channels.forEach((channel: CachedFixtureChannel, channelIndex: number) => {
+        channelOptions.push({
+          id: 'channel_' + this.curve?.uuid + '_' + profileIndex + '_' + channelIndex,
+          name: this.getChannelName(profile.name, channel.name),
+          checked: this.channelChecked(profile, channel),
+          profile,
+          channel,
+        });
+      });
 
-          return name;
-        })
-      );
+      profileIndex++;
+    });
+
+    this.channelOptions = channelOptions;
   }
 
-  capabilityChecked(capability: FixtureCapability): boolean {
+  private updateOptionNames() {
+    this.updateCapabilityNames();
+
+    for (const option of this.channelOptions) {
+      option.name = this.getChannelName(option.profile.name, option.channel.name);
+    }
+  }
+
+  private updateCapabilityNames() {
+    for (const option of this.capabilityOptions) {
+      const capability = option.capability;
+      const typeKey = 'designer.fixtureCapabilityType.' + capability.type;
+      const colorKey = 'designer.fixtureCapabilityColor.' + capability.color;
+
+      this.translate.get([typeKey, colorKey]).subscribe((result: any) => {
+        option.name = capability.color ? result[typeKey] + ', ' + result[colorKey] : result[typeKey];
+      });
+    }
+  }
+
+  private capabilityChecked(capability: FixtureCapability): boolean {
     for (const existingCapability of this.curve.capabilities) {
       if (
         this.fixtureService.capabilitiesMatch(
@@ -305,7 +401,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  toggleCapability(event: any, capability: FixtureCapability) {
+  toggleCapability(event: any, option: CurveCapabilityOption) {
+    const capability = option.capability;
+
     if (event.currentTarget.checked) {
       // add the capability
       this.curve.capabilities.push(capability);
@@ -330,10 +428,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       }
     }
 
+    option.checked = this.capabilityChecked(capability);
+
     this.livePreviewService.previewLive();
   }
 
-  getChannelName(profileName: string, channelName: string) {
+  private getChannelName(profileName: string, channelName: string) {
     if (this.availableProfiles.length > 1) {
       return profileName + ' - ' + channelName;
     }
@@ -341,7 +441,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return channelName;
   }
 
-  channelChecked(profile: FixtureProfile, channel: CachedFixtureChannel): boolean {
+  private channelChecked(profile: FixtureProfile, channel: CachedFixtureChannel): boolean {
     for (const profileChannels of this.curve.channels) {
       if (profileChannels.profileUuid === profile.uuid) {
         if (profileChannels.channels.includes(channel.name)) {
@@ -355,7 +455,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  toggleChannel(event: any, profile: FixtureProfile, channel: CachedFixtureChannel) {
+  toggleChannel(event: any, option: CurveChannelOption) {
+    const profile = option.profile;
+    const channel = option.channel;
+
     // add the profile, if necessary
     let profileContained = false;
     for (const profileChannels of this.curve.channels) {
@@ -385,6 +488,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
         break;
       }
     }
+
+    option.checked = this.channelChecked(profile, channel);
 
     this.livePreviewService.previewLive();
   }
@@ -440,7 +545,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   setPhasingMode(phasingMode: string) {
     this.curve.phasingMode = phasingMode;
-    this.redraw();
     this.livePreviewService.previewLive();
   }
 }
