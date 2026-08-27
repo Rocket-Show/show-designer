@@ -17,6 +17,14 @@
   </div>
   <div class="card-body h-100">
     <p>{{ 'designer.intro.step-' + introService.activeStep | translate }}</p>
+
+    <!-- the user just walked through the whole designer: a good moment to mention the hardware -->
+    @if (introService.activeStep == 'finish' && hardwarePromoService.enabled) {
+    <p class="mb-0">
+      {{ 'designer.hardware-promo.intro-finish' | translate }}
+      <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+    </p>
+    }
   </div>
   <div class="card-footer">
     @if (introService.activeStep != 'start') {

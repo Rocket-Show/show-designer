@@ -11,6 +11,17 @@
       <input type="text" class="form-control" [ngModel]="shareLink" readonly />
     </div>
   </div>
+
+  <!-- sharing a show is a good moment to mention where it can be played for real -->
+  @if (hardwarePromoService.enabled) {
+  <div class="hardware-promo-hint">
+    <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
+    <span>
+      {{ 'designer.hardware-promo.share-hint' | translate }}
+      <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+    </span>
+  </div>
+  }
 </div>
 <div class="modal-footer">
   <button type="button" class="btn btn-primary" (click)="ok()">{{ 'designer.misc.ok' | translate }}</button>

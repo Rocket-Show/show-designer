@@ -204,6 +204,17 @@
             </div>
             }
           </div>
+
+          <!-- this patch is not controlling anything in the free online designer -->
+          @if (hardwarePromoService.enabled) {
+          <div class="hardware-promo-hint mt-3">
+            <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
+            <span>
+              {{ 'designer.hardware-promo.dmx-hint' | translate }}
+              <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+            </span>
+          </div>
+          }
         </div>
 
         <!-- Fixture settings -->

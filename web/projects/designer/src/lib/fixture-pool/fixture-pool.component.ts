@@ -7,6 +7,7 @@ import { catchError, finalize } from 'rxjs/operators';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
 import { ConfigService } from '../services/config.service';
+import { HardwarePromoService } from '../services/hardware-promo.service';
 import { FixtureService } from '../services/fixture.service';
 import { PresetService } from '../services/preset.service';
 import { PreviewService } from '../services/preview.service';
@@ -53,6 +54,8 @@ export class FixturePoolComponent implements OnInit {
   // filtered to only show fixtures belonging to this universe.
   public selectedUniverse: UniverseConfig;
 
+  public promoLink: string;
+
   constructor(
     public bsModalRef: BsModalRef,
     public fixtureService: FixtureService,
@@ -64,8 +67,11 @@ export class FixturePoolComponent implements OnInit {
     private presetService: PresetService,
     public configService: ConfigService,
     private modalService: BsModalService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    public hardwarePromoService: HardwarePromoService
   ) {
+    this.promoLink = this.hardwarePromoService.link('dmx-overview');
+
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
     // Initialise the universe list from the config. We keep a local copy so

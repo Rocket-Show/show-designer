@@ -25,6 +25,8 @@ import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EffectService } from './services/effect.service';
+import { HardwarePromoService } from './services/hardware-promo.service';
+import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { UniverseConfig } from './models/universe-config';
 
 @Component({
@@ -107,6 +109,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.freeUniverseEdit = value;
   }
 
+  @Input()
+  set hardwarePromo(value: boolean) {
+    this.configService.hardwarePromo = value;
+  }
+
   // the size of the menu used in the designer
   private designerMenuSizePx = 34;
 
@@ -138,7 +145,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private timelineService: TimelineService,
     public introService: IntroService,
     public presetService: PresetService,
-    private effectService: EffectService
+    private effectService: EffectService,
+    private hardwarePromoService: HardwarePromoService
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
@@ -166,6 +174,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.hardwarePromoService.countSession();
+
     if (localStorage.getItem('language')) {
       this.translateService.use(localStorage.getItem('language'));
     } else {
@@ -356,6 +366,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+
+    // the exported show has nowhere to be played yet -> point at the hardware
+    if (this.hardwarePromoService.enabled) {
+      this.modalService.show(HardwarePromoDialogComponent, { keyboard: true, ignoreBackdropClick: false });
+    }
   }
 
   projectShare() {

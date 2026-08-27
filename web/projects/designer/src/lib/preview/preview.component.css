@@ -95,3 +95,34 @@
 .preview-off-title {
   color: var(--sd-text-muted);
 }
+
+/* sits in the lower right corner of the 3d preview, opposite the target badge */
+.preview-simulation {
+  position: absolute;
+  right: var(--sd-space-2);
+  bottom: var(--sd-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-1);
+  max-width: calc(100% - 2 * var(--sd-space-2));
+  padding: 2px var(--sd-space-2);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.preview-simulation:hover {
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--sd-text-muted);
+  text-decoration: none;
+}
+
+/* the call to action, separated from the label by a thin divider */
+.preview-simulation-cta {
+  padding-left: var(--sd-space-2);
+  border-left: 1px solid var(--sd-border-strong);
+  color: var(--sd-primary-text);
+}

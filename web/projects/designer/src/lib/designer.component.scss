@@ -920,6 +920,40 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
 }
 
 // ---------------------------------------------------------------------------
+// Hardware promo
+//
+// The free online designer cannot output any DMX, so it points at the hardware
+// in a few places. Those hints show up inside the designer as well as inside
+// the modals, which are rendered at body level - hence a global rule.
+// ---------------------------------------------------------------------------
+
+.hardware-promo-hint {
+  display: flex;
+  align-items: baseline;
+  // the dmx channels are floated, so the hint has to drop below them
+  clear: both;
+  gap: $sd-space-2;
+  margin: 0;
+  padding: $sd-space-2 $sd-space-3;
+  border: 1px solid $sd-border;
+  border-left: 2px solid $sd-primary;
+  border-radius: $sd-radius-sm;
+  background-color: $sd-primary-soft;
+  color: $sd-text-muted;
+  font-size: 0.75rem;
+  line-height: 1.5;
+
+  .fa-lightbulb-o {
+    color: $sd-primary-text;
+  }
+
+  a {
+    color: $sd-primary-text;
+    white-space: nowrap;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Designer
 // ---------------------------------------------------------------------------
 

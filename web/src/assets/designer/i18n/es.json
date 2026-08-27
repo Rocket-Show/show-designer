@@ -254,6 +254,21 @@
       "title-finish": "¡Bien hecho!",
       "step-finish": "¡Ya es hora de que lo intentes por ti mismo! Comparte tus espectáculos con tus amigos y mira qué piensan. 👫"
     },
+    "hardware-promo": {
+      "preview-badge": "Simulación",
+      "preview-badge-cta": "Sacarlo a luces reales",
+      "universes-hint": "Estos universos aún no están conectados a nada. Rocket Show Spark los envía como DMX real.",
+      "dmx-hint": "Esta asignación todavía no controla ninguna luz. Rocket Show Spark la convierte en una salida DMX real.",
+      "composition-hint": "En un dispositivo Rocket Show, esta composición reproduce tu audio y tu espectáculo de luces a la vez, de forma automática.",
+      "share-hint": "¿Quieres verlo en luces reales? Rocket Show Spark reproduce tus espectáculos por DMX.",
+      "export-title": "Tu espectáculo está listo",
+      "export-text": "Acabas de exportar un espectáculo de luces completo. Rocket Show Spark lo reproduce en luces reales, sincronizado con tu música.",
+      "intro-finish": "Y cuando quieras verlo en luces reales: Rocket Show Spark reproduce tus espectáculos por DMX.",
+      "bar-title": "¿Listo para hacer realidad tu espectáculo?",
+      "bar-text": "Todo lo que diseñas aquí funciona en Rocket Show Spark: salida DMX real, sincronizada con tu música.",
+      "cta": "Descubre Spark",
+      "dismiss": "Ahora no"
+    },
     "fixtureCapabilityType": {
       "NoFunction": "Sin función",
       "ShutterStrobe": "Shutter/Strobe",

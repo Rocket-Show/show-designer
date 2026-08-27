@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { HardwarePromoService } from '../services/hardware-promo.service';
 import { IntroService } from '../services/intro.service';
 
 @Component({
@@ -8,7 +9,11 @@ import { IntroService } from '../services/intro.service';
   standalone: false,
 })
 export class IntroComponent implements OnInit {
-  constructor(public introService: IntroService) {}
+  public promoLink: string;
+
+  constructor(public introService: IntroService, public hardwarePromoService: HardwarePromoService) {
+    this.promoLink = this.hardwarePromoService.link('intro-finish');
+  }
 
   ngOnInit() {}
 

@@ -1,0 +1,31 @@
+<div class="card-modal">
+  <div class="card">
+    <div class="card-header">
+      {{ 'designer.hardware-promo.export-title' | translate }}
+    </div>
+
+    <div class="card-body">
+      <div class="row">
+        <div class="col-auto">
+          <h2 class="mb-0">
+            <i class="fa fa-lightbulb-o text-primary" aria-hidden="true"></i>
+          </h2>
+        </div>
+        <div class="col pl-0">
+          <p class="mb-0">{{ 'designer.hardware-promo.export-text' | translate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <div class="d-flex float-right">
+        <a class="mr-3 my-auto" href="#" role="button" (click)="close(); (false)">
+          {{ 'designer.hardware-promo.dismiss' | translate }}
+        </a>
+        <a class="btn btn-primary" [href]="link" target="_blank" rel="noopener" (click)="close()">
+          {{ 'designer.hardware-promo.cta' | translate }}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

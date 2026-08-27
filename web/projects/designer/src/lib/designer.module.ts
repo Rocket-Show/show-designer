@@ -31,6 +31,8 @@ import { FixtureSettingsPositionComponent } from './fixture/fixture-settings/fix
 import { FixtureSettingsStageComponent } from './fixture/fixture-settings/fixture-settings-stage/fixture-settings-stage.component';
 import { FixtureSettingsComponent } from './fixture/fixture-settings/fixture-settings.component';
 import { FixtureComponent } from './fixture/fixture.component';
+import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
+import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
 import { PresetSettingsComponent } from './preset/preset-settings/preset-settings.component';
@@ -98,6 +100,8 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     SortablejsDirective,
     TreeComponent,
     InlineEditComponent,
+    HardwarePromoBarComponent,
+    HardwarePromoDialogComponent,
   ],
   exports: [DesignerComponent],
   imports: [

@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
+import { HardwarePromoService } from '../../services/hardware-promo.service';
 import { ProjectService } from '../../services/project.service';
 
 @Component({
@@ -10,8 +11,11 @@ import { ProjectService } from '../../services/project.service';
 })
 export class ProjectShareComponent implements OnInit {
   shareLink: string;
+  promoLink: string;
 
-  constructor(public bsModalRef: BsModalRef, private projectService: ProjectService) {}
+  constructor(public bsModalRef: BsModalRef, private projectService: ProjectService, public hardwarePromoService: HardwarePromoService) {
+    this.promoLink = this.hardwarePromoService.link('share');
+  }
 
   ngOnInit() {
     this.shareLink =

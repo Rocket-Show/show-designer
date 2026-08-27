@@ -32,6 +32,17 @@
   @if (composition.syncType == 'audio') {
   <div class="row">
     <div class="px-3 w-100">
+      <!-- playing lights in sync with the audio is what the hardware does unattended -->
+      @if (hardwarePromoService.enabled) {
+      <div class="hardware-promo-hint mb-3">
+        <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
+        <span>
+          {{ 'designer.hardware-promo.composition-hint' | translate }}
+          <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+        </span>
+      </div>
+      }
+
       <!-- Selected file -->
       <div class="card border-secondary mb-3">
         <div class="card-body">

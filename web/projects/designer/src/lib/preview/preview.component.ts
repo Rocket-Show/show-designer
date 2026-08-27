@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
+import { HardwarePromoService } from '../services/hardware-promo.service';
 import { PresetService } from '../services/preset.service';
 import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
@@ -42,6 +43,8 @@ export class PreviewComponent implements AfterViewInit {
   // turned off while nobody is looking at it. Remembered across sessions.
   public previewHidden = localStorage.getItem(PREVIEW_HIDDEN_STORAGE_KEY) === 'true';
 
+  public promoLink: string;
+
   constructor(
     private fixtureService: FixtureService,
     private previewMeshService: PreviewMeshService,
@@ -51,8 +54,11 @@ export class PreviewComponent implements AfterViewInit {
     public projectService: ProjectService,
     private presetService: PresetService,
     private sceneService: SceneService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    public hardwarePromoService: HardwarePromoService
   ) {
+    this.promoLink = this.hardwarePromoService.link('preview-badge');
+
     this.previewService.doUpdateFixtureSetup.subscribe(() => {
       this.syncFixtures();
     });

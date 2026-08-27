@@ -254,6 +254,21 @@
       "title-finish": "Well done!",
       "step-finish": "About time you're gonna try it out by yourself! Share your shows with your friends and see, what they think about it. 👫"
     },
+    "hardware-promo": {
+      "preview-badge": "Simulation",
+      "preview-badge-cta": "Output to real lights",
+      "universes-hint": "These universes aren't connected to anything yet. Rocket Show Spark sends them out as real DMX.",
+      "dmx-hint": "This patch isn't controlling any lights yet. Rocket Show Spark turns it into real DMX output.",
+      "composition-hint": "On a Rocket Show device, this composition plays your audio and your lighting show together, fully automatically.",
+      "share-hint": "Want to see this on real fixtures? Rocket Show Spark plays your shows over DMX.",
+      "export-title": "Your show is ready",
+      "export-text": "You just exported a complete lighting show. Rocket Show Spark plays it back on real fixtures, in sync with your music.",
+      "intro-finish": "And when you want to see it on real fixtures: Rocket Show Spark plays your shows over DMX.",
+      "bar-title": "Ready to bring your show to reality?",
+      "bar-text": "Everything you design here runs on Rocket Show Spark – real DMX output, in sync with your music.",
+      "cta": "Discover Spark",
+      "dismiss": "Not now"
+    },
     "fixtureCapabilityType": {
       "NoFunction": "No function",
       "ShutterStrobe": "Shutter/Strobe",
