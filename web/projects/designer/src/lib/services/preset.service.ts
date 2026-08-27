@@ -21,6 +21,9 @@ import { LivePreviewService } from './live-preview.service';
 export class PresetService {
   selectedPreset: Preset;
 
+  // the fixtures of a preset indexed by fixture uuid (see getPresetFixturesByUuid)
+  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byUuid: Map<string, PresetFixture[]> }>();
+
   // fires, when the current preview element has changed (scene/preset)
   previewSelectionChanged: Subject<void> = new Subject<void>();
 
@@ -62,13 +65,43 @@ export class PresetService {
   }
 
   getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
-    for (const fixture of preset.fixtures) {
+    // only the fixtures of this uuid can match, which are the fixture itself and its pixels
+    for (const fixture of this.getPresetFixturesByUuid(preset, fixtureUuid)) {
       if (this.fixtureUuidAndPixelKeyEquals(fixture.fixtureUuid, fixtureUuid, fixture.pixelKey, pixelKey)) {
         return fixture;
       }
     }
 
     return null;
+  }
+
+  // getPresetFixture() is called from templates and therefore runs for every fixture on every
+  // change detection cycle, which a slider being dragged triggers with each mouse move. Walking
+  // all fixtures of the preset each time makes that quadratic, so index them by uuid instead.
+  // A preset only ever gets fixtures added, removed or reordered, never exchanged in place, so
+  // the list itself together with its length tells us whether the index is still valid.
+  // Reordering leaves it valid, because a preset holds at most one entry per fixture and pixel.
+  private getPresetFixturesByUuid(preset: Preset, fixtureUuid: string): PresetFixture[] {
+    let index = this.presetFixtureIndex.get(preset);
+
+    if (!index || index.list !== preset.fixtures || index.length !== preset.fixtures.length) {
+      const byUuid = new Map<string, PresetFixture[]>();
+
+      for (const fixture of preset.fixtures) {
+        const fixturesOfUuid = byUuid.get(fixture.fixtureUuid);
+
+        if (fixturesOfUuid) {
+          fixturesOfUuid.push(fixture);
+        } else {
+          byUuid.set(fixture.fixtureUuid, [fixture]);
+        }
+      }
+
+      index = { list: preset.fixtures, length: preset.fixtures.length, byUuid };
+      this.presetFixtureIndex.set(preset, index);
+    }
+
+    return index.byUuid.get(fixtureUuid) || [];
   }
 
   // all fixtures of a preset in the order they are chased in: either the global
