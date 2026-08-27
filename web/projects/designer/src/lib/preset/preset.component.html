@@ -54,6 +54,7 @@
         (dragend)="onDragEnd()"
         (click)="selectPreset(i)"
         [class.active]="item == presetService.selectedPreset"
+        [class.focused]="item == presetService.selectedPreset"
         [class.inactive-list-item]="!sceneService.presetIsSelected(item)"
       >
         <div class="row d-flex" style="cursor: pointer">

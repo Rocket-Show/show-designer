@@ -456,6 +456,12 @@
     }
   }
 
+  // the row the panel's buttons act on, the same ring the scene tree uses
+  .list-group-item.focused {
+    outline: 1px solid $sd-primary;
+    outline-offset: -1px;
+  }
+
   .inactive-list-item {
     opacity: 0.4;
   }

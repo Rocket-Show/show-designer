@@ -110,6 +110,7 @@ export class SceneService {
     return false;
   }
 
+  // used to pick something to edit when a project is opened
   selectPresetFromSelectedScene() {
     // select the first preset of the scene, if no preset of the current scene is already
     // selected to make sure, the user does not edit a preset which is not even
@@ -158,10 +159,11 @@ export class SceneService {
     this.effectService.selectedEffect = undefined;
     this.selectedScenes = scenes;
 
+    // only a preset which was clicked changes what is being edited. Selecting a scene
+    // leaves it alone, the tab rail names it and the tree only marks it when it is part
+    // of a selected scene.
     if (preset) {
       this.presetService.selectPreset(this.projectService.project.presets.indexOf(preset));
-    } else {
-      this.selectPresetFromSelectedScene();
     }
 
     this.projectService.project.selectedSceneUuids = [];
