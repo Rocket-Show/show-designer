@@ -3,14 +3,14 @@
   <button
     type="button"
     class="icon-picker-item"
-    [class.picked]="!icon"
+    [class.picked]="defaultPicked"
     [title]="'designer.misc.icon-default' | translate"
     (click)="pick(undefined)"
   >
     <i class="fa fa-fw {{ defaultIcon }}" [style.color]="color" aria-hidden="true"></i>
   </button>
 
-  @for (pickable of icons; track pickable) {
+  @for (pickable of pickableIcons; track pickable) {
   <button type="button" class="icon-picker-item" [class.picked]="pickable === icon" (click)="pick(pickable)">
     <i class="fa fa-fw {{ pickable }}" [style.color]="color" aria-hidden="true"></i>
   </button>
