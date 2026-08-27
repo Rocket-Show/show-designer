@@ -57,6 +57,7 @@
       "already-have-account": "Hai già un account?",
       "no-account-yet": "Non hai ancora un account?",
       "login-required": "Per favore accedi per continuare.",
+      "newsletter": "Desidero ricevere notizie e aggiornamenti via email.",
       "error": {
         "internal": "Si è verificato un errore interno. Per favore riprova o contatta il nostro supporto nel menu Aiuto.",
         "fill-all-fields": "Per favore compila tutti i campi.",

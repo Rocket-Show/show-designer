@@ -57,6 +57,7 @@
       "already-have-account": "已有账户？",
       "no-account-yet": "还没有账户？",
       "login-required": "请登录以继续。",
+      "newsletter": "我希望通过电子邮件接收新闻和更新。",
       "error": {
         "internal": "发生内部错误。请重试或通过帮助菜单联系我们的支持团队。",
         "fill-all-fields": "请填写所有字段。",
