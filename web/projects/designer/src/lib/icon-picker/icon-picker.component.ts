@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 
 /**
  * Picks the icon an item (a scene, a preset) is shown with in the trees, from a small
@@ -14,7 +14,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
   styleUrls: ['./icon-picker.component.css'],
   standalone: false,
 })
-export class IconPickerComponent {
+export class IconPickerComponent implements OnChanges {
   // the picked icon (undefined = the default one of the item's kind)
   @Input() icon: string;
 
@@ -26,9 +26,31 @@ export class IconPickerComponent {
   // the color the item is marked with, so the icons are shown the way the tree shows them
   @Input() color: string;
 
+  // the icons offered next to the default one, which is the first entry on its own
+  pickableIcons: string[] = IconPickerComponent.icons;
+
+  ngOnChanges() {
+    // the default icon is offered as the first entry alone, so it is never in the set twice
+    this.pickableIcons = IconPickerComponent.icons.filter((icon) => icon !== this.defaultIcon);
+  }
+
+  // picking the icon an item already falls back to is the same as picking none
+  get defaultPicked(): boolean {
+    return !this.icon || this.icon === this.defaultIcon;
+  }
+
+  pick(icon: string) {
+    if (icon === this.icon) {
+      return;
+    }
+
+    this.icon = icon;
+    this.iconChange.emit(icon);
+  }
+
   // font awesome classes, grouped the way they are offered: the looks first, then what
   // a preset does to the fixtures, then where in the show it belongs
-  readonly icons: string[] = [
+  private static readonly icons: string[] = [
     'fa-lightbulb-o',
     'fa-sun-o',
     'fa-moon-o',
@@ -74,13 +96,4 @@ export class IconPickerComponent {
     'fa-clock-o',
     'fa-eye',
   ];
-
-  pick(icon: string) {
-    if (icon === this.icon) {
-      return;
-    }
-
-    this.icon = icon;
-    this.iconChange.emit(icon);
-  }
 }

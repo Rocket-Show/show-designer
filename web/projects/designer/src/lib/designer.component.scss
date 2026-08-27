@@ -283,6 +283,13 @@
     width: 88px;
   }
 
+  // the millisecond fields of the settings dialogs. They are all the same width, so
+  // the unit and the switch next to them line up from row to row.
+  .sd-time-field {
+    flex: 0 0 auto;
+    width: 120px;
+  }
+
   label {
     margin-bottom: 0;
     color: $sd-text-muted;
