@@ -78,6 +78,9 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // the tree structure changed because of a drag & drop move
   @Output() nodesChange = new EventEmitter<TreeNode[]>();
 
+  // a folder was opened or closed
+  @Output() nodeExpandedChange = new EventEmitter<TreeNode>();
+
   // custom node content, provided as <ng-template #nodeTemplate let-node>
   @ContentChild('nodeTemplate') nodeTemplate?: TemplateRef<any>;
 
@@ -153,6 +156,7 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     event?.stopPropagation();
     node.expanded = !node.expanded;
     this.rebuild();
+    this.nodeExpandedChange.emit(node);
   }
 
   // ---- selection / clicking ----------------------------------------------

@@ -97,6 +97,14 @@ export class ProjectLoadService {
     this.projectService.project.version = 3;
   }
 
+  private migrateToVersion4() {
+    // previewPreset used to mean "a preset was clicked last", it is the solo switch of
+    // the preset now -> don't open an old project soloed
+    this.projectService.project.previewPreset = false;
+
+    this.projectService.project.version = 4;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -119,6 +127,11 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 3) {
       this.migrateToVersion3();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 4) {
+      this.migrateToVersion4();
       migrated = true;
     }
 
@@ -248,7 +261,7 @@ export class ProjectLoadService {
     this.sceneService.addScene();
     this.projectService.project.scenes[0].presetUuids.push(preset.uuid);
 
-    this.projectService.project.previewPreset = true;
+    this.projectService.project.previewPreset = false;
 
     this.sceneService.selectedScenes = [this.projectService.project.scenes[0]];
     this.presetService.selectedPreset = this.projectService.project.presets[0];

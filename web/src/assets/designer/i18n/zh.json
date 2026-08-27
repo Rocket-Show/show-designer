@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "场景",
+      "collapse-all": "折叠所有场景",
+      "expand-all": "展开所有场景",
       "add": "添加场景",
       "remove": "删除场景",
       "remove-preset": "从场景中移除预设",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "场景",
-      "preset": "预设",
-      "switch": "在场景和预设之间切换"
+      "solo": "独奏",
+      "editing": "正在编辑"
     },
     "preset": {
       "title": "预设",
+      "solo": "独奏",
       "add": "添加预设",
       "remove": "删除预设",
       "settings-name": "名称",

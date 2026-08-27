@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "Szenen",
+      "collapse-all": "Alle Szenen zuklappen",
+      "expand-all": "Alle Szenen aufklappen",
       "add": "Szene hinzufügen",
       "remove": "Szene löschen",
       "remove-preset": "Preset aus Szene entfernen",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "Szene",
-      "preset": "Preset",
-      "switch": "Zwischen Szene und Preset wechseln"
+      "solo": "Solo",
+      "editing": "bearbeitet"
     },
     "preset": {
       "title": "Presets",
+      "solo": "Solo",
       "add": "Preset hinzufügen",
       "remove": "Preset löschen",
       "settings-name": "Name",

@@ -36,8 +36,16 @@ export class PresetComponent implements OnInit {
   ngOnInit() {}
 
   selectPreset(index: number) {
-    this.projectService.project.previewPreset = true;
     this.presetService.selectPreset(index);
+  }
+
+  // solo previews the selected preset on its own instead of the selected scenes
+  soloPreset(): boolean {
+    return this.projectService.project.previewPreset;
+  }
+
+  switchSoloPreset() {
+    this.presetService.setPreviewPreset(!this.projectService.project.previewPreset);
   }
 
   // the presets can only be added to/removed from a single selected scene

@@ -36,13 +36,6 @@
   color: #ffd0a8;
 }
 
-/* something else is being previewed -> the selection is only what is being edited,
-   not what is on stage */
-:host(.selection-inactive) .tree-node.selected {
-  background-color: var(--sd-primary-soft);
-  color: var(--sd-text);
-}
-
 .tree-node.dragging {
   opacity: 0.4;
 }

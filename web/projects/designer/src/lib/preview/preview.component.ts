@@ -339,18 +339,27 @@ export class PreviewComponent implements AfterViewInit {
     this.previewService.updateFixtureSetup();
   }
 
-  // the name of what is currently being previewed: the selected scenes or the preset
-  // which is being edited
+  // only the selected preset is played, not the scenes it is part of
+  soloPreset(): boolean {
+    return this.projectService.project.previewPreset || this.sceneService.selectedScenes.length === 0;
+  }
+
+  // the name of what is currently being played
   previewName(): string {
-    if (this.projectService.project.previewPreset) {
+    if (this.soloPreset()) {
       return this.presetService.selectedPreset ? this.presetService.selectedPreset.name : '';
     }
 
     return this.sceneService.selectedScenes.map((scene) => scene.name).join(', ');
   }
 
-  switchPreviewPreset() {
-    this.presetService.setPreviewPreset(!this.projectService.project.previewPreset);
+  // the preset being edited, as long as it is not the one being played anyway
+  editedPresetName(): string {
+    if (this.soloPreset() || !this.presetService.selectedPreset) {
+      return '';
+    }
+
+    return this.presetService.selectedPreset.name;
   }
 
   ngAfterViewInit(): void {

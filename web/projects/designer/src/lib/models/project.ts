@@ -26,8 +26,8 @@ export class Project {
   public selectedPresetUuid: string;
   public selectedSceneUuids: string[] = [];
 
-  // true = show the preset, false = show the selected scene
-  public previewPreset = true;
+  // true = play the selected preset on its own (solo), false = play the selected scenes
+  public previewPreset = false;
 
   public selectedCompositionUuid: string;
 

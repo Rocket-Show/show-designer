@@ -445,7 +445,7 @@
     }
   }
 
-  // the item that is currently being output
+  // the selected item
   .list-group-item.active {
     background-color: $sd-primary-soft-strong !important;
     border-color: $sd-border !important;
@@ -453,17 +453,6 @@
 
     &:hover {
       background-color: rgba(253, 126, 20, 0.34) !important;
-    }
-  }
-
-  // selected, but something else is being output
-  .list-group-item.active-light {
-    background-color: $sd-primary-soft;
-    border-color: $sd-border;
-    color: $sd-text;
-
-    &:hover {
-      background-color: $sd-primary-soft-hover;
     }
   }
 

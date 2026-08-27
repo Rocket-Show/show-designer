@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "Scènes",
+      "collapse-all": "Replier toutes les scènes",
+      "expand-all": "Déplier toutes les scènes",
       "add": "Ajouter une scène",
       "remove": "Supprimer la scène",
       "remove-preset": "Retirer le préréglage de la scène",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "Scène",
-      "preset": "Préréglage",
-      "switch": "Basculer entre scène et préréglage"
+      "solo": "Solo",
+      "editing": "édition"
     },
     "preset": {
       "title": "Préréglages",
+      "solo": "Solo",
       "add": "Ajouter un préréglage",
       "remove": "Supprimer le préréglage",
       "settings-name": "Nom",

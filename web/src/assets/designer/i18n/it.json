@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "Scene",
+      "collapse-all": "Comprimi tutte le scene",
+      "expand-all": "Espandi tutte le scene",
       "add": "Aggiungi scena",
       "remove": "Elimina scena",
       "remove-preset": "Rimuovi preset dalla scena",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "Scena",
-      "preset": "Preset",
-      "switch": "Passa da scena a preset"
+      "solo": "Solo",
+      "editing": "in modifica"
     },
     "preset": {
       "title": "Preset",
+      "solo": "Solo",
       "add": "Aggiungi preset",
       "remove": "Elimina preset",
       "settings-name": "Nome",

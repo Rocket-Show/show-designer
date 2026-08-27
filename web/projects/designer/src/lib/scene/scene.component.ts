@@ -25,6 +25,10 @@ export class SceneComponent implements OnInit, OnDestroy {
 
   private subscriptions: Subscription[] = [];
 
+  // what the trash button acts on: the scene or the preset which was clicked last
+  private removeScene: Scene = undefined;
+  private removePreset: Preset = undefined;
+
   constructor(
     public sceneService: SceneService,
     public presetService: PresetService,
@@ -55,17 +59,11 @@ export class SceneComponent implements OnInit, OnDestroy {
   private buildTree() {
     const nodes: TreeNode[] = [];
 
-    // keep the folders open/closed the way they are right now
-    const openScenes = new Map<string, boolean>();
-    for (const sceneNode of this.treeNodes) {
-      openScenes.set(sceneNode.scene.uuid, sceneNode.expanded);
-    }
-
     for (const scene of this.projectService.project.scenes) {
       const sceneNode: TreeNode = {
         id: scene.uuid,
         isFolder: true,
-        expanded: openScenes.get(scene.uuid) !== false,
+        expanded: scene.expanded !== false,
         scene,
         children: [],
       };
@@ -100,7 +98,7 @@ export class SceneComponent implements OnInit, OnDestroy {
       // mark the preset being edited inside the scene as well
       const presetNode = (sceneNode.children ?? []).find((node: TreeNode) => node.preset === this.presetService.selectedPreset);
 
-      if (presetNode && !this.projectService.project.previewPreset) {
+      if (presetNode) {
         selectedNodes.push(presetNode);
       }
     }
@@ -169,6 +167,12 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // a row was clicked -> it becomes what the trash button acts on
+  onActivate(node: TreeNode) {
+    this.removeScene = node.scene;
+    this.removePreset = node.preset;
+  }
+
   onSelectedNodesChange(nodes: TreeNode[]) {
     const scenes: Scene[] = [];
     let preset: Preset = undefined;
@@ -186,25 +190,48 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.sceneService.selectScenes(scenes, preset);
   }
 
+  // opening and closing a scene is remembered with the project
+  onNodeExpandedChange(node: TreeNode) {
+    node.scene.expanded = node.expanded;
+  }
+
+  // one button for both directions: collapse everything, or open it up again once
+  // everything is closed
+  allScenesCollapsed(): boolean {
+    return !this.projectService.project.scenes.some((scene) => scene.expanded !== false);
+  }
+
+  switchAllScenesCollapsed() {
+    const expanded = this.allScenesCollapsed();
+
+    for (const scene of this.projectService.project.scenes) {
+      scene.expanded = expanded;
+    }
+
+    this.buildTree();
+  }
+
   // the trash button removes whatever is selected: a preset from its scene or the
   // scene itself
   removeLabel(): string {
-    return this.selectedNodes.some((node) => node.preset) ? 'designer.scene.remove-preset' : 'designer.scene.remove';
+    return this.removePreset ? 'designer.scene.remove-preset' : 'designer.scene.remove';
   }
 
   remove() {
-    const presetNode = this.selectedNodes.find((node) => node.preset);
-
-    if (presetNode) {
-      this.sceneService.removePresetFromScene(presetNode.scene, presetNode.preset);
+    if (this.removePreset && this.removeScene) {
+      this.sceneService.removePresetFromScene(this.removeScene, this.removePreset);
+      this.removePreset = undefined;
       return;
     }
 
-    if (this.sceneService.selectedScenes.length === 0) {
+    const scene = this.removeScene || this.sceneService.selectedScenes[0];
+
+    if (!scene) {
       return;
     }
 
-    this.sceneService.removeScene(this.sceneService.selectedScenes[0]);
+    this.sceneService.removeScene(scene);
+    this.removeScene = undefined;
   }
 
   openSettings(scene: Scene) {

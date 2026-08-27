@@ -10,6 +10,17 @@
       <a
         href="#"
         class="btn btn-secondary m-0 p-0"
+        [class.text-primary]="soloPreset()"
+        popover="{{ 'designer.preset.solo' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="switchSoloPreset(); (false)"
+        ><i class="fa fa-headphones fa-fw" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ 'designer.preset.remove' | translate }}"
         container="body"
         placement="bottom"
@@ -42,8 +53,7 @@
         (dragstart)="onDragStart(item, $event)"
         (dragend)="onDragEnd()"
         (click)="selectPreset(i)"
-        [class.active-light]="!projectService.project.previewPreset && item == presetService.selectedPreset"
-        [class.active]="projectService.project.previewPreset && item == presetService.selectedPreset"
+        [class.active]="item == presetService.selectedPreset"
         [class.inactive-list-item]="!sceneService.presetIsSelected(item)"
       >
         <div class="row d-flex" style="cursor: pointer">

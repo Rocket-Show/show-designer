@@ -6,6 +6,9 @@ export class Scene {
 
   color = '#fff';
 
+  // is the scene shown with its presets in the scene tree?
+  expanded = true;
+
   // All contained presets, in the order they are layered in this scene: the first
   // one is the topmost layer, overwriting the values of the ones below it
   presetUuids: string[] = [];
@@ -26,6 +29,7 @@ export class Scene {
     this.uuid = data.uuid;
     this.name = data.name;
     this.color = data.color;
+    this.expanded = data.expanded !== false;
     if (data.presetUuids) {
       this.presetUuids = data.presetUuids;
     }

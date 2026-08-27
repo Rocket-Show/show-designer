@@ -21,22 +21,11 @@
   font-size: 0.75rem;
   line-height: 1.5;
   white-space: nowrap;
-  text-decoration: none;
 }
 
-.preview-target:hover {
-  background-color: rgba(0, 0, 0, 0.55);
-  color: var(--sd-text);
-  text-decoration: none;
-}
-
-/* the name of the scenes/preset being previewed, which can get long */
+/* the names, which can get long */
 .preview-target-name {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--sd-text);
-}
-
-.preview-target:hover .preview-target-name {
-  color: var(--sd-primary-text);
 }

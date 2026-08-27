@@ -92,7 +92,9 @@ export class PreviewService implements OnDestroy {
       // Only use active presets in current regions
       presets = this.timelineService.getPresetsInTime(timeMillis);
     } else {
-      if (this.projectService.project.previewPreset) {
+      // previewPreset = solo. Without a selected scene there is nothing else to show
+      // than the selected preset anyway.
+      if (this.projectService.project.previewPreset || this.sceneService.selectedScenes.length === 0) {
         // Only preview the selected preset
         if (this.presetService.selectedPreset) {
           presets.push(new PresetRegionScene(this.presetService.selectedPreset, undefined, undefined));

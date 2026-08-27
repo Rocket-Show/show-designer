@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "Cenas",
+      "collapse-all": "Recolher todas as cenas",
+      "expand-all": "Expandir todas as cenas",
       "add": "Adicionar cena",
       "remove": "Eliminar cena",
       "remove-preset": "Remover predefinição da cena",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "Cena",
-      "preset": "Predefinição",
-      "switch": "Alternar entre cena e predefinição"
+      "solo": "Solo",
+      "editing": "a editar"
     },
     "preset": {
       "title": "Predefinições",
+      "solo": "Solo",
       "add": "Adicionar predefinição",
       "remove": "Eliminar predefinição",
       "settings-name": "Nome",

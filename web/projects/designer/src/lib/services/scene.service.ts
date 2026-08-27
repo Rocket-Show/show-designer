@@ -164,9 +164,6 @@ export class SceneService {
       this.selectPresetFromSelectedScene();
     }
 
-    // preview the complete scene
-    this.projectService.project.previewPreset = false;
-
     this.projectService.project.selectedSceneUuids = [];
     for (const scene of this.selectedScenes) {
       this.projectService.project.selectedSceneUuids.push(scene.uuid);
@@ -204,6 +201,12 @@ export class SceneService {
   }
 
   removeScene(scene: Scene): void {
+    const index = this.projectService.project.scenes.indexOf(scene);
+
+    if (index < 0) {
+      return;
+    }
+
     // remove all playback regions
     for (const composition of this.projectService.project.compositions) {
       for (let i = composition.scenePlaybackRegions.length - 1; i >= 0; i--) {
@@ -215,7 +218,7 @@ export class SceneService {
     }
 
     // remove the scene
-    this.projectService.project.scenes.splice(this.projectService.project.scenes.indexOf(scene), 1);
+    this.projectService.project.scenes.splice(index, 1);
     this.scenesChanged.next();
 
     if (this.projectService.project.scenes.length > 0) {

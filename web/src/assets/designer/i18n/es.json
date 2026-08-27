@@ -87,6 +87,8 @@
     },
     "scene": {
       "title": "Escenas",
+      "collapse-all": "Contraer todas las escenas",
+      "expand-all": "Expandir todas las escenas",
       "add": "Añadir escena",
       "remove": "Eliminar escena",
       "remove-preset": "Quitar preajuste de la escena",
@@ -98,11 +100,12 @@
     },
     "preview": {
       "scene": "Escena",
-      "preset": "Preajuste",
-      "switch": "Cambiar entre escena y preajuste"
+      "solo": "Solo",
+      "editing": "editando"
     },
     "preset": {
       "title": "Preajustes",
+      "solo": "Solo",
       "add": "Añadir preajuste",
       "remove": "Eliminar preajuste",
       "settings-name": "Nombre",

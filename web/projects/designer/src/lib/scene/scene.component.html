@@ -7,6 +7,16 @@
       <a
         href="#"
         class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        popover="{{ (allScenesCollapsed() ? 'designer.scene.expand-all' : 'designer.scene.collapse-all') | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="switchAllScenesCollapsed(); (false)"
+        ><i class="fa fa-fw" [class.fa-compress]="!allScenesCollapsed()" [class.fa-expand]="allScenesCollapsed()" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
         popover="{{ removeLabel() | translate }}"
         container="body"
         placement="bottom"
@@ -29,12 +39,13 @@
   <div class="card-body border-secondary p-0 overflow-auto">
     <!-- The scenes with their presets, ordered as they are layered in the scene -->
     <lib-tree
-      [class.selection-inactive]="projectService.project.previewPreset"
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
       [allowDrop]="allowDrop"
       (selectedNodesChange)="onSelectedNodesChange($event)"
       (nodesChange)="onNodesChange($event)"
+      (nodeExpandedChange)="onNodeExpandedChange($event)"
+      (activate)="onActivate($event)"
     >
       <ng-template #nodeTemplate let-node>
         @if (node.isFolder) {
