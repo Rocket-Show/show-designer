@@ -50,6 +50,7 @@ export class SceneComponent implements OnInit, OnDestroy {
       this.sceneService.scenesChanged.subscribe(() => this.buildTree()),
       this.presetService.presetsChanged.subscribe(() => this.buildTree()),
       this.sceneService.sceneSelected.subscribe(() => this.updateSelection()),
+      // a preset picked in the preset list has to take the mark off the tree
       this.presetService.previewSelectionChanged.subscribe(() => this.updateSelection())
     );
   }
@@ -88,27 +89,25 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.updateSelection();
   }
 
+  // the tree marks the scenes which are played and the row which was clicked last.
+  // Which preset is being edited is not derived here: it is named along the tab rail
+  // and marked in the preset list, so it does not come and go with the scene selection.
   private updateSelection() {
-    // mark the currently selected scenes and, inside them, the preset being edited
+    this.updateFocusedNode();
+
     const selectedNodes: TreeNode[] = [];
 
     for (const sceneNode of this.treeNodes) {
-      if (!this.sceneService.sceneIsSelected(sceneNode.scene)) {
-        continue;
-      }
-
-      selectedNodes.push(sceneNode);
-
-      // mark the preset being edited inside the scene as well
-      const presetNode = (sceneNode.children ?? []).find((node: TreeNode) => node.preset === this.presetService.selectedPreset);
-
-      if (presetNode) {
-        selectedNodes.push(presetNode);
+      if (this.sceneService.sceneIsSelected(sceneNode.scene)) {
+        selectedNodes.push(sceneNode);
       }
     }
 
+    if (this.focusedNode && selectedNodes.indexOf(this.focusedNode) < 0) {
+      selectedNodes.push(this.focusedNode);
+    }
+
     this.selectedNodes = selectedNodes;
-    this.updateFocusedNode();
   }
 
   // scenes stay at the root level, presets only live inside a scene and only once
@@ -172,14 +171,20 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
-  // a row was clicked -> it becomes what the trash button acts on
+  // a row was clicked -> it becomes what the trash button acts on. updateSelection()
+  // runs right after this, through the scene selection.
   onActivate(node: TreeNode) {
     this.targetScene = node.scene;
     this.targetPreset = node.preset;
-    this.updateFocusedNode();
   }
 
   private updateFocusedNode() {
+    // a preset picked somewhere else takes the mark off the one clicked here, so the
+    // tree never keeps marking a preset which is not the one being edited
+    if (this.targetPreset && this.targetPreset !== this.presetService.selectedPreset) {
+      this.targetPreset = undefined;
+    }
+
     this.focusedNode = undefined;
 
     for (const sceneNode of this.treeNodes) {
