@@ -21,6 +21,9 @@ export interface TreeNode {
   // font awesome class of the type icon, and the one to use while the node is open
   icon?: string;
   iconOpen?: string;
+  // full class of a type icon from another font (the fixture icons), used when the
+  // node brings no font awesome one
+  iconClass?: string;
   // the icon already shows whether the node is open (a folder) -> no caret glyph in
   // front of it, and a plain click on the row opens and closes it
   toggleOnClick?: boolean;
@@ -76,6 +79,15 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // offer the current drag to the other trees, so nodes can be dragged from here into
   // one of them (they insert a copy, this tree keeps its own nodes)
   @Input() publishDrag = false;
+
+  // a plain click selects the row it went to. Switch it off where a click means
+  // something else (checking a fixture); ctrl and shift still select, so several rows
+  // can be dragged together
+  @Input() plainClickSelects = true;
+
+  // extra css classes for a row, decided by the host (a fixture which is not part of
+  // the preset is dimmed, for example)
+  @Input() nodeClass: (node: TreeNode) => string = () => '';
 
   // decide whether a node may be dragged
   @Input() allowDrag: (node: TreeNode) => boolean = () => true;
@@ -160,14 +172,18 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // whether it is open
   nodeIcon(node: TreeNode): string {
     if (node.isFolder && node.expanded && node.iconOpen) {
-      return node.iconOpen;
+      return 'fa ' + node.iconOpen;
     }
 
     if (node.icon) {
-      return node.icon;
+      return 'fa ' + node.icon;
     }
 
-    return node.isFolder ? 'fa-folder-o' : 'fa-file-o';
+    if (node.iconClass) {
+      return node.iconClass;
+    }
+
+    return 'fa ' + (node.isFolder ? 'fa-folder-o' : 'fa-file-o');
   }
 
   // a row whose own icon already shows whether it is open carries no caret, but keeps
@@ -215,10 +231,15 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
         this.toggleExpand(node);
       }
 
-      this.selection.clear();
-      this.selection.add(node);
       this.lastClickedIndex = index;
       this.activate.emit(node);
+
+      if (!this.plainClickSelects) {
+        return;
+      }
+
+      this.selection.clear();
+      this.selection.add(node);
     }
 
     this.selectedNodesChange.emit([...this.selection]);

@@ -27,17 +27,28 @@
       <a
         href="#"
         class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.scene.add-folder' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="addFolder(); (false)"
+        ><i class="fa fa-folder-o fa-fw" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
         popover="{{ 'designer.scene.add' | translate }}"
         container="body"
         placement="bottom"
         triggers="mouseenter:mouseleave"
-        (click)="sceneService.addScene(); (false)"
+        (click)="addScene(); (false)"
         ><i class="fa fa-plus fa-fw" aria-hidden="true"></i
       ></a>
     </div>
   </div>
   <div class="card-body border-secondary p-0 overflow-auto">
-    <!-- The scenes with their presets, ordered as they are layered in the scene -->
+    <!-- The scenes, grouped in folders, with their presets ordered as they are layered
+         in the scene -->
     <lib-tree
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
@@ -49,7 +60,13 @@
       (activate)="onActivate($event)"
     >
       <ng-template #nodeTemplate let-node>
-        @if (node.isFolder) {
+        @if (node.sceneFolder) {
+        <div class="d-flex">
+          <div class="my-auto text-truncate" (click)="$event.stopPropagation()">
+            <lib-app-inline-edit [value]="node.sceneFolder.name" (valueChange)="node.sceneFolder.name = $event"></lib-app-inline-edit>
+          </div>
+        </div>
+        } @else if (node.isFolder) {
         <div class="d-flex">
           <div class="my-auto text-truncate">
             {{ node.scene.name }}

@@ -35,6 +35,40 @@
         (click)="selectAll(); (false)"
         ><i class="fa fa-check-square-o fa-fw" aria-hidden="true"></i
       ></a>
+      <!-- the folders group the project's fixture list, which a preset with its own
+           fixture order does not follow -->
+      @if (!usePresetOrder()) {
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ (allFoldersCollapsed() ? 'designer.fixture.expand-all' : 'designer.fixture.collapse-all') | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="switchAllFoldersCollapsed(); (false)"
+        ><i class="fa fa-fw" [class.fa-compress]="!allFoldersCollapsed()" [class.fa-expand]="allFoldersCollapsed()" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.fixture.remove-folder' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="removeFolder(); (false)"
+        ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.fixture.add-folder' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="addFolder(); (false)"
+        ><i class="fa fa-folder-o fa-fw" aria-hidden="true"></i
+      ></a>
+      }
       <a
         href="#"
         class="btn btn-secondary m-0 p-0"
@@ -50,8 +84,9 @@
 
   <div class="card-body h-100 p-0 overflow-auto">
     <!-- List of fixtures -->
-    @if (presetService.selectedPreset) { @if (usePresetOrder()) {
-    <!-- The fixtures of this preset, in the order this preset chases them in -->
+    @if (presetService.selectedPreset && usePresetOrder()) {
+    <!-- The fixtures of this preset, in the order this preset chases them in. It is the
+         preset's own sequence, so the folders of the project's list do not apply here -->
     <div class="list-group" [sortablejs]="presetService.selectedPreset.fixtures" [sortablejsOptions]="fixtureSortableOptions">
       @for (presetFixture of presetService.selectedPreset.fixtures; track presetFixture) {
       <ng-container *ngTemplateOutlet="fixtureRow; context: { $implicit: presetFixture, sortable: true }"></ng-container>
@@ -65,13 +100,46 @@
       }
     </div>
     } @else {
-    <!-- All fixtures of the project, in the global order -->
-    <div class="list-group" [sortablejs]="projectService.project.presetFixtures" [sortablejsOptions]="fixtureSortableOptions">
-      @for (presetFixture of projectService.project.presetFixtures; track presetFixture) {
-      <ng-container *ngTemplateOutlet="fixtureRow; context: { $implicit: presetFixture, sortable: true }"></ng-container>
-      }
-    </div>
-    } } @if (projectService.project.presetFixtures.length == 0) {
+    <!-- All fixtures of the project, grouped in folders. Their order is the one the
+         presets chase them in, unless a preset brings its own -->
+    <lib-tree
+      [nodes]="treeNodes"
+      [selectedNodes]="selectedNodes"
+      [focusedNode]="focusedNode"
+      [plainClickSelects]="false"
+      [nodeClass]="nodeClass"
+      [allowDrop]="allowDrop"
+      (selectedNodesChange)="onSelectedNodesChange($event)"
+      (nodesChange)="onNodesChange($event)"
+      (nodeExpandedChange)="onNodeExpandedChange($event)"
+      (activate)="onActivate($event)"
+    >
+      <ng-template #nodeTemplate let-node>
+        @if (node.folder) {
+        <div class="d-flex">
+          <div class="my-auto text-truncate" (click)="$event.stopPropagation()">
+            <lib-app-inline-edit [value]="node.folder.name" (valueChange)="node.folder.name = $event"></lib-app-inline-edit>
+          </div>
+        </div>
+        } @else {
+        <div class="d-flex">
+          <div class="form-check my-auto mr-1">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [ngModel]="fixtureIsSelected(node.presetFixture)"
+              (ngModelChange)="selectFixture(node.presetFixture)"
+              (click)="$event.stopPropagation()"
+            />
+          </div>
+          <div class="my-auto text-truncate">
+            {{ fixtureName(node.presetFixture) }}
+          </div>
+        </div>
+        }
+      </ng-template>
+    </lib-tree>
+    } @if (projectService.project.presetFixtures.length == 0) {
     <div class="w-100 h-100 d-flex p-3 text-center">
       <a href="#" class="m-auto" (click)="openFixturePool(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.fixture.no-fixtures' | translate }}</a
@@ -83,7 +151,7 @@
 
 <ng-template #fixtureRow let-presetFixture let-sortable="sortable">
   <div class="list-group-item" [class.inactive-list-item]="!fixtureIsSelected(presetFixture)" [class.no-sortjs]="!sortable">
-    <div class="row d-flex" (click)="selectFixture($event, presetFixture)" style="cursor: pointer">
+    <div class="row d-flex" (click)="selectFixture(presetFixture)" style="cursor: pointer">
       @if (sortable) {
       <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
         <i class="fa fa-bars" aria-hidden="true"></i>
@@ -97,13 +165,7 @@
         <input type="checkbox" class="form-check-input" id="active" [ngModel]="fixtureIsSelected(presetFixture)" />
       </div>
       <div>
-        <span
-          class="icon-{{
-            fixtureService.getFixtureIconClass(
-              fixtureService.getProfileByUuid(fixtureService.getFixtureByUuid(presetFixture.fixtureUuid).profileUuid)
-            )
-          }} mr-1"
-        ></span>
+        <span class="icon-{{ fixtureIconClass(presetFixture) }} mr-1"></span>
         {{ fixtureName(presetFixture) }}
       </div>
     </div>

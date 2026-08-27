@@ -3,6 +3,7 @@ import { Subject } from 'rxjs';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
 import { EffectService } from './effect.service';
+import { FolderService } from './folder.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
@@ -24,6 +25,7 @@ export class SceneService {
   constructor(
     private uuidService: UuidService,
     private effectService: EffectService,
+    private folderService: FolderService,
     private presetService: PresetService,
     private projectService: ProjectService,
     private livePreviewService: LivePreviewService
@@ -176,7 +178,9 @@ export class SceneService {
     this.sceneSelected.next();
   }
 
-  addScene(name?: string): void {
+  // add a scene inside the passed folder, right above the passed one (the scene which
+  // was clicked last) or at the end of that folder
+  addScene(name?: string, folderUuid?: string, above?: Scene): Scene {
     const scene: Scene = new Scene();
     scene.uuid = this.uuidService.getUuid();
     scene.name = name || 'New Scene';
@@ -187,19 +191,21 @@ export class SceneService {
       scene.color = '#' + Math.random().toString(16).slice(2, 8).toUpperCase();
     }
 
-    // Insert the new scene before the highest currently selected scene
-    let highestSelectedSceneIndex = 0;
-
-    for (let i = 0; i < this.projectService.project.scenes.length; i++) {
-      if (this.sceneIsSelected(this.projectService.project.scenes[i])) {
-        highestSelectedSceneIndex = i;
-        break;
-      }
+    if (above && above.folderUuid === folderUuid) {
+      scene.folderUuid = folderUuid;
+      scene.sortIndex = (above.sortIndex || 0) - 0.5;
+    } else {
+      this.folderService.placeLast(this.projectService.project.sceneFolders, this.projectService.project.scenes, scene, folderUuid);
     }
 
-    this.projectService.project.scenes.splice(highestSelectedSceneIndex, 0, scene);
+    this.projectService.project.scenes.push(scene);
+    this.folderService.renumber(this.projectService.project.sceneFolders, this.projectService.project.scenes, folderUuid);
+    this.folderService.sortItems(this.projectService.project.sceneFolders, this.projectService.project.scenes);
+
     this.scenesChanged.next();
-    this.selectScene(highestSelectedSceneIndex);
+    this.selectScenes([scene]);
+
+    return scene;
   }
 
   removeScene(scene: Scene): void {
@@ -221,6 +227,7 @@ export class SceneService {
 
     // remove the scene
     this.projectService.project.scenes.splice(index, 1);
+    this.folderService.renumber(this.projectService.project.sceneFolders, this.projectService.project.scenes, scene.folderUuid);
     this.scenesChanged.next();
 
     if (this.projectService.project.scenes.length > 0) {

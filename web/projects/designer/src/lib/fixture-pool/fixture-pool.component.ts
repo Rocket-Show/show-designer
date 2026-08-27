@@ -16,6 +16,7 @@ import { UuidService } from '../services/uuid.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { FixturePoolEditUniversesComponent } from './fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { PresetFixture } from '../models/preset-fixture';
+import { FolderService } from '../services/folder.service';
 import { LivePreviewService } from '../services/live-preview.service';
 import { UniverseConfig } from '../models/universe-config';
 
@@ -67,6 +68,7 @@ export class FixturePoolComponent implements OnInit {
     private presetService: PresetService,
     public configService: ConfigService,
     private modalService: BsModalService,
+    private folderService: FolderService,
     private livePreviewService: LivePreviewService,
     public hardwarePromoService: HardwarePromoService
   ) {
@@ -438,21 +440,22 @@ export class FixturePoolComponent implements OnInit {
       }
       if (!found) {
         if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixture.uuid;
-          this.projectService.project.presetFixtures.push(presetFixture);
+          this.addPresetFixture(fixture.uuid);
         }
 
         const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
         for (let pixel of pixels) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixture.uuid;
-          presetFixture.pixelKey = pixel.key;
-          this.projectService.project.presetFixtures.push(presetFixture);
+          this.addPresetFixture(fixture.uuid, pixel.key);
         }
       }
     }
+
+    // the removed fixtures left gaps in the numbering of every folder they were in
+    for (const folder of [undefined, ...this.projectService.project.fixtureFolders.map((candidate) => candidate.uuid)]) {
+      this.folderService.renumber(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures, folder);
+    }
+
     this.projectService.project.fixtures = this.fixturePool;
 
     // Persist any locally edited universes back to the config when the
@@ -470,6 +473,17 @@ export class FixturePoolComponent implements OnInit {
 
     this.onClose.next(1);
     this.bsModalRef.hide();
+  }
+
+  // a fixture added to the pool appears at the end of the project's fixture list, at
+  // the top level of its folders
+  private addPresetFixture(fixtureUuid: string, pixelKey?: string) {
+    const presetFixture = new PresetFixture();
+    presetFixture.fixtureUuid = fixtureUuid;
+    presetFixture.pixelKey = pixelKey;
+
+    this.folderService.placeLast(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures, presetFixture);
+    this.projectService.project.presetFixtures.push(presetFixture);
   }
 
   cancel() {

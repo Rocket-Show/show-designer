@@ -5,7 +5,6 @@ import { UuidService } from './uuid.service';
 // anything which can sit inside a folder: it knows its folder and its position
 // among the folders and items of that folder
 export interface FolderItem {
-  uuid: string;
   folderUuid?: string;
   sortIndex?: number;
 }
@@ -39,6 +38,14 @@ export class FolderService {
     folders.push(folder);
 
     return folder;
+  }
+
+  // put an item at the end of a folder's children. Used for items which appear without
+  // the user placing them (a fixture added to the pool), so they do not all pile up at
+  // the top with a sortIndex of 0. Call it before adding the item to the list.
+  placeLast(folders: Folder[], items: FolderItem[], item: FolderItem, parentUuid?: string) {
+    item.folderUuid = parentUuid;
+    item.sortIndex = this.getChildren(folders, items, parentUuid).length;
   }
 
   // the folders and items of one parent, in the order they are shown in
@@ -76,19 +83,23 @@ export class FolderService {
   }
 
   // remove a folder and move everything it contained to its parent, so nothing is
-  // deleted along with it
+  // deleted along with it. The content takes the folder's own place among its siblings,
+  // instead of jumping somewhere else in the list.
   removeFolder(folders: Folder[], items: FolderItem[], folder: Folder) {
-    for (const candidate of folders) {
-      if (this.sameFolder(candidate.parentUuid, folder.uuid)) {
-        candidate.parentUuid = folder.parentUuid;
-      }
-    }
+    const content = this.getChildren(folders, items, folder.uuid);
 
-    for (const item of items) {
-      if (this.sameFolder(item.folderUuid, folder.uuid)) {
-        item.folderUuid = folder.parentUuid;
+    content.forEach((child, index) => {
+      // squeeze the content into the gap between the folder and its next sibling
+      const sortIndex = (folder.sortIndex || 0) + (index + 1) / (content.length + 1);
+
+      if (child.folder) {
+        child.folder.parentUuid = folder.parentUuid;
+        child.folder.sortIndex = sortIndex;
+      } else {
+        child.item.folderUuid = folder.parentUuid;
+        child.item.sortIndex = sortIndex;
       }
-    }
+    });
 
     const index = folders.indexOf(folder);
 

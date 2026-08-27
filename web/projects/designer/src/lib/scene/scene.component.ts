@@ -1,8 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subscription } from 'rxjs';
+import { Folder } from '../models/folder';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
+import { FolderService } from '../services/folder.service';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
@@ -18,8 +21,9 @@ import { SceneSettingsComponent } from './scene-settings/scene-settings.componen
   standalone: false,
 })
 export class SceneComponent implements OnInit, OnDestroy {
-  // the scenes with their presets: every scene is a folder, its presets are the
-  // children in the order they are layered in (the first one is the topmost layer)
+  // the scenes with their presets, grouped in folders: every scene is a folder of the
+  // tree, its presets are the children in the order they are layered in (the first one
+  // is the topmost layer)
   treeNodes: TreeNode[] = [];
   selectedNodes: TreeNode[] = [];
 
@@ -29,7 +33,8 @@ export class SceneComponent implements OnInit, OnDestroy {
 
   private subscriptions: Subscription[] = [];
 
-  // what the trash button acts on: the scene or the preset which was clicked last
+  // what the trash button acts on: the folder, scene or preset which was clicked last
+  private targetFolder: Folder = undefined;
   private targetScene: Scene = undefined;
   private targetPreset: Preset = undefined;
 
@@ -37,6 +42,8 @@ export class SceneComponent implements OnInit, OnDestroy {
     public sceneService: SceneService,
     public presetService: PresetService,
     public projectService: ProjectService,
+    private folderService: FolderService,
+    private translateService: TranslateService,
     private modalService: BsModalService,
     private livePreviewService: LivePreviewService,
     public introService: IntroService
@@ -62,9 +69,37 @@ export class SceneComponent implements OnInit, OnDestroy {
   }
 
   private buildTree() {
-    const nodes: TreeNode[] = [];
+    this.treeNodes = this.buildNodes(undefined);
+    this.updateSelection();
+  }
 
-    for (const scene of this.projectService.project.scenes) {
+  private buildNodes(parentUuid: string): TreeNode[] {
+    const nodes: TreeNode[] = [];
+    const children = this.folderService.getChildren(
+      this.projectService.project.sceneFolders,
+      this.projectService.project.scenes,
+      parentUuid
+    );
+
+    for (const child of children) {
+      if (child.folder) {
+        nodes.push({
+          id: child.folder.uuid,
+          isFolder: true,
+          expanded: child.folder.expanded !== false,
+          icon: 'fa-folder-o',
+          iconOpen: 'fa-folder-open-o',
+          toggleOnClick: true,
+          // named apart from the folders of the preset tree, whose nodes are dragged in
+          // here and stand for the presets inside them
+          sceneFolder: child.folder,
+          children: this.buildNodes(child.folder.uuid),
+        });
+
+        continue;
+      }
+
+      const scene = child.item as Scene;
       const sceneNode: TreeNode = {
         id: scene.uuid,
         isFolder: true,
@@ -87,8 +122,7 @@ export class SceneComponent implements OnInit, OnDestroy {
       nodes.push(sceneNode);
     }
 
-    this.treeNodes = nodes;
-    this.updateSelection();
+    return nodes;
   }
 
   // the tree marks the scenes which are played and the row which was clicked last.
@@ -99,17 +133,43 @@ export class SceneComponent implements OnInit, OnDestroy {
 
     const selectedNodes: TreeNode[] = [];
 
-    for (const sceneNode of this.treeNodes) {
-      if (this.sceneService.sceneIsSelected(sceneNode.scene)) {
-        selectedNodes.push(sceneNode);
+    this.eachNode(this.treeNodes, (node) => {
+      if (node.scene && node.isFolder && this.sceneService.sceneIsSelected(node.scene)) {
+        selectedNodes.push(node);
       }
-    }
+    });
 
-    if (this.focusedNode && selectedNodes.indexOf(this.focusedNode) < 0) {
+    // the preset which was clicked is filled as well, so the row being edited stands out
+    // inside its scene. A folder is never played, it only gets the ring - and filling it
+    // would make it part of every drag, so nothing could be dragged into it.
+    if (this.focusedNode?.preset && selectedNodes.indexOf(this.focusedNode) < 0) {
       selectedNodes.push(this.focusedNode);
     }
 
     this.selectedNodes = selectedNodes;
+  }
+
+  private eachNode(nodes: TreeNode[], callback: (node: TreeNode) => void) {
+    for (const node of nodes) {
+      callback(node);
+      this.eachNode(node.children ?? [], callback);
+    }
+  }
+
+  private findNode(nodes: TreeNode[], matches: (node: TreeNode) => boolean): TreeNode {
+    for (const node of nodes) {
+      if (matches(node)) {
+        return node;
+      }
+
+      const found = this.findNode(node.children ?? [], matches);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
   }
 
   // all presets a dragged node stands for: a preset itself, or everything inside a
@@ -119,8 +179,9 @@ export class SceneComponent implements OnInit, OnDestroy {
       return [node.preset];
     }
 
-    // a scene stands for itself, not for the presets it plays
-    if (node.scene) {
+    // a scene and a folder of scenes stand for themselves, not for the presets played
+    // inside them
+    if (node.scene || node.sceneFolder) {
       return [];
     }
 
@@ -133,17 +194,19 @@ export class SceneComponent implements OnInit, OnDestroy {
     return presets;
   }
 
-  // scenes stay at the root level, presets only live inside a scene and only once
+  // scenes and their folders are the structure of the tree, presets only live inside a
+  // scene and only once
   allowDrop = (dragged: TreeNode[], target: TreeNode, zone: TreeDropZone): boolean => {
-    const draggedScenes = dragged.filter((node) => node.scene && node.isFolder);
+    const structure = dragged.filter((node) => node.sceneFolder || (node.scene && node.isFolder));
     const presets = dragged.reduce((all: Preset[], node) => all.concat(this.draggedPresets(node)), []);
 
-    if (draggedScenes.length && presets.length) {
+    if (structure.length && presets.length) {
       return false;
     }
 
-    if (draggedScenes.length) {
-      return target.isFolder && zone !== 'inside';
+    if (structure.length) {
+      // a scene or a folder of scenes goes next to another one, or into a folder
+      return zone === 'inside' ? !!target.sceneFolder : !!(target.sceneFolder || (target.scene && target.isFolder));
     }
 
     if (!presets.length) {
@@ -179,17 +242,36 @@ export class SceneComponent implements OnInit, OnDestroy {
   };
 
   onNodesChange(nodes: TreeNode[]) {
-    const scenes: Scene[] = [];
+    this.applyNodes(nodes, undefined);
 
-    for (const sceneNode of nodes) {
-      if (!sceneNode.isFolder) {
-        continue;
+    // the flat scene list follows what the tree shows
+    this.folderService.sortItems(this.projectService.project.sceneFolders, this.projectService.project.scenes);
+
+    // rebuilds the tree through the subscription above
+    this.sceneService.scenesChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  private applyNodes(nodes: TreeNode[], parentUuid: string) {
+    nodes.forEach((node, index) => {
+      if (node.sceneFolder) {
+        node.sceneFolder.parentUuid = parentUuid;
+        node.sceneFolder.sortIndex = index;
+        this.applyNodes(node.children ?? [], node.sceneFolder.uuid);
+
+        return;
       }
 
-      const scene: Scene = sceneNode.scene;
+      if (!node.scene) {
+        return;
+      }
+
+      node.scene.folderUuid = parentUuid;
+      node.scene.sortIndex = index;
+
       const presetUuids: string[] = [];
 
-      for (const presetNode of sceneNode.children ?? []) {
+      for (const presetNode of node.children ?? []) {
         // a folder dragged in from the preset tree stands for all presets inside it
         for (const preset of this.draggedPresets(presetNode)) {
           if (presetUuids.indexOf(preset.uuid) < 0) {
@@ -198,20 +280,14 @@ export class SceneComponent implements OnInit, OnDestroy {
         }
       }
 
-      scene.presetUuids = presetUuids;
-      scenes.push(scene);
-    }
-
-    this.projectService.project.scenes = scenes;
-
-    // rebuilds the tree through the subscription above
-    this.sceneService.scenesChanged.next();
-    this.livePreviewService.previewLive();
+      node.scene.presetUuids = presetUuids;
+    });
   }
 
   // a row was clicked -> it becomes what the trash button acts on. updateSelection()
   // runs right after this, through the scene selection.
   onActivate(node: TreeNode) {
+    this.targetFolder = node.sceneFolder;
     this.targetScene = node.scene;
     this.targetPreset = node.preset;
   }
@@ -223,17 +299,16 @@ export class SceneComponent implements OnInit, OnDestroy {
       this.targetPreset = undefined;
     }
 
-    this.focusedNode = undefined;
-
-    for (const sceneNode of this.treeNodes) {
-      if (sceneNode.scene !== this.targetScene) {
-        continue;
-      }
-
-      const presetNode = (sceneNode.children ?? []).find((node: TreeNode) => node.preset === this.targetPreset);
-      this.focusedNode = presetNode || sceneNode;
+    if (this.targetFolder) {
+      this.focusedNode = this.findNode(this.treeNodes, (node) => node.sceneFolder === this.targetFolder);
       return;
     }
+
+    const sceneNode = this.findNode(this.treeNodes, (node) => node.scene === this.targetScene && node.isFolder);
+
+    this.focusedNode = this.targetPreset
+      ? (sceneNode?.children ?? []).find((node: TreeNode) => node.preset === this.targetPreset) || sceneNode
+      : sceneNode;
   }
 
   onSelectedNodesChange(nodes: TreeNode[]) {
@@ -253,15 +328,23 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.sceneService.selectScenes(scenes, preset);
   }
 
-  // opening and closing a scene is remembered with the project
+  // opening and closing a scene or a folder is remembered with the project
   onNodeExpandedChange(node: TreeNode) {
+    if (node.sceneFolder) {
+      node.sceneFolder.expanded = node.expanded;
+      return;
+    }
+
     node.scene.expanded = node.expanded;
   }
 
   // one button for both directions: collapse everything, or open it up again once
   // everything is closed
   allScenesCollapsed(): boolean {
-    return !this.projectService.project.scenes.some((scene) => scene.expanded !== false);
+    return (
+      !this.projectService.project.scenes.some((scene) => scene.expanded !== false) &&
+      !this.projectService.project.sceneFolders.some((folder) => folder.expanded !== false)
+    );
   }
 
   switchAllScenesCollapsed() {
@@ -271,16 +354,62 @@ export class SceneComponent implements OnInit, OnDestroy {
       scene.expanded = expanded;
     }
 
+    for (const folder of this.projectService.project.sceneFolders) {
+      folder.expanded = expanded;
+    }
+
     this.buildTree();
   }
 
-  // the trash button removes whatever is selected: a preset from its scene or the
-  // scene itself
+  addScene() {
+    // create it above the scene which was clicked last (or the one being played), inside
+    // the same folder. A folder which was clicked last takes it in instead.
+    const above = this.targetFolder ? undefined : this.targetScene || this.sceneService.selectedScenes[0];
+    const folderUuid = this.targetFolder ? this.targetFolder.uuid : above?.folderUuid;
+
+    // the new scene is what the trash acts on now
+    this.targetScene = this.sceneService.addScene(undefined, folderUuid, above);
+    this.targetFolder = undefined;
+    this.targetPreset = undefined;
+
+    // the tree was already rebuilt while the scene was added -> move the ring over
+    this.updateSelection();
+  }
+
+  addFolder() {
+    const folder = this.folderService.createFolder(
+      this.projectService.project.sceneFolders,
+      this.projectService.project.scenes,
+      this.translateService.instant('designer.scene.new-folder'),
+      this.targetFolder ? this.targetFolder.parentUuid : this.targetScene?.folderUuid
+    );
+
+    this.targetFolder = folder;
+    this.targetScene = undefined;
+    this.targetPreset = undefined;
+    this.buildTree();
+  }
+
+  // the trash button removes whatever was clicked last: a folder, a preset of a scene
+  // or the scene itself
   removeLabel(): string {
+    if (this.targetFolder) {
+      return 'designer.scene.remove-folder';
+    }
+
     return this.targetPreset ? 'designer.scene.remove-preset' : 'designer.scene.remove';
   }
 
   remove() {
+    if (this.targetFolder) {
+      // the content of a folder is not deleted along with it, it moves up
+      this.folderService.removeFolder(this.projectService.project.sceneFolders, this.projectService.project.scenes, this.targetFolder);
+      this.targetFolder = undefined;
+      this.folderService.sortItems(this.projectService.project.sceneFolders, this.projectService.project.scenes);
+      this.buildTree();
+      return;
+    }
+
     if (this.targetPreset && this.targetScene) {
       this.sceneService.removePresetFromScene(this.targetScene, this.targetPreset);
       this.targetPreset = undefined;

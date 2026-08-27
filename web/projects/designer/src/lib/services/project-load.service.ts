@@ -116,6 +116,22 @@ export class ProjectLoadService {
     this.projectService.project.version = 5;
   }
 
+  private migrateToVersion6() {
+    // the scenes and the fixtures can be grouped in folders now, like the presets ->
+    // put them all at the top level, in the order they had so far
+    this.projectService.project.scenes.forEach((scene, index) => {
+      scene.folderUuid = undefined;
+      scene.sortIndex = index;
+    });
+
+    this.projectService.project.presetFixtures.forEach((presetFixture, index) => {
+      presetFixture.folderUuid = undefined;
+      presetFixture.sortIndex = index;
+    });
+
+    this.projectService.project.version = 6;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -148,6 +164,11 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 5) {
       this.migrateToVersion5();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 6) {
+      this.migrateToVersion6();
       migrated = true;
     }
 

@@ -4,6 +4,11 @@ export class Scene {
   uuid: string;
   name: string;
 
+  // the folder of the scene tree this scene is in (undefined = top level) and its
+  // position among the folders and scenes of that folder
+  folderUuid: string;
+  sortIndex = 0;
+
   color = '#fff';
 
   // is the scene shown with its presets in the scene tree?
@@ -28,6 +33,8 @@ export class Scene {
 
     this.uuid = data.uuid;
     this.name = data.name;
+    this.folderUuid = data.folderUuid;
+    this.sortIndex = data.sortIndex || 0;
     this.color = data.color;
     this.expanded = data.expanded !== false;
     if (data.presetUuids) {

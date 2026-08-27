@@ -48,8 +48,10 @@ export class Project {
   public scenes: Scene[] = [];
   public presets: Preset[] = [];
 
-  // the folders grouping the presets
+  // the folders grouping the scenes, the presets and the fixtures
+  public sceneFolders: Folder[] = [];
   public presetFolders: Folder[] = [];
+  public fixtureFolders: Folder[] = [];
 
   constructor(data?: any) {
     if (!data) {
@@ -119,9 +121,13 @@ export class Project {
       }
     }
 
-    if (data.presetFolders) {
-      for (const folder of data.presetFolders) {
-        this.presetFolders.push(new Folder(folder));
+    for (const [source, target] of [
+      [data.sceneFolders, this.sceneFolders],
+      [data.presetFolders, this.presetFolders],
+      [data.fixtureFolders, this.fixtureFolders],
+    ] as [any[], Folder[]][]) {
+      for (const folder of source ?? []) {
+        target.push(new Folder(folder));
       }
     }
   }

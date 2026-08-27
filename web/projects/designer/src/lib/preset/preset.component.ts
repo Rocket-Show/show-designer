@@ -83,11 +83,13 @@ export class PresetComponent implements OnInit, OnDestroy {
           children: this.buildNodes(child.folder.uuid),
         });
       } else {
+        const preset = child.item as Preset;
+
         nodes.push({
-          id: child.item.uuid,
+          id: preset.uuid,
           isFolder: false,
           icon: 'fa-lightbulb-o',
-          preset: child.item as Preset,
+          preset,
         });
       }
     }
@@ -270,6 +272,9 @@ export class PresetComponent implements OnInit, OnDestroy {
 
     // create it next to the preset being edited, inside the same folder
     const folderUuid = this.presetService.selectedPreset ? this.presetService.selectedPreset.folderUuid : this.targetFolder?.uuid;
+
+    // the new preset is what the trash acts on now
+    this.targetFolder = undefined;
 
     this.presetService.addPreset();
     this.presetService.selectedPreset.folderUuid = folderUuid;
