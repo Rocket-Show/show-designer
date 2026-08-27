@@ -297,81 +297,31 @@ export class PreviewService implements OnDestroy {
               )
             ) {
               // the capabilities match -> apply the value, if possible
-              if (
-                (presetCapabilityValue.type === FixtureCapabilityType.Intensity ||
-                  presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
-                presetCapabilityValue.valuePercentage >= 0
-              ) {
-                // intensity and colorIntensity (dimmer and color)
-                const valuePercentage = presetCapabilityValue.valuePercentage;
-                const defaultValue = 0;
+              const value = this.presetService.getCapabilityChannelValue(presetCapabilityValue, cachedChannel, channelCapability);
 
-                // brightness property
-                if (cachedChannel.capabilities.length === 1) {
-                  // the only capability in this channel
-                  const fixtureChannelValue = new FixtureChannelValue();
-                  fixtureChannelValue.channelName = cachedChannel.name;
-                  fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                  fixtureChannelValue.value = cachedChannel.maxValue * valuePercentage;
-                  this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, defaultValue);
+              if (value !== undefined) {
+                const fixtureChannelValue = new FixtureChannelValue();
+                fixtureChannelValue.channelName = cachedChannel.name;
+                fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+                fixtureChannelValue.value = value;
+
+                if (
+                  presetCapabilityValue.type === FixtureCapabilityType.Intensity ||
+                  presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity
+                ) {
+                  // dimmer and color fade with the preset
+                  this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, 0);
 
                   if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
                     hasColor = true;
                   }
                 } else {
-                  // more than one capability in the channel
-                  if (channelCapability.capability.brightness === 'off' && valuePercentage === 0) {
-                    const fixtureChannelValue = new FixtureChannelValue();
-                    fixtureChannelValue.channelName = cachedChannel.name;
-                    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                    fixtureChannelValue.value = channelCapability.centerValue;
-                    this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, defaultValue);
+                  this.mixChannelValue(values, fixtureChannelValue, 1);
 
-                    if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
-                      hasColor = true;
-                    }
-                  } else if (
-                    (channelCapability.capability.brightnessStart === 'dark' || channelCapability.capability.brightnessStart === 'off') &&
-                    channelCapability.capability.brightnessEnd === 'bright'
-                  ) {
-                    const value =
-                      (channelCapability.capability.dmxRange[1] - channelCapability.capability.dmxRange[0]) * valuePercentage +
-                      channelCapability.capability.dmxRange[0];
-
-                    const fixtureChannelValue = new FixtureChannelValue();
-                    fixtureChannelValue.channelName = cachedChannel.name;
-                    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                    fixtureChannelValue.value = value;
-                    this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, defaultValue);
-
-                    if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
-                      hasColor = true;
-                    }
+                  // check, whether we just set a color wheel value
+                  if (presetCapabilityValue.type === FixtureCapabilityType.WheelSlot && channelCapability.wheelIsColor) {
+                    hasColor = true;
                   }
-                }
-              } else if (
-                (presetCapabilityValue.type === FixtureCapabilityType.Pan || presetCapabilityValue.type === FixtureCapabilityType.Tilt) &&
-                presetCapabilityValue.valuePercentage >= 0
-              ) {
-                const fixtureChannelValue = new FixtureChannelValue();
-                fixtureChannelValue.channelName = cachedChannel.name;
-                fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                fixtureChannelValue.value = cachedChannel.maxValue * presetCapabilityValue.valuePercentage;
-                this.mixChannelValue(values, fixtureChannelValue, 1);
-              } else if (
-                presetCapabilityValue.type === FixtureCapabilityType.WheelSlot &&
-                channelCapability.capability.slotNumber === presetCapabilityValue.slotNumber
-              ) {
-                // wheel slot (color, gobo, etc.)
-                const fixtureChannelValue = new FixtureChannelValue();
-                fixtureChannelValue.channelName = cachedChannel.name;
-                fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                fixtureChannelValue.value = channelCapability.centerValue;
-                this.mixChannelValue(values, fixtureChannelValue, 1);
-
-                // check, whether we just set a color wheel value
-                if (channelCapability.wheelIsColor) {
-                  hasColor = true;
                 }
               }
             }

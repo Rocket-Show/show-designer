@@ -37,6 +37,10 @@ export class PresetService {
   // because detectChanges is not enough to trigger different components.
   fixtureColorChanged: Subject<void> = new Subject<void>();
 
+  // fires, when a capability value has been set or deleted (dimmer, color, pan/tilt,
+  // wheel slot). The channels driven by these capabilities show what they do to them.
+  capabilityValuesChanged: Subject<void> = new Subject<void>();
+
   constructor(
     private effectService: EffectService,
     private uuidService: UuidService,
@@ -269,6 +273,17 @@ export class PresetService {
     wheel?: string,
     profileUuid?: string
   ) {
+    this.removeCapabilityValue(preset, capabilityType, color, wheel, profileUuid);
+    this.capabilityValuesChanged.next();
+  }
+
+  private removeCapabilityValue(
+    preset: Preset,
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string
+  ) {
     for (let i = 0; i < preset.fixtureCapabilityValues.length; i++) {
       if (
         this.fixtureService.capabilitiesMatch(
@@ -298,7 +313,7 @@ export class PresetService {
     profileUuid?: string
   ) {
     // Delete existant properties with this type and set the new value
-    this.deleteCapabilityValue(preset, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(preset, capabilityType, color, wheel, profileUuid);
 
     const fixtureCapabilityValue = new FixtureCapabilityValue();
     fixtureCapabilityValue.type = capabilityType;
@@ -309,6 +324,7 @@ export class PresetService {
     fixtureCapabilityValue.profileUuid = profileUuid;
 
     preset.fixtureCapabilityValues.push(fixtureCapabilityValue);
+    this.capabilityValuesChanged.next();
   }
 
   getCapabilityValue(
@@ -415,6 +431,102 @@ export class PresetService {
     }
 
     return lowestDiffCapability;
+  }
+
+  // the value a single capability value of a preset produces on a channel capability, or
+  // undefined, if it does not reach that capability at all. This is what the preview and the
+  // player make of a capability, and what the channels have to show while it is in effect.
+  getCapabilityChannelValue(
+    capabilityValue: FixtureCapabilityValue,
+    channel: CachedFixtureChannel,
+    channelCapability: CachedFixtureCapability
+  ): number {
+    if (
+      (capabilityValue.type === FixtureCapabilityType.Intensity || capabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
+      capabilityValue.valuePercentage >= 0
+    ) {
+      // intensity and colorIntensity (dimmer and color)
+      if (channel.capabilities.length === 1) {
+        // the only capability in this channel -> it takes the whole channel
+        return channel.maxValue * capabilityValue.valuePercentage;
+      }
+
+      // more than one capability in the channel -> only a brightness capability can be dimmed
+      if (channelCapability.capability.brightness === 'off' && capabilityValue.valuePercentage === 0) {
+        return channelCapability.centerValue;
+      }
+
+      if (
+        (channelCapability.capability.brightnessStart === 'dark' || channelCapability.capability.brightnessStart === 'off') &&
+        channelCapability.capability.brightnessEnd === 'bright'
+      ) {
+        return (
+          (channelCapability.capability.dmxRange[1] - channelCapability.capability.dmxRange[0]) * capabilityValue.valuePercentage +
+          channelCapability.capability.dmxRange[0]
+        );
+      }
+
+      return undefined;
+    }
+
+    if (
+      (capabilityValue.type === FixtureCapabilityType.Pan || capabilityValue.type === FixtureCapabilityType.Tilt) &&
+      capabilityValue.valuePercentage >= 0
+    ) {
+      return channel.maxValue * capabilityValue.valuePercentage;
+    }
+
+    if (
+      capabilityValue.type === FixtureCapabilityType.WheelSlot &&
+      channelCapability.capability.slotNumber === capabilityValue.slotNumber
+    ) {
+      // wheel slot (color, gobo, etc.)
+      return channelCapability.centerValue;
+    }
+
+    return undefined;
+  }
+
+  // the value a channel is driven to by the capability values of a preset, or undefined, if no
+  // capability touches it. A channel value set on the channel itself wins over this one.
+  getChannelValueFromCapabilities(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): number {
+    let value: number;
+
+    for (const capabilityValue of preset.fixtureCapabilityValues) {
+      for (const channelCapability of channel.capabilities) {
+        if (
+          this.fixtureService.capabilitiesMatch(
+            capabilityValue.type,
+            channelCapability.capability.type,
+            capabilityValue.color,
+            channelCapability.capability.color,
+            capabilityValue.wheel,
+            channelCapability.wheelName,
+            capabilityValue.profileUuid,
+            profileUuid
+          )
+        ) {
+          const capabilityChannelValue = this.getCapabilityChannelValue(capabilityValue, channel, channelCapability);
+
+          if (capabilityChannelValue !== undefined) {
+            // a later capability value overwrites an earlier one, just like in the preview
+            value = capabilityChannelValue;
+          }
+        }
+      }
+    }
+
+    if (value === undefined && channel.colorWheel) {
+      // no slot has been picked on this wheel -> it shows the color approximated from a color
+      // or from a slot on a different wheel
+      const approximatedCapability = this.getApproximatedColorWheelCapability(preset, channel);
+
+      if (approximatedCapability) {
+        value = approximatedCapability.centerValue;
+      }
+    }
+
+    return value;
   }
 
   private hasCapabilityType(type: FixtureCapabilityType): boolean {
