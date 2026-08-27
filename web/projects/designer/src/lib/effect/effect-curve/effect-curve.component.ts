@@ -116,8 +116,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       this.updateOptionNames();
     });
 
-    this.updateCapabilitiesAndChannels();
-
     this.effectsOpenChangedSubscription = this.effectService.effectsOpenChanged.subscribe(() => {
       if (this.effectService.effectsOpen) {
         this.startAnimation();
@@ -128,6 +126,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // the capabilities and channels are checked against the curve, which is only available
+    // once the inputs have been set
+    this.updateCapabilitiesAndChannels();
+
     const canvas = this.curveGrid.nativeElement;
     this.ctx = canvas.getContext('2d');
     this.maxWidth = canvas.width;
@@ -382,6 +384,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   private capabilityChecked(capability: FixtureCapability): boolean {
+    if (!this.curve) {
+      return false;
+    }
+
     for (const existingCapability of this.curve.capabilities) {
       if (
         this.fixtureService.capabilitiesMatch(
@@ -442,6 +448,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   private channelChecked(profile: FixtureProfile, channel: CachedFixtureChannel): boolean {
+    if (!this.curve) {
+      return false;
+    }
+
     for (const profileChannels of this.curve.channels) {
       if (profileChannels.profileUuid === profile.uuid) {
         if (profileChannels.channels.includes(channel.name)) {
