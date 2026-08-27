@@ -816,21 +816,32 @@
   }
 }
 
+// The rail is one tall strip carrying its icons at the top, so whatever is drawn
+// underneath them has to know where they end: nothing measures them at runtime.
+// These describe the icon block and belong with the .nav-pills rules that draw it.
+$sd-rail-icon-size: 30px;
+$sd-rail-icon-gap: 2px;
+// the rail's top border and padding, its four icons, the gaps between them, and the
+// wider gap above the one that stands apart
+$sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail-icon-gap + $sd-space-2;
+
 .tab-rail {
   position: relative;
 }
 
 // the name of the preset the capability/channel/effect panels edit, along their tab
-// rail: reads bottom-up next to the panels it belongs to
+// rail: reads bottom-up next to the panels it belongs to, using the whole rail from
+// its bottom up to the icons
 .edit-target {
   position: absolute;
+  top: $sd-rail-icons-height + $sd-space-3;
   bottom: $sd-space-3;
-  left: 0;
-  right: 0;
+  // turned on its side, the text is only as wide as a single line, so it takes its
+  // own width and is centred on the rail's axis by hand: auto margins would need it
+  // to span the rail, and then the line would hang off one edge of it
+  left: 50%;
   writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  max-height: calc(100% - 200px);
-  margin: 0 auto;
+  transform: translateX(-50%) rotate(180deg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1104,14 +1115,14 @@
     border: 1px solid $sd-border;
     border-radius: $sd-radius-lg;
     padding: $sd-space-1;
-    gap: 2px;
+    gap: $sd-rail-icon-gap;
 
     .nav-link {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
+      width: $sd-rail-icon-size;
+      height: $sd-rail-icon-size;
       padding: 0 !important;
       border-radius: $sd-radius;
       color: $sd-text-muted;
