@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Déposez un fichier ici ou cliquez pour télécharger",
       "toast-upload-error-title": "Erreur de téléchargement",
-      "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : "
+      "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : ",
+      "color": "Couleur",
+      "icon": "Icône",
+      "icon-default": "Icône par défaut"
     },
     "loading": {
       "title": "Chargement...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
       "settings-fade-out-post": "Après",
-      "live-mode": "Mode live"
+      "live-mode": "Mode live",
+      "settings-color-auto": "Reprendre celle des presets"
     },
     "preview": {
       "scene": "Scène",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fondu entrant",
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
-      "settings-fade-out-post": "Après"
+      "settings-fade-out-post": "Après",
+      "settings-color-auto": "Reprendre la couleur des appareils"
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",

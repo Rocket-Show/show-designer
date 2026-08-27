@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Trascina un file qui o clicca per caricare",
       "toast-upload-error-title": "Errore di caricamento",
-      "toast-upload-error": "Il file non ha potuto essere caricato per il seguente errore: "
+      "toast-upload-error": "Il file non ha potuto essere caricato per il seguente errore: ",
+      "color": "Colore",
+      "icon": "Icona",
+      "icon-default": "Icona predefinita"
     },
     "loading": {
       "title": "Caricamento...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Prima",
       "settings-fade-out-post": "Dopo",
-      "live-mode": "Modalità live"
+      "live-mode": "Modalità live",
+      "settings-color-auto": "Prendilo dai preset"
     },
     "preview": {
       "scene": "Scena",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Prima",
-      "settings-fade-out-post": "Dopo"
+      "settings-fade-out-post": "Dopo",
+      "settings-color-auto": "Prendilo dal colore dei fari"
     },
     "fixture": {
       "no-fixtures": "Aggiungi nuovi fixture al progetto",

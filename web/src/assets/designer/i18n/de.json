@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Ziehe eine Datei hier hinein oder klicke, um hochzuladen",
       "toast-upload-error-title": "Fehler beim Hochladen",
-      "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: "
+      "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: ",
+      "color": "Farbe",
+      "icon": "Symbol",
+      "icon-default": "Standardsymbol"
     },
     "loading": {
       "title": "Laden...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Davor",
       "settings-fade-out-post": "Danach",
-      "live-mode": "Live Modus"
+      "live-mode": "Live Modus",
+      "settings-color-auto": "Von den Presets übernehmen"
     },
     "preview": {
       "scene": "Szene",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Davor",
-      "settings-fade-out-post": "Danach"
+      "settings-fade-out-post": "Danach",
+      "settings-color-auto": "Von der Gerätefarbe übernehmen"
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",

@@ -14,6 +14,15 @@ export class Preset {
   folderUuid: string;
   sortIndex = 0;
 
+  // how the preset is marked in the lists. While colorAuto is set, the color the preset
+  // puts on its fixtures decides and the picked one is only what the preset falls back
+  // to while it sets no color at all.
+  color: string;
+  colorAuto = true;
+
+  // font awesome class of the icon shown in the preset list (undefined = the default one)
+  icon: string;
+
   // all related fixtures
   // OBSOLETE: replaced with fixtures
   fixtureUuids: string[] = [];
@@ -55,6 +64,9 @@ export class Preset {
     this.name = data.name;
     this.folderUuid = data.folderUuid;
     this.sortIndex = data.sortIndex || 0;
+    this.color = data.color;
+    this.colorAuto = data.colorAuto !== false;
+    this.icon = data.icon;
 
     // OBSOLETE
     this.fixtureUuids = data.fixtureUuids;

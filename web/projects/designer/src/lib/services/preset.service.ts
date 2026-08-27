@@ -21,6 +21,9 @@ import { LivePreviewService } from './live-preview.service';
 export class PresetService {
   selectedPreset: Preset;
 
+  // the icon a preset is shown with, while none has been picked for it
+  static readonly defaultIcon = 'fa-lightbulb-o';
+
   // the fixtures of a preset indexed by fixture uuid (see getPresetFixturesByUuid)
   private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byUuid: Map<string, PresetFixture[]> }>();
 
@@ -51,6 +54,11 @@ export class PresetService {
     private fixtureService: FixtureService,
     private livePreviewService: LivePreviewService
   ) {}
+
+  // the icon of a preset: the one picked for it, or the default one
+  getPresetIcon(preset: Preset): string {
+    return preset.icon || PresetService.defaultIcon;
+  }
 
   getPresetByUuid(uuid: string): Preset {
     for (const preset of this.projectService.project.presets) {

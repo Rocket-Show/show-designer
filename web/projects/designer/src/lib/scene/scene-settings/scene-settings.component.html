@@ -12,6 +12,29 @@
     </div>
   </div>
 
+  <div class="form-group">
+    <label class="d-block mb-2">{{ 'designer.misc.icon' | translate }}</label>
+    <lib-app-icon-picker
+      [icon]="icon"
+      [defaultIcon]="defaultIcon"
+      [color]="shownColor()"
+      (iconChange)="icon = $event"
+    ></lib-app-icon-picker>
+  </div>
+
+  <div class="form-group">
+    <label class="d-block mb-2">{{ 'designer.misc.color' | translate }}</label>
+    <lib-app-color-picker
+      [color]="color"
+      [auto]="colorAuto"
+      [autoColor]="derivedColor"
+      autoLabel="designer.scene.settings-color-auto"
+      [palette]="palette"
+      (colorChange)="color = $event"
+      (autoChange)="colorAuto = $event"
+    ></lib-app-color-picker>
+  </div>
+
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-in' | translate }}</label>
     <div class="col-lg-7">

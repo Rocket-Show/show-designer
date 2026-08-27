@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { Folder } from '../models/folder';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
+import { ColorService } from '../services/color.service';
 import { FolderService } from '../services/folder.service';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
@@ -35,6 +36,7 @@ export class PresetComponent implements OnInit, OnDestroy {
     public sceneService: SceneService,
     public projectService: ProjectService,
     public introService: IntroService,
+    private colorService: ColorService,
     private folderService: FolderService,
     private translateService: TranslateService,
     private modalService: BsModalService
@@ -47,7 +49,9 @@ export class PresetComponent implements OnInit, OnDestroy {
       this.projectService.projectChanged.subscribe(() => this.buildTree()),
       this.presetService.presetsChanged.subscribe(() => this.buildTree()),
       this.presetService.previewSelectionChanged.subscribe(() => this.updateSelection()),
-      this.sceneService.sceneSelected.subscribe(() => this.updateSelection())
+      this.sceneService.sceneSelected.subscribe(() => this.updateSelection()),
+      // the color picker of the fixtures changes what the presets are marked with
+      this.presetService.capabilityValuesChanged.subscribe(() => this.updateColors())
     );
   }
 
@@ -88,7 +92,8 @@ export class PresetComponent implements OnInit, OnDestroy {
         nodes.push({
           id: preset.uuid,
           isFolder: false,
-          icon: 'fa-lightbulb-o',
+          icon: this.presetService.getPresetIcon(preset),
+          iconColor: this.colorService.getPresetColor(preset),
           preset,
         });
       }
@@ -109,6 +114,23 @@ export class PresetComponent implements OnInit, OnDestroy {
     const presetNode = this.findPresetNode(this.treeNodes, this.presetService.selectedPreset);
 
     this.selectedNodes = presetNode ? [presetNode] : [];
+  }
+
+  // the color of a preset follows what it puts on its fixtures, which changes with every
+  // mouse move on the color picker -> repaint the icons instead of rebuilding the list
+  private updateColors() {
+    this.eachNode(this.treeNodes, (node) => {
+      if (node.preset) {
+        node.iconColor = this.colorService.getPresetColor(node.preset);
+      }
+    });
+  }
+
+  private eachNode(nodes: TreeNode[], callback: (node: TreeNode) => void) {
+    for (const node of nodes) {
+      callback(node);
+      this.eachNode(node.children ?? [], callback);
+    }
   }
 
   private updateFocusedNode() {

@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Drop a file here or click to upload",
       "toast-upload-error-title": "Upload error",
-      "toast-upload-error": "The file could not be uploaded because of the following error: "
+      "toast-upload-error": "The file could not be uploaded because of the following error: ",
+      "color": "Color",
+      "icon": "Icon",
+      "icon-default": "Default icon"
     },
     "loading": {
       "title": "Loading...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Before",
       "settings-fade-out-post": "After",
-      "live-mode": "Live mode"
+      "live-mode": "Live mode",
+      "settings-color-auto": "Take it from the presets"
     },
     "preview": {
       "scene": "Scene",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fade in",
       "settings-fade-out": "Fade out",
       "settings-fade-in-pre": "Before",
-      "settings-fade-out-post": "After"
+      "settings-fade-out-post": "After",
+      "settings-color-auto": "Take it from the fixture color"
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",

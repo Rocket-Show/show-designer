@@ -24,6 +24,9 @@ export interface TreeNode {
   // full class of a type icon from another font (the fixture icons), used when the
   // node brings no font awesome one
   iconClass?: string;
+  // color the type icon is tinted with, marking what the node stands for (the color of
+  // a scene or a preset). undefined leaves the icon in the color of the row.
+  iconColor?: string;
   // the icon already shows whether the node is open (a folder) -> no caret glyph in
   // front of it, and a plain click on the row opens and closes it
   toggleOnClick?: boolean;

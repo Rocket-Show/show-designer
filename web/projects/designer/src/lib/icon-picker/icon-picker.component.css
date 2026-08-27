@@ -1,0 +1,40 @@
+/* as many icons per row as fit, so the grid follows the width of the dialog */
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  gap: var(--sd-space-1);
+}
+
+.icon-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--sd-control-height);
+  padding: 0;
+  background-color: var(--sd-surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text-muted);
+  cursor: pointer;
+}
+
+.icon-picker-item:hover {
+  background-color: var(--sd-surface-3);
+  color: var(--sd-text);
+}
+
+/* the icon the item is shown with right now */
+.icon-picker-item.picked {
+  background-color: var(--sd-primary-soft-strong);
+  border-color: var(--sd-primary);
+  color: var(--sd-text);
+}
+
+/* the default entry, kept apart from the icons which are picked on purpose */
+.icon-picker-item:first-child {
+  border-color: var(--sd-border-strong);
+}
+
+.icon-picker-item:first-child.picked {
+  border-color: var(--sd-primary);
+}

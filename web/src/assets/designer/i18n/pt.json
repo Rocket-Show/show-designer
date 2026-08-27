@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Arraste um ficheiro para aqui ou clique para carregar",
       "toast-upload-error-title": "Erro de carregamento",
-      "toast-upload-error": "O ficheiro não pôde ser carregado devido ao seguinte erro: "
+      "toast-upload-error": "O ficheiro não pôde ser carregado devido ao seguinte erro: ",
+      "color": "Cor",
+      "icon": "Ícone",
+      "icon-default": "Ícone padrão"
     },
     "loading": {
       "title": "A carregar...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Antes",
       "settings-fade-out-post": "Depois",
-      "live-mode": "Modo ao vivo"
+      "live-mode": "Modo ao vivo",
+      "settings-color-auto": "Usar a das predefinições"
     },
     "preview": {
       "scene": "Cena",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Antes",
-      "settings-fade-out-post": "Depois"
+      "settings-fade-out-post": "Depois",
+      "settings-color-auto": "Usar a cor dos aparelhos"
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
