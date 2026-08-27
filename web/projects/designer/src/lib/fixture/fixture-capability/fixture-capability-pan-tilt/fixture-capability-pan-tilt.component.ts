@@ -19,7 +19,7 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
   ngOnInit() {}
 
   getValuePan(): number {
-    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Pan);
+    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Pan);
     if (capabilityValue) {
       return capabilityValue.valuePercentage;
     }
@@ -43,13 +43,13 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
       return;
     }
 
-    this.presetService.setCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Pan, value);
+    this.presetService.setCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Pan, value);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }
 
   getValueTilt(): number {
-    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Tilt);
+    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Tilt);
     if (capabilityValue) {
       return capabilityValue.valuePercentage;
     }
@@ -73,7 +73,7 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
       return;
     }
 
-    this.presetService.setCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Tilt, value);
+    this.presetService.setCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Tilt, value);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }
@@ -83,8 +83,8 @@ export class FixtureCapabilityPanTiltComponent implements OnInit {
       this.setValuePan(0.5);
       this.setValueTilt(0.5);
     } else {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Pan);
-      this.presetService.deleteCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Tilt);
+      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Pan);
+      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Tilt);
       this.changeDetectorRef.detectChanges();
     }
     this.livePreviewService.previewLive();

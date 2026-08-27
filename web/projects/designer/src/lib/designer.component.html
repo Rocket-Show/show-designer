@@ -234,8 +234,11 @@
         @if (projectService.project) {
         <div class="row h-100">
           <!-- Content for the capabilities, channels, effects and settings -->
-          <div class="col pl-0 h-100">
-            <div class="tab-content h-100" id="v-pills-tabContent">
+          <div class="col pl-0 h-100 d-flex flex-column">
+            <!-- which step of the selected preset the panels below are editing -->
+            <lib-app-preset-step></lib-app-preset-step>
+
+            <div class="tab-content flex-grow-1 overflow-hidden" id="v-pills-tabContent">
               <div class="tab-pane h-100 show active" id="v-pills-capabilities" role="tabpanel">
                 <lib-app-fixture-capability></lib-app-fixture-capability>
               </div>

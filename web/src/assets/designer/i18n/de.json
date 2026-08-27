@@ -19,6 +19,12 @@
       "warning-proceed-unsaved": "Nicht gespeicherte Änderungen gehen verloren. Möchtest du wirklich fortfahren?",
       "language": "Sprache",
       "ms": "ms",
+      "transition-curve": "Kurve",
+      "transition-curve-linear": "Linear",
+      "transition-curve-ease-in": "Sanft starten",
+      "transition-curve-ease-out": "Sanft enden",
+      "transition-curve-ease-in-out": "Sanft starten und enden",
+      "transition-curve-snap": "Springen",
       "dropzone-message": "Ziehe eine Datei hier hinein oder klicke, um hochzuladen",
       "toast-upload-error-title": "Fehler beim Hochladen",
       "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: "
@@ -127,7 +133,17 @@
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Davor",
-      "settings-fade-out-post": "Danach"
+      "settings-fade-out-post": "Danach",
+      "step": "Schritt",
+      "step-add": "Schritt hinzufügen",
+      "step-remove": "Schritt löschen",
+      "step-settings": "Schritt-Einstellungen",
+      "step-start": "Erreicht bei",
+      "step-transition": "Übergang",
+      "steps-run": "Schritte abspielen",
+      "steps-loop": "Schritte wiederholen",
+      "steps-loop-length": "Schleifenlänge",
+      "steps-chase": "Chase"
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",

@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
+import { TransitionCurveType, transitionCurveTypes } from '../../models/transition-curve';
 import { Scene } from '../../models/scene';
 
 @Component({
@@ -16,6 +17,10 @@ export class SceneSettingsComponent implements OnInit {
   fadeOutMillis: number;
   fadeInPre: boolean;
   fadeOutPost: boolean;
+  fadeInCurve: TransitionCurveType;
+  fadeOutCurve: TransitionCurveType;
+
+  transitionCurveTypes = transitionCurveTypes;
 
   constructor(public bsModalRef: BsModalRef) {}
 
@@ -25,6 +30,8 @@ export class SceneSettingsComponent implements OnInit {
     this.fadeOutMillis = this.scene.fadeOutMillis;
     this.fadeInPre = this.scene.fadeInPre;
     this.fadeOutPost = this.scene.fadeOutPost;
+    this.fadeInCurve = this.scene.fadeInCurve;
+    this.fadeOutCurve = this.scene.fadeOutCurve;
   }
 
   ok() {
@@ -39,6 +46,8 @@ export class SceneSettingsComponent implements OnInit {
 
     this.scene.fadeInPre = this.fadeInPre;
     this.scene.fadeOutPost = this.fadeOutPost;
+    this.scene.fadeInCurve = this.fadeInCurve;
+    this.scene.fadeOutCurve = this.fadeOutCurve;
 
     this.bsModalRef.hide();
   }

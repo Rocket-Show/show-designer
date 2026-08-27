@@ -19,6 +19,12 @@
       "warning-proceed-unsaved": "Le modifiche non salvate andranno perse. Vuoi davvero continuare?",
       "language": "Lingua",
       "ms": "ms",
+      "transition-curve": "Curva",
+      "transition-curve-linear": "Lineare",
+      "transition-curve-ease-in": "Partenza morbida",
+      "transition-curve-ease-out": "Arrivo morbido",
+      "transition-curve-ease-in-out": "Partenza e arrivo morbidi",
+      "transition-curve-snap": "Salto",
       "dropzone-message": "Trascina un file qui o clicca per caricare",
       "toast-upload-error-title": "Errore di caricamento",
       "toast-upload-error": "Il file non ha potuto essere caricato per il seguente errore: "
@@ -127,7 +133,17 @@
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Prima",
-      "settings-fade-out-post": "Dopo"
+      "settings-fade-out-post": "Dopo",
+      "step": "Passo",
+      "step-add": "Aggiungi passo",
+      "step-remove": "Elimina passo",
+      "step-settings": "Impostazioni del passo",
+      "step-start": "Raggiunto a",
+      "step-transition": "Transizione",
+      "steps-run": "Riproduci i passi",
+      "steps-loop": "Ripeti i passi",
+      "steps-loop-length": "Durata del ciclo",
+      "steps-chase": "Chase"
     },
     "fixture": {
       "no-fixtures": "Aggiungi nuovi fixture al progetto",

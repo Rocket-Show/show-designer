@@ -36,6 +36,8 @@ import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-di
 import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
 import { PresetSettingsComponent } from './preset/preset-settings/preset-settings.component';
+import { PresetStepSettingsComponent } from './preset/preset-step/preset-step-settings/preset-step-settings.component';
+import { PresetStepComponent } from './preset/preset-step/preset-step.component';
 import { PresetComponent } from './preset/preset.component';
 import { PreviewComponent } from './preview/preview.component';
 import { ProjectBrowserComponent } from './project/project-browser/project-browser.component';
@@ -92,6 +94,8 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     FixtureSettingsStageComponent,
     IntroComponent,
     PresetSettingsComponent,
+    PresetStepComponent,
+    PresetStepSettingsComponent,
     SceneSettingsComponent,
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,

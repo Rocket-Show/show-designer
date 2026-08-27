@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+.step-strip {
+  align-items: center;
+  padding: var(--sd-space-1) var(--sd-space-2);
+  border-bottom: 1px solid var(--sd-border);
+  background-color: var(--sd-surface-1);
+}
+
+/* the steps take whatever room is left and scroll sideways once they outgrow it */
+.steps {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.step {
+  flex: 0 0 auto;
+  max-width: 160px;
+  padding: 2px var(--sd-space-2);
+  margin-right: var(--sd-space-1);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-2);
+  color: var(--sd-text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease;
+}
+
+.step:hover {
+  background-color: var(--sd-surface-3);
+}
+
+.step-selected {
+  border-color: var(--sd-primary);
+  background-color: var(--sd-primary-soft-strong);
+  color: #ffd0a8;
+}
+
+.step-name {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+/* when the step is reached and, in front of it, how long it travels to get there */
+.step-time {
+  font-size: 0.7rem;
+  line-height: 1.1;
+  color: var(--sd-text-dim);
+}
+
+.step-selected .step-time {
+  color: var(--sd-primary-text);
+}

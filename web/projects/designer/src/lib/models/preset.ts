@@ -4,6 +4,8 @@ import { EffectPanTilt } from './effect-pan-tilt';
 import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureChannelValue } from './fixture-channel-value';
 import { PresetFixture } from './preset-fixture';
+import { PresetStep } from './preset-step';
+import { TransitionCurveType } from './transition-curve';
 
 export class Preset {
   uuid: string;
@@ -27,10 +29,36 @@ export class Preset {
   useGlobalFixtureOrder = true;
 
   // the selected values
+  // OBSOLETE: replaced with the values of the first step. Still written when a project
+  // is saved, so that an older Rocket Show shows the first step instead of nothing.
   fixtureChannelValues: FixtureChannelValue[] = [];
   fixtureCapabilityValues: FixtureCapabilityValue[] = [];
 
-  // all related effects
+  // the states this preset runs through over its playing time, in the order they are
+  // reached. A preset always holds at least one step.
+  steps: PresetStep[] = [];
+
+  // start the sequence over instead of holding the last step
+  stepsLoop = false;
+
+  // the length of one pass (undefined = the last step holds as long as the one before
+  // it lasted, see PresetStepService.getStepsLoopMillis)
+  stepsLoopMillis: number;
+
+  // how the sequence is shifted from one fixture to the next (chasing), following the
+  // same rules as the effect curves: 'millis' shifts it by a fixed time, 'spread'
+  // distributes stepsPhasingCycles full passes over all fixtures of the preset.
+  // both values are signed: a negative one chases in the opposite direction.
+  stepsPhasingMode = 'millis';
+  stepsPhasingMillis = 0;
+  stepsPhasingCycles = 1;
+
+  // how many fixtures share the same chase step (1 = each fixture on its own)
+  stepsPhasingGroupSize = 1;
+
+  // all related effects. They stay on the preset instead of moving into the steps, so
+  // that they keep their phase across a step transition: a step only opens or closes
+  // them (see PresetStep.effectAmounts).
   effects: Effect[] = [];
 
   // position offset, relative to the scene start
@@ -41,6 +69,10 @@ export class Preset {
   // fading times
   fadeInMillis = 0;
   fadeOutMillis = 0;
+
+  // how the fades are shaped over their time (see transition-curve)
+  fadeInCurve: TransitionCurveType = 'linear';
+  fadeOutCurve: TransitionCurveType = 'linear';
 
   // fade in/out outside the start/end times?
   fadeInPre = false;
@@ -75,6 +107,19 @@ export class Preset {
         this.fixtureCapabilityValues.push(new FixtureCapabilityValue(fixtureCapabilityValue));
       }
     }
+    if (data.steps) {
+      for (const step of data.steps) {
+        this.steps.push(new PresetStep(step));
+      }
+    }
+
+    this.stepsLoop = data.stepsLoop === true;
+    this.stepsLoopMillis = data.stepsLoopMillis;
+    this.stepsPhasingMode = data.stepsPhasingMode || 'millis';
+    this.stepsPhasingMillis = data.stepsPhasingMillis || 0;
+    this.stepsPhasingCycles = data.stepsPhasingCycles === undefined ? 1 : data.stepsPhasingCycles;
+    this.stepsPhasingGroupSize = data.stepsPhasingGroupSize === undefined ? 1 : data.stepsPhasingGroupSize;
+
     if (data.effects) {
       for (const effect of data.effects) {
         switch (effect.type) {
@@ -91,6 +136,10 @@ export class Preset {
     this.endMillis = data.endMillis;
     this.fadeInMillis = data.fadeInMillis;
     this.fadeOutMillis = data.fadeOutMillis;
+
+    // projects before version 7 only knew linear fades
+    this.fadeInCurve = data.fadeInCurve || 'linear';
+    this.fadeOutCurve = data.fadeOutCurve || 'linear';
     this.fadeInPre = data.fadeInPre;
     this.fadeOutPost = data.fadeOutPost;
 

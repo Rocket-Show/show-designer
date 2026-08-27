@@ -19,6 +19,12 @@
       "warning-proceed-unsaved": "Los cambios no guardados se perderán. ¿Realmente deseas continuar?",
       "language": "Idioma",
       "ms": "ms",
+      "transition-curve": "Curva",
+      "transition-curve-linear": "Lineal",
+      "transition-curve-ease-in": "Entrada suave",
+      "transition-curve-ease-out": "Salida suave",
+      "transition-curve-ease-in-out": "Entrada y salida suaves",
+      "transition-curve-snap": "Salto",
       "dropzone-message": "Arrastra un archivo aquí o haz clic para subir",
       "toast-upload-error-title": "Error de carga",
       "toast-upload-error": "El archivo no pudo cargarse debido al siguiente error: "
@@ -127,7 +133,17 @@
       "settings-fade-in": "Fundido de entrada",
       "settings-fade-out": "Fundido de salida",
       "settings-fade-in-pre": "Antes",
-      "settings-fade-out-post": "Después"
+      "settings-fade-out-post": "Después",
+      "step": "Paso",
+      "step-add": "Añadir paso",
+      "step-remove": "Eliminar paso",
+      "step-settings": "Ajustes del paso",
+      "step-start": "Alcanzado en",
+      "step-transition": "Transición",
+      "steps-run": "Reproducir los pasos",
+      "steps-loop": "Repetir los pasos",
+      "steps-loop-length": "Duración del bucle",
+      "steps-chase": "Chase"
     },
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",

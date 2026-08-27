@@ -19,6 +19,12 @@
       "warning-proceed-unsaved": "Les modifications non enregistrées seront perdues. Voulez-vous vraiment continuer ?",
       "language": "Langue",
       "ms": "ms",
+      "transition-curve": "Courbe",
+      "transition-curve-linear": "Linéaire",
+      "transition-curve-ease-in": "Départ progressif",
+      "transition-curve-ease-out": "Arrivée progressive",
+      "transition-curve-ease-in-out": "Départ et arrivée progressifs",
+      "transition-curve-snap": "Saut",
       "dropzone-message": "Déposez un fichier ici ou cliquez pour télécharger",
       "toast-upload-error-title": "Erreur de téléchargement",
       "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : "
@@ -127,7 +133,17 @@
       "settings-fade-in": "Fondu entrant",
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
-      "settings-fade-out-post": "Après"
+      "settings-fade-out-post": "Après",
+      "step": "Étape",
+      "step-add": "Ajouter une étape",
+      "step-remove": "Supprimer l'étape",
+      "step-settings": "Paramètres de l'étape",
+      "step-start": "Atteinte à",
+      "step-transition": "Transition",
+      "steps-run": "Lire les étapes",
+      "steps-loop": "Répéter les étapes",
+      "steps-loop-length": "Durée de la boucle",
+      "steps-chase": "Chase"
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",

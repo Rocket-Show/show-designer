@@ -7,8 +7,11 @@ import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
+import { PresetStepState } from '../models/preset-step-state';
+import { applyTransitionCurve } from '../models/transition-curve';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
+import { PresetStepService } from './preset-step.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
 import { TimelineService } from './timeline.service';
@@ -41,6 +44,7 @@ export class PreviewService implements OnDestroy {
 
   constructor(
     private presetService: PresetService,
+    private presetStepService: PresetStepService,
     private fixtureService: FixtureService,
     private sceneService: SceneService,
     private timelineService: TimelineService,
@@ -221,6 +225,27 @@ export class PreviewService implements OnDestroy {
     return undefined;
   }
 
+  // where the preset itself starts, which is what its steps are timed against. The
+  // fades may reach outside it, but a step at 0 belongs to the preset's own start.
+  private getPresetStartMillis(preset: PresetRegionScene): number {
+    if (!preset.region) {
+      return 0;
+    }
+
+    return preset.preset.startMillis === undefined ? preset.region.startMillis : preset.region.startMillis + preset.preset.startMillis;
+  }
+
+  // the values a preset applies at the passed time. While nothing is playing, the
+  // panels are editing one step of the selected preset, so that is the one to show:
+  // the sequence only runs on the timeline, or when the designer asks to watch it.
+  private getPresetStepState(preset: PresetRegionScene, timeMillis: number): PresetStepState {
+    if (!preset.region && !this.presetService.stepPreviewRunning) {
+      return this.presetStepService.getStepState(this.presetService.getEditStep(preset.preset));
+    }
+
+    return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.getPresetStartMillis(preset), !preset.region);
+  }
+
   private getPresetIntensity(preset: PresetRegionScene, timeMillis: number): number {
     // When fading is in progress (on preset or scene-level), the current preset does not
     // fully cover underlying values.
@@ -236,12 +261,20 @@ export class PreviewService implements OnDestroy {
       const sceneStartMillis = preset.scene.fadeInPre ? preset.region.startMillis - preset.scene.fadeInMillis : preset.region.startMillis;
       const sceneEndMillis = preset.scene.fadeOutPost ? preset.region.endMillis + preset.scene.fadeOutMillis : preset.region.endMillis;
 
+      // the curve maps how far the fade has come to how much of the intensity it has
+      // already handed over, which shapes a fade out just as well as a fade in
       if (timeMillis > sceneEndMillis - preset.scene.fadeOutMillis && timeMillis < sceneEndMillis) {
         // Scene fades out
-        intensityPercentageScene = (sceneEndMillis - timeMillis) / preset.scene.fadeOutMillis;
+        intensityPercentageScene = applyTransitionCurve(
+          preset.scene.fadeOutCurve,
+          (sceneEndMillis - timeMillis) / preset.scene.fadeOutMillis
+        );
       } else if (timeMillis < sceneStartMillis + preset.scene.fadeInMillis && timeMillis > sceneStartMillis) {
         // Scene fades in
-        intensityPercentageScene = (timeMillis - sceneStartMillis) / preset.scene.fadeInMillis;
+        intensityPercentageScene = applyTransitionCurve(
+          preset.scene.fadeInCurve,
+          (timeMillis - sceneStartMillis) / preset.scene.fadeInMillis
+        );
       }
     }
 
@@ -259,10 +292,16 @@ export class PreviewService implements OnDestroy {
 
       if (timeMillis > presetEndMillis - preset.preset.fadeOutMillis && timeMillis < presetEndMillis) {
         // Preset fades out
-        intensityPercentagePreset = (presetEndMillis - timeMillis) / preset.preset.fadeOutMillis;
+        intensityPercentagePreset = applyTransitionCurve(
+          preset.preset.fadeOutCurve,
+          (presetEndMillis - timeMillis) / preset.preset.fadeOutMillis
+        );
       } else if (timeMillis < presetStartMillis + preset.preset.fadeInMillis && timeMillis > presetStartMillis) {
         // Preset fades in
-        intensityPercentagePreset = (timeMillis - presetStartMillis) / preset.preset.fadeInMillis;
+        intensityPercentagePreset = applyTransitionCurve(
+          preset.preset.fadeInCurve,
+          (timeMillis - presetStartMillis) / preset.preset.fadeInMillis
+        );
       }
 
       intensityPercentage = intensityPercentageScene * intensityPercentagePreset;
@@ -272,15 +311,15 @@ export class PreviewService implements OnDestroy {
   }
 
   private mixCapabilityValues(
-    preset: PresetRegionScene,
+    state: PresetStepState,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number
   ) {
     let hasColor = false;
 
-    // mix the preset capability values
-    for (const presetCapabilityValue of preset.preset.fixtureCapabilityValues) {
+    // mix the capability values of the state the preset is in
+    for (const presetCapabilityValue of state.fixtureCapabilityValues) {
       for (const cachedChannel of cachedFixture.channels) {
         if (cachedChannel.channel) {
           for (const channelCapability of cachedChannel.capabilities) {
@@ -330,7 +369,7 @@ export class PreviewService implements OnDestroy {
 
         // approximate the color from a color or a different color wheel, if necessary
         if (!hasColor && cachedChannel.colorWheel) {
-          const capability = this.presetService.getApproximatedColorWheelCapability(preset.preset, cachedChannel);
+          const capability = this.presetService.getApproximatedColorWheelCapability(state.fixtureCapabilityValues, cachedChannel);
 
           if (capability) {
             // we found an approximated color in the available wheel channel
@@ -346,15 +385,15 @@ export class PreviewService implements OnDestroy {
   }
 
   private mixChannelValues(
-    preset: PresetRegionScene,
+    state: PresetStepState,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number
   ) {
-    // mix the preset channel values
+    // mix the channel values of the state the preset is in
     for (const cachedChannel of cachedFixture.channels) {
       if (cachedChannel.channel) {
-        for (const channelValue of preset.preset.fixtureChannelValues) {
+        for (const channelValue of state.fixtureChannelValues) {
           if (cachedFixture.profile.uuid === channelValue.profileUuid && cachedChannel.name === channelValue.channelName) {
             this.mixChannelValue(values, channelValue, intensityPercentage);
           }
@@ -370,7 +409,8 @@ export class PreviewService implements OnDestroy {
     preset: PresetRegionScene,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
-    intensityPercentage: number
+    intensityPercentage: number,
+    state: PresetStepState
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -379,7 +419,11 @@ export class PreviewService implements OnDestroy {
     }
 
     for (const effect of preset.preset.effects) {
-      if (effect.visible) {
+      // the effect keeps running through the steps, they only open or close it
+      const effectAmount = state.getEffectAmount(effect.uuid);
+      const effectIntensityPercentage = intensityPercentage * effectAmount;
+
+      if (effect.visible && effectAmount > 0) {
         // EffectCurve
         if (effect instanceof EffectCurve) {
           const effectCurve = effect as EffectCurve;
@@ -405,7 +449,7 @@ export class PreviewService implements OnDestroy {
                   fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
                   fixtureChannelValue.value =
                     cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
-                  this.mixChannelValue(values, fixtureChannelValue, intensityPercentage);
+                  this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
                 }
               }
             }
@@ -422,7 +466,7 @@ export class PreviewService implements OnDestroy {
                     fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
                     fixtureChannelValue.value =
                       cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
-                    this.mixChannelValue(values, fixtureChannelValue, intensityPercentage);
+                    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
                   }
                 }
               }
@@ -446,9 +490,20 @@ export class PreviewService implements OnDestroy {
     // over all fixtures of their preset)
     const fixtureCounts = new Map<Preset, number>();
 
+    // which state each preset is in. The same preset can play in more than one region
+    // at a time, each of them at a different point of its sequence, so the entry of the
+    // playing preset is what this is keyed by.
+    const presetStates = new Map<PresetRegionScene, PresetStepState>();
+
     for (const preset of presets) {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
+      }
+
+      // a preset chasing its steps over its fixtures is at a different point of the
+      // sequence for each of them, so its state is worked out per fixture below
+      if (!this.presetStepService.stepsArePhased(preset.preset)) {
+        presetStates.set(preset, this.getPresetStepState(preset, timeMillis));
       }
     }
 
@@ -485,10 +540,25 @@ export class PreviewService implements OnDestroy {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,
             // if set multiple times)
             const intensityPercentage = this.getPresetIntensity(preset, timeMillis);
+            const state =
+              presetStates.get(preset) ||
+              this.getPresetStepState(
+                preset,
+                timeMillis - this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
+              );
 
-            this.mixCapabilityValues(preset, cachedFixture, values, intensityPercentage);
-            this.mixChannelValues(preset, cachedFixture, values, intensityPercentage);
-            this.mixEffects(timeMillis, fixtureIndex, fixtureCounts.get(preset.preset), preset, cachedFixture, values, intensityPercentage);
+            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage);
+            this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
+            this.mixEffects(
+              timeMillis,
+              fixtureIndex,
+              fixtureCounts.get(preset.preset),
+              preset,
+              cachedFixture,
+              values,
+              intensityPercentage,
+              state
+            );
           }
         }
       }

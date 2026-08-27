@@ -79,7 +79,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.updateTimer = setTimeout(() => {
       this.updateTimer = undefined;
 
-      if (!this._channel || !this.profile || !this.presetService.selectedPreset) {
+      if (!this._channel || !this.profile || !this.presetService.selectedPreset || !this.presetService.selectedStep) {
         return;
       }
 
@@ -94,7 +94,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.value = this.presetService.getChannelValue(this._channel.name, this.profile.uuid);
 
     const capabilityValue = this.presetService.getChannelValueFromCapabilities(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep.fixtureCapabilityValues,
       this._channel,
       this.profile.uuid
     );
