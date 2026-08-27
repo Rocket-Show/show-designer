@@ -2,7 +2,6 @@ import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angula
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { getTransitionStartMillis, PresetStep } from '../../models/preset-step';
-import { LivePreviewService } from '../../services/live-preview.service';
 import { PresetService } from '../../services/preset.service';
 import { PresetStepSettingsComponent } from './preset-step-settings/preset-step-settings.component';
 import { PresetStepsSettingsComponent } from './preset-steps-settings/preset-steps-settings.component';
@@ -22,7 +21,6 @@ export class PresetStepComponent implements OnInit, OnDestroy {
 
   constructor(
     public presetService: PresetService,
-    private livePreviewService: LivePreviewService,
     private modalService: BsModalService,
     private translateService: TranslateService,
     private changeDetectorRef: ChangeDetectorRef,
@@ -80,11 +78,6 @@ export class PresetStepComponent implements OnInit, OnDestroy {
     }
 
     this.presetService.deleteStep(this.presetService.selectedStep);
-  }
-
-  switchLoop() {
-    this.presetService.selectedPreset.stepsLoop = !this.presetService.selectedPreset.stepsLoop;
-    this.livePreviewService.previewLive();
   }
 
   switchStepPreview() {

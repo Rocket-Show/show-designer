@@ -22,17 +22,6 @@
     <a
       href="#"
       class="btn btn-secondary"
-      [class.text-primary]="presetService.selectedPreset.stepsLoop"
-      popover="{{ 'designer.preset.steps-loop' | translate }}"
-      container="body"
-      placement="left"
-      triggers="mouseenter:mouseleave"
-      (click)="switchLoop(); (false)"
-      ><i class="fa fa-repeat fa-fw" aria-hidden="true"></i
-    ></a>
-    <a
-      href="#"
-      class="btn btn-secondary"
       popover="{{ 'designer.preset.steps-settings' | translate }}"
       container="body"
       placement="left"
@@ -83,7 +72,7 @@
       placement="left"
       triggers="mouseenter:mouseleave"
       (click)="openSettings(presetService.selectedStep); (false)"
-      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+      ><i class="fa fa-ellipsis-h fa-fw" aria-hidden="true"></i
     ></a>
     <a
       href="#"
