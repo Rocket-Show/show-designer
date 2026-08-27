@@ -164,7 +164,8 @@
       "setting-stage-ceiling-height": "Altezza soffitto",
       "setting-stage-pillar-width": "Larghezza pilastro",
       "capability-sound-controlled": "Controllato dal suono",
-      "capability-random-timing": "Temporizzazione casuale"
+      "capability-random-timing": "Temporizzazione casuale",
+      "channel-effect-driven": "Un effetto controlla questo canale e sovrascrive il valore mostrato qui"
     },
     "fixture-pool": {
       "title": "Pool fixture",

@@ -4,6 +4,7 @@ import { CachedFixtureCapability } from '../../../models/cached-fixture-capabili
 import { CachedFixtureChannel } from '../../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../../models/fixture-profile';
 import { PresetService } from '../../../services/preset.service';
+import { EffectService } from '../../../services/effect.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
 
 @Component({
@@ -24,6 +25,9 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   // the value the capabilities of the preset (dimmer, color, pan/tilt, wheel slot) drive this
   // channel to, if any. It is shown as long as the channel carries no value of its own.
   capabilityValue: number;
+  // an effect of the preset drives this channel. Its value moves and, while the effect is
+  // chasing, differs from fixture to fixture, so the channel only says that it is driven.
+  drivenByEffect = false;
   templateValue = 0;
   description: string;
 
@@ -34,8 +38,9 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   descriptionEnd: string;
 
   valueSetTimer: any;
-  private capabilityValueTimer: any;
+  private updateTimer: any;
   private capabilityValuesChangedSubscription: Subscription;
+  private effectsChangedSubscription: Subscription;
 
   @Input()
   profile: FixtureProfile;
@@ -51,23 +56,28 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
 
   constructor(
     private presetService: PresetService,
+    private effectService: EffectService,
     private livePreviewService: LivePreviewService,
     private changeDetectorRef: ChangeDetectorRef
   ) {
     this.capabilityValuesChangedSubscription = this.presetService.capabilityValuesChanged.subscribe(() => {
-      this.capabilityValuesChanged();
+      this.scheduleUpdate();
+    });
+
+    this.effectsChangedSubscription = this.effectService.effectsChanged.subscribe(() => {
+      this.scheduleUpdate();
     });
   }
 
-  // a capability of the preset has been changed -> show what it does to this channel. This
+  // the preset has been changed somewhere else -> show what it does to this channel. This
   // happens while a capability slider is being dragged, so don't redraw on every single step.
-  private capabilityValuesChanged() {
-    if (this.capabilityValueTimer) {
+  private scheduleUpdate() {
+    if (this.updateTimer) {
       return;
     }
 
-    this.capabilityValueTimer = setTimeout(() => {
-      this.capabilityValueTimer = undefined;
+    this.updateTimer = setTimeout(() => {
+      this.updateTimer = undefined;
 
       if (!this._channel || !this.profile || !this.presetService.selectedPreset) {
         return;
@@ -90,6 +100,8 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     );
     // the capabilities calculate in percentages, the channels show dmx values
     this.capabilityValue = capabilityValue === undefined ? undefined : Math.round(capabilityValue);
+
+    this.drivenByEffect = this.presetService.channelIsDrivenByEffect(this.presetService.selectedPreset, this._channel, this.profile.uuid);
 
     this.calculateTemplateValue();
 
@@ -238,7 +250,8 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.capabilityValuesChangedSubscription.unsubscribe();
-    clearTimeout(this.capabilityValueTimer);
+    this.effectsChangedSubscription.unsubscribe();
+    clearTimeout(this.updateTimer);
     clearTimeout(this.valueSetTimer);
   }
 

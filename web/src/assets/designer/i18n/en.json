@@ -164,7 +164,8 @@
       "setting-stage-ceiling-height": "Ceiling height",
       "setting-stage-pillar-width": "Pillar width",
       "capability-sound-controlled": "Sound controlled",
-      "capability-random-timing": "Random timing"
+      "capability-random-timing": "Random timing",
+      "channel-effect-driven": "An effect drives this channel and overrides the value shown here"
     },
     "fixture-pool": {
       "title": "Fixture pool",

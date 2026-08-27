@@ -164,7 +164,8 @@
       "setting-stage-ceiling-height": "Altura del techo",
       "setting-stage-pillar-width": "Anchura del pilar",
       "capability-sound-controlled": "Control por sonido",
-      "capability-random-timing": "Temporización aleatoria"
+      "capability-random-timing": "Temporización aleatoria",
+      "channel-effect-driven": "Un efecto controla este canal y anula el valor mostrado aquí"
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",

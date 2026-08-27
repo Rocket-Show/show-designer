@@ -164,7 +164,8 @@
       "setting-stage-ceiling-height": "Deckenhöhe",
       "setting-stage-pillar-width": "Trägerdicke",
       "capability-sound-controlled": "Sound controlled",
-      "capability-random-timing": "Zufallsgesteuert"
+      "capability-random-timing": "Zufallsgesteuert",
+      "channel-effect-driven": "Ein Effekt steuert diesen Kanal und überschreibt den hier angezeigten Wert"
     },
     "fixture-pool": {
       "title": "Fixture Pool",

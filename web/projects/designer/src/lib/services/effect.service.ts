@@ -13,5 +13,9 @@ export class EffectService {
   effectsOpen: boolean = false;
   effectsOpenChanged: Subject<void> = new Subject<void>();
 
+  // fires, when the effects of the preset changed in a way which changes the channels they
+  // drive: an effect has been added, deleted, hidden, shown, or aimed at other channels
+  effectsChanged: Subject<void> = new Subject<void>();
+
   constructor() {}
 }

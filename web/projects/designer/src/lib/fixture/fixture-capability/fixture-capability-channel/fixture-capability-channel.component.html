@@ -12,6 +12,16 @@
         <label class="form-check-label" for="capabilityGeneric{{ capabilityIndex }}Active">
           {{ _channel?.name }}
         </label>
+        @if (drivenByEffect) {
+        <i
+          class="fa fa-magic ml-1 text-primary"
+          popover="{{ 'designer.fixture.channel-effect-driven' | translate }}"
+          container="body"
+          placement="top"
+          triggers="mouseenter:mouseleave"
+          aria-hidden="true"
+        ></i>
+        }
       </div>
     </div>
   </div>

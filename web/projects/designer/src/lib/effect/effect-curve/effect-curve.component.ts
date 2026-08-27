@@ -436,6 +436,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     option.checked = this.capabilityChecked(capability);
 
+    this.effectService.effectsChanged.next();
     this.livePreviewService.previewLive();
   }
 
@@ -501,6 +502,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     option.checked = this.channelChecked(profile, channel);
 
+    this.effectService.effectsChanged.next();
     this.livePreviewService.previewLive();
   }
 

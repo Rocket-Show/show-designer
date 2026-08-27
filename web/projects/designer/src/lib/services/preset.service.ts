@@ -7,6 +7,7 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureProfile } from '../models/fixture-profile';
+import { EffectCurve } from '../models/effect-curve';
 import { Preset } from '../models/preset';
 import { EffectService } from './effect.service';
 import { FixtureService } from './fixture.service';
@@ -560,6 +561,48 @@ export class PresetService {
     }
 
     return value;
+  }
+
+  // whether an effect of the preset drives a channel. An effect overwrites whatever the
+  // capabilities and the channel itself say, but its value is a moving one and, as soon as the
+  // effect is chasing, a different one for every fixture -> the channel can only tell that it is
+  // in the hands of an effect, not which value it is at.
+  // this follows the same rules as mixEffects() in the preview service.
+  channelIsDrivenByEffect(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): boolean {
+    for (const effect of preset.effects) {
+      if (!effect.visible || !(effect instanceof EffectCurve)) {
+        continue;
+      }
+
+      // the capabilities of the effect reach this type of channel on every profile
+      for (const capability of effect.capabilities) {
+        for (const channelCapability of channel.capabilities) {
+          if (
+            this.fixtureService.capabilitiesMatch(
+              capability.type,
+              channelCapability.capability.type,
+              capability.color,
+              channelCapability.capability.color,
+              null,
+              null,
+              null,
+              null
+            )
+          ) {
+            return true;
+          }
+        }
+      }
+
+      // the channels of the effect are named per profile
+      for (const profileChannels of effect.channels) {
+        if (profileChannels.profileUuid === profileUuid && profileChannels.channels.indexOf(channel.name) >= 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private hasCapabilityType(type: FixtureCapabilityType): boolean {

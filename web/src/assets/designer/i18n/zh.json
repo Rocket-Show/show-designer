@@ -164,7 +164,8 @@
       "setting-stage-ceiling-height": "天花板高度",
       "setting-stage-pillar-width": "柱子宽度",
       "capability-sound-controlled": "声控",
-      "capability-random-timing": "随机定时"
+      "capability-random-timing": "随机定时",
+      "channel-effect-driven": "该通道由效果控制，此处显示的值会被覆盖"
     },
     "fixture-pool": {
       "title": "灯具库",
