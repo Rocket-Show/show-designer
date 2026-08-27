@@ -21,7 +21,10 @@
       "ms": "ms",
       "dropzone-message": "Arrastra un archivo aquí o haz clic para subir",
       "toast-upload-error-title": "Error de carga",
-      "toast-upload-error": "El archivo no pudo cargarse debido al siguiente error: "
+      "toast-upload-error": "El archivo no pudo cargarse debido al siguiente error: ",
+      "color": "Color",
+      "icon": "Icono",
+      "icon-default": "Icono predeterminado"
     },
     "loading": {
       "title": "Cargando...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "Fundido de salida",
       "settings-fade-in-pre": "Antes",
       "settings-fade-out-post": "Después",
-      "live-mode": "Modo en directo"
+      "live-mode": "Modo en directo",
+      "settings-color-auto": "Tomarlo de los presets"
     },
     "preview": {
       "scene": "Escena",
@@ -127,7 +131,8 @@
       "settings-fade-in": "Fundido de entrada",
       "settings-fade-out": "Fundido de salida",
       "settings-fade-in-pre": "Antes",
-      "settings-fade-out-post": "Después"
+      "settings-fade-out-post": "Después",
+      "settings-color-auto": "Tomarlo del color de los aparatos"
     },
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",

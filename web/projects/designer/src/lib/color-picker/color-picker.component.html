@@ -1,0 +1,32 @@
+<div class="color-picker">
+  <!-- the wheel is filled by iro, which needs an element of its own to mount into -->
+  <div #wheel class="color-picker-wheel"></div>
+
+  <div class="color-picker-controls">
+    <div class="color-picker-palette">
+      @for (paletteColor of palette; track paletteColor) {
+      <button
+        type="button"
+        class="color-picker-swatch"
+        [class.picked]="paletteColor === shownColor"
+        [style.background-color]="paletteColor"
+        [attr.aria-label]="paletteColor"
+        (click)="pick(paletteColor)"
+      ></button>
+      }
+    </div>
+
+    <input
+      type="text"
+      class="sd-value-input sd-value-input-hex"
+      [ngModel]="hexValue"
+      (ngModelChange)="pickHex($event)"
+      (blur)="resetHex()"
+    />
+
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input" [id]="autoId" [ngModel]="auto" (ngModelChange)="setAuto($event)" />
+      <label class="form-check-label" [attr.for]="autoId">{{ autoLabel | translate }}</label>
+    </div>
+  </div>
+</div>

@@ -21,7 +21,10 @@
       "ms": "毫秒",
       "dropzone-message": "将文件拖放到此处或点击上传",
       "toast-upload-error-title": "上传错误",
-      "toast-upload-error": "文件无法上传，原因如下："
+      "toast-upload-error": "文件无法上传，原因如下：",
+      "color": "颜色",
+      "icon": "图标",
+      "icon-default": "默认图标"
     },
     "loading": {
       "title": "加载中...",
@@ -100,7 +103,8 @@
       "settings-fade-out": "淡出",
       "settings-fade-in-pre": "之前",
       "settings-fade-out-post": "之后",
-      "live-mode": "实时模式"
+      "live-mode": "实时模式",
+      "settings-color-auto": "取自预设"
     },
     "preview": {
       "scene": "场景",
@@ -127,7 +131,8 @@
       "settings-fade-in": "淡入",
       "settings-fade-out": "淡出",
       "settings-fade-in-pre": "之前",
-      "settings-fade-out-post": "之后"
+      "settings-fade-out-post": "之后",
+      "settings-color-auto": "取自灯具颜色"
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",

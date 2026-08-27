@@ -9,7 +9,14 @@ export class Scene {
   folderUuid: string;
   sortIndex = 0;
 
-  color = '#fff';
+  // how the scene is marked in the lists and on the timeline. While colorAuto is set,
+  // the presets played in the scene decide the color and the picked one is only what
+  // the scene falls back to while none of them sets a color.
+  color: string;
+  colorAuto = true;
+
+  // font awesome class of the icon shown in the scene tree (undefined = the default one)
+  icon: string;
 
   // is the scene shown with its presets in the scene tree?
   expanded = true;
@@ -36,6 +43,10 @@ export class Scene {
     this.folderUuid = data.folderUuid;
     this.sortIndex = data.sortIndex || 0;
     this.color = data.color;
+    // the color of a scene used to be assigned automatically, there was no way to pick
+    // one -> keep what such a project brings as the fallback, not as a picked color
+    this.colorAuto = data.colorAuto !== false;
+    this.icon = data.icon;
     this.expanded = data.expanded !== false;
     if (data.presetUuids) {
       this.presetUuids = data.presetUuids;

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
+import { ColorService } from './color.service';
 import { EffectService } from './effect.service';
 import { FolderService } from './folder.service';
 import { PresetService } from './preset.service';
@@ -14,7 +15,9 @@ import { LivePreviewService } from './live-preview.service';
 })
 export class SceneService {
   selectedScenes: Scene[] = [];
-  sceneColors: string[] = ['#945fda', '#61da5f', '#5fc3da', '#dad65f', '#da5f5f', '#246db7'];
+
+  // the icon a scene is shown with, while none has been picked for it
+  static readonly defaultIcon = 'fa-picture-o';
 
   sceneDeleted: Subject<void> = new Subject<void>();
   sceneSelected: Subject<void> = new Subject<void>();
@@ -24,12 +27,18 @@ export class SceneService {
 
   constructor(
     private uuidService: UuidService,
+    private colorService: ColorService,
     private effectService: EffectService,
     private folderService: FolderService,
     private presetService: PresetService,
     private projectService: ProjectService,
     private livePreviewService: LivePreviewService
   ) {}
+
+  // the icon of a scene: the one picked for it, or the default one
+  getSceneIcon(scene: Scene): string {
+    return scene.icon || SceneService.defaultIcon;
+  }
 
   sceneIsSelected(scene: Scene): boolean {
     for (const selectedScene of this.selectedScenes) {
@@ -185,11 +194,9 @@ export class SceneService {
     scene.uuid = this.uuidService.getUuid();
     scene.name = name || 'New Scene';
 
-    if (this.projectService.project.scenes.length < this.sceneColors.length) {
-      scene.color = this.sceneColors[this.projectService.project.scenes.length];
-    } else {
-      scene.color = '#' + Math.random().toString(16).slice(2, 8).toUpperCase();
-    }
+    // the presets decide the color of the scene as soon as one of them sets one. Until
+    // then it is marked with a palette color, so the scenes can be told apart.
+    scene.color = this.colorService.getNewSceneColor(this.projectService.project.scenes.length);
 
     if (above && above.folderUuid === folderUuid) {
       scene.folderUuid = folderUuid;

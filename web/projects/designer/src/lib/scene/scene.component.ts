@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { Folder } from '../models/folder';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
+import { ColorService } from '../services/color.service';
 import { FolderService } from '../services/folder.service';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
@@ -42,6 +43,7 @@ export class SceneComponent implements OnInit, OnDestroy {
     public sceneService: SceneService,
     public presetService: PresetService,
     public projectService: ProjectService,
+    private colorService: ColorService,
     private folderService: FolderService,
     private translateService: TranslateService,
     private modalService: BsModalService,
@@ -58,7 +60,10 @@ export class SceneComponent implements OnInit, OnDestroy {
       this.presetService.presetsChanged.subscribe(() => this.buildTree()),
       this.sceneService.sceneSelected.subscribe(() => this.updateSelection()),
       // a preset picked in the preset list has to take the mark off the tree
-      this.presetService.previewSelectionChanged.subscribe(() => this.updateSelection())
+      this.presetService.previewSelectionChanged.subscribe(() => this.updateSelection()),
+      // the color picker of the fixtures changes what the presets and their scenes are
+      // marked with
+      this.presetService.capabilityValuesChanged.subscribe(() => this.updateColors())
     );
   }
 
@@ -104,7 +109,8 @@ export class SceneComponent implements OnInit, OnDestroy {
         id: scene.uuid,
         isFolder: true,
         expanded: scene.expanded !== false,
-        icon: 'fa-picture-o',
+        icon: this.sceneService.getSceneIcon(scene),
+        iconColor: this.colorService.getSceneColor(scene),
         scene,
         children: [],
       };
@@ -113,7 +119,8 @@ export class SceneComponent implements OnInit, OnDestroy {
         sceneNode.children.push({
           id: scene.uuid + '/' + preset.uuid,
           isFolder: false,
-          icon: 'fa-lightbulb-o',
+          icon: this.presetService.getPresetIcon(preset),
+          iconColor: this.colorService.getPresetColor(preset),
           scene,
           preset,
         });
@@ -147,6 +154,18 @@ export class SceneComponent implements OnInit, OnDestroy {
     }
 
     this.selectedNodes = selectedNodes;
+  }
+
+  // the colors follow what the presets put on their fixtures, which changes with every
+  // mouse move on the color picker -> repaint the icons instead of rebuilding the tree
+  private updateColors() {
+    this.eachNode(this.treeNodes, (node) => {
+      if (node.preset) {
+        node.iconColor = this.colorService.getPresetColor(node.preset);
+      } else if (node.scene) {
+        node.iconColor = this.colorService.getSceneColor(node.scene);
+      }
+    });
   }
 
   private eachNode(nodes: TreeNode[], callback: (node: TreeNode) => void) {
