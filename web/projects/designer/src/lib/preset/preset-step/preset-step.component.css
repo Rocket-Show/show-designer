@@ -68,6 +68,21 @@
   background-color: var(--sd-surface-3);
 }
 
+/* the next step is added where it would show up, at the end of the list */
+.step-add {
+  display: block;
+  border-style: dashed;
+  background-color: transparent;
+  color: var(--sd-text-dim);
+  text-decoration: none;
+}
+
+.step-add:hover {
+  background-color: var(--sd-surface-3);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
 /* the step the panels are editing */
 .step-selected {
   border-color: var(--sd-primary);

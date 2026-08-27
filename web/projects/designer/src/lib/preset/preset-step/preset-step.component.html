@@ -66,20 +66,20 @@
       {{ i + 1 }}
     </div>
     }
-  </div>
-
-  <!-- what the steps themselves can be done with -->
-  <div class="step-rail-actions d-flex">
     <a
       href="#"
-      class="btn btn-secondary"
+      class="step step-add"
       popover="{{ 'designer.preset.step-add' | translate }}"
       container="body"
       placement="left"
       triggers="mouseenter:mouseleave"
       (click)="addStep(); (false)"
-      ><i class="fa fa-plus fa-fw" aria-hidden="true"></i
+      ><i class="fa fa-plus" aria-hidden="true"></i
     ></a>
+  </div>
+
+  <!-- what the selected step can be done with -->
+  <div class="step-rail-actions d-flex">
     <a
       href="#"
       class="btn btn-secondary"
