@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Scene",
       "solo": "Solo",
-      "editing": "editing"
+      "editing": "editing",
+      "hide": "Hide the preview to save performance",
+      "show": "Show the preview",
+      "hidden": "Preview hidden",
+      "hidden-hint": "The stage is not rendered while the preview is hidden."
     },
     "preset": {
       "title": "Presets",

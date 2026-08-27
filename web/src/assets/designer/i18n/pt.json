@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Cena",
       "solo": "Solo",
-      "editing": "a editar"
+      "editing": "a editar",
+      "hide": "Ocultar a pré-visualização para poupar desempenho",
+      "show": "Mostrar a pré-visualização",
+      "hidden": "Pré-visualização oculta",
+      "hidden-hint": "O palco não é renderizado enquanto a pré-visualização estiver oculta."
     },
     "preset": {
       "title": "Predefinições",

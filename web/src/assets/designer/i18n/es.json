@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Escena",
       "solo": "Solo",
-      "editing": "editando"
+      "editing": "editando",
+      "hide": "Ocultar la vista previa para ahorrar rendimiento",
+      "show": "Mostrar la vista previa",
+      "hidden": "Vista previa oculta",
+      "hidden-hint": "El escenario no se renderiza mientras la vista previa está oculta."
     },
     "preset": {
       "title": "Preajustes",

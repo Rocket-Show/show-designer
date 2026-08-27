@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Scena",
       "solo": "Solo",
-      "editing": "in modifica"
+      "editing": "in modifica",
+      "hide": "Nascondi l'anteprima per risparmiare prestazioni",
+      "show": "Mostra l'anteprima",
+      "hidden": "Anteprima nascosta",
+      "hidden-hint": "Il palco non viene renderizzato mentre l'anteprima è nascosta."
     },
     "preset": {
       "title": "Preset",

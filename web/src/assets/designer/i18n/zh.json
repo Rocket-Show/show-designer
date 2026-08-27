@@ -102,7 +102,11 @@
     "preview": {
       "scene": "场景",
       "solo": "独奏",
-      "editing": "正在编辑"
+      "editing": "正在编辑",
+      "hide": "隐藏预览以节省性能",
+      "show": "显示预览",
+      "hidden": "预览已隐藏",
+      "hidden-hint": "预览隐藏时不会渲染舞台。"
     },
     "preset": {
       "title": "预设",

@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Szene",
       "solo": "Solo",
-      "editing": "bearbeitet"
+      "editing": "bearbeitet",
+      "hide": "Vorschau ausblenden, um Leistung zu sparen",
+      "show": "Vorschau einblenden",
+      "hidden": "Vorschau ausgeblendet",
+      "hidden-hint": "Die Bühne wird nicht gerendert, solange die Vorschau ausgeblendet ist."
     },
     "preset": {
       "title": "Presets",

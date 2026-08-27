@@ -102,7 +102,11 @@
     "preview": {
       "scene": "Scène",
       "solo": "Solo",
-      "editing": "édition"
+      "editing": "édition",
+      "hide": "Masquer l'aperçu pour économiser des performances",
+      "show": "Afficher l'aperçu",
+      "hidden": "Aperçu masqué",
+      "hidden-hint": "La scène n'est pas rendue tant que l'aperçu est masqué."
     },
     "preset": {
       "title": "Préréglages",
