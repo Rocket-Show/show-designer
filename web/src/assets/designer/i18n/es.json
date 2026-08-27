@@ -142,6 +142,7 @@
       "step-start": "Alcanzado en",
       "step-transition": "Transición",
       "steps-run": "Reproducir los pasos",
+      "steps-settings": "Ajustes de la secuencia",
       "steps-loop": "Repetir los pasos",
       "steps-loop-length": "Duración del bucle",
       "steps-chase": "Chase"

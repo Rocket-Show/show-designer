@@ -37,6 +37,7 @@ import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
 import { PresetSettingsComponent } from './preset/preset-settings/preset-settings.component';
 import { PresetStepSettingsComponent } from './preset/preset-step/preset-step-settings/preset-step-settings.component';
+import { PresetStepsSettingsComponent } from './preset/preset-step/preset-steps-settings/preset-steps-settings.component';
 import { PresetStepComponent } from './preset/preset-step/preset-step.component';
 import { PresetComponent } from './preset/preset.component';
 import { PreviewComponent } from './preview/preview.component';
@@ -96,6 +97,7 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     PresetSettingsComponent,
     PresetStepComponent,
     PresetStepSettingsComponent,
+    PresetStepsSettingsComponent,
     SceneSettingsComponent,
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,

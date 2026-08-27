@@ -107,68 +107,6 @@
       </div>
     </div>
   </div>
-
-  <!-- how the preset runs through its steps. Only worth showing once there is more than
-       one of them: a single step is the static look the preset has always been. -->
-  @if (preset.steps.length > 1) {
-  <hr />
-
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label"></label>
-    <div class="col-lg-8 d-flex">
-      <div class="form-check my-auto">
-        <input type="checkbox" [ngModel]="stepsLoop" (ngModelChange)="stepsLoop = $event" class="form-check-input" id="stepsLoop" />
-
-        <label class="form-check-label" for="stepsLoop">
-          {{ 'designer.preset.steps-loop' | translate }}
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.preset.steps-loop-length' | translate }}</label>
-    <div class="col-lg-7">
-      <input
-        type="text"
-        class="form-control"
-        placeholder="{{ automaticLoopMillis }}"
-        [ngModel]="stepsLoopMillis"
-        (ngModelChange)="stepsLoopMillis = $event"
-      />
-    </div>
-    <div class="col-lg-1 d-flex p-0">
-      <div class="my-auto">
-        {{ 'designer.misc.ms' | translate }}
-      </div>
-    </div>
-  </div>
-
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.preset.steps-chase' | translate }}</label>
-    <div class="col-lg-4">
-      <input
-        type="text"
-        class="form-control"
-        [ngModel]="stepsPhasingMode === 'spread' ? stepsPhasingCycles : stepsPhasingMillis"
-        (ngModelChange)="setPhasingAmount($event)"
-      />
-    </div>
-    <div class="col-lg-4">
-      <select class="form-control" [ngModel]="stepsPhasingMode" (ngModelChange)="stepsPhasingMode = $event">
-        <option [value]="'millis'">{{ 'designer.misc.ms' | translate }}</option>
-        <option [value]="'spread'">{{ 'designer.effect.curve-chase-spread' | translate }}</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-chase-group' | translate }}</label>
-    <div class="col-lg-7">
-      <input type="text" class="form-control" [ngModel]="stepsPhasingGroupSize" (ngModelChange)="stepsPhasingGroupSize = $event" />
-    </div>
-  </div>
-  }
 </div>
 <div class="modal-footer">
   <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">

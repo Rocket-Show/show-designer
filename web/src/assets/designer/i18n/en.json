@@ -142,6 +142,7 @@
       "step-start": "Reached at",
       "step-transition": "Transition",
       "steps-run": "Run the steps",
+      "steps-settings": "Sequence settings",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
       "steps-chase": "Chase"

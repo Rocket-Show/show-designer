@@ -5,6 +5,7 @@ import { getTransitionStartMillis, PresetStep } from '../../models/preset-step';
 import { LivePreviewService } from '../../services/live-preview.service';
 import { PresetService } from '../../services/preset.service';
 import { PresetStepSettingsComponent } from './preset-step-settings/preset-step-settings.component';
+import { PresetStepsSettingsComponent } from './preset-steps-settings/preset-steps-settings.component';
 
 @Component({
   selector: 'lib-app-preset-step',
@@ -88,6 +89,16 @@ export class PresetStepComponent implements OnInit, OnDestroy {
 
   switchStepPreview() {
     this.presetService.setStepPreviewRunning(!this.presetService.stepPreviewRunning);
+  }
+
+  // how the sequence as a whole runs: looping, and chasing over the fixtures
+  openStepsSettings() {
+    this.modalService.show(PresetStepsSettingsComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      class: '',
+      initialState: { preset: this.presetService.selectedPreset },
+    });
   }
 
   openSettings(step: PresetStep) {

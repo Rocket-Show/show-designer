@@ -30,6 +30,16 @@
       (click)="switchLoop(); (false)"
       ><i class="fa fa-repeat fa-fw" aria-hidden="true"></i
     ></a>
+    <a
+      href="#"
+      class="btn btn-secondary"
+      popover="{{ 'designer.preset.steps-settings' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="openStepsSettings(); (false)"
+      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+    ></a>
   </div>
 
   <!-- the states the selected preset runs through, in the order they are reached. The

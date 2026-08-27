@@ -1,7 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { TransitionCurveType, transitionCurveTypes } from '../../models/transition-curve';
-import { PresetStepService } from '../../services/preset-step.service';
 import { Preset } from '../../models/preset';
 
 @Component({
@@ -23,19 +22,9 @@ export class PresetSettingsComponent implements OnInit {
   fadeInCurve: TransitionCurveType;
   fadeOutCurve: TransitionCurveType;
 
-  stepsLoop: boolean;
-  stepsLoopMillis: number;
-  stepsPhasingMode: string;
-  stepsPhasingMillis: number;
-  stepsPhasingCycles: number;
-  stepsPhasingGroupSize: number;
-
-  // what the sequence loops at while no length of its own is set
-  automaticLoopMillis: number;
-
   transitionCurveTypes = transitionCurveTypes;
 
-  constructor(public bsModalRef: BsModalRef, private presetStepService: PresetStepService) {}
+  constructor(public bsModalRef: BsModalRef) {}
 
   ngOnInit() {
     this.name = this.preset.name;
@@ -47,23 +36,6 @@ export class PresetSettingsComponent implements OnInit {
     this.fadeOutPost = this.preset.fadeOutPost;
     this.fadeInCurve = this.preset.fadeInCurve;
     this.fadeOutCurve = this.preset.fadeOutCurve;
-
-    this.stepsLoop = this.preset.stepsLoop;
-    this.stepsLoopMillis = this.preset.stepsLoopMillis;
-    this.stepsPhasingMode = this.preset.stepsPhasingMode;
-    this.stepsPhasingMillis = this.preset.stepsPhasingMillis;
-    this.stepsPhasingCycles = this.preset.stepsPhasingCycles;
-    this.stepsPhasingGroupSize = this.preset.stepsPhasingGroupSize;
-    this.automaticLoopMillis = this.presetStepService.getStepsLoopMillis(this.preset);
-  }
-
-  // the chase is either a fixed time or a number of passes spread over the fixtures
-  setPhasingAmount(amount: number) {
-    if (this.stepsPhasingMode === 'spread') {
-      this.stepsPhasingCycles = amount;
-    } else {
-      this.stepsPhasingMillis = amount;
-    }
   }
 
   ok() {
@@ -90,26 +62,6 @@ export class PresetSettingsComponent implements OnInit {
     this.preset.fadeOutPost = this.fadeOutPost;
     this.preset.fadeInCurve = this.fadeInCurve;
     this.preset.fadeOutCurve = this.fadeOutCurve;
-
-    this.preset.stepsLoop = this.stepsLoop;
-
-    if (this.stepsLoopMillis === undefined || this.stepsLoopMillis === null || (this.stepsLoopMillis as any) === '') {
-      this.preset.stepsLoopMillis = undefined;
-    } else if (!isNaN(this.stepsLoopMillis) && this.stepsLoopMillis > 0) {
-      this.preset.stepsLoopMillis = +this.stepsLoopMillis;
-    }
-
-    this.preset.stepsPhasingMode = this.stepsPhasingMode;
-
-    if (!isNaN(this.stepsPhasingMillis)) {
-      this.preset.stepsPhasingMillis = +this.stepsPhasingMillis;
-    }
-    if (!isNaN(this.stepsPhasingCycles)) {
-      this.preset.stepsPhasingCycles = +this.stepsPhasingCycles;
-    }
-    if (!isNaN(this.stepsPhasingGroupSize) && this.stepsPhasingGroupSize >= 1) {
-      this.preset.stepsPhasingGroupSize = +this.stepsPhasingGroupSize;
-    }
 
     this.bsModalRef.hide();
   }
