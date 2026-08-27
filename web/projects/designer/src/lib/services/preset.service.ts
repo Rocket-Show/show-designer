@@ -155,8 +155,10 @@ export class PresetService {
   setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
     if (!useGlobalFixtureOrder) {
       // start from the order which has been in effect so far, so the chasing does
-      // not change just because the preset got its own order
+      // not change just because the preset got its own order - the folders included,
+      // which sit where the project puts them until this preset moves them
       preset.fixtures = this.getOrderedPresetFixtures(preset).map((presetFixture) => new PresetFixture(presetFixture));
+      preset.fixtureFolders = [];
     }
 
     preset.useGlobalFixtureOrder = useGlobalFixtureOrder;

@@ -2,16 +2,25 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { Folder } from '../models/folder';
+import { FolderPosition } from '../models/folder-position';
+import { Preset } from '../models/preset';
 import { FixturePoolService } from '../services/fixture-pool.service';
 import { FixtureService } from '../services/fixture.service';
-import { FolderService } from '../services/folder.service';
+import { FolderItem, FolderService } from '../services/folder.service';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { PresetFixture } from '../models/preset-fixture';
-import type { Options } from 'sortablejs';
 import { LivePreviewService } from '../services/live-preview.service';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
+
+// One row of the fixture tree. The project's entry says what the row is, the preset's
+// own entry (if it has one) says where the row sits while the preset brings its own
+// fixture order.
+interface FixtureOrderItem extends FolderItem {
+  presetFixture: PresetFixture;
+  orderEntry?: PresetFixture;
+}
 
 @Component({
   selector: 'lib-app-fixture',
@@ -20,12 +29,8 @@ import { TreeDropZone, TreeNode } from '../tree/tree.component';
   standalone: false,
 })
 export class FixtureComponent implements OnInit, OnDestroy {
-  fixtureSortableOptions: Options = {
-    onUpdate: () => this.fixtureListReordered(),
-  };
-
-  // the fixtures which are not part of the current preset (only used, when the preset
-  // brings its own fixture order)
+  // the fixtures which are not part of the current preset (they come after the ones it
+  // chases, when the preset brings its own fixture order)
   otherFixtures: PresetFixture[] = [];
 
   // the fixtures of the project, grouped in folders
@@ -42,6 +47,9 @@ export class FixtureComponent implements OnInit, OnDestroy {
   private targetFolder: Folder = undefined;
   private targetFixture: PresetFixture = undefined;
 
+  // the parent of every row, to keep a preset's own order inside the project's folders
+  private parentOf = new Map<TreeNode, TreeNode>();
+
   constructor(
     public projectService: ProjectService,
     public presetService: PresetService,
@@ -54,19 +62,12 @@ export class FixtureComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.updateOtherFixtures();
     this.buildTree();
 
     this.subscriptions.push(
-      this.presetService.fixtureSelectionChanged.subscribe(() => {
-        this.updateOtherFixtures();
-        this.buildTree();
-      }),
-      this.presetService.previewSelectionChanged.subscribe(() => this.updateOtherFixtures()),
-      this.projectService.projectChanged.subscribe(() => {
-        this.updateOtherFixtures();
-        this.buildTree();
-      })
+      this.presetService.fixtureSelectionChanged.subscribe(() => this.buildTree()),
+      this.presetService.previewSelectionChanged.subscribe(() => this.buildTree()),
+      this.projectService.projectChanged.subscribe(() => this.buildTree())
     );
   }
 
@@ -92,7 +93,41 @@ export class FixtureComponent implements OnInit, OnDestroy {
     }
 
     this.presetService.setUseGlobalFixtureOrder(this.presetService.selectedPreset, !customFixtureOrder);
+    this.buildTree();
+    this.fixtureListReordered();
+  }
+
+  private orderedPreset(): Preset {
+    return this.usePresetOrder() ? this.presetService.selectedPreset : undefined;
+  }
+
+  // ---- the fixture tree ----------------------------------------------------
+
+  private buildTree() {
+    const preset = this.orderedPreset();
+
     this.updateOtherFixtures();
+
+    if (preset) {
+      this.syncPresetOrder(preset, this.projectFixtures());
+    }
+
+    this.parentOf.clear();
+    this.treeNodes = this.buildNodes(this.orderFolders(preset), this.orderItems(preset), undefined, undefined);
+    this.updateFocusedNode();
+  }
+
+  // The folders are the rig, shared by every preset: a fixture moved into another one,
+  // or a folder which is gone, moves inside the order of every preset which brings its
+  // own as well. Only run this when the project's own list changed, it walks them all.
+  private syncPresetOrders() {
+    const projectFixtures = this.projectFixtures();
+
+    for (const preset of this.projectService.project.presets) {
+      if (!preset.useGlobalFixtureOrder) {
+        this.syncPresetOrder(preset, projectFixtures);
+      }
+    }
   }
 
   private updateOtherFixtures() {
@@ -108,45 +143,152 @@ export class FixtureComponent implements OnInit, OnDestroy {
     );
   }
 
-  // ---- the fixture tree ----------------------------------------------------
+  // The folders as this tree orders them: the project's own order, or the positions the
+  // preset gives them. The copies only carry the order, the nodes get the real folders.
+  private orderFolders(preset: Preset): Folder[] {
+    if (!preset) {
+      return this.projectService.project.fixtureFolders;
+    }
 
-  private buildTree() {
-    this.treeNodes = this.buildNodes(undefined);
-    this.updateFocusedNode();
+    return this.projectService.project.fixtureFolders.map((folder) => {
+      const ordered = new Folder(folder);
+      const position = preset.fixtureFolders.find((candidate) => candidate.folderUuid === folder.uuid);
+
+      ordered.sortIndex = position ? position.sortIndex : folder.sortIndex;
+
+      return ordered;
+    });
   }
 
-  private buildNodes(parentUuid: string): TreeNode[] {
-    const nodes: TreeNode[] = [];
-    const children = this.folderService.getChildren(
-      this.projectService.project.fixtureFolders,
-      this.projectService.project.presetFixtures,
-      parentUuid
-    );
+  // The rows of the tree: the project's fixtures in its own order, or the ones the
+  // preset chases in the preset's order, with the rest of them following in every folder.
+  private orderItems(preset: Preset): FixtureOrderItem[] {
+    if (!preset) {
+      return this.projectService.project.presetFixtures.map((projectFixture) => ({
+        folderUuid: projectFixture.folderUuid,
+        sortIndex: projectFixture.sortIndex,
+        presetFixture: projectFixture,
+        orderEntry: projectFixture,
+      }));
+    }
 
-    for (const child of children) {
+    const items: FixtureOrderItem[] = [];
+    const projectFixtures = this.projectFixtures();
+
+    // every position handed out is an index among siblings, so this is past all of them
+    let last = this.projectService.project.fixtureFolders.length + this.projectService.project.presetFixtures.length;
+
+    for (const entry of preset.fixtures) {
+      const projectFixture = projectFixtures.get(this.fixtureKey(entry));
+
+      if (projectFixture) {
+        items.push({ folderUuid: entry.folderUuid, sortIndex: entry.sortIndex, presetFixture: projectFixture, orderEntry: entry });
+      }
+    }
+
+    // a fixture this preset does not chase has no place of its own -> it follows the
+    // ones it does chase, inside the folder it belongs to
+    for (const projectFixture of this.otherFixtures) {
+      items.push({ folderUuid: projectFixture.folderUuid, sortIndex: ++last, presetFixture: projectFixture });
+    }
+
+    return items;
+  }
+
+  // A fixture just checked for the preset, or one the project moved into another folder,
+  // has no place of its own there yet -> it goes to the end of that folder. Afterwards
+  // the preset's own list follows what the tree shows again: it is its chase order.
+  private syncPresetOrder(preset: Preset, projectFixtures: Map<string, PresetFixture>) {
+    // the last position each folder handed out, so an arrival lands after what is in it
+    const last = new Map<string, number>();
+    const note = (folderUuid: string, sortIndex: number) =>
+      last.set(folderUuid || '', Math.max(last.get(folderUuid || '') ?? -1, sortIndex));
+    const next = (folderUuid: string): number => {
+      const sortIndex = (last.get(folderUuid || '') ?? -1) + 1;
+      last.set(folderUuid || '', sortIndex);
+
+      return sortIndex;
+    };
+
+    for (const folder of this.projectService.project.fixtureFolders) {
+      const position = preset.fixtureFolders.find((candidate) => candidate.folderUuid === folder.uuid);
+
+      note(folder.parentUuid, position ? position.sortIndex : folder.sortIndex || 0);
+    }
+
+    for (const entry of preset.fixtures) {
+      const projectFixture = projectFixtures.get(this.fixtureKey(entry));
+
+      if (projectFixture && entry.folderUuid === projectFixture.folderUuid && entry.sortIndex !== undefined && entry.sortIndex !== null) {
+        note(entry.folderUuid, entry.sortIndex);
+      }
+    }
+
+    for (const entry of preset.fixtures) {
+      const projectFixture = projectFixtures.get(this.fixtureKey(entry));
+      const folderUuid = projectFixture ? projectFixture.folderUuid : undefined;
+
+      if (entry.folderUuid !== folderUuid || entry.sortIndex === undefined || entry.sortIndex === null) {
+        entry.sortIndex = next(folderUuid);
+      }
+
+      // the folders are the project's, only the position inside them is the preset's
+      entry.folderUuid = folderUuid;
+    }
+
+    this.folderService.sortItems(this.orderFolders(preset), preset.fixtures);
+  }
+
+  // the project's fixture list by fixture and pixel, to look a preset's own entries up
+  // without walking it for each of them
+  private projectFixtures(): Map<string, PresetFixture> {
+    const projectFixtures = new Map<string, PresetFixture>();
+
+    for (const projectFixture of this.projectService.project.presetFixtures) {
+      projectFixtures.set(this.fixtureKey(projectFixture), projectFixture);
+    }
+
+    return projectFixtures;
+  }
+
+  private fixtureKey(presetFixture: PresetFixture): string {
+    return presetFixture.fixtureUuid + '/' + (presetFixture.pixelKey || '');
+  }
+
+  private buildNodes(folders: Folder[], items: FixtureOrderItem[], parentUuid: string, parent: TreeNode): TreeNode[] {
+    const nodes: TreeNode[] = [];
+
+    for (const child of this.folderService.getChildren(folders, items, parentUuid)) {
+      let node: TreeNode;
+
       if (child.folder) {
-        nodes.push({
-          id: child.folder.uuid,
+        const folder = this.projectService.project.fixtureFolders.find((candidate) => candidate.uuid === child.folder.uuid);
+
+        node = {
+          id: folder.uuid,
           isFolder: true,
-          expanded: child.folder.expanded !== false,
+          expanded: folder.expanded !== false,
           icon: 'fa-folder-o',
           iconOpen: 'fa-folder-open-o',
           toggleOnClick: true,
-          folder: child.folder,
-          children: this.buildNodes(child.folder.uuid),
-        });
+          folder,
+          children: [],
+        };
+        node.children = this.buildNodes(folders, items, folder.uuid, node);
+      } else {
+        const item = child.item as FixtureOrderItem;
 
-        continue;
+        node = {
+          id: this.fixtureKey(item.presetFixture),
+          isFolder: false,
+          iconClass: 'icon-' + this.fixtureIconClass(item.presetFixture),
+          presetFixture: item.presetFixture,
+          orderEntry: item.orderEntry,
+        };
       }
 
-      const presetFixture = child.item as PresetFixture;
-
-      nodes.push({
-        id: presetFixture.fixtureUuid + '/' + (presetFixture.pixelKey || ''),
-        isFolder: false,
-        iconClass: 'icon-' + this.fixtureIconClass(presetFixture),
-        presetFixture,
-      });
+      this.parentOf.set(node, parent);
+      nodes.push(node);
     }
 
     return nodes;
@@ -174,17 +316,36 @@ export class FixtureComponent implements OnInit, OnDestroy {
     return undefined;
   }
 
-  // a fixture which is not part of the current preset is dimmed, the same way the flat
-  // list dims it
+  // a fixture which is not part of the current preset is dimmed, the same way the list
+  // dimmed it
   nodeClass = (node: TreeNode): string => (node.presetFixture && !this.fixtureIsSelected(node.presetFixture) ? 'inactive-list-item' : '');
 
-  // a folder cannot be dropped into itself, everything else may go anywhere
+  // a preset only orders the fixtures it chases: the others follow them and stay put
+  allowDrag = (node: TreeNode): boolean => !this.usePresetOrder() || !node.presetFixture || !!node.orderEntry;
+
   allowDrop = (dragged: TreeNode[], target: TreeNode, zone: TreeDropZone): boolean => {
     if (zone === 'inside' && !target.isFolder) {
       return false;
     }
 
-    return dragged.every((node) => !node.folder || !this.containsFolder(node, target));
+    if (dragged.some((node) => node.folder && this.containsFolder(node, target))) {
+      return false;
+    }
+
+    if (!this.usePresetOrder()) {
+      return true;
+    }
+
+    // a fixture stays in the folder it belongs to and the folders keep the project's
+    // structure: a preset only moves a row among the rows it already sits with. And
+    // nothing is placed next to a fixture the preset does not chase, they come last.
+    if (target.presetFixture && !target.orderEntry) {
+      return false;
+    }
+
+    const targetParent = zone === 'inside' ? target : this.parentOf.get(target);
+
+    return dragged.every((node) => this.parentOf.get(node) === targetParent);
   };
 
   private containsFolder(node: TreeNode, target: TreeNode): boolean {
@@ -198,27 +359,58 @@ export class FixtureComponent implements OnInit, OnDestroy {
   }
 
   onNodesChange(nodes: TreeNode[]) {
-    this.applyNodes(nodes, undefined);
+    const preset = this.orderedPreset();
 
-    // the flat fixture list follows what the tree shows: it is the order the presets
-    // chase their fixtures in
-    this.folderService.sortItems(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures);
+    this.applyNodes(nodes, undefined, preset);
+
+    if (preset) {
+      // the preset's own list follows what the tree shows: it is the order it chases in
+      this.folderService.sortItems(this.orderFolders(preset), preset.fixtures);
+    } else {
+      this.folderService.sortItems(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures);
+      this.syncPresetOrders();
+    }
 
     this.buildTree();
     this.fixtureListReordered();
   }
 
-  private applyNodes(nodes: TreeNode[], parentUuid: string) {
+  private applyNodes(nodes: TreeNode[], parentUuid: string, preset: Preset) {
     nodes.forEach((node, index) => {
       if (node.folder) {
-        node.folder.parentUuid = parentUuid;
-        node.folder.sortIndex = index;
-        this.applyNodes(node.children ?? [], node.folder.uuid);
-      } else if (node.presetFixture) {
-        node.presetFixture.folderUuid = parentUuid;
-        node.presetFixture.sortIndex = index;
+        if (preset) {
+          this.setFolderPosition(preset, node.folder, index);
+        } else {
+          node.folder.parentUuid = parentUuid;
+          node.folder.sortIndex = index;
+        }
+
+        this.applyNodes(node.children ?? [], node.folder.uuid, preset);
+        return;
       }
+
+      if (!node.orderEntry) {
+        return;
+      }
+
+      if (!preset) {
+        node.orderEntry.folderUuid = parentUuid;
+      }
+
+      node.orderEntry.sortIndex = index;
     });
+  }
+
+  private setFolderPosition(preset: Preset, folder: Folder, sortIndex: number) {
+    let position = preset.fixtureFolders.find((candidate) => candidate.folderUuid === folder.uuid);
+
+    if (!position) {
+      position = new FolderPosition();
+      position.folderUuid = folder.uuid;
+      preset.fixtureFolders.push(position);
+    }
+
+    position.sortIndex = sortIndex;
   }
 
   onNodeExpandedChange(node: TreeNode) {
@@ -283,8 +475,15 @@ export class FixtureComponent implements OnInit, OnDestroy {
       this.projectService.project.presetFixtures,
       this.targetFolder
     );
+
+    // the presets which gave the folder a place of their own do not need it anymore
+    for (const preset of this.projectService.project.presets) {
+      preset.fixtureFolders = preset.fixtureFolders.filter((position) => position.folderUuid !== this.targetFolder.uuid);
+    }
+
     this.targetFolder = undefined;
     this.folderService.sortItems(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures);
+    this.syncPresetOrders();
     this.buildTree();
     this.fixtureListReordered();
   }

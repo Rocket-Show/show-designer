@@ -3,6 +3,7 @@ import { EffectCurve } from './effect-curve';
 import { EffectPanTilt } from './effect-pan-tilt';
 import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureChannelValue } from './fixture-channel-value';
+import { FolderPosition } from './folder-position';
 import { PresetFixture } from './preset-fixture';
 
 export class Preset {
@@ -21,6 +22,10 @@ export class Preset {
   // all related fixtures, in the order they are chased in (only relevant, if
   // useGlobalFixtureOrder is false)
   fixtures: PresetFixture[] = [];
+
+  // where this preset puts the project's fixture folders, when it brings its own
+  // fixture order. A folder without an entry here sits where the project puts it.
+  fixtureFolders: FolderPosition[] = [];
 
   // chase the fixtures in the global order (project.presetFixtures) instead of
   // this preset's own order
@@ -62,6 +67,12 @@ export class Preset {
     if (data.fixtures) {
       for (const fixture of data.fixtures) {
         this.fixtures.push(new PresetFixture(fixture));
+      }
+    }
+
+    if (data.fixtureFolders) {
+      for (const folderPosition of data.fixtureFolders) {
+        this.fixtureFolders.push(new FolderPosition(folderPosition));
       }
     }
 
