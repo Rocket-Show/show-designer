@@ -9,6 +9,11 @@ export class Preset {
   uuid: string;
   name: string;
 
+  // the folder of the preset list this preset is in (undefined = top level) and its
+  // position among the folders and presets of that folder
+  folderUuid: string;
+  sortIndex = 0;
+
   // all related fixtures
   // OBSOLETE: replaced with fixtures
   fixtureUuids: string[] = [];
@@ -48,6 +53,8 @@ export class Preset {
 
     this.uuid = data.uuid;
     this.name = data.name;
+    this.folderUuid = data.folderUuid;
+    this.sortIndex = data.sortIndex || 0;
 
     // OBSOLETE
     this.fixtureUuids = data.fixtureUuids;

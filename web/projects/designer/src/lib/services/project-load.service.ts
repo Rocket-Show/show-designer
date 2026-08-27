@@ -105,6 +105,17 @@ export class ProjectLoadService {
     this.projectService.project.version = 4;
   }
 
+  private migrateToVersion5() {
+    // the presets can be grouped in folders now -> put them all at the top level, in
+    // the order they had so far
+    this.projectService.project.presets.forEach((preset, index) => {
+      preset.folderUuid = undefined;
+      preset.sortIndex = index;
+    });
+
+    this.projectService.project.version = 5;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -132,6 +143,11 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 4) {
       this.migrateToVersion4();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 5) {
+      this.migrateToVersion5();
       migrated = true;
     }
 

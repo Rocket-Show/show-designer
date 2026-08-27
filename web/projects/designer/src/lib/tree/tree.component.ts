@@ -70,6 +70,10 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // the node the last plain click went to, marked apart from the selection
   @Input() focusedNode: TreeNode | undefined;
 
+  // offer the current drag to the other trees, so nodes can be dragged from here into
+  // one of them (they insert a copy, this tree keeps its own nodes)
+  @Input() publishDrag = false;
+
   // decide whether a node may be dragged
   @Input() allowDrag: (node: TreeNode) => boolean = () => true;
 
@@ -242,6 +246,10 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       this.draggingNodes = [node];
     }
 
+    if (this.publishDrag) {
+      this.treeDragService.start(this.draggingNodes);
+    }
+
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       // required for Firefox to start a native drag
@@ -272,8 +280,12 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   onDrop(flat: FlatNode, event: DragEvent): void {
     event.preventDefault();
     if (this.drop) {
-      // nodes dragged in from the outside are inserted, not moved away from their list
-      this.moveNodes(this.activeNodes, this.drop.ref, this.drop.zone, !this.externalDrag);
+      // nodes dragged in from the outside are inserted as a copy, their own tree or
+      // list keeps them
+      const external = this.externalDrag;
+      const dropped = external ? this.activeNodes.map((dragged) => ({ ...dragged })) : this.activeNodes;
+
+      this.moveNodes(dropped, this.drop.ref, this.drop.zone, !external);
       this.nodesChange.emit(this.nodes);
     }
     this.endDrag();
@@ -296,8 +308,10 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   onTailDrop(event: DragEvent): void {
     event.preventDefault();
     if (this.activeNodes.length && this.canDropAtRoot()) {
-      const dropped = this.activeNodes;
-      if (!this.externalDrag) {
+      const external = this.externalDrag;
+      const dropped = external ? this.activeNodes.map((dragged) => ({ ...dragged })) : this.activeNodes;
+
+      if (!external) {
         this.detachAll(dropped);
       }
       this.nodes.push(...dropped);

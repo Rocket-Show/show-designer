@@ -1,14 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
+import { Subscription } from 'rxjs';
+import { Folder } from '../models/folder';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
+import { FolderService } from '../services/folder.service';
 import { IntroService } from '../services/intro.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
-import { TreeDragService } from '../tree/tree-drag.service';
+import { TreeDropZone, TreeNode } from '../tree/tree.component';
 import { PresetSettingsComponent } from './preset-settings/preset-settings.component';
-import type { Options } from 'sortablejs';
 
 @Component({
   selector: 'lib-app-preset',
@@ -16,36 +19,185 @@ import type { Options } from 'sortablejs';
   styleUrls: ['./preset.component.css'],
   standalone: false,
 })
-export class PresetComponent implements OnInit {
-  // this list only organizes the presets. Their order does not influence the
-  // playback anymore, the scenes define it -> let sortablejs use its own drag
-  // implementation, so the presets can be dragged into the scene tree natively
-  presetSortableOptions: Options = {
-    forceFallback: true,
-  };
+export class PresetComponent implements OnInit, OnDestroy {
+  // all presets of the project, grouped in their folders
+  treeNodes: TreeNode[] = [];
+  selectedNodes: TreeNode[] = [];
+  focusedNode: TreeNode = undefined;
+
+  private subscriptions: Subscription[] = [];
+
+  // what the trash button acts on: the folder or the preset which was clicked last
+  private targetFolder: Folder = undefined;
 
   constructor(
     public presetService: PresetService,
     public sceneService: SceneService,
     public projectService: ProjectService,
     public introService: IntroService,
-    private treeDragService: TreeDragService,
+    private folderService: FolderService,
+    private translateService: TranslateService,
     private modalService: BsModalService
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.buildTree();
 
-  selectPreset(index: number) {
-    this.presetService.selectPreset(index);
+    this.subscriptions.push(
+      this.projectService.projectChanged.subscribe(() => this.buildTree()),
+      this.presetService.presetsChanged.subscribe(() => this.buildTree()),
+      this.presetService.previewSelectionChanged.subscribe(() => this.updateSelection()),
+      this.sceneService.sceneSelected.subscribe(() => this.updateSelection())
+    );
   }
 
-  // solo previews the selected preset on its own instead of the selected scenes
-  soloPreset(): boolean {
-    return this.projectService.project.previewPreset;
+  ngOnDestroy() {
+    for (const subscription of this.subscriptions) {
+      subscription.unsubscribe();
+    }
   }
 
-  switchSoloPreset() {
-    this.presetService.setPreviewPreset(!this.projectService.project.previewPreset);
+  private buildTree() {
+    this.treeNodes = this.buildNodes(undefined);
+    this.updateSelection();
+  }
+
+  private buildNodes(parentUuid: string): TreeNode[] {
+    const nodes: TreeNode[] = [];
+    const children = this.folderService.getChildren(
+      this.projectService.project.presetFolders,
+      this.projectService.project.presets,
+      parentUuid
+    );
+
+    for (const child of children) {
+      if (child.folder) {
+        nodes.push({
+          id: child.folder.uuid,
+          isFolder: true,
+          expanded: child.folder.expanded !== false,
+          icon: 'fa-folder-o',
+          iconOpen: 'fa-folder-open-o',
+          folder: child.folder,
+          children: this.buildNodes(child.folder.uuid),
+        });
+      } else {
+        nodes.push({
+          id: child.item.uuid,
+          isFolder: false,
+          icon: 'fa-lightbulb-o',
+          preset: child.item as Preset,
+        });
+      }
+    }
+
+    return nodes;
+  }
+
+  private updateSelection() {
+    // the preset being edited, plus the row which was clicked last
+    this.updateFocusedNode();
+
+    const presetNode = this.findPresetNode(this.treeNodes, this.presetService.selectedPreset);
+
+    this.selectedNodes = presetNode ? [presetNode] : [];
+  }
+
+  private updateFocusedNode() {
+    this.focusedNode = this.targetFolder
+      ? this.findFolderNode(this.treeNodes, this.targetFolder)
+      : this.findPresetNode(this.treeNodes, this.presetService.selectedPreset);
+  }
+
+  private findPresetNode(nodes: TreeNode[], preset: Preset): TreeNode {
+    for (const node of nodes) {
+      if (node.preset && node.preset === preset) {
+        return node;
+      }
+
+      const found = this.findPresetNode(node.children ?? [], preset);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  private findFolderNode(nodes: TreeNode[], folder: Folder): TreeNode {
+    for (const node of nodes) {
+      if (node.folder === folder) {
+        return node;
+      }
+
+      const found = this.findFolderNode(node.children ?? [], folder);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  // a folder cannot be dropped into itself, everything else may go anywhere
+  allowDrop = (dragged: TreeNode[], target: TreeNode, zone: TreeDropZone): boolean => {
+    if (zone === 'inside' && !target.isFolder) {
+      return false;
+    }
+
+    return dragged.every((node) => !node.folder || !this.containsFolder(node, target));
+  };
+
+  private containsFolder(node: TreeNode, target: TreeNode): boolean {
+    for (const child of node.children ?? []) {
+      if (child === target || this.containsFolder(child, target)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  onNodesChange(nodes: TreeNode[]) {
+    this.applyNodes(nodes, undefined);
+
+    // the flat preset list follows what the tree shows
+    this.folderService.sortItems(this.projectService.project.presetFolders, this.projectService.project.presets);
+
+    this.buildTree();
+  }
+
+  private applyNodes(nodes: TreeNode[], parentUuid: string) {
+    nodes.forEach((node, index) => {
+      if (node.folder) {
+        node.folder.parentUuid = parentUuid;
+        node.folder.sortIndex = index;
+        this.applyNodes(node.children ?? [], node.folder.uuid);
+      } else if (node.preset) {
+        node.preset.folderUuid = parentUuid;
+        node.preset.sortIndex = index;
+      }
+    });
+  }
+
+  onNodeExpandedChange(node: TreeNode) {
+    node.folder.expanded = node.expanded;
+  }
+
+  onActivate(node: TreeNode) {
+    this.targetFolder = node.folder;
+
+    if (node.preset) {
+      this.presetService.selectPreset(this.projectService.project.presets.indexOf(node.preset));
+    }
+
+    this.updateSelection();
+  }
+
+  onSelectedNodesChange(nodes: TreeNode[]) {
+    this.selectedNodes = nodes;
   }
 
   // the presets can only be added to/removed from a single selected scene
@@ -76,6 +228,14 @@ export class PresetComponent implements OnInit {
     }
   }
 
+  soloPreset(): boolean {
+    return this.projectService.project.previewPreset;
+  }
+
+  switchSoloPreset() {
+    this.presetService.setPreviewPreset(!this.projectService.project.previewPreset);
+  }
+
   addPreset() {
     const scene = this.singleSelectedScene();
 
@@ -87,14 +247,48 @@ export class PresetComponent implements OnInit {
       index = Math.max(scene.presetUuids.indexOf(this.presetService.selectedPreset.uuid), 0);
     }
 
+    // create it next to the preset being edited, inside the same folder
+    const folderUuid = this.presetService.selectedPreset ? this.presetService.selectedPreset.folderUuid : this.targetFolder?.uuid;
+
     this.presetService.addPreset();
+    this.presetService.selectedPreset.folderUuid = folderUuid;
+    this.presetService.selectedPreset.sortIndex = -1;
+    this.folderService.renumber(this.projectService.project.presetFolders, this.projectService.project.presets, folderUuid);
+    this.folderService.sortItems(this.projectService.project.presetFolders, this.projectService.project.presets);
 
     if (scene) {
       this.sceneService.addPresetToScene(scene, this.presetService.selectedPreset, index);
     }
+
+    this.buildTree();
   }
 
-  removePreset() {
+  addFolder() {
+    const folder = this.folderService.createFolder(
+      this.projectService.project.presetFolders,
+      this.projectService.project.presets,
+      this.translateService.instant('designer.preset.new-folder'),
+      this.targetFolder ? this.targetFolder.parentUuid : this.presetService.selectedPreset?.folderUuid
+    );
+
+    this.targetFolder = folder;
+    this.buildTree();
+  }
+
+  removeLabel(): string {
+    return this.targetFolder ? 'designer.preset.remove-folder' : 'designer.preset.remove';
+  }
+
+  remove() {
+    if (this.targetFolder) {
+      // the content of a folder is not deleted along with it, it moves up
+      this.folderService.removeFolder(this.projectService.project.presetFolders, this.projectService.project.presets, this.targetFolder);
+      this.targetFolder = undefined;
+      this.folderService.sortItems(this.projectService.project.presetFolders, this.projectService.project.presets);
+      this.buildTree();
+      return;
+    }
+
     if (!this.presetService.selectedPreset) {
       return;
     }
@@ -105,27 +299,12 @@ export class PresetComponent implements OnInit {
     this.presetService.removePreset(preset);
   }
 
-  // dragging a preset into the scene tree adds it to a scene (it stays in this list)
-  onDragStart(preset: Preset, event: DragEvent) {
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'copy';
-      // required for Firefox to start a native drag
-      event.dataTransfer.setData('text/plain', preset.name ?? '');
-    }
-
-    this.treeDragService.start([{ id: preset.uuid, isFolder: false, preset }]);
-  }
-
-  onDragEnd() {
-    this.treeDragService.end();
-  }
-
-  openSettings(preset: Preset) {
+  openSettings(node: TreeNode) {
     this.modalService.show(PresetSettingsComponent, {
       keyboard: true,
       ignoreBackdropClick: false,
       class: '',
-      initialState: { preset },
+      initialState: { preset: node.preset },
     });
   }
 }

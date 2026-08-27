@@ -1,5 +1,6 @@
 import { Composition } from './composition';
 import { Fixture } from './fixture';
+import { Folder } from './folder';
 import { FixtureProfile } from './fixture-profile';
 import { Preset } from './preset';
 import { PresetFixture } from './preset-fixture';
@@ -46,6 +47,9 @@ export class Project {
 
   public scenes: Scene[] = [];
   public presets: Preset[] = [];
+
+  // the folders grouping the presets
+  public presetFolders: Folder[] = [];
 
   constructor(data?: any) {
     if (!data) {
@@ -112,6 +116,12 @@ export class Project {
     if (data.presets) {
       for (const preset of data.presets) {
         this.presets.push(new Preset(preset));
+      }
+    }
+
+    if (data.presetFolders) {
+      for (const folder of data.presetFolders) {
+        this.presetFolders.push(new Folder(folder));
       }
     }
   }

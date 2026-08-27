@@ -17,7 +17,7 @@ export class ProjectService {
   public project: Project;
 
   // the project-file versions used in this version of the designer (older ones will be migrated, newer ones are not supported)
-  public currentProjectVersion = 4;
+  public currentProjectVersion = 5;
 
   // fires, when another project has been loaded, created or imported
   public projectChanged: Subject<void> = new Subject<void>();
