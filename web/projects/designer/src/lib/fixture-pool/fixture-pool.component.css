@@ -87,3 +87,10 @@
 .card {
   overflow: auto;
 }
+
+/* the dmx channels are floated, so the hint below them has to clear the grid.
+   The clearance would swallow a top margin, hence the padding. */
+.dmx-promo-hint {
+  clear: both;
+  padding-top: var(--sd-space-5);
+}

@@ -930,8 +930,6 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
 .hardware-promo-hint {
   display: flex;
   align-items: baseline;
-  // the dmx channels are floated, so the hint has to drop below them
-  clear: both;
   gap: $sd-space-2;
   margin: 0;
   padding: $sd-space-2 $sd-space-3;
