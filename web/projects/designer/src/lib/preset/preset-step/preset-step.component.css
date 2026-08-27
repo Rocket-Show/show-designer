@@ -21,8 +21,18 @@
   padding: var(--sd-space-1) 0;
 }
 
-.step-rail-actions:first-child {
+.step-rail-actions:first-child,
+.step-rail-actions:nth-child(2) {
   border-bottom: 1px solid var(--sd-border);
+}
+
+/* folded away, the rail is only the icon which unfolds it again */
+.step-rail-collapsed {
+  width: 28px;
+}
+
+.step-rail-collapsed .step-rail-actions:first-child {
+  border-bottom: 0;
 }
 
 .step-rail-actions:last-child {

@@ -1,5 +1,21 @@
-@if (presetService.stepRailVisible && presetService.selectedPreset && presetService.selectedStep) {
-<div class="step-rail d-flex flex-column h-100">
+@if (presetService.selectedPreset && presetService.selectedStep) {
+<div class="step-rail d-flex flex-column h-100" [class.step-rail-collapsed]="!presetService.stepRailVisible">
+  <!-- the rail folds itself away while the steps are not being worked on -->
+  <div class="step-rail-actions d-flex">
+    <a
+      href="#"
+      class="btn btn-secondary"
+      [class.text-primary]="presetService.stepRailVisible"
+      popover="{{ 'designer.preset.steps' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="presetService.stepRailVisible = !presetService.stepRailVisible; (false)"
+      ><i class="fa fa-list-ol fa-fw" aria-hidden="true"></i
+    ></a>
+  </div>
+
+  @if (presetService.stepRailVisible) {
   <!-- what the sequence as a whole does -->
   <div class="step-rail-actions d-flex">
     <a
@@ -86,5 +102,6 @@
       ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
     ></a>
   </div>
+  }
 </div>
 }

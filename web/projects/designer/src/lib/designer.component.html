@@ -221,18 +221,6 @@
           >
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
           </a>
-          <a
-            class="nav-link px-3 nav-link-divider"
-            href="#"
-            [class.text-primary]="presetService.stepRailVisible"
-            popover="{{ 'designer.preset.steps' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            (click)="presetService.stepRailVisible = !presetService.stepRailVisible; (false)"
-          >
-            <i class="fa fa-list-ol fa-fw" aria-hidden="true"></i>
-          </a>
         </div>
 
         <!-- which preset the panels on the right are editing -->
