@@ -859,6 +859,18 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
   pointer-events: none;
 }
 
+// the icon of the preset stays upright while its name reads bottom-up next to it:
+// it is laid out on its own and turned back against the rail's own rotation
+.edit-target .fa {
+  display: inline-block;
+  writing-mode: horizontal-tb;
+  transform: rotate(180deg);
+  // the inline direction of the rail runs down the strip, so this is the gap between
+  // the icon and the name
+  margin-bottom: $sd-space-1;
+  font-size: 0.8125rem;
+}
+
 .dropdown-divider {
   border-top-color: $sd-border;
 }
