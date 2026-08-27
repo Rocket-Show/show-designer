@@ -60,7 +60,7 @@
       "already-have-account": "Vous avez déjà un compte ?",
       "no-account-yet": "Vous n'avez pas encore de compte ?",
       "login-required": "Veuillez vous connecter pour continuer.",
-      "newsletter": "Je souhaite recevoir des nouvelles et des mises à jour par e-mail.",
+      "newsletter": "Envoyez-moi les nouveautés par e-mail",
       "error": {
         "internal": "Une erreur interne s'est produite. Veuillez réessayer ou contacter notre assistance via le menu Aide.",
         "fill-all-fields": "Veuillez remplir tous les champs.",
