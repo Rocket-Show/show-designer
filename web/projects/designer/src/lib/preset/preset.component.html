@@ -21,6 +21,16 @@
       <a
         href="#"
         class="btn btn-secondary m-0 p-0"
+        popover="{{ (allFoldersCollapsed() ? 'designer.preset.expand-all' : 'designer.preset.collapse-all') | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="switchAllFoldersCollapsed(); (false)"
+        ><i class="fa fa-fw" [class.fa-compress]="!allFoldersCollapsed()" [class.fa-expand]="allFoldersCollapsed()" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ removeLabel() | translate }}"
         container="body"
         placement="bottom"

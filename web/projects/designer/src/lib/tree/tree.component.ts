@@ -21,6 +21,9 @@ export interface TreeNode {
   // font awesome class of the type icon, and the one to use while the node is open
   icon?: string;
   iconOpen?: string;
+  // the icon already shows whether the node is open (a folder) -> no caret in front of
+  // it, and a plain click on the row opens and closes it
+  toggleOnClick?: boolean;
   children?: TreeNode[];
   // allow arbitrary extra payload on a node
   [key: string]: any;
@@ -199,8 +202,13 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       }
       this.lastClickedIndex = index;
     } else {
-      // plain click: select just this row and activate it (folders are opened and
-      // closed with their icon, so they can be selected without collapsing them)
+      // plain click: select just this row and activate it. Rows whose icon already
+      // shows whether they are open are opened and closed by it as well, the others
+      // keep their caret for that, so they can be selected without collapsing them
+      if (node.toggleOnClick && node.isFolder) {
+        this.toggleExpand(node);
+      }
+
       this.selection.clear();
       this.selection.add(node);
       this.lastClickedIndex = index;
@@ -251,7 +259,9 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     }
 
     if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
+      // another tree inserts a copy, so both effects have to be allowed. With 'move'
+      // alone the browser refuses a drop which asks for 'copy'.
+      event.dataTransfer.effectAllowed = this.publishDrag ? 'copyMove' : 'move';
       // required for Firefox to start a native drag
       event.dataTransfer.setData('text/plain', node.name ?? '');
     }

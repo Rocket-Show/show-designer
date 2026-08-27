@@ -105,6 +105,8 @@
     },
     "preset": {
       "title": "Presets",
+      "collapse-all": "Alle Ordner zuklappen",
+      "expand-all": "Alle Ordner aufklappen",
       "solo": "Solo",
       "add": "Preset hinzufügen",
       "add-folder": "Ordner hinzufügen",

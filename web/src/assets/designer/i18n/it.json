@@ -105,6 +105,8 @@
     },
     "preset": {
       "title": "Preset",
+      "collapse-all": "Comprimi tutte le cartelle",
+      "expand-all": "Espandi tutte le cartelle",
       "solo": "Solo",
       "add": "Aggiungi preset",
       "add-folder": "Aggiungi cartella",

@@ -16,6 +16,7 @@
     (dragover)="onDragOver(flat, $event)"
     (drop)="onDrop(flat, $event)"
   >
+    @if (!flat.node.toggleOnClick) {
     <i
       class="tree-caret fa"
       [class.fa-caret-down]="flat.node.isFolder && flat.node.expanded"
@@ -24,6 +25,7 @@
       aria-hidden="true"
       (click)="flat.node.isFolder && toggleExpand(flat.node, $event)"
     ></i>
+    }
     <i class="tree-icon fa {{ nodeIcon(flat.node) }}" draggable="false" aria-hidden="true"></i>
     <span class="tree-label">
       <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>

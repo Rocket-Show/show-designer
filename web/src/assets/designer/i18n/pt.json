@@ -105,6 +105,8 @@
     },
     "preset": {
       "title": "Predefinições",
+      "collapse-all": "Recolher todas as pastas",
+      "expand-all": "Expandir todas as pastas",
       "solo": "Solo",
       "add": "Adicionar predefinição",
       "add-folder": "Adicionar pasta",

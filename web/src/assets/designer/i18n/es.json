@@ -105,6 +105,8 @@
     },
     "preset": {
       "title": "Preajustes",
+      "collapse-all": "Contraer todas las carpetas",
+      "expand-all": "Expandir todas las carpetas",
       "solo": "Solo",
       "add": "Añadir preajuste",
       "add-folder": "Añadir carpeta",

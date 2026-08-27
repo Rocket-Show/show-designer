@@ -105,6 +105,8 @@
     },
     "preset": {
       "title": "Presets",
+      "collapse-all": "Collapse all folders",
+      "expand-all": "Expand all folders",
       "solo": "Solo",
       "add": "Add preset",
       "add-folder": "Add folder",

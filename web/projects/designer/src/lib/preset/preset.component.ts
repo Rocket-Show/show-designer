@@ -78,6 +78,7 @@ export class PresetComponent implements OnInit, OnDestroy {
           expanded: child.folder.expanded !== false,
           icon: 'fa-folder-o',
           iconOpen: 'fa-folder-open-o',
+          toggleOnClick: true,
           folder: child.folder,
           children: this.buildNodes(child.folder.uuid),
         });
@@ -95,8 +96,13 @@ export class PresetComponent implements OnInit, OnDestroy {
   }
 
   private updateSelection() {
-    // the preset being edited, plus the row which was clicked last
     this.updateFocusedNode();
+
+    // the preset being edited is what the tree marks, unless the user selected several
+    // rows here to drag them together
+    if (this.selectedNodes.length > 1 && this.selectedNodes.some((node) => node.preset === this.presetService.selectedPreset)) {
+      return;
+    }
 
     const presetNode = this.findPresetNode(this.treeNodes, this.presetService.selectedPreset);
 
@@ -198,6 +204,21 @@ export class PresetComponent implements OnInit, OnDestroy {
 
   onSelectedNodesChange(nodes: TreeNode[]) {
     this.selectedNodes = nodes;
+  }
+
+  // one button for both directions, the same way the scene panel does it
+  allFoldersCollapsed(): boolean {
+    return !this.projectService.project.presetFolders.some((folder) => folder.expanded !== false);
+  }
+
+  switchAllFoldersCollapsed() {
+    const expanded = this.allFoldersCollapsed();
+
+    for (const folder of this.projectService.project.presetFolders) {
+      folder.expanded = expanded;
+    }
+
+    this.buildTree();
   }
 
   // the presets can only be added to/removed from a single selected scene

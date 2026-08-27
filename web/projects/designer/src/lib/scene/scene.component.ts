@@ -112,17 +112,37 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.selectedNodes = selectedNodes;
   }
 
+  // all presets a dragged node stands for: a preset itself, or everything inside a
+  // folder dragged in from the preset tree
+  private draggedPresets(node: TreeNode): Preset[] {
+    if (node.preset) {
+      return [node.preset];
+    }
+
+    const presets: Preset[] = [];
+
+    for (const child of node.children ?? []) {
+      presets.push(...this.draggedPresets(child));
+    }
+
+    return presets;
+  }
+
   // scenes stay at the root level, presets only live inside a scene and only once
   allowDrop = (dragged: TreeNode[], target: TreeNode, zone: TreeDropZone): boolean => {
-    const draggedScenes = dragged.filter((node) => node.isFolder);
-    const draggedPresets = dragged.filter((node) => node.preset);
+    const draggedScenes = dragged.filter((node) => node.scene && node.isFolder);
+    const presets = dragged.reduce((all: Preset[], node) => all.concat(this.draggedPresets(node)), []);
 
-    if (draggedScenes.length && draggedPresets.length) {
+    if (draggedScenes.length && presets.length) {
       return false;
     }
 
     if (draggedScenes.length) {
       return target.isFolder && zone !== 'inside';
+    }
+
+    if (!presets.length) {
+      return false;
     }
 
     const targetScene: Scene = target.scene;
@@ -131,10 +151,16 @@ export class SceneComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    for (const node of draggedPresets) {
+    for (const node of dragged) {
       // moving a preset inside its own scene is fine, adding it a second time is not
-      if (node.scene !== targetScene && targetScene.presetUuids.indexOf(node.preset.uuid) >= 0) {
-        return false;
+      if (node.scene === targetScene) {
+        continue;
+      }
+
+      for (const preset of this.draggedPresets(node)) {
+        if (targetScene.presetUuids.indexOf(preset.uuid) >= 0) {
+          return false;
+        }
       }
     }
 
@@ -153,12 +179,11 @@ export class SceneComponent implements OnInit, OnDestroy {
       const presetUuids: string[] = [];
 
       for (const presetNode of sceneNode.children ?? []) {
-        // the node moved to another scene -> let it point to its new one
-        presetNode.scene = scene;
-        presetNode.id = scene.uuid + '/' + presetNode.preset.uuid;
-
-        if (presetUuids.indexOf(presetNode.preset.uuid) < 0) {
-          presetUuids.push(presetNode.preset.uuid);
+        // a folder dragged in from the preset tree stands for all presets inside it
+        for (const preset of this.draggedPresets(presetNode)) {
+          if (presetUuids.indexOf(preset.uuid) < 0) {
+            presetUuids.push(preset.uuid);
+          }
         }
       }
 
