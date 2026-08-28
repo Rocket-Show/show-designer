@@ -11,6 +11,8 @@ import { EffectCurve } from './../../models/effect-curve';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
+import { BsModalService } from 'ngx-bootstrap/modal';
+import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 
 // a capability checkbox, prepared for the template. the name and the checked state are
 // calculated whenever they change instead of on each change detection cycle, because the
@@ -49,14 +51,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public amplitudeMax = 4;
   public percentageMin = 0;
   public percentageMax = 1;
-  public phaseMillisMin = -1000;
-  public phaseMillisMax = 1000;
   public phasingMillisMin = -1000;
   public phasingMillisMax = 1000;
   public phasingCyclesMin = -4;
   public phasingCyclesMax = 4;
-  public phasingGroupSizeMin = 1;
-  public phasingGroupSizeMax = 16;
+
+  // the phase moves the curve inside its period, so a shift of a full period lands on
+  // the same curve again -> the slider spans one period in each direction, whatever the
+  // period is. it is set in cycles and shown in milliseconds.
+  public phaseCyclesMin = -1;
+  public phaseCyclesMax = 1;
 
   // the capabilities to choose from
   public capabilityOptions: CurveCapabilityOption[] = [];
@@ -103,7 +107,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private effectService: EffectService,
     private ngZone: NgZone,
-    public livePreviewService: LivePreviewService
+    public livePreviewService: LivePreviewService,
+    private modalService: BsModalService
   ) {
     this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
@@ -175,7 +180,14 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {
-    const currVal = 1 - this.curve.getValueAtMillis(currMillis);
+    const value = this.curve.getValueAtMillis(currMillis);
+
+    if (value === undefined) {
+      // the curve has finished running and left the fixtures to the rest of the preset
+      return;
+    }
+
+    const currVal = 1 - value;
 
     const x = (this.maxWidth * (currMillis % durationMillis)) / durationMillis;
     const y = maxHeight * currVal + lineWidth;
@@ -206,6 +218,18 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return this.phasingCount;
   }
 
+  // the time the grid shows. it is the same window the preview repeats, so the marks on
+  // the grid stay in step with the fixtures.
+  private getGridDurationMillis(): number {
+    const loopMillis = this.curve.getRunLoopMillis(this.getPhasingCount());
+
+    if (loopMillis !== undefined) {
+      return loopMillis;
+    }
+
+    return this.curve.lengthMillis * Math.max(Math.round(4 - this.curve.lengthMillis / 1000), 1);
+  }
+
   redraw() {
     if (!this.ctx) {
       return;
@@ -220,7 +244,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.lineWidth = width;
 
-    const durationMillis = this.curve.lengthMillis * Math.max(Math.round(4 - this.curve.lengthMillis / 1000), 1);
+    const durationMillis = this.getGridDurationMillis();
     const maxHeight = this.maxHeight - width * 2;
 
     // sample the curve once per pixel of the grid. a finer resolution only produces line
@@ -232,18 +256,27 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     // most expensive part of the redraw and the redraw runs on each animation frame.
     this.ctx.beginPath();
 
+    let drawing = false;
+
     for (let i = -2; i <= samples + 2; i++) {
       const millis = i * stepMillis;
-      const val = 1 - this.curve.getValueAtMillis(millis);
+      const value = this.curve.getValueAtMillis(millis);
+
+      if (value === undefined) {
+        // the curve does not apply here (before or after its run) -> leave a gap
+        drawing = false;
+        continue;
+      }
 
       // Scale the values to the grid dimensions
       const x = (this.maxWidth * millis) / durationMillis;
-      const y = maxHeight * val + width;
+      const y = maxHeight * (1 - value) + width;
 
-      if (i === -2) {
-        this.ctx.moveTo(x, y);
-      } else {
+      if (drawing) {
         this.ctx.lineTo(x, y);
+      } else {
+        this.ctx.moveTo(x, y);
+        drawing = true;
       }
     }
 
@@ -509,8 +542,52 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   setLengthMillis(value: any) {
     if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisMax) {
       this.curve.lengthMillis = +value;
-      this.livePreviewService.previewLive();
+      this.lengthMillisChanged();
     }
+  }
+
+  // the slider reports its value after it has changed, so the period cannot be bound to
+  // it directly: the phase has to be brought along with the new period, not the old one
+  setLengthMillisFromSlider(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    this.curve.lengthMillis = Math.round(+value);
+    this.lengthMillisChanged();
+  }
+
+  private lengthMillisChanged() {
+    // the phase is bound to the period, which just changed under it
+    this.wrapPhaseMillis();
+    this.livePreviewService.previewLive();
+  }
+
+  // the phase repeats with the period: shifting the curve by a full period lands on the
+  // same curve again. keeping it inside one period does not change what the curve puts
+  // on its fixtures and keeps it on the scale of its slider.
+  private wrapPhaseMillis() {
+    if (this.curve.lengthMillis > 0 && Math.abs(this.curve.phaseMillis) > this.curve.lengthMillis) {
+      this.curve.phaseMillis = Math.round(this.curve.phaseMillis % this.curve.lengthMillis);
+    }
+  }
+
+  // the phase as the part of the period it shifts the curve by
+  get phaseCycles(): number {
+    if (!this.curve.lengthMillis) {
+      return 0;
+    }
+
+    return this.curve.phaseMillis / this.curve.lengthMillis;
+  }
+
+  setPhaseCycles(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    this.curve.phaseMillis = Math.round(+value * this.curve.lengthMillis);
+    this.livePreviewService.previewLive();
   }
 
   setAmplitude(value: any) {
@@ -528,7 +605,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setPhaseMillis(value: any) {
-    if (!isNaN(value) && value >= this.phaseMillisMin && value <= this.phaseMillisMax) {
+    if (!isNaN(value) && Math.abs(value) <= this.curve.lengthMillis) {
       this.curve.phaseMillis = +value;
       this.livePreviewService.previewLive();
     }
@@ -548,15 +625,25 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
-  setPhasingGroupSize(value: any) {
-    if (!isNaN(value) && value >= this.phasingGroupSizeMin && value <= this.phasingGroupSizeMax) {
-      this.curve.phasingGroupSize = Math.round(+value);
-      this.livePreviewService.previewLive();
-    }
-  }
-
   setPhasingMode(phasingMode: string) {
     this.curve.phasingMode = phasingMode;
     this.livePreviewService.previewLive();
+  }
+
+  // whether the advanced settings hold anything else than their defaults. the button
+  // marks it, so settings that are not on this screen are not lost out of sight.
+  advancedActive(): boolean {
+    return (
+      this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5) || this.curve.phasingGroupSize !== 1
+    );
+  }
+
+  openAdvanced() {
+    this.modalService.show(EffectCurveAdvancedComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      class: '',
+      initialState: { curve: this.curve },
+    });
   }
 }
