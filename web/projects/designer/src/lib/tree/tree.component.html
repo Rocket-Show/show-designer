@@ -1,5 +1,5 @@
 <div class="tree" (dragend)="onDragEnd()">
-  @for (flat of flatNodes; track flat.node) {
+  @for (flat of flatNodes; track flat.key) {
   <div
     class="tree-node"
     [ngClass]="nodeClass(flat.node)"

@@ -39,6 +39,8 @@ export type TreeDropZone = 'before' | 'after' | 'inside';
 
 interface FlatNode {
   node: TreeNode;
+  // what the row is tracked by, see TreeComponent.key
+  key: any;
   level: number;
   parent: TreeNode | null;
 }
@@ -531,16 +533,50 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     this.flatNodes = [];
     this.flatByNode.clear();
     this.flatten(this.nodes ?? [], 0, null);
+    this.remapSelection();
   }
 
   private flatten(list: TreeNode[], level: number, parent: TreeNode | null): void {
     for (const node of list) {
-      const flat: FlatNode = { node, level, parent };
+      const flat: FlatNode = { node, key: this.key(node), level, parent };
       this.flatNodes.push(flat);
       this.flatByNode.set(node, flat);
       if (node.isFolder && node.expanded && node.children?.length) {
         this.flatten(node.children, level + 1, node);
       }
+    }
+  }
+
+  // What a row stands for, no matter which objects the nodes are made of right now. A
+  // host builds its nodes again whenever what they show changes, and the rows follow
+  // this instead of the objects, so that they are updated rather than thrown away and
+  // drawn again. A node without an id of its own only ever stands for itself.
+  private key(node: TreeNode): any {
+    return node.id ?? node;
+  }
+
+  // keep the selection on the rows it is on, after the host built its nodes again
+  private remapSelection(): void {
+    if (!this.selection.size) {
+      return;
+    }
+
+    const keys = new Set([...this.selection].map((node) => this.key(node)));
+    const selection = new Set<TreeNode>();
+
+    this.eachNode(this.nodes ?? [], (node) => {
+      if (keys.has(this.key(node))) {
+        selection.add(node);
+      }
+    });
+
+    this.selection = selection;
+  }
+
+  private eachNode(list: TreeNode[], each: (node: TreeNode) => void): void {
+    for (const node of list) {
+      each(node);
+      this.eachNode(node.children ?? [], each);
     }
   }
 
