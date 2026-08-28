@@ -301,16 +301,20 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     // draw the current value
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
 
-    // draw the phasing values (chase), if required
+    // draw the phasing values (chase), if required. the fixtures of a group run the same
+    // step of the chase, so the grid marks each step once, not each fixture of it.
     const phasingCount = this.getPhasingCount();
+    const stepCount = this.curve.getPhasingStepCount(phasingCount);
 
-    if (this.curve.getPhasingMillis(1, phasingCount, this.beatsPerMinute) === 0) {
+    if (this.curve.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) === 0) {
+      // the steps are not shifted against each other -> they all run on the mark that
+      // has just been drawn
       return;
     }
 
-    for (let i = 1; i < phasingCount; i++) {
+    for (let step = 1; step < stepCount; step++) {
       // the phasing can be negative, which the modulo has to be normalized for
-      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(i, phasingCount, this.beatsPerMinute);
+      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingStepMillis(step, phasingCount, this.beatsPerMinute);
 
       this.drawCurrentValue(((phasedMillis % durationMillis) + durationMillis) % durationMillis, 3, width, durationMillis, maxHeight);
     }
