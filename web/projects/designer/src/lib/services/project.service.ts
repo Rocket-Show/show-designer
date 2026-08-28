@@ -17,7 +17,7 @@ export class ProjectService {
   public project: Project;
 
   // the project-file versions used in this version of the designer (older ones will be migrated, newer ones are not supported)
-  public currentProjectVersion = 6;
+  public currentProjectVersion = 7;
 
   // fires, when another project has been loaded, created or imported
   public projectChanged: Subject<void> = new Subject<void>();
@@ -55,8 +55,23 @@ export class ProjectService {
     );
   }
 
+  // The presets carry the values of their first step on themselves as well. A Rocket
+  // Show which does not know steps yet reads those, so an old player shows the first
+  // step of a preset instead of leaving the stage dark. Written on the way out only:
+  // the steps are what a project is loaded from.
+  writeCompatibilityValues(project: Project) {
+    for (const preset of project.presets) {
+      const step = preset.steps[0];
+
+      preset.fixtureChannelValues = step ? step.fixtureChannelValues.slice() : [];
+      preset.fixtureCapabilityValues = step ? step.fixtureCapabilityValues.slice() : [];
+    }
+  }
+
   save(project: Project) {
     // tries to save the project and returns, whether it has been saved or not
+
+    this.writeCompatibilityValues(project);
 
     if (this.configService.freeUniverseEdit) {
       // persist the freely edited universes together with the project

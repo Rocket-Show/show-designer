@@ -1,19 +1,19 @@
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
-import { PositionComponent } from './position.component';
+import { FixtureSettingsPositionComponent } from './fixture-settings-position.component';
 
-describe('PositionComponent', () => {
-  let component: PositionComponent;
-  let fixture: ComponentFixture<PositionComponent>;
+describe('FixtureSettingsPositionComponent', () => {
+  let component: FixtureSettingsPositionComponent;
+  let fixture: ComponentFixture<FixtureSettingsPositionComponent>;
 
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      declarations: [PositionComponent],
+      declarations: [FixtureSettingsPositionComponent],
     }).compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(PositionComponent);
+    fixture = TestBed.createComponent(FixtureSettingsPositionComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

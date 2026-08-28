@@ -50,9 +50,11 @@
     border-top: 1px solid $sd-border;
   }
 
-  // icon-only actions in a panel header
+  // icon-only actions in a panel header and in the step rail
   .card-header .btn,
-  .card-header a.btn {
+  .card-header a.btn,
+  .step-list .btn,
+  .step-list a.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -828,9 +830,9 @@
 // These describe the icon block and belong with the .nav-pills rules that draw it.
 $sd-rail-icon-size: 30px;
 $sd-rail-icon-gap: 2px;
-// the rail's top border and padding, its four icons, the gaps between them, and the
-// wider gap above the one that stands apart
-$sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail-icon-gap + $sd-space-2;
+// the rail's top border and padding, its five icons, the gaps between them, and the
+// wider gaps above the two that stand apart
+$sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail-icon-gap + 2 * $sd-space-2;
 
 .tab-rail {
   position: relative;
@@ -1220,13 +1222,21 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
     overflow: hidden;
   }
 
-  // the tab panel is attached to the rail, so it has to start at the pane's own
-  // left edge: no pane padding, and no negative row gutter pulling it further
+  // the tab panel is attached to the rail and to the steps beside it, so it has to
+  // start at the pane's own edge: no pane padding, and no negative row gutter pulling
+  // it further
   #capabilities > .row {
     margin-left: 0;
+    margin-right: 0;
   }
 
-  // the tab panel the main rail is attached to
+  // the panel has to be able to shrink below the width of what it holds, or a wide
+  // channel list would push the steps beside it out of the pane
+  #capabilities > .row > .col {
+    min-width: 0;
+  }
+
+  // the tab panel the rail and the steps are attached to
   #capabilities .tab-pane > * > .card {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
@@ -1356,6 +1366,49 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 4 * $sd-rail-icon-size + 3 * $sd-rail
     content: attr(data-region-name);
     margin-left: $sd-space-5;
     font-size: 0.75rem;
+  }
+
+  /* The steps of the preset being edited, marked inside the regions it plays in */
+  .step-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  /* where a step is reached. The markers show what the preset does over the region,
+     they do not take clicks away from it: the steps are picked in their own rail. */
+  .step-marker-tick {
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .step-marker-tick:after {
+    content: attr(data-step-name);
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    color: $sd-text-muted;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .step-marker-tick[data-step-selected='true'] {
+    width: 2px;
+    background-color: $sd-primary;
+  }
+
+  .step-marker-tick[data-step-selected='true']:after {
+    color: $sd-primary-text;
+  }
+
+  /* the time the step travels over to get there */
+  .step-marker-transition {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.22));
+  }
+
+  .step-marker-transition[data-step-selected='true'] {
+    background: linear-gradient(to right, rgba(253, 126, 20, 0), rgba(253, 126, 20, 0.45));
   }
 
   /* Wavesurfer region handle styles */

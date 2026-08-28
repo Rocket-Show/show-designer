@@ -347,6 +347,13 @@ export class PresetComponent implements OnInit, OnDestroy {
     this.presetService.removePreset(preset);
   }
 
+  // double clicking a preset opens it, the same way its own button does
+  onNodeDoubleClick(node: TreeNode) {
+    if (node.preset) {
+      this.openSettings(node);
+    }
+  }
+
   openSettings(node: TreeNode) {
     this.modalService.show(PresetSettingsComponent, {
       keyboard: true,

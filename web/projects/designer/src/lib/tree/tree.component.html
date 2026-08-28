@@ -13,6 +13,7 @@
     [style.--tree-drop-indent]="drop?.row === flat.node ? drop.indent + 'px' : null"
     [attr.draggable]="allowDrag(flat.node)"
     (click)="onRowClick(flat, $event)"
+    (dblclick)="onRowDoubleClick(flat.node, $event)"
     (dragstart)="onDragStart(flat, $event)"
     (dragover)="onDragOver(flat, $event)"
     (drop)="onDrop(flat, $event)"

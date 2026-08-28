@@ -18,6 +18,7 @@ import { ProjectService } from '../../services/project.service';
 export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   private fixtureSelectionChangedSubscription: Subscription;
   private previewSelectionChangedSubscription: Subscription;
+  private stepsChangedSubscription: Subscription;
 
   // map containing the profile and the channel name containing the wheel
   colorWheelChannels: Map<FixtureProfile, CachedFixtureChannel> = new Map<FixtureProfile, CachedFixtureChannel>();
@@ -40,6 +41,11 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
       this.update();
     });
 
+    // the panels edit one step of the preset, so they follow the step being selected
+    this.stepsChangedSubscription = this.presetService.stepsChanged.subscribe(() => {
+      this.update();
+    });
+
     this.introService.stepChanged.subscribe(() => {
       this.changeDetectorRef.detectChanges();
     });
@@ -52,6 +58,7 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.fixtureSelectionChangedSubscription.unsubscribe();
     this.previewSelectionChangedSubscription.unsubscribe();
+    this.stepsChangedSubscription.unsubscribe();
   }
 
   private wheelInList(wheels: Map<FixtureProfile, CachedFixtureChannel>, profile: FixtureProfile, channel: CachedFixtureChannel) {

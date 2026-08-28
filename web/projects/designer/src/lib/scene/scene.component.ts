@@ -13,6 +13,7 @@ import { ProjectService } from '../services/project.service';
 import { LivePreviewService } from '../services/live-preview.service';
 import { SceneService } from '../services/scene.service';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
+import { PresetSettingsComponent } from '../preset/preset-settings/preset-settings.component';
 import { SceneSettingsComponent } from './scene-settings/scene-settings.component';
 
 @Component({
@@ -443,6 +444,21 @@ export class SceneComponent implements OnInit, OnDestroy {
 
     this.sceneService.removeScene(scene);
     this.targetScene = undefined;
+  }
+
+  // double clicking a row opens it: a scene its own settings, a preset layered in it
+  // the settings of that preset
+  onNodeDoubleClick(node: TreeNode) {
+    if (node.preset) {
+      this.modalService.show(PresetSettingsComponent, {
+        keyboard: true,
+        ignoreBackdropClick: false,
+        class: '',
+        initialState: { preset: node.preset },
+      });
+    } else if (node.scene) {
+      this.openSettings(node.scene);
+    }
   }
 
   openSettings(scene: Scene) {

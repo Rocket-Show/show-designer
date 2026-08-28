@@ -58,6 +58,7 @@
       (nodesChange)="onNodesChange($event)"
       (nodeExpandedChange)="onNodeExpandedChange($event)"
       (activate)="onActivate($event)"
+      (nodeDoubleClick)="onNodeDoubleClick($event)"
     >
       <ng-template #nodeTemplate let-node>
         @if (node.sceneFolder) {

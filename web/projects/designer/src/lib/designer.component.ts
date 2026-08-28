@@ -360,6 +360,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectExport() {
+    this.projectService.writeCompatibilityValues(this.projectService.project);
+
     const json = JSON.stringify(this.projectService.project, null, 2);
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=UTF-8,' + encodeURIComponent(json));
