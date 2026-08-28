@@ -13,6 +13,7 @@ import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { getStepMarkers } from '../models/timeline-step-marker';
+import { ColorService } from './color.service';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
@@ -47,6 +48,7 @@ export class TimelineService {
   constructor(
     private sceneService: SceneService,
     private presetService: PresetService,
+    private colorService: ColorService,
     private projectService: ProjectService,
     private http: HttpClient,
     private configService: ConfigService,
@@ -67,6 +69,14 @@ export class TimelineService {
     });
     this.sceneService.sceneSelected.subscribe(() => {
       this.redrawAllRegions();
+    });
+    // the color of a scene follows the presets played in it, so both a scene and a
+    // preset can change what the regions are painted in
+    this.sceneService.scenesChanged.subscribe(() => {
+      this.updateRegionSelection();
+    });
+    this.presetService.presetsChanged.subscribe(() => {
+      this.updateRegionSelection();
     });
   }
 
@@ -356,16 +366,7 @@ export class TimelineService {
     this.selectedPlaybackRegion = scenePlaybackRegion;
 
     if (waveSurferRegion) {
-      waveSurferRegion.color =
-        'rgba(' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).r +
-        ', ' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).g +
-        ', ' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).b +
-        ', ' +
-        this.intensityHighlighted +
-        ')';
+      waveSurferRegion.color = this.regionColor(this.sceneService.selectedScenes[0], this.intensityHighlighted);
       waveSurferRegion.attributes.selectable = true;
       this.connectRegion(waveSurferRegion, this.sceneService.selectedScenes[0], scenePlaybackRegion);
       this.updateRegionSelection();
@@ -590,15 +591,10 @@ export class TimelineService {
     }, 0);
   }
 
-  private hexToRgb(hex: string) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
+  // a region is painted in the color of its scene, at the intensity which says whether
+  // the scene is played and whether the region itself is the selected one
+  private regionColor(scene: Scene, intensity: number): string {
+    return this.colorService.toRgba(this.colorService.getSceneColor(scene), intensity);
   }
 
   private updateRegionSelection() {
@@ -632,16 +628,7 @@ export class TimelineService {
           region.attributes.selected = true;
         }
 
-        region.color =
-          'rgba(' +
-          this.hexToRgb(region.scene.color).r +
-          ', ' +
-          this.hexToRgb(region.scene.color).g +
-          ', ' +
-          this.hexToRgb(region.scene.color).b +
-          ', ' +
-          intensity +
-          ')';
+        region.color = this.regionColor(region.scene, intensity);
         region.updateRender();
       }
     }

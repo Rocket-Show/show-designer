@@ -1,8 +1,13 @@
+/* fill the panel, so the empty space below the last row belongs to the tree and can
+   take a drop (see .tree-tail) instead of being dead */
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .tree {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   padding: var(--sd-space-1);
@@ -110,8 +115,9 @@
   outline-offset: -2px;
 }
 
-/* trailing strip below the last row: a drop target for "after the last folder",
-   at the root level. grows to fill any spare space so it is easy to hit */
+/* the empty space below the last row: a drop target for "after the last folder", at
+   the root level, which an open folder's own row cannot offer. It fills the panel, so
+   it is easy to hit even when only a few rows are in the tree. */
 .tree-tail {
   flex: 1 1 auto;
   min-height: 16px;

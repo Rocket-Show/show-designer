@@ -285,6 +285,13 @@
     width: 88px;
   }
 
+  // the millisecond fields of the settings dialogs. They are all the same width, so
+  // the unit and the switch next to them line up from row to row.
+  .sd-time-field {
+    flex: 0 0 auto;
+    width: 120px;
+  }
+
   label {
     margin-bottom: 0;
     color: $sd-text-muted;
@@ -852,6 +859,18 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   letter-spacing: 0.02em;
   user-select: none;
   pointer-events: none;
+}
+
+// the icon of the preset stays upright while its name reads bottom-up next to it:
+// it is laid out on its own and turned back against the rail's own rotation
+.edit-target .fa {
+  display: inline-block;
+  writing-mode: horizontal-tb;
+  transform: rotate(180deg);
+  // the inline direction of the rail runs down the strip, so this is the gap between
+  // the icon and the name
+  margin-bottom: $sd-space-1;
+  font-size: 0.8125rem;
 }
 
 .dropdown-divider {

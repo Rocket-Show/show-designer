@@ -27,7 +27,10 @@
       "transition-curve-snap": "Springen",
       "dropzone-message": "Ziehe eine Datei hier hinein oder klicke, um hochzuladen",
       "toast-upload-error-title": "Fehler beim Hochladen",
-      "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: "
+      "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: ",
+      "color": "Farbe",
+      "icon": "Symbol",
+      "icon-default": "Standardsymbol"
     },
     "loading": {
       "title": "Laden...",
@@ -63,7 +66,7 @@
       "already-have-account": "Du hast bereits ein Konto?",
       "no-account-yet": "Du hast noch kein Konto?",
       "login-required": "Bitte logge dich ein, um fortzufahren.",
-      "newsletter": "Ich möchte Neuigkeiten und Updates per E-Mail erhalten.",
+      "newsletter": "Schick mir Neuigkeiten per E-Mail",
       "error": {
         "internal": "Ein interner Fehler ist aufgetreten. Bitte versuche es später erneut oder wende dich unter Menü Hilfe an den Support.",
         "fill-all-fields": "Bitte fülle alle Felder aus.",
@@ -106,7 +109,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Davor",
       "settings-fade-out-post": "Danach",
-      "live-mode": "Live Modus"
+      "live-mode": "Live Modus",
+      "settings-color-auto": "Von den Presets übernehmen"
     },
     "preview": {
       "scene": "Szene",
@@ -134,6 +138,7 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Davor",
       "settings-fade-out-post": "Danach",
+      "settings-color-auto": "Von der Gerätefarbe übernehmen",
       "steps": "Schritte",
       "step": "Schritt",
       "step-add": "Schritt hinzufügen",
@@ -187,8 +192,11 @@
     },
     "fixture-pool": {
       "title": "Fixture Pool",
+      "fixtures": "Fixtures",
+      "remove-fixture": "Fixture entfernen",
       "create-profile": "Profil erstellen",
       "search-profiles": "Profile suchen",
+      "more-profiles": "{{count}} weitere Profile passen. Verfeinere die Suche, um sie zu sehen.",
       "settings": "Einstellungen",
       "dmx": "DMX Übersicht",
       "fixture-name": "Fixture Name",

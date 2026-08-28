@@ -12,33 +12,45 @@
     </div>
   </div>
 
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-in' | translate }}</label>
-    <div class="col-lg-7">
-      <input type="text" class="form-control" [ngModel]="fadeInMillis" (ngModelChange)="fadeInMillis = $event" />
-    </div>
-    <div class="col-lg-1 d-flex p-0">
-      <div class="my-auto">
-        {{ 'designer.misc.ms' | translate }}
-      </div>
-    </div>
+  <div class="form-group">
+    <label class="d-block mb-2">{{ 'designer.misc.icon' | translate }}</label>
+    <lib-app-icon-picker
+      [icon]="icon"
+      [defaultIcon]="defaultIcon"
+      [color]="shownColor()"
+      (iconChange)="icon = $event"
+    ></lib-app-icon-picker>
+  </div>
+
+  <div class="form-group">
+    <label class="d-block mb-2">{{ 'designer.misc.color' | translate }}</label>
+    <lib-app-color-picker
+      [color]="color"
+      [auto]="colorAuto"
+      [autoColor]="derivedColor"
+      autoLabel="designer.scene.settings-color-auto"
+      [palette]="palette"
+      (colorChange)="color = $event"
+      (autoChange)="colorAuto = $event"
+    ></lib-app-color-picker>
   </div>
 
   <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.misc.transition-curve' | translate }}</label>
-    <div class="col-lg-7">
-      <select class="form-control" [ngModel]="fadeInCurve" (ngModelChange)="fadeInCurve = $event">
+    <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-in' | translate }}</label>
+    <div class="col-lg-8 d-flex align-items-center">
+      <input type="text" class="form-control sd-time-field" [ngModel]="fadeInMillis" (ngModelChange)="fadeInMillis = $event" />
+
+      <div class="ml-2">
+        {{ 'designer.misc.ms' | translate }}
+      </div>
+
+      <select class="form-control sd-time-field ml-4" [ngModel]="fadeInCurve" (ngModelChange)="fadeInCurve = $event">
         @for (curveType of transitionCurveTypes; track curveType) {
         <option [value]="curveType">{{ 'designer.misc.transition-curve-' + curveType | translate }}</option>
         }
       </select>
-    </div>
-  </div>
 
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label"></label>
-    <div class="col-lg-8 d-flex">
-      <div class="form-check my-auto">
+      <div class="form-check ml-4">
         <input type="checkbox" [ngModel]="fadeInPre" (ngModelChange)="fadeInPre = $event" class="form-check-input" id="fadeInPre" />
 
         <label class="form-check-label" for="fadeInPre">
@@ -50,31 +62,20 @@
 
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-out' | translate }}</label>
-    <div class="col-lg-7">
-      <input type="text" class="form-control" [ngModel]="fadeOutMillis" (ngModelChange)="fadeOutMillis = $event" />
-    </div>
-    <div class="col-lg-1 d-flex p-0">
-      <div class="my-auto">
+    <div class="col-lg-8 d-flex align-items-center">
+      <input type="text" class="form-control sd-time-field" [ngModel]="fadeOutMillis" (ngModelChange)="fadeOutMillis = $event" />
+
+      <div class="ml-2">
         {{ 'designer.misc.ms' | translate }}
       </div>
-    </div>
-  </div>
 
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label">{{ 'designer.misc.transition-curve' | translate }}</label>
-    <div class="col-lg-7">
-      <select class="form-control" [ngModel]="fadeOutCurve" (ngModelChange)="fadeOutCurve = $event">
+      <select class="form-control sd-time-field ml-4" [ngModel]="fadeOutCurve" (ngModelChange)="fadeOutCurve = $event">
         @for (curveType of transitionCurveTypes; track curveType) {
         <option [value]="curveType">{{ 'designer.misc.transition-curve-' + curveType | translate }}</option>
         }
       </select>
-    </div>
-  </div>
 
-  <div class="form-group row">
-    <label class="col-lg-4 col-form-label"></label>
-    <div class="col-lg-8 d-flex">
-      <div class="form-check my-auto">
+      <div class="form-check ml-4">
         <input type="checkbox" [ngModel]="fadeOutPost" (ngModelChange)="fadeOutPost = $event" class="form-check-input" id="fadeOutPost" />
 
         <label class="form-check-label" for="fadeOutPost">

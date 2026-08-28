@@ -27,7 +27,10 @@
       "transition-curve-snap": "跳变",
       "dropzone-message": "将文件拖放到此处或点击上传",
       "toast-upload-error-title": "上传错误",
-      "toast-upload-error": "文件无法上传，原因如下："
+      "toast-upload-error": "文件无法上传，原因如下：",
+      "color": "颜色",
+      "icon": "图标",
+      "icon-default": "默认图标"
     },
     "loading": {
       "title": "加载中...",
@@ -63,7 +66,7 @@
       "already-have-account": "已有账户？",
       "no-account-yet": "还没有账户？",
       "login-required": "请登录以继续。",
-      "newsletter": "我希望通过电子邮件接收新闻和更新。",
+      "newsletter": "邮件告诉我最新动态",
       "error": {
         "internal": "发生内部错误。请重试或通过帮助菜单联系我们的支持团队。",
         "fill-all-fields": "请填写所有字段。",
@@ -106,7 +109,8 @@
       "settings-fade-out": "淡出",
       "settings-fade-in-pre": "之前",
       "settings-fade-out-post": "之后",
-      "live-mode": "实时模式"
+      "live-mode": "实时模式",
+      "settings-color-auto": "取自预设"
     },
     "preview": {
       "scene": "场景",
@@ -134,6 +138,7 @@
       "settings-fade-out": "淡出",
       "settings-fade-in-pre": "之前",
       "settings-fade-out-post": "之后",
+      "settings-color-auto": "取自灯具颜色",
       "steps": "步骤",
       "step": "步骤",
       "step-add": "添加步骤",
@@ -187,8 +192,11 @@
     },
     "fixture-pool": {
       "title": "灯具库",
+      "fixtures": "灯具",
+      "remove-fixture": "移除灯具",
       "create-profile": "创建配置文件",
       "search-profiles": "搜索配置文件",
+      "more-profiles": "还有 {{count}} 个配置文件匹配。请细化搜索以查看它们。",
       "settings": "设置",
       "dmx": "DMX 概览",
       "fixture-name": "灯具名称",

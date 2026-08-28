@@ -27,7 +27,10 @@
       "transition-curve-snap": "Snap",
       "dropzone-message": "Drop a file here or click to upload",
       "toast-upload-error-title": "Upload error",
-      "toast-upload-error": "The file could not be uploaded because of the following error: "
+      "toast-upload-error": "The file could not be uploaded because of the following error: ",
+      "color": "Color",
+      "icon": "Icon",
+      "icon-default": "Default icon"
     },
     "loading": {
       "title": "Loading...",
@@ -63,7 +66,7 @@
       "already-have-account": "You already have an account?",
       "no-account-yet": "You don't have an account yet?",
       "login-required": "Please sign in to proceed.",
-      "newsletter": "I would like to receive news and updates by email.",
+      "newsletter": "Email me what's new",
       "error": {
         "internal": "An internal error occured. Please try again or reach out to our support under the menu help.",
         "fill-all-fields": "Please fill in all fields.",
@@ -106,7 +109,8 @@
       "settings-fade-out": "Fade Out",
       "settings-fade-in-pre": "Before",
       "settings-fade-out-post": "After",
-      "live-mode": "Live mode"
+      "live-mode": "Live mode",
+      "settings-color-auto": "Take it from the presets"
     },
     "preview": {
       "scene": "Scene",
@@ -134,6 +138,7 @@
       "settings-fade-out": "Fade out",
       "settings-fade-in-pre": "Before",
       "settings-fade-out-post": "After",
+      "settings-color-auto": "Take it from the fixture color",
       "steps": "Steps",
       "step": "Step",
       "step-add": "Add step",
@@ -187,8 +192,11 @@
     },
     "fixture-pool": {
       "title": "Fixture pool",
+      "fixtures": "Fixtures",
+      "remove-fixture": "Remove fixture",
       "create-profile": "Create profile",
       "search-profiles": "Search profiles",
+      "more-profiles": "{{count}} more profiles match. Refine your search to see them.",
       "settings": "Settings",
       "dmx": "DMX overview",
       "fixture-name": "Fixture name",

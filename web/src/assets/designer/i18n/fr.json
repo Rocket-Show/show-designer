@@ -27,7 +27,10 @@
       "transition-curve-snap": "Saut",
       "dropzone-message": "Déposez un fichier ici ou cliquez pour télécharger",
       "toast-upload-error-title": "Erreur de téléchargement",
-      "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : "
+      "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : ",
+      "color": "Couleur",
+      "icon": "Icône",
+      "icon-default": "Icône par défaut"
     },
     "loading": {
       "title": "Chargement...",
@@ -63,7 +66,7 @@
       "already-have-account": "Vous avez déjà un compte ?",
       "no-account-yet": "Vous n'avez pas encore de compte ?",
       "login-required": "Veuillez vous connecter pour continuer.",
-      "newsletter": "Je souhaite recevoir des nouvelles et des mises à jour par e-mail.",
+      "newsletter": "Envoyez-moi les nouveautés par e-mail",
       "error": {
         "internal": "Une erreur interne s'est produite. Veuillez réessayer ou contacter notre assistance via le menu Aide.",
         "fill-all-fields": "Veuillez remplir tous les champs.",
@@ -106,7 +109,8 @@
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
       "settings-fade-out-post": "Après",
-      "live-mode": "Mode live"
+      "live-mode": "Mode live",
+      "settings-color-auto": "Reprendre celle des presets"
     },
     "preview": {
       "scene": "Scène",
@@ -134,6 +138,7 @@
       "settings-fade-out": "Fondu sortant",
       "settings-fade-in-pre": "Avant",
       "settings-fade-out-post": "Après",
+      "settings-color-auto": "Reprendre la couleur des appareils",
       "steps": "Étapes",
       "step": "Étape",
       "step-add": "Ajouter une étape",
@@ -187,8 +192,11 @@
     },
     "fixture-pool": {
       "title": "Parc de fixtures",
+      "fixtures": "Fixtures",
+      "remove-fixture": "Supprimer le fixture",
       "create-profile": "Créer un profil",
       "search-profiles": "Rechercher des profils",
+      "more-profiles": "{{count}} autres profils correspondent. Affinez votre recherche pour les voir.",
       "settings": "Paramètres",
       "dmx": "Vue d'ensemble DMX",
       "fixture-name": "Nom du fixture",

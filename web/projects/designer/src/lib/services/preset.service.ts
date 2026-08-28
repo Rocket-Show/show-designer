@@ -25,6 +25,9 @@ import { AnimationService } from './animation.service';
 export class PresetService {
   selectedPreset: Preset;
 
+  // the icon a preset is shown with, while none has been picked for it
+  static readonly defaultIcon = 'fa-lightbulb-o';
+
   // the step of the selected preset the capability, channel and effect panels edit. It
   // is also what the preview shows while nothing is playing.
   selectedStep: PresetStep;
@@ -65,6 +68,11 @@ export class PresetService {
     private livePreviewService: LivePreviewService,
     private animationService: AnimationService
   ) {}
+
+  // the icon of a preset: the one picked for it, or the default one
+  getPresetIcon(preset: Preset): string {
+    return preset.icon || PresetService.defaultIcon;
+  }
 
   getPresetByUuid(uuid: string): Preset {
     for (const preset of this.projectService.project.presets) {
@@ -168,8 +176,10 @@ export class PresetService {
   setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
     if (!useGlobalFixtureOrder) {
       // start from the order which has been in effect so far, so the chasing does
-      // not change just because the preset got its own order
+      // not change just because the preset got its own order - the folders included,
+      // which sit where the project puts them until this preset moves them
       preset.fixtures = this.getOrderedPresetFixtures(preset).map((presetFixture) => new PresetFixture(presetFixture));
+      preset.fixtureFolders = [];
     }
 
     preset.useGlobalFixtureOrder = useGlobalFixtureOrder;

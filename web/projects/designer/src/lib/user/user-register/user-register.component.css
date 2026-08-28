@@ -1,0 +1,14 @@
+/* the only optional box in the form. a pointer and a hover tint keep it from
+   reading like fine print nobody is meant to touch */
+.form-check-input,
+.form-check-label {
+  cursor: pointer;
+}
+
+.form-check-label {
+  transition: color 0.12s ease;
+}
+
+.form-check:hover .form-check-label {
+  color: var(--sd-primary-text);
+}

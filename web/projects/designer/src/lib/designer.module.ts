@@ -12,6 +12,7 @@ import { TypeaheadModule } from 'ngx-bootstrap/typeahead';
 import { DropzoneModule } from 'ngx-dropzone-wrapper';
 import { ToastrModule } from 'ngx-toastr';
 import { ArraySortPipe } from './array-sort-pipe';
+import { ColorPickerComponent } from './color-picker/color-picker.component';
 import { DesignerComponent } from './designer.component';
 import { EffectCurveComponent } from './effect/effect-curve/effect-curve.component';
 import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt.component';
@@ -33,6 +34,7 @@ import { FixtureSettingsComponent } from './fixture/fixture-settings/fixture-set
 import { FixtureComponent } from './fixture/fixture.component';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { IconPickerComponent } from './icon-picker/icon-picker.component';
 import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
 import { PresetSettingsComponent } from './preset/preset-settings/preset-settings.component';
@@ -106,6 +108,8 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     SortablejsDirective,
     TreeComponent,
     InlineEditComponent,
+    ColorPickerComponent,
+    IconPickerComponent,
     HardwarePromoBarComponent,
     HardwarePromoDialogComponent,
   ],

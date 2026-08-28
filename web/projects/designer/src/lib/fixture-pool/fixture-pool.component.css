@@ -94,3 +94,40 @@
   clear: both;
   padding-top: var(--sd-space-5);
 }
+
+/* The fixtures of the project, grouped in the folders of the fixture panel. The rows
+   carry their own remove button, which must not stretch the row it sits in. */
+.fixture-remove {
+  padding: 0 var(--sd-space-1);
+  line-height: 1;
+  color: var(--sd-text-dim);
+}
+
+.fixture-remove:hover {
+  color: var(--sd-text);
+}
+
+/* The number of the channel under the cursor. The cell draws it itself: a tooltip
+   component per channel meant 512 of them in this dialog, which cost more to build and
+   to place than everything else the pool does. */
+.dmx-channel:hover {
+  z-index: 2;
+}
+
+.dmx-channel:hover::before {
+  content: attr(data-channel);
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.1875rem var(--sd-space-2);
+  background-color: var(--sd-surface-3);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius);
+  box-shadow: var(--sd-shadow-2);
+  color: var(--sd-text);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}

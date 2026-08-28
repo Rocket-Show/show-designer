@@ -235,9 +235,17 @@
           </a>
         </div>
 
-        <!-- which preset the panels on the right are editing -->
+        <!-- which preset the panels on the right are editing, marked the way the preset
+             list marks it -->
         @if (presetService.selectedPreset) {
-        <div class="edit-target">{{ presetService.selectedPreset.name }}</div>
+        <div class="edit-target">
+          <i
+            class="fa fa-fw {{ presetService.getPresetIcon(presetService.selectedPreset) }}"
+            [style.color]="colorService.getPresetColor(presetService.selectedPreset)"
+            aria-hidden="true"
+          ></i>
+          {{ presetService.selectedPreset.name }}
+        </div>
         }
       </div>
       }
