@@ -1,3 +1,11 @@
+/* The tree and the profile list are their own paint units, like the channel map below:
+   what paints inside one of them stops at its edge instead of taking the rest of the
+   dialog with it. */
+lib-tree,
+.list-group {
+  contain: paint;
+}
+
 /* The map is its own layout unit: without that, hovering anything in this dialog makes
    the browser repaint all 512 channels along with whatever changed, which is what made
    the hover effects lag behind the cursor. It contains its floated cells as well, so
