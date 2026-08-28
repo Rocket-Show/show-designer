@@ -688,6 +688,27 @@
 .modal-full {
   max-width: unset !important;
   margin: $sd-space-5 !important;
+  // a dialog this size can outgrow a small window, and there is nowhere for it to go
+  // once it does -> it stays inside the window and lets its body scroll instead
+  .modal-content {
+    max-height: calc(100vh - #{$sd-space-5 * 2});
+  }
+
+  // the element of the dialog's own component sits between the frame and the header,
+  // body and footer it holds, and has to pass that height on to them
+  .modal-content > * {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    // a flex item does not shrink below its content on its own
+    min-height: 0;
+  }
 }
 
 // The fixture pool is the one dialog which paints a lot at once: the channel map, the

@@ -31,6 +31,15 @@
   right: 0;
 }
 
+/* The list of fixtures takes the height the profiles next to it need, so both columns
+   of the dialog end on the same line and the dialog stays as short as it can - it has
+   nowhere to scroll if it outgrows the window. */
+.fixtures-card {
+  flex: 1 1 0;
+  /* without this it would insist on being as tall as all its rows together */
+  min-height: 150px;
+}
+
 /* The tree and the profile list are their own paint units, like the channel map below:
    what paints inside one of them stops at its edge instead of taking the rest of the
    dialog with it. */
