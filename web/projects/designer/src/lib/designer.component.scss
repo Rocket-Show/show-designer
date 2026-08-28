@@ -1385,8 +1385,8 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     pointer-events: none;
   }
 
-  /* where a step is reached. The markers show what the preset does over the region,
-     they do not take clicks away from it: the steps are picked in their own rail. */
+  /* where a step starts. The markers show what the preset does over the region, they
+     do not take clicks away from it: the steps are picked in their own rail. */
   .step-marker-tick {
     width: 1px;
     background-color: rgba(255, 255, 255, 0.5);
@@ -1411,13 +1411,13 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     color: $sd-primary-text;
   }
 
-  /* the time the step travels over to get there */
+  /* the time the step travels over from there, fading out as it arrives at its values */
   .step-marker-transition {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.22));
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
   }
 
   .step-marker-transition[data-step-selected='true'] {
-    background: linear-gradient(to right, rgba(253, 126, 20, 0), rgba(253, 126, 20, 0.45));
+    background: linear-gradient(to right, rgba(253, 126, 20, 0.45), rgba(253, 126, 20, 0));
   }
 
   /* Wavesurfer region handle styles */

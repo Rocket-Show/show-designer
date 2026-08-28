@@ -1,5 +1,5 @@
 import { Preset } from './preset';
-import { getTransitionStartMillis, PresetStep } from './preset-step';
+import { getStepsLoopMillis, getTransitionEndMillis, PresetStep } from './preset-step';
 import { Scene } from './scene';
 import { ScenePlaybackRegion } from './scene-playback-region';
 
@@ -7,10 +7,9 @@ import { ScenePlaybackRegion } from './scene-playback-region';
 export interface TimelineStepMarker {
   step: PresetStep;
 
-  // where the step is reached, and where the transition leading to it starts and how
-  // far it runs, as percentages of the region's own length
+  // where the step starts and how far the transition it opens with runs from there, as
+  // percentages of the region's own length
   leftPercentage: number;
-  transitionLeftPercentage: number;
   transitionWidthPercentage: number;
 }
 
@@ -37,23 +36,25 @@ export function getStepMarkers(preset: Preset, scene: Scene, scenePlaybackRegion
 
   // the steps are timed against the start of the preset, which may sit inside the region
   const presetStartMillis = preset.startMillis === undefined ? 0 : preset.startMillis;
-  let previousReachedMillis: number;
+  const steps = preset.steps;
 
-  for (const step of preset.steps) {
-    const reachedMillis = presetStartMillis + step.startMillis;
+  // the last step holds for as long as a pass of the sequence would have given it
+  const lastEndMillis = steps[0].startMillis + getStepsLoopMillis(steps, preset.stepsLoopMillis);
 
-    // the transition is placed the same way the preset itself plays it
-    const transitionStartMillis = getTransitionStartMillis(step, reachedMillis, previousReachedMillis);
+  steps.forEach((step, index) => {
+    const startMillis = presetStartMillis + step.startMillis;
+    const endMillis = presetStartMillis + (index < steps.length - 1 ? steps[index + 1].startMillis : lastEndMillis);
+
+    // The transition is placed the same way the preset itself plays it: at the start of
+    // the step it travels into. Only a looping preset travels into its first step.
+    const transitionEndMillis = index > 0 || preset.stepsLoop ? getTransitionEndMillis(step, startMillis, endMillis) : startMillis;
 
     markers.push({
       step,
-      leftPercentage: (reachedMillis / regionLengthMillis) * 100,
-      transitionLeftPercentage: (transitionStartMillis / regionLengthMillis) * 100,
-      transitionWidthPercentage: ((reachedMillis - transitionStartMillis) / regionLengthMillis) * 100,
+      leftPercentage: (startMillis / regionLengthMillis) * 100,
+      transitionWidthPercentage: ((transitionEndMillis - startMillis) / regionLengthMillis) * 100,
     });
-
-    previousReachedMillis = reachedMillis;
-  }
+  });
 
   return markers;
 }

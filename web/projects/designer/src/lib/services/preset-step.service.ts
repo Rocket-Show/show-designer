@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { getTransitionStartMillis, PresetStep } from '../models/preset-step';
+import { getStepsLoopMillis, getTransitionEndMillis, PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { UuidService } from './uuid.service';
@@ -68,24 +68,34 @@ export class PresetStepService {
     }
   }
 
-  // the length of one pass through the steps. Without a length of its own, the last
-  // step holds as long as the one before it lasted, which loops an evenly spaced chase
-  // the way it is written down.
+  // the length of one pass through the steps
   public getStepsLoopMillis(preset: Preset): number {
-    if (preset.stepsLoopMillis !== undefined && preset.stepsLoopMillis > 0) {
-      return preset.stepsLoopMillis;
-    }
+    return getStepsLoopMillis(preset.steps, preset.stepsLoopMillis);
+  }
 
+  // When the step at the passed index gives way to the next one. The last step holds
+  // for as long as a pass of the sequence would have given it, which is what a looping
+  // preset starts over after and what one which does not loop stands still on.
+  public getStepEndMillis(preset: Preset, index: number): number {
     const steps = preset.steps;
 
-    if (steps.length < 2) {
+    if (index < steps.length - 1) {
+      return steps[index + 1].startMillis;
+    }
+
+    return steps[0].startMillis + this.getStepsLoopMillis(preset);
+  }
+
+  // how long the transition into the passed step actually runs, which is the whole
+  // time the step lasts unless it carries a shorter one of its own
+  public getStepTransitionMillis(preset: Preset, step: PresetStep): number {
+    const index = preset.steps.indexOf(step);
+
+    if (index < 0) {
       return 0;
     }
 
-    const last = steps[steps.length - 1];
-    const previous = steps[steps.length - 2];
-
-    return last.startMillis - steps[0].startMillis + (last.startMillis - previous.startMillis);
+    return getTransitionEndMillis(step, step.startMillis, this.getStepEndMillis(preset, index)) - step.startMillis;
   }
 
   // whether the sequence starts at a different point for every fixture of the preset,
@@ -162,7 +172,7 @@ export class PresetStepService {
       }
     }
 
-    // the step reached last
+    // the step started last
     let index = -1;
 
     for (let i = 0; i < steps.length; i++) {
@@ -179,48 +189,31 @@ export class PresetStepService {
     }
 
     const current = steps[index];
+    const endMillis = this.getStepEndMillis(preset, index);
 
-    // the step being travelled to, which is the first one again once the sequence loops
-    let target: PresetStep;
-    let targetStartMillis: number;
+    // The step travelled from, which is the last one again once the sequence starts
+    // over. The first step of a preset which does not loop has nothing to travel from,
+    // so it is simply what the preset opens with.
+    const previous = index > 0 ? steps[index - 1] : loopMillis > 0 ? steps[steps.length - 1] : undefined;
 
-    if (index < steps.length - 1) {
-      target = steps[index + 1];
-      targetStartMillis = target.startMillis;
-    } else if (loopMillis > 0) {
-      target = first;
-      targetStartMillis = first.startMillis + loopMillis;
-    } else {
-      // The last step has no step to travel to. It is held for as long as a pass of the
-      // sequence would have given it, which is what a looping preset would hold it for
-      // before starting over, and from there on the preset simply stays on it.
-      const holdMillis = first.startMillis + this.getStepsLoopMillis(preset) - current.startMillis;
-      const state = this.getStepState(current);
-      state.currentStepProgress = holdMillis > 0 ? Math.min((timeMillis - current.startMillis) / holdMillis, 1) : 1;
-
-      return state;
-    }
-
-    // how far the sequence has come from this step towards the next one, over the whole
-    // time between them rather than only over the transition at its end
-    const stepLengthMillis = targetStartMillis - current.startMillis;
-    const progress = stepLengthMillis > 0 ? (timeMillis - current.startMillis) / stepLengthMillis : 0;
-
-    const transitionStartMillis = getTransitionStartMillis(target, targetStartMillis, current.startMillis);
+    const transitionEndMillis = getTransitionEndMillis(current, current.startMillis, endMillis);
     let state: PresetStepState;
 
-    if (timeMillis <= transitionStartMillis || targetStartMillis <= transitionStartMillis) {
+    if (!previous || timeMillis >= transitionEndMillis) {
       state = this.getStepState(current);
     } else {
       const position = applyTransitionCurve(
-        target.transitionCurve,
-        (timeMillis - transitionStartMillis) / (targetStartMillis - transitionStartMillis)
+        current.transitionCurve,
+        (timeMillis - current.startMillis) / (transitionEndMillis - current.startMillis)
       );
 
-      state = this.interpolate(current, target, position);
+      state = this.interpolate(previous, current, position);
     }
 
-    state.currentStepProgress = progress;
+    // how far the sequence has come through this step, over the whole time it lasts
+    // rather than only over the transition it starts with
+    const stepLengthMillis = endMillis - current.startMillis;
+    state.currentStepProgress = stepLengthMillis > 0 ? Math.min((timeMillis - current.startMillis) / stepLengthMillis, 1) : 1;
 
     return state;
   }
@@ -258,8 +251,8 @@ export class PresetStepService {
   private interpolate(from: PresetStep, to: PresetStep, position: number): PresetStepState {
     const state = new PresetStepState();
 
-    // the preset is on the step it is travelling from until it arrives
-    state.currentStep = from;
+    // the preset is on the step it is travelling into from the moment that step starts
+    state.currentStep = to;
 
     // A value only one of the two steps carries is held as it is: a step not naming a
     // channel means it does not drive that channel, not that it drives it to zero.

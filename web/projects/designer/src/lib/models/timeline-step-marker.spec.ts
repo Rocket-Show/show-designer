@@ -37,7 +37,7 @@ describe('getStepMarkers', () => {
     return playbackRegion;
   }
 
-  it('should place a step where it is reached inside the region', () => {
+  it('should place a step where it starts inside the region', () => {
     const markers = getStepMarkers(preset(step(0), step(2500)), scene('preset'), region(1000, 11000));
 
     expect(markers.length).toBe(2);
@@ -55,27 +55,28 @@ describe('getStepMarkers', () => {
     expect(markers[1].leftPercentage).toBe(45);
   });
 
-  it('should draw the transition over the time it travels', () => {
+  it('should draw the transition over the time it travels, from the step it belongs to', () => {
     const markers = getStepMarkers(preset(step(0), step(5000, 2000)), scene('preset'), region(0, 10000));
 
-    expect(markers[1].transitionLeftPercentage).toBe(30);
+    expect(markers[1].leftPercentage).toBe(50);
     expect(markers[1].transitionWidthPercentage).toBe(20);
   });
 
-  it('should not let a transition reach back past the step it starts from', () => {
-    const markers = getStepMarkers(preset(step(0), step(2000), step(4000, 9000)), scene('preset'), region(0, 10000));
+  it('should not let a transition run past the step which follows it', () => {
+    const markers = getStepMarkers(preset(step(0), step(2000, 9000), step(4000)), scene('preset'), region(0, 10000));
 
-    expect(markers[2].transitionLeftPercentage).toBe(20);
-    expect(markers[2].transitionWidthPercentage).toBe(20);
+    expect(markers[1].leftPercentage).toBe(20);
+    expect(markers[1].transitionWidthPercentage).toBe(20);
   });
 
-  it('should span the whole gap for a step without a transition of its own', () => {
+  it('should span the whole step for one without a transition of its own', () => {
     const sequence = preset(step(0), step(5000));
     sequence.steps[1].transitionMillis = undefined;
 
     const markers = getStepMarkers(sequence, scene('preset'), region(0, 10000));
 
-    expect(markers[1].transitionLeftPercentage).toBe(0);
+    // the last step is held for the 5000 ms a pass would have given it
+    expect(markers[1].leftPercentage).toBe(50);
     expect(markers[1].transitionWidthPercentage).toBe(50);
   });
 
@@ -83,6 +84,15 @@ describe('getStepMarkers', () => {
     const markers = getStepMarkers(preset(step(0, 1000), step(5000)), scene('preset'), region(0, 10000));
 
     expect(markers[0].transitionWidthPercentage).toBe(0);
+  });
+
+  it('should travel into the first step of a sequence which starts over', () => {
+    const sequence = preset(step(0, 1000), step(5000));
+    sequence.stepsLoop = true;
+
+    const markers = getStepMarkers(sequence, scene('preset'), region(0, 10000));
+
+    expect(markers[0].transitionWidthPercentage).toBe(10);
   });
 
   it('should mark nothing for a preset the scene does not layer', () => {

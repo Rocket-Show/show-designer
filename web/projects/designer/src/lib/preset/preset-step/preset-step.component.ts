@@ -1,7 +1,8 @@
 import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { getTransitionStartMillis, PresetStep } from '../../models/preset-step';
+import { PresetStep } from '../../models/preset-step';
+import { PresetStepService } from '../../services/preset-step.service';
 import { PresetService } from '../../services/preset.service';
 import { PresetStepSettingsComponent } from './preset-step-settings/preset-step-settings.component';
 import { PresetStepsSettingsComponent } from './preset-steps-settings/preset-steps-settings.component';
@@ -25,6 +26,7 @@ export class PresetStepComponent implements OnInit, OnDestroy {
 
   constructor(
     public presetService: PresetService,
+    private presetStepService: PresetStepService,
     private modalService: BsModalService,
     private translateService: TranslateService,
     private changeDetectorRef: ChangeDetectorRef,
@@ -58,17 +60,18 @@ export class PresetStepComponent implements OnInit, OnDestroy {
 
   // a step only shows its number, so its times are read on the way past it
   stepDescription(step: PresetStep, index: number): string {
+    const preset = this.presetService.selectedPreset;
     const millis = this.translateService.instant('designer.misc.ms');
-    const reached = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
+    const started = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
 
-    if (index === 0) {
-      return reached;
+    if (index === 0 && !preset.stepsLoop) {
+      // the first step has nothing to travel from unless the sequence starts over
+      return started;
     }
 
-    const previous = this.presetService.selectedPreset.steps[index - 1];
-    const transitionMillis = step.startMillis - getTransitionStartMillis(step, step.startMillis, previous.startMillis);
+    const transitionMillis = this.presetStepService.getStepTransitionMillis(preset, step);
 
-    return reached + ', ' + this.translateService.instant('designer.preset.step-transition') + ': ' + transitionMillis + ' ' + millis;
+    return started + ', ' + this.translateService.instant('designer.preset.step-transition') + ': ' + transitionMillis + ' ' + millis;
   }
 
   selectStep(step: PresetStep) {

@@ -15,9 +15,9 @@ describe('PresetStepService', () => {
     service = TestBed.inject(PresetStepService);
   });
 
-  // a step driving one channel to the passed value, reached at startMillis. Without a
-  // transition of its own a step travels over the whole gap, so the cases which want a
-  // jump ask for one.
+  // a step driving one channel to the passed value, starting at startMillis. Without a
+  // transition of its own a step travels over the whole time it lasts, so the cases
+  // which want a jump ask for one.
   function step(startMillis: number, value: number, transitionMillis: number = 0): PresetStep {
     const presetStep = new PresetStep();
     presetStep.uuid = 'step-' + startMillis;
@@ -65,7 +65,7 @@ describe('PresetStepService', () => {
     expect(dimmerAt(old, 0)).toBe(42);
   });
 
-  it('should hold the first step before it is reached', () => {
+  it('should hold the first step before it starts', () => {
     const sequence = preset(step(1000, 100), step(2000, 200));
 
     expect(dimmerAt(sequence, 0)).toBe(100);
@@ -79,21 +79,36 @@ describe('PresetStepService', () => {
     expect(dimmerAt(sequence, 1000)).toBe(200);
   });
 
-  it('should reach a step at its own start, having travelled the time before it', () => {
+  it('should travel into a step over the time that step starts with', () => {
     const sequence = preset(step(0, 100), step(1000, 200, 400));
 
-    // the transition runs over the 400 ms in front of the step
-    expect(dimmerAt(sequence, 600)).toBe(100);
-    expect(dimmerAt(sequence, 800)).toBe(150);
-    expect(dimmerAt(sequence, 1000)).toBe(200);
+    // the transition runs over the 400 ms the second step opens with
+    expect(dimmerAt(sequence, 999)).toBe(100);
+    expect(dimmerAt(sequence, 1000)).toBe(100);
+    expect(dimmerAt(sequence, 1200)).toBe(150);
+    expect(dimmerAt(sequence, 1400)).toBe(200);
+    expect(dimmerAt(sequence, 1800)).toBe(200);
   });
 
-  it('should not let a transition reach back past the step it starts from', () => {
-    const sequence = preset(step(0, 100), step(500, 200), step(1000, 300, 5000));
+  it('should let a step which changes nothing stand still', () => {
+    // three steps of black, black and white: the white belongs to the third step, so
+    // nothing may move while the second one plays
+    const sequence = preset(step(0, 0), step(1000, 0), step(2000, 255));
+    sequence.steps[2].transitionMillis = undefined;
 
-    // the third step would travel from before the second one, which it cannot
-    expect(dimmerAt(sequence, 500)).toBe(200);
-    expect(dimmerAt(sequence, 750)).toBe(250);
+    expect(dimmerAt(sequence, 1000)).toBe(0);
+    expect(dimmerAt(sequence, 1999)).toBe(0);
+    expect(dimmerAt(sequence, 2500)).toBe(127.5);
+    expect(dimmerAt(sequence, 3000)).toBe(255);
+  });
+
+  it('should not let a transition run past the step which follows it', () => {
+    const sequence = preset(step(0, 100), step(500, 200, 5000), step(1000, 300));
+
+    // the second step would travel into the third one, which it cannot
+    expect(dimmerAt(sequence, 500)).toBe(100);
+    expect(dimmerAt(sequence, 750)).toBe(150);
+    expect(dimmerAt(sequence, 1000)).toBe(300);
   });
 
   it('should hold the last step of a sequence which does not loop', () => {
@@ -121,20 +136,23 @@ describe('PresetStepService', () => {
     const sequence = preset(step(0, 100), step(1000, 300));
     sequence.stepsLoop = true;
     sequence.stepsLoopMillis = 2000;
-    sequence.steps[0].transitionMillis = 1000;
+    sequence.steps[0].transitionMillis = 500;
 
-    // the wrap runs over the 1000 ms in front of the end of the pass
-    expect(dimmerAt(sequence, 1000)).toBe(300);
-    expect(dimmerAt(sequence, 1500)).toBe(200);
+    // the wrap runs over the 500 ms the first step of the next pass opens with
+    expect(dimmerAt(sequence, 2000)).toBe(300);
+    expect(dimmerAt(sequence, 2250)).toBe(200);
+    expect(dimmerAt(sequence, 2500)).toBe(100);
   });
 
-  it('should travel over the whole gap for a step without a transition of its own', () => {
+  it('should travel over its whole length for a step without a transition of its own', () => {
     const sequence = preset(step(0, 100), step(1000, 200));
     sequence.steps[1].transitionMillis = undefined;
 
-    expect(dimmerAt(sequence, 0)).toBe(100);
-    expect(dimmerAt(sequence, 500)).toBe(150);
-    expect(dimmerAt(sequence, 1000)).toBe(200);
+    // the last step is held for the 1000 ms a pass would have given it and travels
+    // into its value over all of them
+    expect(dimmerAt(sequence, 1000)).toBe(100);
+    expect(dimmerAt(sequence, 1500)).toBe(150);
+    expect(dimmerAt(sequence, 2000)).toBe(200);
   });
 
   it('should jump for a step whose transition was set to nothing', () => {
@@ -148,9 +166,9 @@ describe('PresetStepService', () => {
     const sequence = preset(step(0, 100), step(1000, 200, 400));
 
     expect(service.getStateAtMillis(sequence, 500).currentStep).toBe(sequence.steps[0]);
-    // it is still travelling away from the first step until it arrives at the second
-    expect(service.getStateAtMillis(sequence, 800).currentStep).toBe(sequence.steps[0]);
+    // it is on the second step from the moment that one starts, transition and all
     expect(service.getStateAtMillis(sequence, 1000).currentStep).toBe(sequence.steps[1]);
+    expect(service.getStateAtMillis(sequence, 1200).currentStep).toBe(sequence.steps[1]);
   });
 
   it('should hold a value only one of the two steps carries', () => {
@@ -169,7 +187,7 @@ describe('PresetStepService', () => {
     onlyInTo.value = 70;
     to.fixtureChannelValues.push(onlyInTo);
 
-    const state = service.getStateAtMillis(preset(from, to), 500);
+    const state = service.getStateAtMillis(preset(from, to), 1500);
 
     expect(state.fixtureChannelValues.find((value) => value.channelName === 'strobe').value).toBe(50);
     expect(state.fixtureChannelValues.find((value) => value.channelName === 'zoom').value).toBe(70);
@@ -190,7 +208,7 @@ describe('PresetStepService', () => {
       target.fixtureCapabilityValues.push(capabilityValue);
     }
 
-    const state = service.getStateAtMillis(preset(from, to), 500);
+    const state = service.getStateAtMillis(preset(from, to), 1500);
 
     expect(state.fixtureCapabilityValues[0].valuePercentage).toBeCloseTo(0.6, 10);
   });
@@ -212,8 +230,8 @@ describe('PresetStepService', () => {
 
     const sequence = preset(from, to);
 
-    expect(service.getStateAtMillis(sequence, 0).fixtureCapabilityValues[0].slotNumber).toBe(1);
-    expect(service.getStateAtMillis(sequence, 500).fixtureCapabilityValues[0].slotNumber).toBe(4);
+    expect(service.getStateAtMillis(sequence, 1000).fixtureCapabilityValues[0].slotNumber).toBe(1);
+    expect(service.getStateAtMillis(sequence, 1500).fixtureCapabilityValues[0].slotNumber).toBe(4);
   });
 
   it('should hold a wheel until the end of a snapping transition', () => {
@@ -234,8 +252,8 @@ describe('PresetStepService', () => {
 
     const sequence = preset(from, to);
 
-    expect(service.getStateAtMillis(sequence, 500).fixtureCapabilityValues[0].slotNumber).toBe(1);
-    expect(service.getStateAtMillis(sequence, 1000).fixtureCapabilityValues[0].slotNumber).toBe(4);
+    expect(service.getStateAtMillis(sequence, 1500).fixtureCapabilityValues[0].slotNumber).toBe(1);
+    expect(service.getStateAtMillis(sequence, 2000).fixtureCapabilityValues[0].slotNumber).toBe(4);
   });
 
   it('should shape a transition with its curve', () => {
@@ -243,14 +261,14 @@ describe('PresetStepService', () => {
     sequence.steps[1].transitionCurve = 'ease-in';
 
     // half way through an ease-in, a quarter of the distance is covered
-    expect(dimmerAt(sequence, 500)).toBeCloseTo(25, 10);
+    expect(dimmerAt(sequence, 1500)).toBeCloseTo(25, 10);
   });
 
   it('should say how far it has come through the step it is on', () => {
     const sequence = preset(step(0, 100), step(1000, 200, 400));
 
     expect(service.getStateAtMillis(sequence, 0).currentStepProgress).toBe(0);
-    // the whole time between two steps counts, not only the transition at its end
+    // the whole time a step lasts counts, not only the transition it opens with
     expect(service.getStateAtMillis(sequence, 250).currentStepProgress).toBe(0.25);
     expect(service.getStateAtMillis(sequence, 800).currentStepProgress).toBe(0.8);
   });
@@ -288,7 +306,7 @@ describe('PresetStepService', () => {
     open.amount = 1;
     to.effectAmounts.push(open);
 
-    expect(service.getStateAtMillis(preset(from, to), 500).getEffectAmount('effect')).toBeCloseTo(0.5, 10);
+    expect(service.getStateAtMillis(preset(from, to), 1500).getEffectAmount('effect')).toBeCloseTo(0.5, 10);
   });
 
   describe('chasing the steps over the fixtures', () => {
