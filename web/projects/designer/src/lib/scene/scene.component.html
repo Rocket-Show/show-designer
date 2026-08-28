@@ -69,10 +69,15 @@
         </div>
         } @else if (node.isFolder) {
         <div class="d-flex">
-          <div class="my-auto text-truncate">
+          <div class="my-auto text-truncate mr-auto">
             {{ node.scene.name }}
           </div>
-          <div class="d-none d-md-flex my-auto ml-auto mr-2">
+          <!-- a scene which is held below full says so, so a dimmed one does not just
+               look like it is not working -->
+          @if (node.scene.dimmer < 1) {
+          <div class="my-auto pl-2 scene-dimmer">{{ dimmerPercentage(node.scene) }}%</div>
+          }
+          <div class="d-none d-md-flex my-auto ml-2 mr-2">
             <button
               type="button"
               class="btn btn-secondary btn-sm py-0 px-1"

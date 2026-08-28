@@ -258,7 +258,12 @@ export class PreviewService implements OnDestroy {
     // -> 0 = no covering at all, 1 = fully cover (no fading)
     let intensityPercentageScene = 1;
     let intensityPercentagePreset = 1;
-    let intensityPercentage = 1;
+
+    if (preset.scene) {
+      // the dimmer holds the scene below full for as long as it plays, whether it sits
+      // on the timeline or is only being watched in the preview
+      intensityPercentageScene = preset.scene.dimmer;
+    }
 
     if (preset.region && preset.scene) {
       // Fade out is stronger than fade in (if they overlap)
@@ -271,13 +276,13 @@ export class PreviewService implements OnDestroy {
       // already handed over, which shapes a fade out just as well as a fade in
       if (timeMillis > sceneEndMillis - preset.scene.fadeOutMillis && timeMillis < sceneEndMillis) {
         // Scene fades out
-        intensityPercentageScene = applyTransitionCurve(
+        intensityPercentageScene *= applyTransitionCurve(
           preset.scene.fadeOutCurve,
           (sceneEndMillis - timeMillis) / preset.scene.fadeOutMillis
         );
       } else if (timeMillis < sceneStartMillis + preset.scene.fadeInMillis && timeMillis > sceneStartMillis) {
         // Scene fades in
-        intensityPercentageScene = applyTransitionCurve(
+        intensityPercentageScene *= applyTransitionCurve(
           preset.scene.fadeInCurve,
           (timeMillis - sceneStartMillis) / preset.scene.fadeInMillis
         );
@@ -309,11 +314,9 @@ export class PreviewService implements OnDestroy {
           (timeMillis - presetStartMillis) / preset.preset.fadeInMillis
         );
       }
-
-      intensityPercentage = intensityPercentageScene * intensityPercentagePreset;
     }
 
-    return intensityPercentage;
+    return intensityPercentageScene * intensityPercentagePreset;
   }
 
   private mixCapabilityValues(

@@ -25,6 +25,11 @@ export class Scene {
   // one is the topmost layer, overwriting the values of the ones below it
   presetUuids: string[] = [];
 
+  // how much of the scene reaches the stage: 1 = all of it, 0 = nothing. It scales
+  // everything the scene's presets put out, the way the master dimmer scales the whole
+  // project, and the fades take away from what it leaves.
+  dimmer = 1;
+
   // Fading times
   fadeInMillis = 0;
   fadeOutMillis = 0;
@@ -55,6 +60,9 @@ export class Scene {
     if (data.presetUuids) {
       this.presetUuids = data.presetUuids;
     }
+    // a scene of a project written before the scenes had a dimmer plays at full
+    this.dimmer = data.dimmer === undefined ? 1 : data.dimmer;
+
     this.fadeInMillis = data.fadeInMillis;
     this.fadeOutMillis = data.fadeOutMillis;
 

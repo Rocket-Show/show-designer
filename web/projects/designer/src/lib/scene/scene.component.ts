@@ -461,6 +461,11 @@ export class SceneComponent implements OnInit, OnDestroy {
     }
   }
 
+  // the dimmer of a scene as a percentage, for the scene tree to mark a dimmed one with
+  dimmerPercentage(scene: Scene): number {
+    return Math.round(scene.dimmer * 100);
+  }
+
   openSettings(scene: Scene) {
     this.modalService.show(SceneSettingsComponent, {
       keyboard: true,
