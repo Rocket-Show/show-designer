@@ -74,8 +74,12 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public dmxChannels: DmxChannel[] = [];
 
-  // the channel map, which watches the pointer itself while a fixture is dragged over it
+  // The channel map. It is drawn rather than built from an element per channel, and it
+  // watches the pointer itself, so neither the browser nor angular has 512 of anything
+  // to walk while the pointer crosses this dialog.
   @ViewChild('dmxMap') dmxMap: ElementRef<HTMLElement>;
+  @ViewChild('dmxCanvas') dmxCanvas: ElementRef<HTMLCanvasElement>;
+  @ViewChild('channelLabel') channelLabel: ElementRef<HTMLElement>;
 
   public selectedFixture: Fixture;
   public selectedFixtureProfile: FixtureProfile;
@@ -104,6 +108,18 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   // the pool does afterwards slow, so the search shows the first matches and says how
   // many more there are.
   private static readonly maxShownProfiles = 50;
+
+  // the size of one channel on the map, in px
+  private static readonly channelWidth = 28;
+  private static readonly channelHeight = 20;
+
+  // how many channels the map fits on a row, which follows the width it is given
+  private channelsPerRow = 1;
+
+  // the channel the cursor is on, so the label is only moved when it changes
+  private labelledChannel = -1;
+
+  private mapResized: ResizeObserver;
 
   // one row per fixture of the pool, in the folders of the project
   private fixtureItems: PoolFixture[] = [];
@@ -203,28 +219,198 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    // The map is 512 elements, and every one of them used to carry a mouseover binding.
-    // Angular runs a change detection cycle for each of those, which walks the whole
-    // dialog - the map and the channel select alone are a thousand views - so the
-    // pointer merely crossing the map kept the app busy. Nothing here has to happen
-    // until a fixture is actually dragged, so the map listens for itself and only comes
-    // back into angular while there is something to move.
+    // Nothing here has to reach angular: the label under the cursor is moved by hand,
+    // and only a fixture actually being dragged across the map changes anything the
+    // dialog shows.
     this.ngZone.runOutsideAngular(() => {
-      this.dmxMap.nativeElement.addEventListener('mouseover', this.channelHovered);
+      this.dmxMap.nativeElement.addEventListener('mousemove', this.channelHovered);
+      this.dmxMap.nativeElement.addEventListener('mouseleave', this.channelLeft);
+
+      // the map lays its channels out over the width it is given
+      this.mapResized = new ResizeObserver(() => this.drawChannelMap());
+      this.mapResized.observe(this.dmxMap.nativeElement);
     });
   }
 
   ngOnDestroy() {
-    this.dmxMap?.nativeElement.removeEventListener('mouseover', this.channelHovered);
+    this.mapResized?.disconnect();
+    this.dmxMap?.nativeElement.removeEventListener('mousemove', this.channelHovered);
+    this.dmxMap?.nativeElement.removeEventListener('mouseleave', this.channelLeft);
   }
 
+  // ---- the DMX channel map -------------------------------------------------
+
   private channelHovered = (event: MouseEvent) => {
-    if (!this.channelDragFixture) {
+    const channel = this.channelAt(event);
+
+    this.labelChannel(channel);
+
+    if (this.channelDragFixture && channel >= 0) {
+      this.ngZone.run(() => this.dragChannelTo(channel));
+    }
+  };
+
+  private channelLeft = () => this.labelChannel(-1);
+
+  // the channel under the cursor, or -1 next to the last one of the map
+  private channelAt(event: MouseEvent): number {
+    const column = Math.floor(event.offsetX / FixturePoolComponent.channelWidth);
+    const row = Math.floor(event.offsetY / FixturePoolComponent.channelHeight);
+
+    if (column < 0 || column >= this.channelsPerRow || row < 0) {
+      return -1;
+    }
+
+    const channel = row * this.channelsPerRow + column;
+
+    return channel < this.dmxChannels.length ? channel : -1;
+  }
+
+  // the number of the channel the cursor is on, in place of a tooltip
+  private labelChannel(channel: number) {
+    if (channel === this.labelledChannel || !this.channelLabel) {
       return;
     }
 
-    this.ngZone.run(() => this.channelMouseOver(event));
-  };
+    this.labelledChannel = channel;
+
+    const label = this.channelLabel.nativeElement;
+
+    if (channel < 0) {
+      label.hidden = true;
+      return;
+    }
+
+    const column = channel % this.channelsPerRow;
+    const row = Math.floor(channel / this.channelsPerRow);
+
+    label.textContent = String(channel + 1);
+    label.hidden = false;
+    label.style.left = (column + 0.5) * FixturePoolComponent.channelWidth + 'px';
+    label.style.top = row * FixturePoolComponent.channelHeight + 'px';
+  }
+
+  // Draw the map: the grid of channels, the run of channels every fixture of the
+  // universe occupies, the one being edited and the ones two fixtures collide on. The
+  // colours are the stylesheet's, so the map is themed with everything else.
+  private drawChannelMap() {
+    const canvas = this.dmxCanvas?.nativeElement;
+    const width = this.dmxMap?.nativeElement.clientWidth ?? 0;
+
+    if (!canvas || !width) {
+      return;
+    }
+
+    const channelWidth = FixturePoolComponent.channelWidth;
+    const channelHeight = FixturePoolComponent.channelHeight;
+
+    this.channelsPerRow = Math.max(1, Math.floor(width / channelWidth));
+
+    const rows = Math.ceil(this.dmxChannels.length / this.channelsPerRow);
+    const mapWidth = this.channelsPerRow * channelWidth;
+    const mapHeight = rows * channelHeight;
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = Math.round(mapWidth * ratio);
+    canvas.height = Math.round(mapHeight * ratio);
+    canvas.style.width = mapWidth + 'px';
+    canvas.style.height = mapHeight + 'px';
+
+    const context = canvas.getContext('2d');
+    const style = getComputedStyle(this.dmxMap.nativeElement);
+    const colour = (name: string) => style.getPropertyValue(name).trim();
+
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, mapWidth, mapHeight);
+
+    // the grid of empty channels
+    context.strokeStyle = colour('--dmx-line');
+    context.lineWidth = 1;
+
+    for (let channel = 0; channel < this.dmxChannels.length; channel++) {
+      // the bar of a fixture is drawn in one piece, so it is not divided into channels
+      if (this.dmxChannels[channel].occupied) {
+        continue;
+      }
+
+      const column = channel % this.channelsPerRow;
+      const row = Math.floor(channel / this.channelsPerRow);
+
+      context.strokeRect(column * channelWidth + 0.5, row * channelHeight + 0.5, channelWidth - 1, channelHeight - 1);
+    }
+
+    // the fixtures on it, as one bar per run of channels which reads the same way. A
+    // fixture whose channels wrap onto the next row is drawn as a bar per row.
+    for (const run of this.channelRuns()) {
+      const overlapped = run.overlapped;
+      const selected = run.selected && !overlapped;
+
+      const x = (run.channel % this.channelsPerRow) * channelWidth;
+      const y = Math.floor(run.channel / this.channelsPerRow) * channelHeight;
+      const barWidth = run.length * channelWidth;
+
+      context.fillStyle = overlapped ? colour('--dmx-overlap-fill') : selected ? colour('--dmx-selected-fill') : colour('--dmx-fill');
+      context.strokeStyle = overlapped ? colour('--dmx-overlap-edge') : colour('--dmx-edge');
+
+      this.channelBar(context, x + 0.5, y + 0.5, barWidth - 1, channelHeight - 1, run.start, run.end);
+      context.fill();
+      context.stroke();
+    }
+  }
+
+  // the bars of the map: channels next to each other which are drawn the same way, cut
+  // at the end of the row they sit on and at the first and last channel of a fixture
+  private channelRuns(): { channel: number; length: number; start: boolean; end: boolean; selected: boolean; overlapped: boolean }[] {
+    const runs = [];
+    let run: { channel: number; length: number; start: boolean; end: boolean; selected: boolean; overlapped: boolean };
+
+    for (let channel = 0; channel < this.dmxChannels.length; channel++) {
+      const state = this.dmxChannels[channel];
+
+      const continues =
+        run &&
+        state.occupied &&
+        !state.start &&
+        !this.dmxChannels[channel - 1].end &&
+        state.selected === run.selected &&
+        state.overlapped === run.overlapped &&
+        channel % this.channelsPerRow !== 0;
+
+      if (continues) {
+        run.length++;
+        run.end = state.end;
+        continue;
+      }
+
+      run = undefined;
+
+      if (state.occupied) {
+        run = { channel, length: 1, start: state.start, end: state.end, selected: state.selected, overlapped: state.overlapped };
+        runs.push(run);
+      }
+    }
+
+    return runs;
+  }
+
+  // a bar with the ends of the fixture rounded and the cuts left square
+  private channelBar(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, start: boolean, end: boolean) {
+    const radius = Math.min(4, height / 2, width / 2);
+    const left = start ? radius : 0;
+    const right = end ? radius : 0;
+
+    context.beginPath();
+    context.moveTo(x + left, y);
+    context.lineTo(x + width - right, y);
+    context.arcTo(x + width, y, x + width, y + right, right);
+    context.lineTo(x + width, y + height - right);
+    context.arcTo(x + width, y + height, x + width - right, y + height, right);
+    context.lineTo(x + left, y + height);
+    context.arcTo(x, y + height, x, y + height - left, left);
+    context.lineTo(x, y + left);
+    context.arcTo(x, y, x + left, y, left);
+    context.closePath();
+  }
 
   private loadProfiles() {
     this.loadingProfiles = true;
@@ -641,6 +827,8 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
         this.dmxChannels[i].selected = true;
       }
     }
+
+    this.drawChannelMap();
   }
 
   // the same lamp patched twice is not a collision, see updateChannelMap
@@ -674,10 +862,14 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     return false;
   }
 
-  channelMouseDown(event: any) {
+  channelMouseDown(event: MouseEvent) {
     // start dragging
-    const selectedIndex = event.target.dataset.index;
+    const selectedIndex = this.channelAt(event);
     let newSelectedFixture: Fixture;
+
+    if (selectedIndex < 0) {
+      return;
+    }
 
     // find a dragging fixture and select it, but don't change the selection, if the
     // currently selected fixture might also be selected (on overlapped fixtures)
@@ -712,19 +904,23 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.channelDragOffset = undefined;
   }
 
-  channelMouseOver(event: any) {
-    if (!this.channelDragFixture) {
-      return;
-    }
-
-    // perform dragging
-    const selectedIndex = event.target.dataset.index;
+  // the fixture being dragged over the map follows the cursor, as far as it fits
+  private dragChannelTo(channel: number) {
+    const firstChannel = channel - this.channelDragOffset;
     const channelCount = this.fixtureChannelCount(this.channelDragFixture);
 
-    if (selectedIndex - this.channelDragOffset >= 0 && selectedIndex - this.channelDragOffset + channelCount - 1 <= 511) {
-      this.channelDragFixture.dmxFirstChannel = selectedIndex - this.channelDragOffset;
+    if (firstChannel >= 0 && firstChannel + channelCount <= this.dmxChannels.length) {
+      this.channelDragFixture.dmxFirstChannel = firstChannel;
       this.updateChannelMap();
     }
+  }
+
+  // the address of the selected fixture, which the settings show counting from 1
+  setFirstChannel(channel: number) {
+    const firstChannel = Math.round(channel) - 1;
+
+    this.selectedFixture.dmxFirstChannel = Math.min(Math.max(firstChannel, 0), this.dmxChannels.length - 1);
+    this.updateChannelMap();
   }
 
   ok() {

@@ -217,21 +217,13 @@
       <div class="tab-content" id="myTabContent">
         <!-- DMX universe overview-->
         <div class="tab-pane show active" id="dmx" role="tabpanel">
-          <!-- List of DMX channels. The map is its own layout unit (see the css), without
-               which hovering anything in this dialog repaints all 512 channels with it. -->
+          <!-- The DMX channels. The map is drawn rather than built: an element per channel
+               is 512 of them in the page and 512 views for angular to walk, which is what
+               made hovering anywhere in this dialog slow. -->
           <div class="dmx-map" #dmxMap (mousedown)="channelMouseDown($event)">
-            @for (channel of dmxChannels; track $index; let i = $index) {
-            <div
-              class="dmx-channel"
-              [class.dmx-channel-occupied]="channel.occupied"
-              [class.dmx-channel-occupied-start]="channel.start"
-              [class.dmx-channel-occupied-end]="channel.end"
-              [class.dmx-channel-selected]="channel.selected"
-              [class.dmx-channel-overlapped]="channel.overlapped"
-              [attr.data-index]="i"
-              [attr.data-channel]="i + 1"
-            ></div>
-            }
+            <canvas class="dmx-canvas" #dmxCanvas></canvas>
+            <!-- the number of the channel under the cursor, moved by the map itself -->
+            <div class="dmx-channel-label" #channelLabel hidden></div>
           </div>
 
           <!-- this patch is not controlling anything in the free online designer -->
@@ -294,17 +286,14 @@
             <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.first-channel' | translate }}</label>
               <div class="col-lg-9">
-                <select
-                  class="custom-select"
-                  [ngModel]="selectedFixture.dmxFirstChannel"
-                  (ngModelChange)="selectedFixture.dmxFirstChannel = $event; updateChannelMap()"
-                >
-                  @for (channel of dmxChannels; track $index; let i = $index) {
-                  <option [ngValue]="i">
-                    {{ i + 1 }}
-                  </option>
-                  }
-                </select>
+                <input
+                  type="number"
+                  class="form-control"
+                  min="1"
+                  [max]="dmxChannels.length"
+                  [ngModel]="selectedFixture.dmxFirstChannel + 1"
+                  (ngModelChange)="setFirstChannel($event)"
+                />
               </div>
             </div>
             <div class="form-group row">

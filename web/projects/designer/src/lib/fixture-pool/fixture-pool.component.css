@@ -1,10 +1,9 @@
-/* A label the element draws itself, for the icons of this dialog and for the channels
-   of the map below. A tooltip component is built, placed at body level and thrown away
-   again for every hover, and each of those hovers also runs a change detection cycle
-   over a dialog which holds a thousand views - so hovering here cost more than what it
-   explains. */
+/* The look of the labels this dialog explains itself with: the ones on its icons and
+   the number of the channel under the cursor. A tooltip component is built, placed at
+   body level and thrown away again for every hover, and each of those hovers also runs
+   a change detection cycle over the dialog - more work than what it explains. */
 .sd-tip:hover::after,
-.dmx-channel:hover::before {
+.dmx-channel-label {
   position: absolute;
   z-index: 3;
   padding: 0.1875rem var(--sd-space-2);
@@ -40,108 +39,39 @@ lib-tree,
   contain: paint;
 }
 
-/* The map is its own layout unit: without that, hovering anything in this dialog makes
-   the browser repaint all 512 channels along with whatever changed, which is what made
-   the hover effects lag behind the cursor. It contains its floated cells as well, so
-   what follows no longer has to clear them. */
+/* The channel map. It is drawn on a canvas: an element per channel put 512 of them in
+   the page, which every hover had to walk through - and 512 more views for angular on
+   top of that. The colours stay here, so the map is themed with everything else. */
 .dmx-map {
+  position: relative;
   contain: layout;
+
+  --dmx-line: var(--sd-border);
+  --dmx-fill: var(--sd-primary-soft-strong);
+  --dmx-edge: var(--sd-primary);
+  --dmx-selected-fill: var(--sd-primary);
+  --dmx-overlap-fill: rgba(229, 84, 75, 0.55);
+  --dmx-overlap-edge: var(--sd-danger);
 }
 
-.dmx-channel {
-  display: flex;
-  float: left;
-  position: relative;
-  width: 28px;
-  /* the size a line of (blank) text used to give the cell, which cost three more
-     elements per channel to paint and to hit-test */
-  height: 20.5px;
-  border: 1px solid var(--sd-border);
-  margin-left: -1px;
-  margin-bottom: -1px;
-  padding-bottom: 2px;
-  color: var(--sd-text-dim);
-  font-size: 0.6875rem;
+.dmx-canvas {
+  display: block;
+  cursor: move;
 
   -webkit-touch-callout: none;
-  /* iOS Safari */
   -webkit-user-select: none;
-  /* Safari */
-  -khtml-user-select: none;
-  /* Konqueror HTML */
   -moz-user-select: none;
-  /* Firefox */
   -ms-user-select: none;
-  /* Internet Explorer/Edge */
   user-select: none;
-  /* Non-prefixed version, currently supported by Chrome and Opera */
 }
 
-.dmx-channel-occupied {
-  /* the bar below draws the outline, so the grid line is hidden underneath it */
-  border-color: transparent;
-  color: var(--sd-text);
-  cursor: move;
-}
-
-/* The channels of one fixture read as a single translucent bar. It is drawn as
-   an overlay rather than as the cells' own background because the cells overlap
-   by 1px so their grid borders collapse, and a translucent background would
-   stack in that overlap and draw a false divider inside the run. Starting the
-   overlay 1px in makes consecutive cells meet exactly instead of overlapping. */
-.dmx-channel-occupied::after {
-  content: '';
+/* the number of the channel under the cursor, above it */
+.dmx-channel-label {
   position: absolute;
-  /* Rows overlap by 1px too, and a float paints as one unit including its
-     positioned descendants, so the row below would paint over the last pixel of
-     this bar and cut off its bottom edge. Stopping at the padding box keeps the
-     bar inside the band this row actually owns. */
-  top: -1px;
-  bottom: 0;
-  left: 0;
-  right: -1px;
-  background-color: var(--sd-primary-soft-strong);
-  border-top: 1px solid var(--sd-primary);
-  border-bottom: 1px solid var(--sd-primary);
-  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 5px));
 }
 
-/* The ends of a run are capped by the outline and the corner radius. They sit
-   flush on their channel, so a bar covers exactly the channels it occupies. */
-.dmx-channel-occupied-start::after {
-  border-left: 1px solid var(--sd-primary);
-  border-top-left-radius: var(--sd-radius);
-  border-bottom-left-radius: var(--sd-radius);
-}
-
-.dmx-channel-occupied-end::after {
-  border-right: 1px solid var(--sd-primary);
-  border-top-right-radius: var(--sd-radius);
-  border-bottom-right-radius: var(--sd-radius);
-}
-
-.dmx-channel-selected {
-  color: #fff;
-}
-
-.dmx-channel-selected::after {
-  background-color: var(--sd-primary);
-}
-
-.dmx-channel-overlapped {
-  color: #fff;
-}
-
-.dmx-channel-overlapped::after {
-  background-color: rgba(229, 84, 75, 0.55);
-  border-color: var(--sd-danger);
-}
-
-.card {
-  overflow: auto;
-}
-
-/* the map contains its floats, so this only needs the distance to it */
+/* the hint keeps its distance to the map above it */
 .dmx-promo-hint {
   padding-top: var(--sd-space-5);
 }
@@ -156,16 +86,4 @@ lib-tree,
 
 .fixture-remove:hover {
   color: var(--sd-text);
-}
-
-/* the number of the channel under the cursor, above it */
-.dmx-channel:hover {
-  z-index: 2;
-}
-
-.dmx-channel:hover::before {
-  content: attr(data-channel);
-  bottom: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
 }
