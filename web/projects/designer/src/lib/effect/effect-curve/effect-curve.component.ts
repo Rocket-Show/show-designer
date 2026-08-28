@@ -11,6 +11,7 @@ import { EffectCurve } from './../../models/effect-curve';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
+import { TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 
@@ -47,6 +48,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
+  public lengthBeatsMin = 0.25;
+  public lengthBeatsMax = 16;
   public amplitudeMin = 0;
   public amplitudeMax = 4;
   public percentageMin = 0;
@@ -55,6 +58,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public phasingMillisMax = 1000;
   public phasingCyclesMin = -4;
   public phasingCyclesMax = 4;
+  public phasingBeatsMin = -4;
+  public phasingBeatsMax = 4;
 
   // the phase moves the curve inside its period, so a shift of a full period lands on
   // the same curve again -> the slider spans one period in each direction, whatever the
@@ -108,7 +113,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private effectService: EffectService,
     private ngZone: NgZone,
     public livePreviewService: LivePreviewService,
-    private modalService: BsModalService
+    private modalService: BsModalService,
+    private timelineService: TimelineService
   ) {
     this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
@@ -179,8 +185,14 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  // the tempo the grid draws a curve synced to the beat at. a preset can be edited without
+  // a composition being open, which leaves the curve on its default tempo.
+  public get beatsPerMinute(): number {
+    return this.timelineService.selectedComposition?.beatsPerMinute ?? EffectCurve.defaultBeatsPerMinute;
+  }
+
   private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {
-    const value = this.curve.getValueAtMillis(currMillis);
+    const value = this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute);
 
     if (value === undefined) {
       // the curve has finished running and left the fixtures to the rest of the preset
@@ -221,13 +233,17 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // the time the grid shows. it is the same window the preview repeats, so the marks on
   // the grid stay in step with the fixtures.
   private getGridDurationMillis(): number {
-    const loopMillis = this.curve.getRunLoopMillis(this.getPhasingCount());
+    const loopMillis = this.curve.getRunLoopMillis(this.getPhasingCount(), this.beatsPerMinute);
 
     if (loopMillis !== undefined) {
       return loopMillis;
     }
 
-    return this.curve.lengthMillis * Math.max(Math.round(4 - this.curve.lengthMillis / 1000), 1);
+    // a short period is shown a few times over, so the grid does not only hold a single
+    // cycle of it
+    const lengthMillis = this.curve.getLengthMillis(this.beatsPerMinute);
+
+    return lengthMillis * Math.max(Math.round(4 - lengthMillis / 1000), 1);
   }
 
   redraw() {
@@ -260,7 +276,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     for (let i = -2; i <= samples + 2; i++) {
       const millis = i * stepMillis;
-      const value = this.curve.getValueAtMillis(millis);
+      const value = this.curve.getValueAtMillis(millis, undefined, undefined, this.beatsPerMinute);
 
       if (value === undefined) {
         // the curve does not apply here (before or after its run) -> leave a gap
@@ -288,13 +304,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     // draw the phasing values (chase), if required
     const phasingCount = this.getPhasingCount();
 
-    if (this.curve.getPhasingMillis(1, phasingCount) === 0) {
+    if (this.curve.getPhasingMillis(1, phasingCount, this.beatsPerMinute) === 0) {
       return;
     }
 
     for (let i = 1; i < phasingCount; i++) {
       // the phasing can be negative, which the modulo has to be normalized for
-      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(i, phasingCount);
+      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(i, phasingCount, this.beatsPerMinute);
 
       this.drawCurrentValue(((phasedMillis % durationMillis) + durationMillis) % durationMillis, 3, width, durationMillis, maxHeight);
     }
@@ -542,7 +558,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   setLengthMillis(value: any) {
     if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisMax) {
       this.curve.lengthMillis = +value;
-      this.lengthMillisChanged();
+      this.lengthChanged();
     }
   }
 
@@ -554,19 +570,72 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     this.curve.lengthMillis = Math.round(+value);
-    this.lengthMillisChanged();
+    this.lengthChanged();
   }
 
-  private lengthMillisChanged() {
+  setLengthBeats(value: any) {
+    if (!isNaN(value) && value >= this.lengthBeatsMin && value <= this.lengthBeatsMax) {
+      this.curve.lengthBeats = +value;
+      this.lengthChanged();
+    }
+  }
+
+  // see setLengthMillisFromSlider
+  setLengthBeatsFromSlider(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    this.curve.lengthBeats = +value;
+    this.lengthChanged();
+  }
+
+  // the curve keeps the speed and the shape it had when it starts or stops following the
+  // tempo, so switching the unit does not throw away what has been set on it
+  setLengthMode(lengthMode: string) {
+    if (lengthMode === this.curve.lengthMode) {
+      return;
+    }
+
+    const phaseCycles = this.phaseCycles;
+
+    if (lengthMode === 'beats') {
+      // the beats the current period lasts, snapped to the steps the slider offers
+      const beats = this.curve.lengthMillis / EffectCurve.getBeatMillis(this.beatsPerMinute);
+      this.curve.lengthBeats = this.clamp(Math.round(beats * 4) / 4, this.lengthBeatsMin, this.lengthBeatsMax);
+    } else {
+      const millis = this.curve.getLengthMillis(this.beatsPerMinute);
+      this.curve.lengthMillis = this.clamp(Math.round(millis), this.lengthMillisMin, this.lengthMillisMax);
+    }
+
+    this.curve.lengthMode = lengthMode;
+
+    // the phase is bound to the period, which is now measured in another unit
+    this.setPhaseCycles(phaseCycles);
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(Math.min(value, max), min);
+  }
+
+  private lengthChanged() {
     // the phase is bound to the period, which just changed under it
-    this.wrapPhaseMillis();
+    this.wrapPhase();
     this.livePreviewService.previewLive();
   }
 
   // the phase repeats with the period: shifting the curve by a full period lands on the
   // same curve again. keeping it inside one period does not change what the curve puts
   // on its fixtures and keeps it on the scale of its slider.
-  private wrapPhaseMillis() {
+  private wrapPhase() {
+    if (this.curve.isBeatSynced()) {
+      if (this.curve.lengthBeats > 0 && Math.abs(this.curve.phaseBeats) > this.curve.lengthBeats) {
+        this.curve.phaseBeats = this.curve.phaseBeats % this.curve.lengthBeats;
+      }
+
+      return;
+    }
+
     if (this.curve.lengthMillis > 0 && Math.abs(this.curve.phaseMillis) > this.curve.lengthMillis) {
       this.curve.phaseMillis = Math.round(this.curve.phaseMillis % this.curve.lengthMillis);
     }
@@ -574,6 +643,14 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   // the phase as the part of the period it shifts the curve by
   get phaseCycles(): number {
+    if (this.curve.isBeatSynced()) {
+      if (!this.curve.lengthBeats) {
+        return 0;
+      }
+
+      return this.curve.phaseBeats / this.curve.lengthBeats;
+    }
+
     if (!this.curve.lengthMillis) {
       return 0;
     }
@@ -586,7 +663,14 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.curve.phaseMillis = Math.round(+value * this.curve.lengthMillis);
+    if (this.curve.isBeatSynced()) {
+      // the slider walks the period in small steps, which would leave the phase with far
+      // more decimals than its input box can show
+      this.curve.phaseBeats = Math.round(+value * this.curve.lengthBeats * 1000) / 1000;
+    } else {
+      this.curve.phaseMillis = Math.round(+value * this.curve.lengthMillis);
+    }
+
     this.livePreviewService.previewLive();
   }
 
@@ -611,9 +695,23 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  setPhaseBeats(value: any) {
+    if (!isNaN(value) && Math.abs(value) <= this.curve.lengthBeats) {
+      this.curve.phaseBeats = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
   setPhasingMillis(value: any) {
     if (!isNaN(value) && value >= this.phasingMillisMin && value <= this.phasingMillisMax) {
       this.curve.phasingMillis = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhasingBeats(value: any) {
+    if (!isNaN(value) && value >= this.phasingBeatsMin && value <= this.phasingBeatsMax) {
+      this.curve.phasingBeats = +value;
       this.livePreviewService.previewLive();
     }
   }

@@ -12,13 +12,32 @@ export class EffectCurve extends Effect {
   // after a run is taken just before it
   private static readonly cycleEpsilon = 1e-9;
 
+  // the tempo a curve synced to the beat falls back to: a preset previewed on its own is
+  // not played inside a composition, so there is no tempo to take it from
+  public static readonly defaultBeatsPerMinute = 120;
+
   curveType = 'sine';
 
   capabilities: FixtureCapability[] = [];
   channels: EffectCurveProfileChannels[] = [];
 
+  // how the period is measured: 'millis' holds it at a fixed time, 'beats' locks it to
+  // the tempo of the composition, so the curve keeps running with the music when the
+  // tempo is changed or guessed again
+  lengthMode = 'millis';
+
   lengthMillis = 2500;
+
+  // the period in beats, while it follows the tempo: 1 is a beat, 4 a bar in 4/4 time,
+  // 0.5 an eighth
+  lengthBeats = 4;
+
   phaseMillis = 0;
+
+  // the phase in beats, while the period follows the tempo. keeping it musical as well
+  // holds the curve at the same place inside its period when the tempo changes.
+  phaseBeats = 0;
+
   amplitude = 1;
   position = 0.5;
 
@@ -41,12 +60,13 @@ export class EffectCurve extends Effect {
   endMode = 'hold';
 
   // how the curve is shifted from one fixture to the next (chasing):
-  // 'millis' shifts it by a fixed time, 'spread' distributes phasingCycles full
-  // cycles over all fixtures of the preset, which keeps the chase intact when the
-  // period or the number of fixtures changes.
-  // both values are signed: a negative one chases in the opposite direction.
+  // 'millis' shifts it by a fixed time, 'beats' by a musical one that follows the tempo,
+  // 'spread' distributes phasingCycles full cycles over all fixtures of the preset, which
+  // keeps the chase intact when the period or the number of fixtures changes.
+  // all three values are signed: a negative one chases in the opposite direction.
   phasingMode = 'millis';
   phasingMillis = 0;
+  phasingBeats = 0;
   phasingCycles = 1;
 
   // how many fixtures share the same chase step (1 = each fixture on its own)
@@ -78,6 +98,12 @@ export class EffectCurve extends Effect {
     this.phasingMillis = data.phasingMillis;
     this.curveType = data.curveType;
 
+    // curves used to run on a fixed time only, without a tempo to follow
+    this.lengthMode = data.lengthMode || 'millis';
+    this.lengthBeats = data.lengthBeats === undefined ? 4 : data.lengthBeats;
+    this.phaseBeats = data.phaseBeats === undefined ? 0 : data.phaseBeats;
+    this.phasingBeats = data.phasingBeats === undefined ? 0 : data.phasingBeats;
+
     // projects before version 4 only knew a fixed phasing time
     this.phasingMode = data.phasingMode || 'millis';
     this.phasingCycles = data.phasingCycles === undefined ? 1 : data.phasingCycles;
@@ -91,20 +117,55 @@ export class EffectCurve extends Effect {
     this.endMode = data.endMode || 'hold';
   }
 
+  // how long a beat lasts at the passed tempo
+  public static getBeatMillis(beatsPerMinute?: number): number {
+    const bpm = beatsPerMinute && beatsPerMinute > 0 ? beatsPerMinute : EffectCurve.defaultBeatsPerMinute;
+
+    return 60000 / bpm;
+  }
+
+  // whether the curve follows the tempo instead of a fixed time
+  public isBeatSynced(): boolean {
+    return this.lengthMode === 'beats';
+  }
+
+  // the period of the curve at the tempo it is played at
+  public getLengthMillis(beatsPerMinute?: number): number {
+    if (!this.isBeatSynced()) {
+      return this.lengthMillis;
+    }
+
+    // a period of zero would divide by zero when the cycle is sampled
+    return Math.max(this.lengthBeats * EffectCurve.getBeatMillis(beatsPerMinute), 1);
+  }
+
+  // the time the curve is shifted by inside its period
+  public getPhaseMillis(beatsPerMinute?: number): number {
+    if (!this.isBeatSynced()) {
+      return this.phaseMillis;
+    }
+
+    return this.phaseBeats * EffectCurve.getBeatMillis(beatsPerMinute);
+  }
+
   // whether the duty cycle changes anything on the current curve type
   public hasDutyCycle(): boolean {
     return EffectCurve.dutyCycleTypes.indexOf(this.curveType) >= 0;
   }
 
   // the time the curve is shifted by for the passed fixture of the preset
-  public getPhasingMillis(fixtureIndex?: number, fixtureCount?: number): number {
+  public getPhasingMillis(fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number {
     const groupSize = Math.max(Math.round(this.phasingGroupSize), 1);
     const step = Math.floor((fixtureIndex || 0) / groupSize);
 
     if (this.phasingMode === 'spread') {
       // distribute the cycles over all chase steps of the preset
       const steps = Math.max(Math.ceil((fixtureCount || 1) / groupSize), 1);
-      return (step / steps) * this.phasingCycles * this.lengthMillis;
+      return (step / steps) * this.phasingCycles * this.getLengthMillis(beatsPerMinute);
+    }
+
+    if (this.phasingMode === 'beats') {
+      return step * this.phasingBeats * EffectCurve.getBeatMillis(beatsPerMinute);
     }
 
     return step * this.phasingMillis;
@@ -112,9 +173,9 @@ export class EffectCurve extends Effect {
 
   // how long the curve runs, measured from the moment its fixture starts, or undefined
   // if it never stops
-  public getRunEndMillis(): number | undefined {
+  public getRunEndMillis(beatsPerMinute?: number): number | undefined {
     if (this.runMode === 'cycles') {
-      return Math.max(Math.round(this.runCycles), 1) * this.lengthMillis;
+      return Math.max(Math.round(this.runCycles), 1) * this.getLengthMillis(beatsPerMinute);
     }
 
     if (this.runMode === 'duration') {
@@ -128,8 +189,8 @@ export class EffectCurve extends Effect {
   // starts until the last one has finished, plus a rest that shows what it leaves behind.
   // a preset that is not placed in a composition has no moment it starts at, so it is
   // previewed by repeating this pass. undefined for a curve that never stops.
-  public getRunLoopMillis(fixtureCount?: number): number | undefined {
-    const runEndMillis = this.getRunEndMillis();
+  public getRunLoopMillis(fixtureCount?: number, beatsPerMinute?: number): number | undefined {
+    const runEndMillis = this.getRunEndMillis(beatsPerMinute);
 
     if (runEndMillis === undefined) {
       return undefined;
@@ -137,18 +198,20 @@ export class EffectCurve extends Effect {
 
     // the chase delays the fixtures against each other, so the pass is only over once
     // the last of them has run
-    const chaseMillis = Math.abs(this.getPhasingMillis(Math.max((fixtureCount || 1) - 1, 0), fixtureCount));
+    const chaseMillis = Math.abs(this.getPhasingMillis(Math.max((fixtureCount || 1) - 1, 0), fixtureCount, beatsPerMinute));
 
     return Math.max((runEndMillis + chaseMillis) * 1.25, 1);
   }
 
   // the value the curve puts on its channels, or undefined if it does not apply at this
   // moment - the fixtures keep whatever the rest of the preset puts on them then
-  public getValueAtMillis(timeMillis: number, fixtureIndex?: number, fixtureCount?: number): number | undefined {
-    const phasingMillis = this.getPhasingMillis(fixtureIndex, fixtureCount);
-    const phase = this.phaseMillis + phasingMillis;
+  public getValueAtMillis(timeMillis: number, fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number | undefined {
+    const lengthMillis = this.getLengthMillis(beatsPerMinute);
+    const phasingMillis = this.getPhasingMillis(fixtureIndex, fixtureCount, beatsPerMinute);
+    const phaseMillis = this.getPhaseMillis(beatsPerMinute);
+    const phase = phaseMillis + phasingMillis;
 
-    const runEndMillis = this.getRunEndMillis();
+    const runEndMillis = this.getRunEndMillis(beatsPerMinute);
 
     if (runEndMillis !== undefined) {
       // the chase delays the whole run of a fixture, so each of them runs its cycles
@@ -165,16 +228,16 @@ export class EffectCurve extends Effect {
           return undefined;
         }
 
-        return this.getCurveValue(this.getCyclePosition(runEndMillis - this.phaseMillis, true));
+        return this.getCurveValue(this.getCyclePosition(runEndMillis - phaseMillis, true, lengthMillis));
       }
     }
 
-    return this.getCurveValue(this.getCyclePosition(timeMillis - phase, false));
+    return this.getCurveValue(this.getCyclePosition(timeMillis - phase, false, lengthMillis));
   }
 
   // the position inside the current cycle, between 0 and 1
-  private getCyclePosition(shiftedMillis: number, atRunEnd: boolean): number {
-    const cyclePosition = (((shiftedMillis / this.lengthMillis) % 1) + 1) % 1;
+  private getCyclePosition(shiftedMillis: number, atRunEnd: boolean, lengthMillis: number): number {
+    const cyclePosition = (((shiftedMillis / lengthMillis) % 1) + 1) % 1;
 
     if (atRunEnd && cyclePosition < EffectCurve.cycleEpsilon) {
       // a run of full cycles ends exactly on a cycle border, where the curve has already
