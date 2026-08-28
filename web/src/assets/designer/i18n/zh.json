@@ -178,6 +178,7 @@
       "remove-fixture": "移除灯具",
       "create-profile": "创建配置文件",
       "search-profiles": "搜索配置文件",
+      "more-profiles": "还有 {{count}} 个配置文件匹配。请细化搜索以查看它们。",
       "settings": "设置",
       "dmx": "DMX 概览",
       "fixture-name": "灯具名称",

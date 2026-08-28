@@ -26,7 +26,7 @@
                 <i class="fa fa-spinner fa-pulse fa-fw"></i>
               </p>
             </a>
-            } @for (profile of filteredProfiles | sort : 'uuid'; track profile) {
+            } @for (profile of filteredProfiles; track profile.uuid) {
             <div class="list-group-item">
               <div class="row">
                 <div class="col-10 col-auto my-auto pl-2">
@@ -41,6 +41,12 @@
                   </a>
                 </div>
               </div>
+            </div>
+            } @if (hiddenProfileCount) {
+            <div class="list-group-item">
+              <p class="mb-0 text-center">
+                {{ 'designer.fixture-pool.more-profiles' | translate : { count: hiddenProfileCount } }}
+              </p>
             </div>
             }
           </div>
@@ -238,17 +244,15 @@
             @for (channel of dmxChannels; track $index; let i = $index) {
             <div
               class="dmx-channel"
-              [class.dmx-channel-occupied]="channelOccupied(i)"
-              [class.dmx-channel-occupied-start]="channelOccupiedStart(i)"
-              [class.dmx-channel-occupied-end]="channelOccupiedEnd(i)"
-              [class.dmx-channel-selected]="channelSelected(i)"
-              [class.dmx-channel-overlapped]="channelOverlapped(i)"
+              [class.dmx-channel-occupied]="channel.occupied"
+              [class.dmx-channel-occupied-start]="channel.start"
+              [class.dmx-channel-occupied-end]="channel.end"
+              [class.dmx-channel-selected]="channel.selected"
+              [class.dmx-channel-overlapped]="channel.overlapped"
               (mousedown)="channelMouseDown($event)"
               (mouseover)="channelMouseOver($event)"
               [attr.data-index]="i"
-              popover="{{ i + 1 }}"
-              placement="top"
-              triggers="mouseenter:mouseleave"
+              [attr.data-channel]="i + 1"
             >
               <div class="d-flex w-100 dmx-channel-text" [attr.data-index]="i" [class.dmx-channel-text-visible]="showChannelNumbers">
                 <div class="m-auto" style="font-size: 11px" [attr.data-index]="i"><small [attr.data-index]="i">&nbsp;</small></div>
@@ -287,7 +291,7 @@
                 <select
                   class="custom-select"
                   [ngModel]="selectedFixture.modeShortName"
-                  (ngModelChange)="selectedFixture.modeShortName = $event"
+                  (ngModelChange)="selectedFixture.modeShortName = $event; updateChannelMap()"
                 >
                   @for (mode of selectedFixtureProfile.modes; track mode) {
                   <option [ngValue]="mode.shortName || mode.name">
@@ -306,7 +310,7 @@
                   class="custom-select"
                   [disabled]="universes.length === 0"
                   [ngModel]="selectedFixture.dmxUniverseUuid"
-                  (ngModelChange)="selectedFixture.dmxUniverseUuid = $event"
+                  (ngModelChange)="selectedFixture.dmxUniverseUuid = $event; updateChannelMap()"
                 >
                   @for (universe of universes; track universe.uuid) {
                   <option [ngValue]="universe.uuid">{{ universe.name }}</option>
@@ -320,7 +324,7 @@
                 <select
                   class="custom-select"
                   [ngModel]="selectedFixture.dmxFirstChannel"
-                  (ngModelChange)="selectedFixture.dmxFirstChannel = $event"
+                  (ngModelChange)="selectedFixture.dmxFirstChannel = $event; updateChannelMap()"
                 >
                   @for (channel of dmxChannels; track $index; let i = $index) {
                   <option [ngValue]="i">

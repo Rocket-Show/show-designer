@@ -31,6 +31,19 @@ interface PoolFixture extends FolderItem {
   fixture: Fixture;
 }
 
+// One channel of the DMX map: what is drawn on it. The whole map is built again
+// whenever the patch changes, instead of asking every fixture about every one of the
+// 512 channels while the map is drawn - the pool stays open while the user works, so
+// that ran on every mouse move.
+interface DmxChannel {
+  occupied: boolean;
+  // the first and the last channel of a fixture, which the bar is capped at
+  start: boolean;
+  end: boolean;
+  selected: boolean;
+  overlapped: boolean;
+}
+
 @Component({
   selector: 'lib-app-fixture-pool',
   templateUrl: './fixture-pool.component.html',
@@ -38,8 +51,11 @@ interface PoolFixture extends FolderItem {
   standalone: false,
 })
 export class FixturePoolComponent implements OnInit {
-  private profiles: FixtureProfile[];
-  public filteredProfiles: FixtureProfile[];
+  // the profiles the search list shows, and how many more the search matched (see
+  // maxShownProfiles)
+  public filteredProfiles: FixtureProfile[] = [];
+  public hiddenProfileCount = 0;
+
   public loadingProfiles = false;
 
   public fixturePool: Fixture[];
@@ -56,7 +72,7 @@ export class FixturePoolComponent implements OnInit {
   // folder buttons act on
   public focusedNode: TreeNode = undefined;
 
-  public dmxChannels: number[] = [];
+  public dmxChannels: DmxChannel[] = [];
   public selectedFixture: Fixture;
   public selectedFixtureProfile: FixtureProfile;
   public showChannelNumbers = false;
@@ -80,8 +96,17 @@ export class FixturePoolComponent implements OnInit {
 
   public promoLink: string;
 
+  // The fixture library holds thousands of profiles, of which a list this size shows a
+  // handful. Building a row for every one of them costs seconds and makes everything
+  // the pool does afterwards slow, so the search shows the first matches and says how
+  // many more there are.
+  private static readonly maxShownProfiles = 50;
+
   // one row per fixture of the pool, in the folders of the project
   private fixtureItems: PoolFixture[] = [];
+
+  // every profile together with the text the search runs against, prepared once
+  private searchIndex: { profile: FixtureProfile; text: string }[] = [];
 
   // what the trash button acts on: the folder which was clicked last
   private targetFolder: Folder = undefined;
@@ -159,13 +184,17 @@ export class FixturePoolComponent implements OnInit {
     if (this.selectedFixture && this.selectedFixture.dmxUniverseUuid !== universe?.uuid) {
       this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
     }
+
+    // the map shows the channels of the selected universe
+    this.updateChannelMap();
   }
 
   ngOnInit() {
     for (let i = 0; i < 512; i++) {
-      this.dmxChannels.push(0);
+      this.dmxChannels.push({ occupied: false, start: false, end: false, selected: false, overlapped: false });
     }
 
+    this.updateChannelMap();
     this.loadProfiles();
   }
 
@@ -173,7 +202,14 @@ export class FixturePoolComponent implements OnInit {
     this.loadingProfiles = true;
 
     this.fixtureService.getSearchProfiles().subscribe((profiles) => {
-      this.profiles = profiles;
+      // the list is shown in this order, so it is sorted once instead of on every search
+      this.searchIndex = profiles
+        .sort((profile1, profile2) => profile1.uuid.localeCompare(profile2.uuid))
+        .map((profile) => ({
+          profile,
+          text: (profile.uuid + ' ' + profile.name + ' ' + profile.manufacturerName).toLowerCase(),
+        }));
+
       this.filterProfiles();
       this.loadingProfiles = false;
     });
@@ -194,6 +230,7 @@ export class FixturePoolComponent implements OnInit {
       this.selectedUniverse = universe;
     }
 
+    this.updateChannelMap();
     this.updateSelection();
   }
 
@@ -436,30 +473,25 @@ export class FixturePoolComponent implements OnInit {
   }
 
   filterProfiles() {
-    if (!this.searchExpression || !this.profiles) {
-      this.filteredProfiles = this.profiles;
-      return;
-    }
+    const keywords = (this.searchExpression || '')
+      .toLowerCase()
+      .split(' ')
+      .filter((keyword) => keyword.length > 0);
 
     this.filteredProfiles = [];
+    this.hiddenProfileCount = 0;
 
-    const keywords = this.searchExpression.split(' ');
-
-    for (const profile of this.profiles) {
-      let foundKeywords = 0;
-
-      for (const keyword of keywords) {
-        if (
-          profile.uuid.toLowerCase().indexOf(keyword.toLowerCase()) !== -1 ||
-          profile.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1 ||
-          profile.manufacturerName.toLowerCase().indexOf(keyword.toLowerCase()) !== -1
-        ) {
-          foundKeywords++;
-        }
+    for (const entry of this.searchIndex) {
+      if (!keywords.every((keyword) => entry.text.indexOf(keyword) !== -1)) {
+        continue;
       }
 
-      if (foundKeywords === keywords.length) {
-        this.filteredProfiles.push(profile);
+      // everything past the first matches is only counted: they are what makes the list
+      // expensive, and a search this wide is refined rather than scrolled
+      if (this.filteredProfiles.length < FixturePoolComponent.maxShownProfiles) {
+        this.filteredProfiles.push(entry.profile);
+      } else {
+        this.hiddenProfileCount++;
       }
     }
   }
@@ -513,6 +545,7 @@ export class FixturePoolComponent implements OnInit {
       this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
     }
 
+    this.updateChannelMap();
     this.buildTree();
 
     // remove unused profiles
@@ -532,69 +565,80 @@ export class FixturePoolComponent implements OnInit {
     }
   }
 
-  channelOccupied(index: number): boolean {
-    for (const fixture of this.channelFixtures) {
-      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
-      const mode = this.fixtureService.getModeByFixture(profile, fixture);
-      const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
+  // What the DMX map draws: the channels every fixture of the universe occupies, where
+  // its run starts and ends, the ones of the fixture being edited and the ones two
+  // fixtures collide on. Call it whenever the patch changes.
+  updateChannelMap() {
+    for (const channel of this.dmxChannels) {
+      channel.occupied = false;
+      channel.start = false;
+      channel.end = false;
+      channel.selected = false;
+      channel.overlapped = false;
+    }
 
-      if (index >= fixture.dmxFirstChannel && index < fixture.dmxFirstChannel + channelCount) {
-        return true;
+    // fixtures may share their channels while they are the same lamp: same address,
+    // same mode and same universe. Anything else on a channel is a collision.
+    const lampOf: string[] = [];
+
+    for (const fixture of this.channelFixtures) {
+      const lamp = this.lampKey(fixture);
+      const lastChannel = fixture.dmxFirstChannel + this.fixtureChannelCount(fixture) - 1;
+
+      for (let i = fixture.dmxFirstChannel; i <= lastChannel && i < this.dmxChannels.length; i++) {
+        const channel = this.dmxChannels[i];
+
+        if (channel.occupied && lampOf[i] !== lamp) {
+          channel.overlapped = true;
+        } else if (!channel.occupied) {
+          lampOf[i] = lamp;
+        }
+
+        channel.occupied = true;
+      }
+
+      if (fixture.dmxFirstChannel < this.dmxChannels.length) {
+        this.dmxChannels[fixture.dmxFirstChannel].start = true;
+      }
+
+      if (lastChannel < this.dmxChannels.length) {
+        this.dmxChannels[lastChannel].end = true;
       }
     }
 
-    return false;
-  }
+    if (this.selectedFixture) {
+      const lastChannel = this.selectedFixture.dmxFirstChannel + this.fixtureChannelCount(this.selectedFixture) - 1;
 
-  channelOccupiedStart(index: number): boolean {
-    for (const fixture of this.channelFixtures) {
-      if (index === fixture.dmxFirstChannel) {
-        return true;
+      for (let i = this.selectedFixture.dmxFirstChannel; i <= lastChannel && i < this.dmxChannels.length; i++) {
+        this.dmxChannels[i].selected = true;
       }
     }
-
-    return false;
   }
 
-  channelOccupiedEnd(index: number): boolean {
-    for (const fixture of this.channelFixtures) {
-      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
-      const mode = this.fixtureService.getModeByFixture(profile, fixture);
-      const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
-
-      if (index === fixture.dmxFirstChannel + channelCount - 1) {
-        return true;
-      }
-    }
-
-    return false;
+  // the same lamp patched twice is not a collision, see updateChannelMap
+  private lampKey(fixture: Fixture): string {
+    return fixture.dmxFirstChannel + '/' + fixture.modeShortName + '/' + fixture.dmxUniverseUuid;
   }
 
-  channelOverlapped(index: number): boolean {
-    return this.channelOverlappedInFixtures(index, this.channelFixtures);
+  private fixtureChannelCount(fixture: Fixture): number {
+    const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+
+    return this.fixtureService.getModeChannelCount(profile, this.fixtureService.getModeByFixture(profile, fixture));
   }
 
-  private channelOverlappedInFixtures(index: number, fixtures: Fixture[]): boolean {
-    let occupiedFixture: Fixture;
+  // do any two fixtures of the passed list share a channel without being the same lamp?
+  private fixturesOverlap(fixtures: Fixture[]): boolean {
+    const lampOf: string[] = [];
 
     for (const fixture of fixtures) {
-      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
-      const mode = this.fixtureService.getModeByFixture(profile, fixture);
-      const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
+      const lamp = this.lampKey(fixture);
+      const lastChannel = fixture.dmxFirstChannel + this.fixtureChannelCount(fixture) - 1;
 
-      if (index >= fixture.dmxFirstChannel && index < fixture.dmxFirstChannel + channelCount) {
-        if (occupiedFixture) {
-          if (
-            occupiedFixture.dmxFirstChannel !== fixture.dmxFirstChannel ||
-            occupiedFixture.modeShortName !== fixture.modeShortName ||
-            occupiedFixture.dmxUniverseUuid !== fixture.dmxUniverseUuid
-          ) {
-            // fixtures are allowed to overlap, if they start at the same channel,
-            // use the same mode and belong to the same universe. otherwise it's not allowed.
-            return true;
-          }
-        } else {
-          occupiedFixture = fixture;
+      for (let i = fixture.dmxFirstChannel; i <= lastChannel && i < this.dmxChannels.length; i++) {
+        if (lampOf[i] === undefined) {
+          lampOf[i] = lamp;
+        } else if (lampOf[i] !== lamp) {
+          return true;
         }
       }
     }
@@ -610,11 +654,7 @@ export class FixturePoolComponent implements OnInit {
     // find a dragging fixture and select it, but don't change the selection, if the
     // currently selected fixture might also be selected (on overlapped fixtures)
     for (const fixture of this.channelFixtures) {
-      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
-      const mode = this.fixtureService.getModeByFixture(profile, fixture);
-      const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
-
-      if (selectedIndex >= fixture.dmxFirstChannel && selectedIndex <= fixture.dmxFirstChannel + channelCount - 1) {
+      if (selectedIndex >= fixture.dmxFirstChannel && selectedIndex <= fixture.dmxFirstChannel + this.fixtureChannelCount(fixture) - 1) {
         if (this.selectedFixture === fixture) {
           newSelectedFixture = fixture;
           break;
@@ -636,24 +676,6 @@ export class FixturePoolComponent implements OnInit {
     }
   }
 
-  channelSelected(index: number): boolean {
-    if (!this.selectedFixture) {
-      return false;
-    }
-
-    if (index >= this.selectedFixture.dmxFirstChannel) {
-      const profile = this.fixtureService.getProfileByUuid(this.selectedFixture.profileUuid);
-      const mode = this.fixtureService.getModeByFixture(profile, this.selectedFixture);
-      const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
-
-      if (index < this.selectedFixture.dmxFirstChannel + channelCount) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   // register mouse up globally (e.g. also outside the DMX mapping)
   @HostListener('window:mouseup', ['$event'])
   mouseUp(event: any) {
@@ -669,30 +691,26 @@ export class FixturePoolComponent implements OnInit {
 
     // perform dragging
     const selectedIndex = event.target.dataset.index;
-    const profile = this.fixtureService.getProfileByUuid(this.channelDragFixture.profileUuid);
-    const mode = this.fixtureService.getModeByFixture(profile, this.selectedFixture);
-    const channelCount = this.fixtureService.getModeChannelCount(profile, mode);
+    const channelCount = this.fixtureChannelCount(this.channelDragFixture);
 
     if (selectedIndex - this.channelDragOffset >= 0 && selectedIndex - this.channelDragOffset + channelCount - 1 <= 511) {
       this.channelDragFixture.dmxFirstChannel = selectedIndex - this.channelDragOffset;
+      this.updateChannelMap();
     }
   }
 
   ok() {
     // don't allow OK if overlapping fixtures exist within any universe
     for (const universe of this.universes) {
-      const universeFixtures = this.fixturePool.filter((f) => f.dmxUniverseUuid === universe.uuid);
-      for (let i = 0; i < this.dmxChannels.length; i++) {
-        if (this.channelOverlappedInFixtures(i, universeFixtures)) {
-          const msg = 'designer.fixture-pool.channel-occupied';
-          const title = 'designer.fixture-pool.channel-occupied-title';
+      if (this.fixturesOverlap(this.fixturePool.filter((f) => f.dmxUniverseUuid === universe.uuid))) {
+        const msg = 'designer.fixture-pool.channel-occupied';
+        const title = 'designer.fixture-pool.channel-occupied-title';
 
-          this.translateService.get([msg, title]).subscribe((result) => {
-            this.toastrService.error(result[msg], result[title]);
-          });
+        this.translateService.get([msg, title]).subscribe((result) => {
+          this.toastrService.error(result[msg], result[title]);
+        });
 
-          return;
-        }
+        return;
       }
     }
 
@@ -920,6 +938,8 @@ export class FixturePoolComponent implements OnInit {
         this.selectedUniverse = this.universes[0] ?? undefined;
         this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
       }
+
+      this.updateChannelMap();
     });
   }
 

@@ -178,6 +178,7 @@
       "remove-fixture": "Eliminar fixture",
       "create-profile": "Crear perfil",
       "search-profiles": "Buscar perfiles",
+      "more-profiles": "Hay {{count}} perfiles más que coinciden. Afina la búsqueda para verlos.",
       "settings": "Configuración",
       "dmx": "Vista general DMX",
       "fixture-name": "Nombre del fixture",
