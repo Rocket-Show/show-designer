@@ -732,7 +732,7 @@ export class TimelineService {
       const selected = marker.step === this.presetService.selectedStep;
 
       if (marker.transitionWidthPercentage > 0) {
-        const transition = this.createStepMarker('step-marker step-marker-transition', marker.transitionLeftPercentage, selected);
+        const transition = this.createStepMarker('step-marker step-marker-transition', marker.leftPercentage, selected);
         transition.style.width = marker.transitionWidthPercentage + '%';
         region.element.appendChild(transition);
       }

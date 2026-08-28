@@ -8,13 +8,13 @@ import { TransitionCurveType } from './transition-curve';
 export class PresetStep {
   uuid: string;
 
-  // when this step is fully reached, relative to the start of the preset. The
-  // transition runs over the time before it, so a step lands on its millisecond (and
-  // with it on its beat) instead of only starting to move there.
+  // when this step starts, relative to the start of the preset. It is what the preset
+  // shows from that millisecond (and with it from that beat) until the next step
+  // starts, and the transition into it runs over the beginning of that time.
   startMillis = 0;
 
-  // how long the values travel from the previous step to this one: undefined = the
-  // whole time since that step, 0 = a jump
+  // how long the values travel from the previous step into this one, counted from the
+  // start of this step: undefined = the whole time this step lasts, 0 = a jump
   transitionMillis: number;
   transitionCurve: TransitionCurveType = 'linear';
 
@@ -65,17 +65,35 @@ export class PresetStep {
   }
 }
 
-// Where the transition into a step starts: the whole time since the step before it,
-// unless the step carries a shorter time of its own. A transition never reaches back
-// past the step it starts from, and the first step has nothing to travel from.
-export function getTransitionStartMillis(step: PresetStep, reachedMillis: number, previousReachedMillis: number): number {
-  if (previousReachedMillis === undefined) {
-    return reachedMillis;
+// Where the transition into a step ends: it begins as the step does and travels from
+// the step before it over the whole time this step lasts, unless the step carries a
+// shorter time of its own. A transition never runs past the step which follows it.
+export function getTransitionEndMillis(step: PresetStep, startMillis: number, endMillis: number): number {
+  if (endMillis === undefined || endMillis <= startMillis) {
+    return startMillis;
   }
 
   if (step.transitionMillis === undefined) {
-    return previousReachedMillis;
+    return endMillis;
   }
 
-  return Math.max(reachedMillis - step.transitionMillis, previousReachedMillis);
+  return Math.min(startMillis + step.transitionMillis, endMillis);
+}
+
+// The length of one pass through the passed steps. Without a length of its own, the
+// last step holds as long as the one before it lasted, which loops an evenly spaced
+// chase the way it is written down.
+export function getStepsLoopMillis(steps: PresetStep[], loopMillis?: number): number {
+  if (loopMillis !== undefined && loopMillis > 0) {
+    return loopMillis;
+  }
+
+  if (!steps || steps.length < 2) {
+    return 0;
+  }
+
+  const last = steps[steps.length - 1];
+  const previous = steps[steps.length - 2];
+
+  return last.startMillis - steps[0].startMillis + (last.startMillis - previous.startMillis);
 }
