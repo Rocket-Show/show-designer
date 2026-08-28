@@ -55,8 +55,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public phasingMillisMax = 1000;
   public phasingCyclesMin = -4;
   public phasingCyclesMax = 4;
-  public phasingGroupSizeMin = 1;
-  public phasingGroupSizeMax = 16;
 
   // the phase moves the curve inside its period, so a shift of a full period lands on
   // the same curve again -> the slider spans one period in each direction, whatever the
@@ -627,13 +625,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
-  setPhasingGroupSize(value: any) {
-    if (!isNaN(value) && value >= this.phasingGroupSizeMin && value <= this.phasingGroupSizeMax) {
-      this.curve.phasingGroupSize = Math.round(+value);
-      this.livePreviewService.previewLive();
-    }
-  }
-
   setPhasingMode(phasingMode: string) {
     this.curve.phasingMode = phasingMode;
     this.livePreviewService.previewLive();
@@ -642,7 +633,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // whether the advanced settings hold anything else than their defaults. the button
   // marks it, so settings that are not on this screen are not lost out of sight.
   advancedActive(): boolean {
-    return this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5);
+    return (
+      this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5) || this.curve.phasingGroupSize !== 1
+    );
   }
 
   openAdvanced() {

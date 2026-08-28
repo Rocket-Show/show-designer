@@ -21,6 +21,8 @@ export class EffectCurveAdvancedComponent {
   public runDurationMillisMax = 3600000;
   public dutyCyclePercentMin = 0;
   public dutyCyclePercentMax = 100;
+  public phasingGroupSizeMin = 1;
+  public phasingGroupSizeMax = 16;
 
   constructor(public bsModalRef: BsModalRef, public livePreviewService: LivePreviewService) {}
 
@@ -63,6 +65,15 @@ export class EffectCurveAdvancedComponent {
 
   setEndMode(endMode: string) {
     this.curve.endMode = endMode;
+    this.livePreviewService.previewLive();
+  }
+
+  setPhasingGroupSize(value: any) {
+    if (isNaN(value) || value < this.phasingGroupSizeMin || value > this.phasingGroupSizeMax) {
+      return;
+    }
+
+    this.curve.phasingGroupSize = Math.round(+value);
     this.livePreviewService.previewLive();
   }
 

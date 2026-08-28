@@ -176,26 +176,6 @@
       </select>
     </div>
   </div>
-
-  <div class="d-flex">
-    <div class="my-auto" style="width: 100px; float: left">
-      {{ 'designer.effect.curve-chase-group' | translate }}
-    </div>
-    <div class="my-auto" style="float: left">
-      <mv-slider
-        (change)="livePreviewService.previewLive()"
-        [(value)]="curve.phasingGroupSize"
-        style="width: 80px"
-        [tooltip]="'hide'"
-        [min]="phasingGroupSizeMin"
-        [max]="phasingGroupSizeMax"
-        [step]="1"
-      ></mv-slider>
-    </div>
-    <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.phasingGroupSize" (ngModelChange)="setPhasingGroupSize($event)" />
-    </div>
-  </div>
 </div>
 
 <!-- Menu for the capabilities and channels-->
