@@ -41,6 +41,9 @@
     },
     "navigation": {
       "project": "Progetto",
+      "edit": "Modifica",
+      "undo": "Annulla",
+      "redo": "Ripristina",
       "settings": "Impostazioni",
       "help": "Aiuto",
       "fixture-pool": "Pool fixture",

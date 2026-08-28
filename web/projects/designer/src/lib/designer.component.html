@@ -33,6 +33,28 @@
         </div>
       </li>
       <li class="nav-item dropdown d-none d-md-block">
+        <!-- collect what has been changed so far before showing whether there is anything to undo -->
+        <a
+          class="nav-link dropdown-toggle"
+          href="#"
+          id="editDropdown"
+          data-toggle="dropdown"
+          aria-haspopup="true"
+          aria-expanded="false"
+          (click)="undoService.captureChanges()"
+        >
+          {{ 'designer.navigation.edit' | translate }}
+        </a>
+        <div class="dropdown-menu" aria-labelledby="editDropdown">
+          <a class="dropdown-item" [class.disabled]="!undoService.canUndo" href="#" (click)="undo(); (false)"
+            ><i class="fa fa-fw fa-undo" aria-hidden="true"></i> {{ 'designer.navigation.undo' | translate }}</a
+          >
+          <a class="dropdown-item" [class.disabled]="!undoService.canRedo" href="#" (click)="redo(); (false)"
+            ><i class="fa fa-fw fa-repeat" aria-hidden="true"></i> {{ 'designer.navigation.redo' | translate }}</a
+          >
+        </div>
+      </li>
+      <li class="nav-item dropdown d-none d-md-block">
         <a
           class="nav-link dropdown-toggle"
           href="#"

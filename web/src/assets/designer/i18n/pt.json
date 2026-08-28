@@ -41,6 +41,9 @@
     },
     "navigation": {
       "project": "Projeto",
+      "edit": "Editar",
+      "undo": "Desfazer",
+      "redo": "Refazer",
       "settings": "Definições",
       "help": "Ajuda",
       "fixture-pool": "Grupo de fixtures",

@@ -104,7 +104,7 @@ export class TimelineService {
     this.timelineStateService.selectedCompositionIndex = selectedCompositionIndex;
   }
 
-  private redrawAllRegions() {
+  redrawAllRegions() {
     // remove all regions from wavesurver
     if (this.waveSurfer) {
       for (const key of Object.keys(this.waveSurfer.regions.list)) {

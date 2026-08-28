@@ -41,6 +41,9 @@
     },
     "navigation": {
       "project": "Project",
+      "edit": "Edit",
+      "undo": "Undo",
+      "redo": "Redo",
       "settings": "Settings",
       "help": "Help",
       "fixture-pool": "Fixture pool",
