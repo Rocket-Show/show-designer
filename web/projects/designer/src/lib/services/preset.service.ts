@@ -660,6 +660,12 @@ export class PresetService {
   }
 
   private hasCapabilityType(type: FixtureCapabilityType): boolean {
+    // nothing is being edited yet: the panels are asked while the project is still
+    // being loaded, before a preset has been picked
+    if (!this.selectedPreset) {
+      return false;
+    }
+
     // there is at least one channel with at least one intensity capability
     for (const presetFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
@@ -697,6 +703,10 @@ export class PresetService {
     // one of the profiles has a color intensity
     if (this.hasCapabilityColor()) {
       return true;
+    }
+
+    if (!this.selectedPreset) {
+      return false;
     }
 
     // a color wheel is involved
