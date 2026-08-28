@@ -91,6 +91,12 @@
   min-width: 3px;
   border-radius: var(--sd-radius-sm) 0 0 var(--sd-radius-sm);
   background-color: var(--sd-primary-soft-strong);
+  /* The width is read on a clock of its own rather than on every frame, so the fill
+     travels between two of its readings instead of stepping from one to the next. The
+     travel takes exactly as long as the clock's interval, so each one arrives as the
+     next reading comes in: any longer and the fill would never catch up with itself.
+     A step change swaps the element, which starts at its own width without moving. */
+  transition: width 0.1s linear;
 }
 
 /* the number reads over the fill rather than under it */
