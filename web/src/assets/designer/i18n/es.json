@@ -180,6 +180,7 @@
       "capability-color": "Color",
       "capability-color-wheel": "Rueda de color",
       "capability-pan-tilt": "Pan/Tilt",
+      "capability-pan-tilt-mirror": "Reflejar",
       "profiles": "Perfiles",
       "setting-position-title": "Posición del fixture",
       "setting-position": "Posición",

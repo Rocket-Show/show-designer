@@ -180,6 +180,7 @@
       "capability-color": "Farbe",
       "capability-color-wheel": "Farbrad",
       "capability-pan-tilt": "Pan/Tilt",
+      "capability-pan-tilt-mirror": "Spiegeln",
       "profiles": "Profiles",
       "setting-position-title": "Fixture Position",
       "setting-position": "Position",
