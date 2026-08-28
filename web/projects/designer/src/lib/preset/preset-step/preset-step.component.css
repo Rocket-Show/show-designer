@@ -80,14 +80,20 @@
   color: #ffd0a8;
 }
 
-/* the step the preset is on while it runs, which is not necessarily the edited one */
-.step-active:before {
-  content: '';
+/* How far the preset has come through the step it is on while it runs, which is not
+   necessarily the step being edited. It keeps a sliver of itself once the step is
+   reached, so the step reads as the current one before it has filled anything. */
+.step-progress {
   position: absolute;
-  top: -1px;
-  bottom: -1px;
-  left: -1px;
-  width: 3px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 3px;
   border-radius: var(--sd-radius-sm) 0 0 var(--sd-radius-sm);
-  background-color: var(--sd-primary);
+  background-color: var(--sd-primary-soft-strong);
+}
+
+/* the number reads over the fill rather than under it */
+.step-number {
+  position: relative;
 }

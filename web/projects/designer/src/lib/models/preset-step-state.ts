@@ -8,6 +8,10 @@ export class PresetStepState {
   // the step reached last, which is the one a preset is on while it plays
   currentStep: PresetStep;
 
+  // how far it has come from that step towards the next one, between 0 and 1. Only the
+  // designer reads this, to fill the step it is on as it goes.
+  currentStepProgress = 0;
+
   fixtureChannelValues: FixtureChannelValue[] = [];
   fixtureCapabilityValues: FixtureCapabilityValue[] = [];
 

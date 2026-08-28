@@ -501,8 +501,10 @@ export class PreviewService implements OnDestroy {
     // playing preset is what this is keyed by.
     const presetStates = new Map<PresetRegionScene, PresetStepState>();
 
-    // which step the preset being edited is on, for its rail to mark while it runs
+    // which step the preset being edited is on and how far into it, for its list to
+    // mark and fill while it runs
     let activeStep: PresetStep;
+    let activeStepProgress = 0;
 
     for (const preset of presets) {
       if (!fixtureCounts.has(preset.preset)) {
@@ -516,11 +518,14 @@ export class PreviewService implements OnDestroy {
       }
 
       if (preset.preset === this.presetService.selectedPreset && (preset.region || this.presetService.stepPreviewRunning)) {
-        activeStep = (presetStates.get(preset) || this.getPresetStepState(preset, timeMillis)).currentStep;
+        const state = presetStates.get(preset) || this.getPresetStepState(preset, timeMillis);
+        activeStep = state.currentStep;
+        activeStepProgress = state.currentStepProgress;
       }
     }
 
     this.presetService.activeStep = activeStep;
+    this.presetService.activeStepProgress = activeStepProgress;
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];

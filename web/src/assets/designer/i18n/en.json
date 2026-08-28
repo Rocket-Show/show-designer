@@ -149,7 +149,7 @@
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
-      "custom-order": "Custom order",
+      "custom-order": "Custom order for the preset",
       "select-none": "Select none",
       "select-all": "Select all",
       "collapse-all": "Collapse all folders",

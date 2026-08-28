@@ -149,7 +149,7 @@
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",
-      "custom-order": "Ordre personnalisé",
+      "custom-order": "Ordre personnalisé pour le préréglage",
       "select-none": "Ne rien sélectionner",
       "select-all": "Tout sélectionner",
       "collapse-all": "Réduire tous les dossiers",

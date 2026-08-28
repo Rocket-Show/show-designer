@@ -191,22 +191,35 @@ export class PresetStepService {
       target = first;
       targetStartMillis = first.startMillis + loopMillis;
     } else {
-      // the last step is held until the preset ends
-      return this.getStepState(current);
+      // the last step is held until the preset ends, so it is as far along as it gets
+      const state = this.getStepState(current);
+      state.currentStepProgress = 1;
+
+      return state;
     }
+
+    // how far the sequence has come from this step towards the next one, over the whole
+    // time between them rather than only over the transition at its end
+    const stepLengthMillis = targetStartMillis - current.startMillis;
+    const progress = stepLengthMillis > 0 ? (timeMillis - current.startMillis) / stepLengthMillis : 0;
 
     const transitionStartMillis = getTransitionStartMillis(target, targetStartMillis, current.startMillis);
+    let state: PresetStepState;
 
     if (timeMillis <= transitionStartMillis || targetStartMillis <= transitionStartMillis) {
-      return this.getStepState(current);
+      state = this.getStepState(current);
+    } else {
+      const position = applyTransitionCurve(
+        target.transitionCurve,
+        (timeMillis - transitionStartMillis) / (targetStartMillis - transitionStartMillis)
+      );
+
+      state = this.interpolate(current, target, position);
     }
 
-    const position = applyTransitionCurve(
-      target.transitionCurve,
-      (timeMillis - transitionStartMillis) / (targetStartMillis - transitionStartMillis)
-    );
+    state.currentStepProgress = progress;
 
-    return this.interpolate(current, target, position);
+    return state;
   }
 
   private capabilityValuesMatch(value1: FixtureCapabilityValue, value2: FixtureCapabilityValue): boolean {

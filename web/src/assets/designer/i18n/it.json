@@ -149,7 +149,7 @@
     },
     "fixture": {
       "no-fixtures": "Aggiungi nuovi fixture al progetto",
-      "custom-order": "Ordine personalizzato",
+      "custom-order": "Ordine personalizzato per il preset",
       "select-none": "Deseleziona tutto",
       "select-all": "Seleziona tutto",
       "collapse-all": "Comprimi tutte le cartelle",

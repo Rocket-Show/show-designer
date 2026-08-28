@@ -817,8 +817,26 @@ export class PresetService {
   // on a clock of its own rather than being told about it.
   activeStep: PresetStep;
 
-  // show the steps of the selected preset beside the preset list
-  stepsVisible = true;
+  // how far the preset has come through that step, between 0 and 1
+  activeStepProgress = 0;
+
+  // Whether the steps are shown beside the panels which edit them. Left alone they
+  // show themselves once a preset runs through more than one of them, since a single
+  // step is the static look a preset has always been; switching them decides it by
+  // hand from then on.
+  private stepsVisibleOverride: boolean;
+
+  get stepsVisible(): boolean {
+    if (this.stepsVisibleOverride !== undefined) {
+      return this.stepsVisibleOverride;
+    }
+
+    return !!this.selectedPreset && this.selectedPreset.steps.length > 1;
+  }
+
+  switchStepsVisible() {
+    this.stepsVisibleOverride = !this.stepsVisible;
+  }
 
   // run the steps of the selected preset in the preview instead of holding the step
   // being edited, so that the sequence can be watched without a composition

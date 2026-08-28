@@ -246,6 +246,21 @@ describe('PresetStepService', () => {
     expect(dimmerAt(sequence, 500)).toBeCloseTo(25, 10);
   });
 
+  it('should say how far it has come through the step it is on', () => {
+    const sequence = preset(step(0, 100), step(1000, 200, 400));
+
+    expect(service.getStateAtMillis(sequence, 0).currentStepProgress).toBe(0);
+    // the whole time between two steps counts, not only the transition at its end
+    expect(service.getStateAtMillis(sequence, 250).currentStepProgress).toBe(0.25);
+    expect(service.getStateAtMillis(sequence, 800).currentStepProgress).toBe(0.8);
+  });
+
+  it('should be all the way through the last step it holds', () => {
+    const sequence = preset(step(0, 100), step(1000, 200));
+
+    expect(service.getStateAtMillis(sequence, 5000).currentStepProgress).toBe(1);
+  });
+
   it('should let an effect through fully unless a step says otherwise', () => {
     const sequence = preset(step(0, 0), step(1000, 100));
 

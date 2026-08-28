@@ -149,7 +149,7 @@
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
-      "custom-order": "Eigene Reihenfolge",
+      "custom-order": "Eigene Reihenfolge für das Preset",
       "select-none": "Nichts auswählen",
       "select-all": "Alle auswählen",
       "collapse-all": "Alle Ordner zuklappen",

@@ -229,9 +229,9 @@
             container="body"
             placement="right"
             triggers="mouseenter:mouseleave"
-            (click)="presetService.stepsVisible = !presetService.stepsVisible; (false)"
+            (click)="presetService.switchStepsVisible(); (false)"
           >
-            <i class="fa fa-list-ol fa-fw" aria-hidden="true"></i>
+            <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
           </a>
         </div>
 

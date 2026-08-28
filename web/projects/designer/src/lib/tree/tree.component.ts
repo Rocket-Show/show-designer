@@ -100,6 +100,9 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // a (non-folder) leaf was activated by a plain click
   @Output() activate = new EventEmitter<TreeNode>();
 
+  // a row was double clicked, which opens whatever it stands for
+  @Output() nodeDoubleClick = new EventEmitter<TreeNode>();
+
   // the tree structure changed because of a drag & drop move
   @Output() nodesChange = new EventEmitter<TreeNode[]>();
 
@@ -243,6 +246,11 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
     }
 
     this.selectedNodesChange.emit([...this.selection]);
+  }
+
+  onRowDoubleClick(node: TreeNode, event: MouseEvent) {
+    event.stopPropagation();
+    this.nodeDoubleClick.emit(node);
   }
 
   private selectRange(from: number, to: number, additive: boolean): void {

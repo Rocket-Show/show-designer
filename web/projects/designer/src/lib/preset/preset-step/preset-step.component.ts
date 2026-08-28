@@ -17,6 +17,10 @@ export class PresetStepComponent implements OnInit, OnDestroy {
   // frame outside of Angular
   activeStep: PresetStep;
 
+  // how far the preset has come through it, in whole percent: fine enough to read as
+  // it fills, coarse enough not to redraw for nothing
+  activeStepPercentage = 0;
+
   private activeStepTimer: any;
 
   constructor(
@@ -36,8 +40,12 @@ export class PresetStepComponent implements OnInit, OnDestroy {
           this.ngZone.run(() => this.presetService.setStepPreviewRunning(false));
         }
 
-        if (this.activeStep !== this.presetService.activeStep) {
-          this.activeStep = this.presetService.activeStep;
+        const step = this.presetService.activeStep;
+        const percentage = step ? Math.round(this.presetService.activeStepProgress * 100) : 0;
+
+        if (this.activeStep !== step || this.activeStepPercentage !== percentage) {
+          this.activeStep = step;
+          this.activeStepPercentage = percentage;
           this.ngZone.run(() => this.changeDetectorRef.detectChanges());
         }
       }, 100);

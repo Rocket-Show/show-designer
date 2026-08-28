@@ -149,7 +149,7 @@
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
-      "custom-order": "自定义顺序",
+      "custom-order": "此预设的自定义顺序",
       "select-none": "取消全选",
       "select-all": "全选",
       "collapse-all": "折叠所有文件夹",

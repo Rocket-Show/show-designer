@@ -39,7 +39,6 @@
     <div
       class="step"
       [class.step-selected]="step === presetService.selectedStep"
-      [class.step-active]="step === activeStep"
       popover="{{ stepDescription(step, i) }}"
       container="body"
       placement="left"
@@ -47,7 +46,10 @@
       (click)="selectStep(step)"
       (dblclick)="openSettings(step)"
     >
-      {{ i + 1 }}
+      @if (step === activeStep) {
+      <div class="step-progress" [style.width.%]="activeStepPercentage"></div>
+      }
+      <span class="step-number">{{ i + 1 }}</span>
     </div>
     }
     <a
