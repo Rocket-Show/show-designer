@@ -191,9 +191,12 @@ export class PresetStepService {
       target = first;
       targetStartMillis = first.startMillis + loopMillis;
     } else {
-      // the last step is held until the preset ends, so it is as far along as it gets
+      // The last step has no step to travel to. It is held for as long as a pass of the
+      // sequence would have given it, which is what a looping preset would hold it for
+      // before starting over, and from there on the preset simply stays on it.
+      const holdMillis = first.startMillis + this.getStepsLoopMillis(preset) - current.startMillis;
       const state = this.getStepState(current);
-      state.currentStepProgress = 1;
+      state.currentStepProgress = holdMillis > 0 ? Math.min((timeMillis - current.startMillis) / holdMillis, 1) : 1;
 
       return state;
     }

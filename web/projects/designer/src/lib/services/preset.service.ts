@@ -852,8 +852,9 @@ export class PresetService {
     this.livePreviewService.previewLive();
   }
 
-  // A run which does not loop is over once it has reached the last step: there is
-  // nothing left for it to travel to, so it stops instead of standing on that step.
+  // A run which does not loop is over once a whole pass of the sequence has gone by:
+  // the last step is held for its share of that pass first, so the run ends on the look
+  // it was building towards instead of stopping the moment it arrives there.
   stepPreviewFinished(): boolean {
     const preset = this.selectedPreset;
 
@@ -861,9 +862,9 @@ export class PresetService {
       return false;
     }
 
-    const lastStep = preset.steps[preset.steps.length - 1];
+    const passMillis = preset.steps[0].startMillis + this.presetStepService.getStepsLoopMillis(preset);
 
-    return this.animationService.timeMillis - this.stepPreviewStartMillis >= lastStep.startMillis;
+    return this.animationService.timeMillis - this.stepPreviewStartMillis >= passMillis;
   }
 
   get stepPreviewStartMillis(): number {

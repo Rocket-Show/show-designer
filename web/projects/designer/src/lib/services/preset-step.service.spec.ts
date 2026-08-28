@@ -255,10 +255,17 @@ describe('PresetStepService', () => {
     expect(service.getStateAtMillis(sequence, 800).currentStepProgress).toBe(0.8);
   });
 
-  it('should be all the way through the last step it holds', () => {
+  it('should hold the last step for the share of a pass it would have had', () => {
     const sequence = preset(step(0, 100), step(1000, 200));
 
-    expect(service.getStateAtMillis(sequence, 5000).currentStepProgress).toBe(1);
+    // a pass of these two steps runs 2000 ms, so the last one holds the 1000 ms after it
+    expect(service.getStepsLoopMillis(sequence)).toBe(2000);
+    expect(service.getStateAtMillis(sequence, 1000).currentStepProgress).toBe(0);
+    expect(service.getStateAtMillis(sequence, 1500).currentStepProgress).toBe(0.5);
+    expect(service.getStateAtMillis(sequence, 2000).currentStepProgress).toBe(1);
+    // and stays on it once the sequence is over
+    expect(service.getStateAtMillis(sequence, 50000).currentStepProgress).toBe(1);
+    expect(dimmerAt(sequence, 50000)).toBe(200);
   });
 
   it('should let an effect through fully unless a step says otherwise', () => {
