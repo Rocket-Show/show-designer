@@ -31,7 +31,8 @@
       "toast-upload-error": "Le fichier n'a pas pu être téléchargé en raison de l'erreur suivante : ",
       "color": "Couleur",
       "icon": "Icône",
-      "icon-default": "Icône par défaut"
+      "icon-default": "Icône par défaut",
+      "copy-name": "{{name}} copie"
     },
     "loading": {
       "title": "Chargement...",
@@ -101,11 +102,13 @@
       "collapse-all": "Replier toutes les scènes",
       "expand-all": "Déplier toutes les scènes",
       "add": "Ajouter une scène",
+      "duplicate": "Dupliquer la scène",
       "add-folder": "Ajouter un dossier",
       "remove": "Supprimer la scène",
       "remove-folder": "Supprimer le dossier",
       "new-folder": "Nouveau dossier",
       "remove-preset": "Retirer le préréglage de la scène",
+      "duplicate-preset": "Dupliquer le préréglage",
       "settings-dimmer": "Gradateur",
       "settings-fade-in": "Fondu entrant",
       "settings-fade-out": "Fondu sortant",
@@ -129,6 +132,7 @@
       "expand-all": "Déplier tous les dossiers",
       "solo": "Solo",
       "add": "Ajouter un préréglage",
+      "duplicate": "Dupliquer le préréglage",
       "add-folder": "Ajouter un dossier",
       "remove-folder": "Supprimer le dossier",
       "new-folder": "Nouveau dossier",
@@ -226,6 +230,7 @@
     },
     "effect": {
       "add-new": "Ajouter un nouvel effet",
+      "duplicate": "Dupliquer l'effet",
       "type-curve": "Courbe",
       "type-pan-tilt": "Pan-Tilt",
       "curve": "Courbe",

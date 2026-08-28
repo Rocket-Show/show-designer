@@ -13,6 +13,7 @@ import { PresetStep } from '../models/preset-step';
 import { EffectService } from './effect.service';
 import { PresetStepService } from './preset-step.service';
 import { FixtureService } from './fixture.service';
+import { FolderService } from './folder.service';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
@@ -66,7 +67,8 @@ export class PresetService {
     private projectService: ProjectService,
     private fixtureService: FixtureService,
     private livePreviewService: LivePreviewService,
-    private animationService: AnimationService
+    private animationService: AnimationService,
+    private folderService: FolderService
   ) {}
 
   // the icon of a preset: the one picked for it, or the default one
@@ -916,6 +918,53 @@ export class PresetService {
     this.projectService.project.presets.splice(highestSelectedPresetIndex, 0, preset);
     this.presetsChanged.next();
     this.selectPreset(highestSelectedPresetIndex);
+  }
+
+  // a copy of a preset, placed right below the one it was copied from. Its steps and
+  // effects belong to the preset, so they are copied along with it; which scenes play
+  // the copy is decided in the scene tree.
+  duplicatePreset(preset: Preset, name?: string): Preset {
+    const index = this.projectService.project.presets.indexOf(preset);
+
+    if (index < 0) {
+      return undefined;
+    }
+
+    const copy = new Preset(JSON.parse(JSON.stringify(preset)));
+
+    copy.uuid = this.uuidService.getUuid();
+    copy.name = name || preset.name;
+
+    // the steps of the copy open and close its own effects, not the ones of the preset
+    // it was copied from
+    const effectUuids = new Map<string, string>();
+
+    for (const effect of copy.effects) {
+      const effectUuid = this.uuidService.getUuid();
+      effectUuids.set(effect.uuid, effectUuid);
+      effect.uuid = effectUuid;
+    }
+
+    for (const step of copy.steps) {
+      step.uuid = this.uuidService.getUuid();
+
+      for (const effectAmount of step.effectAmounts) {
+        effectAmount.effectUuid = effectUuids.get(effectAmount.effectUuid) || effectAmount.effectUuid;
+      }
+    }
+
+    // right below the original, inside the same folder
+    copy.folderUuid = preset.folderUuid;
+    copy.sortIndex = (preset.sortIndex || 0) + 0.5;
+
+    this.projectService.project.presets.splice(index + 1, 0, copy);
+    this.folderService.renumber(this.projectService.project.presetFolders, this.projectService.project.presets, copy.folderUuid);
+    this.folderService.sortItems(this.projectService.project.presetFolders, this.projectService.project.presets);
+
+    this.presetsChanged.next();
+    this.selectPreset(this.projectService.project.presets.indexOf(copy));
+
+    return copy;
   }
 
   removePreset(preset: Preset): void {

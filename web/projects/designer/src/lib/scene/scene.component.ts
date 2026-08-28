@@ -396,6 +396,48 @@ export class SceneComponent implements OnInit, OnDestroy {
     this.updateSelection();
   }
 
+  // the copy button acts on whatever was clicked last, the same way the trash does:
+  // a preset played in a scene, or the scene itself
+  duplicateLabel(): string {
+    return this.targetPreset ? 'designer.scene.duplicate-preset' : 'designer.scene.duplicate';
+  }
+
+  duplicate() {
+    if (this.targetPreset && this.targetScene) {
+      const index = this.targetScene.presetUuids.indexOf(this.targetPreset.uuid);
+      const copy = this.presetService.duplicatePreset(this.targetPreset, this.copyName(this.targetPreset.name));
+
+      if (copy) {
+        // the copy is what the trash acts on now and is layered right below the preset
+        // it was copied from
+        this.targetPreset = copy;
+        this.sceneService.addPresetToScene(this.targetScene, copy, index + 1);
+        this.updateSelection();
+      }
+
+      return;
+    }
+
+    const scene = this.targetScene || this.sceneService.selectedScenes[0];
+
+    if (!scene) {
+      return;
+    }
+
+    // the copy is what the trash acts on now
+    this.targetScene = this.sceneService.duplicateScene(scene, this.copyName(scene.name));
+    this.targetFolder = undefined;
+    this.targetPreset = undefined;
+
+    // the tree was already rebuilt while the scene was copied -> move the ring over
+    this.updateSelection();
+  }
+
+  // the name a copy is given, so it can be told apart from the one it was copied from
+  private copyName(name: string): string {
+    return this.translateService.instant('designer.misc.copy-name', { name });
+  }
+
   addFolder() {
     const folder = this.folderService.createFolder(
       this.projectService.project.sceneFolders,

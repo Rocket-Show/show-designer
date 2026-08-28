@@ -31,7 +31,8 @@
       "toast-upload-error": "Die Datei konnte aus dem folgenden Grund nicht hochgeladen werden: ",
       "color": "Farbe",
       "icon": "Symbol",
-      "icon-default": "Standardsymbol"
+      "icon-default": "Standardsymbol",
+      "copy-name": "{{name}} Kopie"
     },
     "loading": {
       "title": "Laden...",
@@ -101,11 +102,13 @@
       "collapse-all": "Alle Szenen zuklappen",
       "expand-all": "Alle Szenen aufklappen",
       "add": "Szene hinzufügen",
+      "duplicate": "Szene duplizieren",
       "add-folder": "Ordner hinzufügen",
       "remove": "Szene löschen",
       "remove-folder": "Ordner löschen",
       "new-folder": "Neuer Ordner",
       "remove-preset": "Preset aus Szene entfernen",
+      "duplicate-preset": "Preset duplizieren",
       "settings-dimmer": "Dimmer",
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
@@ -129,6 +132,7 @@
       "expand-all": "Alle Ordner aufklappen",
       "solo": "Solo",
       "add": "Preset hinzufügen",
+      "duplicate": "Preset duplizieren",
       "add-folder": "Ordner hinzufügen",
       "remove-folder": "Ordner löschen",
       "new-folder": "Neuer Ordner",
@@ -227,6 +231,7 @@
     },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",
+      "duplicate": "Effekt duplizieren",
       "type-curve": "Kurve",
       "type-pan-tilt": "Pan-Tilt",
       "curve": "Kurve",

@@ -41,6 +41,16 @@
       <a
         href="#"
         class="btn btn-secondary m-0 p-0"
+        popover="{{ 'designer.preset.duplicate' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="duplicatePreset(); (false)"
+        ><i class="fa fa-clone fa-fw" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ 'designer.preset.add-folder' | translate }}"
         container="body"
         placement="bottom"

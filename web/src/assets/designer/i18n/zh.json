@@ -31,7 +31,8 @@
       "toast-upload-error": "文件无法上传，原因如下：",
       "color": "颜色",
       "icon": "图标",
-      "icon-default": "默认图标"
+      "icon-default": "默认图标",
+      "copy-name": "{{name}} 副本"
     },
     "loading": {
       "title": "加载中...",
@@ -101,11 +102,13 @@
       "collapse-all": "折叠所有场景",
       "expand-all": "展开所有场景",
       "add": "添加场景",
+      "duplicate": "复制场景",
       "add-folder": "添加文件夹",
       "remove": "删除场景",
       "remove-folder": "删除文件夹",
       "new-folder": "新建文件夹",
       "remove-preset": "从场景中移除预设",
+      "duplicate-preset": "复制预设",
       "settings-dimmer": "调光器",
       "settings-fade-in": "淡入",
       "settings-fade-out": "淡出",
@@ -129,6 +132,7 @@
       "expand-all": "展开所有文件夹",
       "solo": "独奏",
       "add": "添加预设",
+      "duplicate": "复制预设",
       "add-folder": "添加文件夹",
       "remove-folder": "删除文件夹",
       "new-folder": "新建文件夹",
@@ -226,6 +230,7 @@
     },
     "effect": {
       "add-new": "添加新效果",
+      "duplicate": "复制效果",
       "type-curve": "曲线",
       "type-pan-tilt": "水平/垂直",
       "curve": "曲线",
