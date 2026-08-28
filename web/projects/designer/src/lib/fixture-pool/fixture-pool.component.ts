@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
+import { Folder } from '../models/folder';
 import { ConfigService } from '../services/config.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
 import { FixtureService } from '../services/fixture.service';
@@ -16,9 +17,19 @@ import { UuidService } from '../services/uuid.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { FixturePoolEditUniversesComponent } from './fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { PresetFixture } from '../models/preset-fixture';
-import { FolderService } from '../services/folder.service';
+import { FixtureOrderService } from '../services/fixture-order.service';
+import { FolderItem, FolderService } from '../services/folder.service';
+import { HotkeyTargetExcludeService } from '../services/hotkey-target-exclude.service';
 import { LivePreviewService } from '../services/live-preview.service';
 import { UniverseConfig } from '../models/universe-config';
+import { TreeDropZone, TreeNode } from '../tree/tree.component';
+
+// One row of the fixture tree: a fixture of the pool and the folder it is in. The
+// fixture panel shows a fixture with all its pixels, here it is a single row which
+// stands for all of them.
+interface PoolFixture extends FolderItem {
+  fixture: Fixture;
+}
 
 @Component({
   selector: 'lib-app-fixture-pool',
@@ -32,6 +43,18 @@ export class FixturePoolComponent implements OnInit {
   public loadingProfiles = false;
 
   public fixturePool: Fixture[];
+
+  // the fixture folders of the project, edited here like the fixtures themselves and
+  // only handed over to the project on OK
+  public fixtureFolders: Folder[];
+
+  // the fixtures of the pool, grouped in those folders
+  public treeNodes: TreeNode[] = [];
+  public selectedNodes: TreeNode[] = [];
+
+  // the row which was clicked last, marked apart from the selection: it is what the
+  // folder buttons act on
+  public focusedNode: TreeNode = undefined;
 
   public dmxChannels: number[] = [];
   public selectedFixture: Fixture;
@@ -57,6 +80,17 @@ export class FixturePoolComponent implements OnInit {
 
   public promoLink: string;
 
+  // one row per fixture of the pool, in the folders of the project
+  private fixtureItems: PoolFixture[] = [];
+
+  // what the trash button acts on: the folder which was clicked last
+  private targetFolder: Folder = undefined;
+
+  // Did the user move something around in the tree? Only then is the order of the whole
+  // fixture list written back on OK: it is the panel's own one, where a fixture with
+  // pixels takes several rows which can be ordered on their own.
+  private fixtureOrderChanged = false;
+
   constructor(
     public bsModalRef: BsModalRef,
     public fixtureService: FixtureService,
@@ -69,12 +103,19 @@ export class FixturePoolComponent implements OnInit {
     public configService: ConfigService,
     private modalService: BsModalService,
     private folderService: FolderService,
+    private fixtureOrderService: FixtureOrderService,
+    private hotkeyTargetExcludeService: HotkeyTargetExcludeService,
     private livePreviewService: LivePreviewService,
     public hardwarePromoService: HardwarePromoService
   ) {
     this.promoLink = this.hardwarePromoService.link('dmx-overview');
 
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
+
+    // the fixtures are grouped in the same folders the fixture panel shows
+    this.fixtureFolders = this.projectService.project.fixtureFolders.map((folder) => new Folder(folder));
+    this.buildFixtureItems();
+    this.buildTree();
 
     // Initialise the universe list from the config. We keep a local copy so
     // edits done in free-edit mode don't bleed into the config until the user
@@ -144,6 +185,254 @@ export class FixturePoolComponent implements OnInit {
       this.selectedFixtureProfile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
     }
     this.selectedFixture = fixture;
+
+    // the tree shows the whole pool, whichever universe a fixture is patched in -> follow
+    // the selection with the universe, so the channel map shows the fixture being edited
+    const universe = this.universes.find((candidate) => candidate.uuid === fixture?.dmxUniverseUuid);
+
+    if (universe) {
+      this.selectedUniverse = universe;
+    }
+
+    this.updateSelection();
+  }
+
+  // ---- the fixture tree ----------------------------------------------------
+
+  // Where the fixtures of the pool sit: a fixture takes the place of its first row in
+  // the fixture panel, which shows it together with its pixels. That numbering counts
+  // the rows, so it has gaps here - only the order it puts the fixtures in matters.
+  private buildFixtureItems() {
+    const firstRow = new Map<string, PresetFixture>();
+
+    for (const presetFixture of this.projectService.project.presetFixtures) {
+      if (!firstRow.has(presetFixture.fixtureUuid)) {
+        firstRow.set(presetFixture.fixtureUuid, presetFixture);
+      }
+    }
+
+    // a fixture with no row of its own (nothing to select on it) has no place yet: every
+    // position handed out is an index among siblings, so this is past all of them
+    let last = this.fixtureFolders.length + this.projectService.project.presetFixtures.length;
+
+    this.fixtureItems = this.fixturePool.map((fixture) => {
+      const presetFixture = firstRow.get(fixture.uuid);
+
+      return {
+        fixture,
+        folderUuid: presetFixture ? presetFixture.folderUuid : undefined,
+        sortIndex: presetFixture ? presetFixture.sortIndex : ++last,
+      };
+    });
+  }
+
+  private buildTree() {
+    this.treeNodes = this.buildNodes(undefined);
+    this.updateSelection();
+  }
+
+  private buildNodes(parentUuid: string): TreeNode[] {
+    const nodes: TreeNode[] = [];
+
+    for (const child of this.folderService.getChildren(this.fixtureFolders, this.fixtureItems, parentUuid)) {
+      if (child.folder) {
+        nodes.push({
+          id: child.folder.uuid,
+          isFolder: true,
+          expanded: child.folder.expanded !== false,
+          icon: 'fa-folder-o',
+          iconOpen: 'fa-folder-open-o',
+          toggleOnClick: true,
+          folder: child.folder,
+          children: this.buildNodes(child.folder.uuid),
+        });
+      } else {
+        const item = child.item as PoolFixture;
+
+        nodes.push({
+          id: item.fixture.uuid,
+          isFolder: false,
+          iconClass: 'icon-' + this.fixtureService.getFixtureIconClass(this.fixtureService.getProfileByUuid(item.fixture.profileUuid)),
+          fixture: item.fixture,
+          item,
+        });
+      }
+    }
+
+    return nodes;
+  }
+
+  private updateSelection() {
+    this.updateFocusedNode();
+
+    // the fixture being edited is what the tree marks, unless the user selected several
+    // rows here to drag them together
+    if (this.selectedNodes.length > 1 && this.selectedNodes.some((node) => node.fixture === this.selectedFixture)) {
+      return;
+    }
+
+    const fixtureNode = this.findNode(this.treeNodes, (node) => !!node.fixture && node.fixture === this.selectedFixture);
+
+    this.selectedNodes = fixtureNode ? [fixtureNode] : [];
+  }
+
+  private updateFocusedNode() {
+    this.focusedNode = this.findNode(this.treeNodes, (node) =>
+      this.targetFolder ? node.folder === this.targetFolder : !!node.fixture && node.fixture === this.selectedFixture
+    );
+  }
+
+  private findNode(nodes: TreeNode[], matches: (node: TreeNode) => boolean): TreeNode {
+    for (const node of nodes) {
+      if (matches(node)) {
+        return node;
+      }
+
+      const found = this.findNode(node.children ?? [], matches);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  // the pool holds the fixtures of all universes, the ones outside the selected universe
+  // are dimmed the same way the fixture panel dims what a preset does not use
+  nodeClass = (node: TreeNode): string =>
+    node.fixture && this.selectedUniverse && node.fixture.dmxUniverseUuid !== this.selectedUniverse.uuid ? 'inactive-list-item' : '';
+
+  // a folder cannot be dropped into itself, everything else may go anywhere
+  allowDrop = (dragged: TreeNode[], target: TreeNode, zone: TreeDropZone): boolean => {
+    if (zone === 'inside' && !target.isFolder) {
+      return false;
+    }
+
+    return dragged.every((node) => !node.folder || !this.containsFolder(node, target));
+  };
+
+  private containsFolder(node: TreeNode, target: TreeNode): boolean {
+    for (const child of node.children ?? []) {
+      if (child === target || this.containsFolder(child, target)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  onNodesChange(nodes: TreeNode[]) {
+    this.applyNodes(nodes, undefined);
+
+    // the project is told about the new order on OK, the fixtures of the panel included
+    this.fixtureOrderChanged = true;
+
+    this.folderService.sortItems(this.fixtureFolders, this.fixtureItems);
+    this.buildTree();
+  }
+
+  private applyNodes(nodes: TreeNode[], parentUuid: string) {
+    nodes.forEach((node, index) => {
+      if (node.folder) {
+        node.folder.parentUuid = parentUuid;
+        node.folder.sortIndex = index;
+        this.applyNodes(node.children ?? [], node.folder.uuid);
+      } else {
+        node.item.folderUuid = parentUuid;
+        node.item.sortIndex = index;
+      }
+    });
+  }
+
+  onNodeExpandedChange(node: TreeNode) {
+    node.folder.expanded = node.expanded;
+  }
+
+  onActivate(node: TreeNode) {
+    this.targetFolder = node.folder;
+
+    if (node.fixture) {
+      this.selectFixture(node.fixture);
+    }
+
+    this.updateSelection();
+  }
+
+  onSelectedNodesChange(nodes: TreeNode[]) {
+    this.selectedNodes = nodes;
+  }
+
+  // one button for both directions, the same way the fixture panel does it
+  allFoldersCollapsed(): boolean {
+    return !this.fixtureFolders.some((folder) => folder.expanded !== false);
+  }
+
+  switchAllFoldersCollapsed() {
+    const expanded = this.allFoldersCollapsed();
+
+    for (const folder of this.fixtureFolders) {
+      folder.expanded = expanded;
+    }
+
+    this.buildTree();
+  }
+
+  addFolder() {
+    const parentUuid = this.targetFolder ? this.targetFolder.parentUuid : this.selectedItem()?.folderUuid;
+    const sortIndex = this.nextSortIndex(parentUuid);
+
+    const folder = this.folderService.createFolder(
+      this.fixtureFolders,
+      this.fixtureItems,
+      this.translateService.instant('designer.fixture.new-folder'),
+      parentUuid
+    );
+
+    folder.sortIndex = sortIndex;
+
+    // the folder takes a place among the rows, which the project has to be told about
+    this.fixtureOrderChanged = true;
+    this.targetFolder = folder;
+    this.buildTree();
+  }
+
+  // fixtures are removed with the button on their own row, so the trash only deletes a
+  // folder here
+  removeFolder() {
+    if (!this.targetFolder) {
+      return;
+    }
+
+    // the content of a folder is not deleted along with it, it moves up
+    this.folderService.removeFolder(this.fixtureFolders, this.fixtureItems, this.targetFolder);
+
+    this.fixtureOrderChanged = true;
+    this.targetFolder = undefined;
+    this.buildTree();
+  }
+
+  // the folder a fixture added to the pool goes into: the one the user last worked in
+  private targetFolderUuid(): string {
+    return this.targetFolder ? this.targetFolder.uuid : this.selectedItem()?.folderUuid;
+  }
+
+  private selectedItem(): PoolFixture {
+    return this.fixtureItems.find((item) => item.fixture === this.selectedFixture);
+  }
+
+  // The end of a folder's content. The rows inherit their position from the fixture
+  // panel, where a fixture with pixels takes several places, so counting the rows here
+  // would land in the middle of the folder.
+  private nextSortIndex(parentUuid: string): number {
+    const children = this.folderService.getChildren(this.fixtureFolders, this.fixtureItems, parentUuid);
+
+    return children.reduce((last, child) => Math.max(last, child.sortIndex), -1) + 1;
+  }
+
+  private addFixtureItem(fixture: Fixture, folderUuid: string) {
+    this.fixtureItems.push({ fixture, folderUuid, sortIndex: this.nextSortIndex(folderUuid) });
+    this.buildTree();
   }
 
   filterProfiles() {
@@ -183,6 +472,7 @@ export class FixturePoolComponent implements OnInit {
       const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
       if (newFixture) {
         newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
+        this.addFixtureItem(newFixture, this.targetFolderUuid());
         this.selectFixture(newFixture);
       }
     });
@@ -199,10 +489,16 @@ export class FixturePoolComponent implements OnInit {
     fixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
 
     this.fixturePool.push(fixture);
+
+    // the copy joins the fixture it was made from
+    this.addFixtureItem(fixture, this.fixtureItems.find((item) => item.fixture === originalFixture)?.folderUuid);
     this.selectFixture(fixture);
   }
 
   removeFixture(fixture: Fixture) {
+    // the row of the fixture goes with it
+    this.fixtureItems = this.fixtureItems.filter((item) => item.fixture.uuid !== fixture.uuid);
+
     for (let i = 0; i < this.fixturePool.length; i++) {
       if (this.fixturePool[i].uuid === fixture.uuid) {
         if (this.selectedFixture === this.fixturePool[i]) {
@@ -216,6 +512,8 @@ export class FixturePoolComponent implements OnInit {
     if (!this.selectedFixture) {
       this.selectFixture(this.currentUniverseFixtures[0] ?? undefined);
     }
+
+    this.buildTree();
 
     // remove unused profiles
     for (let i = 0; i < this.projectService.project.fixtureProfiles.length; i++) {
@@ -429,6 +727,10 @@ export class FixturePoolComponent implements OnInit {
       }
     }
 
+    // the folders shown here are the project's own ones: hand them over before the new
+    // fixtures are placed in them
+    this.projectService.project.fixtureFolders = this.fixtureFolders;
+
     // add the new fixtures/pixel keys to the preset fixtures
     for (let fixture of this.fixturePool) {
       let found = false;
@@ -439,22 +741,22 @@ export class FixturePoolComponent implements OnInit {
         }
       }
       if (!found) {
+        // the fixture and its pixels appear in the folder the pool put the fixture in
+        const folderUuid = this.fixtureItems.find((item) => item.fixture.uuid === fixture.uuid)?.folderUuid;
+
         if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-          this.addPresetFixture(fixture.uuid);
+          this.addPresetFixture(fixture.uuid, folderUuid);
         }
 
         const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
 
         for (let pixel of pixels) {
-          this.addPresetFixture(fixture.uuid, pixel.key);
+          this.addPresetFixture(fixture.uuid, folderUuid, pixel.key);
         }
       }
     }
 
-    // the removed fixtures left gaps in the numbering of every folder they were in
-    for (const folder of [undefined, ...this.projectService.project.fixtureFolders.map((candidate) => candidate.uuid)]) {
-      this.folderService.renumber(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures, folder);
-    }
+    this.applyFixtureOrder();
 
     this.projectService.project.fixtures = this.fixturePool;
 
@@ -475,15 +777,78 @@ export class FixturePoolComponent implements OnInit {
     this.bsModalRef.hide();
   }
 
-  // a fixture added to the pool appears at the end of the project's fixture list, at
-  // the top level of its folders
-  private addPresetFixture(fixtureUuid: string, pixelKey?: string) {
+  // a fixture added to the pool appears at the end of the folder it was put in
+  private addPresetFixture(fixtureUuid: string, folderUuid: string, pixelKey?: string) {
     const presetFixture = new PresetFixture();
     presetFixture.fixtureUuid = fixtureUuid;
     presetFixture.pixelKey = pixelKey;
 
-    this.folderService.placeLast(this.projectService.project.fixtureFolders, this.projectService.project.presetFixtures, presetFixture);
+    this.folderService.placeLast(
+      this.projectService.project.fixtureFolders,
+      this.projectService.project.presetFixtures,
+      presetFixture,
+      folderUuid
+    );
     this.projectService.project.presetFixtures.push(presetFixture);
+  }
+
+  // What the tree did to the fixtures becomes the project's own order. A row here stands
+  // for a fixture with all its pixels: they stay together and follow it into the folder
+  // it was moved to, so only a tree the user actually moved something in is written back
+  // - otherwise the panel keeps the order it gave the pixels.
+  private applyFixtureOrder() {
+    if (this.fixtureOrderChanged) {
+      const rows = new Map<string, PresetFixture[]>();
+
+      for (const presetFixture of this.projectService.project.presetFixtures) {
+        const fixtureRows = rows.get(presetFixture.fixtureUuid);
+
+        if (fixtureRows) {
+          fixtureRows.push(presetFixture);
+        } else {
+          rows.set(presetFixture.fixtureUuid, [presetFixture]);
+        }
+      }
+
+      const apply = (parentUuid: string) => {
+        let sortIndex = 0;
+
+        for (const child of this.folderService.getChildren(this.fixtureFolders, this.fixtureItems, parentUuid)) {
+          if (child.folder) {
+            child.folder.sortIndex = sortIndex++;
+            apply(child.folder.uuid);
+            continue;
+          }
+
+          const item = child.item as PoolFixture;
+
+          item.sortIndex = sortIndex;
+
+          for (const row of rows.get(item.fixture.uuid) ?? []) {
+            row.folderUuid = parentUuid;
+            row.sortIndex = sortIndex++;
+          }
+
+          // a fixture without a row of its own still keeps its place among the others
+          sortIndex = Math.max(sortIndex, item.sortIndex + 1);
+        }
+      };
+
+      apply(undefined);
+      this.fixtureOrderService.sortProjectFixtures();
+    } else {
+      // the removed fixtures left gaps in the numbering of every folder they were in
+      for (const folder of [undefined, ...this.fixtureFolders.map((candidate) => candidate.uuid)]) {
+        this.folderService.renumber(this.fixtureFolders, this.projectService.project.presetFixtures, folder);
+      }
+    }
+
+    // the flat fixture list of the pool follows the tree as well
+    this.folderService.sortItems(this.fixtureFolders, this.fixtureItems);
+    this.fixturePool = this.fixtureItems.map((item) => item.fixture);
+
+    // the folders a preset positions and the order it chases in follow the project's
+    this.fixtureOrderService.syncPresetOrders();
   }
 
   cancel() {
@@ -564,6 +929,7 @@ export class FixturePoolComponent implements OnInit {
       const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
       if (newFixture) {
         newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
+        this.addFixtureItem(newFixture, this.targetFolderUuid());
       }
       this.selectFixture(newFixture);
     });
@@ -571,6 +937,11 @@ export class FixturePoolComponent implements OnInit {
 
   @HostListener('document:keydown.enter', ['$event'])
   handleKeyboardEvent(event: any) {
+    // enter confirms the name being typed (a folder, a fixture), not the whole dialog
+    if (this.hotkeyTargetExcludeService.exclude(event)) {
+      return;
+    }
+
     this.ok();
   }
 }

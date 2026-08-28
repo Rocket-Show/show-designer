@@ -115,36 +115,88 @@
       </div>
 
       <!-- Fixtures -->
-      <div class="card border-secondary" style="height: 235px">
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush" [sortablejs]="fixturePool">
-            @for (fixture of currentUniverseFixtures; track fixture) {
-            <div
-              class="list-group-item"
-              [class.active]="fixture == selectedFixture"
-              (click)="selectFixture(fixture)"
-              style="cursor: pointer"
-            >
-              <div class="row">
-                <div class="col-auto list-sort-handle my-auto" style="cursor: move; cursor: -webkit-grabbing">
-                  <i class="fa fa-bars" aria-hidden="true"></i>
-                </div>
-                <div class="col-auto flex-grow pl-0 my-auto">
-                  <p class="mb-0">
-                    <span class="icon-{{ fixtureService.getFixtureIconClass(fixtureService.getProfileByUuid(fixture.profileUuid)) }} mr-1">
-                    </span
-                    >{{ fixture.name }}
-                  </p>
-                </div>
-                <div class="col-auto my-auto">
-                  <a class="btn btn-primary btn-sm float-right" href="#" role="button" (click)="removeFixture(fixture); (false)">
-                    <i class="fa fa-minus" aria-hidden="true"></i>
-                  </a>
+      <div class="card border-secondary panel" style="height: 300px">
+        <div class="card-header d-flex">
+          <div>{{ 'designer.fixture-pool.fixtures' | translate }}</div>
+          <div class="ml-auto">
+            <a
+              href="#"
+              class="btn btn-secondary m-0 p-0"
+              popover="{{ (allFoldersCollapsed() ? 'designer.fixture.expand-all' : 'designer.fixture.collapse-all') | translate }}"
+              container="body"
+              placement="bottom"
+              triggers="mouseenter:mouseleave"
+              (click)="switchAllFoldersCollapsed(); (false)"
+              ><i
+                class="fa fa-fw"
+                [class.fa-compress]="!allFoldersCollapsed()"
+                [class.fa-expand]="allFoldersCollapsed()"
+                aria-hidden="true"
+              ></i
+            ></a>
+            <a
+              href="#"
+              class="btn btn-secondary m-0 p-0"
+              popover="{{ 'designer.fixture.remove-folder' | translate }}"
+              container="body"
+              placement="bottom"
+              triggers="mouseenter:mouseleave"
+              (click)="removeFolder(); (false)"
+              ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
+            ></a>
+            <a
+              href="#"
+              class="btn btn-secondary m-0 p-0"
+              popover="{{ 'designer.fixture.add-folder' | translate }}"
+              container="body"
+              placement="bottom"
+              triggers="mouseenter:mouseleave"
+              (click)="addFolder(); (false)"
+              ><i class="fa fa-folder-o fa-fw" aria-hidden="true"></i
+            ></a>
+          </div>
+        </div>
+        <div class="card-body p-0 overflow-auto">
+          <!-- The fixtures of the project in the same folders the fixture panel groups them
+               in: a fixture moved here takes its pixels along, they are one row in this tree.
+               The fixtures outside the selected universe are dimmed, clicking one shows its
+               universe. -->
+          <lib-tree
+            [nodes]="treeNodes"
+            [selectedNodes]="selectedNodes"
+            [focusedNode]="focusedNode"
+            [nodeClass]="nodeClass"
+            [allowDrop]="allowDrop"
+            (selectedNodesChange)="onSelectedNodesChange($event)"
+            (nodesChange)="onNodesChange($event)"
+            (nodeExpandedChange)="onNodeExpandedChange($event)"
+            (activate)="onActivate($event)"
+          >
+            <ng-template #nodeTemplate let-node>
+              @if (node.folder) {
+              <div class="d-flex">
+                <div class="my-auto text-truncate" (click)="$event.stopPropagation()">
+                  <lib-app-inline-edit [value]="node.folder.name" (valueChange)="node.folder.name = $event"></lib-app-inline-edit>
                 </div>
               </div>
-            </div>
-            }
-          </div>
+              } @else {
+              <div class="d-flex">
+                <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
+                <a
+                  href="#"
+                  class="fixture-remove ml-auto my-auto"
+                  role="button"
+                  popover="{{ 'designer.fixture-pool.remove-fixture' | translate }}"
+                  container="body"
+                  placement="left"
+                  triggers="mouseenter:mouseleave"
+                  (click)="removeFixture(node.fixture); $event.stopPropagation(); (false)"
+                  ><i class="fa fa-minus fa-fw" aria-hidden="true"></i
+                ></a>
+              </div>
+              }
+            </ng-template>
+          </lib-tree>
         </div>
       </div>
     </div>

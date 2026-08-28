@@ -94,3 +94,15 @@
   clear: both;
   padding-top: var(--sd-space-5);
 }
+
+/* The fixtures of the project, grouped in the folders of the fixture panel. The rows
+   carry their own remove button, which must not stretch the row it sits in. */
+.fixture-remove {
+  padding: 0 var(--sd-space-1);
+  line-height: 1;
+  color: var(--sd-text-dim);
+}
+
+.fixture-remove:hover {
+  color: var(--sd-text);
+}
