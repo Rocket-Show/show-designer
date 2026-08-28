@@ -19,7 +19,7 @@ describe('PreviewService', () => {
 });
 
 // how much of what a preset puts out reaches the stage. These mirror the cases of
-// DesignerSceneDimmerTest in Rocket Show: a show has to look the same on stage as it
+// PresetIntensityTest in Rocket Show: a show has to look the same on stage as it
 // did while it was written, so both sides run the same ones.
 describe('PreviewService preset intensity', () => {
   let service: PreviewService;
