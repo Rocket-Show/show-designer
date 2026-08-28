@@ -1,6 +1,11 @@
 <div class="mr-3">
-  <div class="mb-2">
-    <select [ngModel]="curve.curveType" (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()" style="width: 200px">
+  <div class="mb-2 d-flex" style="width: 200px">
+    <select
+      class="flex-grow-1"
+      style="min-width: 0"
+      [ngModel]="curve.curveType"
+      (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()"
+    >
       <option [value]="'sine'">
         {{ 'designer.effect.curve-sine' | translate }}
       </option>
@@ -17,6 +22,20 @@
         {{ 'designer.effect.curve-reverse-sawtooth' | translate }}
       </option>
     </select>
+
+    <!-- everything that does not fit next to the grid anymore -->
+    <a
+      href="#"
+      class="btn m-0 ml-1 px-2"
+      [class.btn-primary]="advancedActive()"
+      [class.btn-secondary]="!advancedActive()"
+      popover="{{ 'designer.effect.curve-advanced' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="openAdvanced(); (false)"
+      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+    ></a>
   </div>
   <div>
     <canvas #curveGrid class="curve-grid" width="200" height="100" viewBox="150 -75 4850 5150" preserveAspectRatio="none"></canvas>
@@ -30,8 +49,8 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="livePreviewService.previewLive()"
-        [(value)]="curve.lengthMillis"
+        [value]="curve.lengthMillis"
+        (valueChange)="setLengthMillisFromSlider($event)"
         style="width: 80px"
         [tooltip]="'hide'"
         [min]="lengthMillisMin"
@@ -94,13 +113,13 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="livePreviewService.previewLive()"
-        [(value)]="curve.phaseMillis"
+        [value]="phaseCycles"
+        (valueChange)="setPhaseCycles($event)"
         style="width: 80px"
         [tooltip]="'hide'"
-        [min]="phaseMillisMin"
-        [max]="phaseMillisMax"
-        [step]="1"
+        [min]="phaseCyclesMin"
+        [max]="phaseCyclesMax"
+        [step]="0.01"
       ></mv-slider>
     </div>
     <div class="my-auto">

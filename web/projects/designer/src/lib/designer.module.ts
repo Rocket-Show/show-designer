@@ -14,6 +14,7 @@ import { ToastrModule } from 'ngx-toastr';
 import { ArraySortPipe } from './array-sort-pipe';
 import { ColorPickerComponent } from './color-picker/color-picker.component';
 import { DesignerComponent } from './designer.component';
+import { EffectCurveAdvancedComponent } from './effect/effect-curve/effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect/effect-curve/effect-curve.component';
 import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt.component';
 import { EffectComponent } from './effect/effect.component';
@@ -64,6 +65,7 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     WarningDialogComponent,
     PreviewComponent,
     EffectCurveComponent,
+    EffectCurveAdvancedComponent,
     EffectPanTiltComponent,
     SceneComponent,
     TimelineComponent,
