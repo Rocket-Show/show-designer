@@ -408,6 +408,24 @@ export class PreviewService implements OnDestroy {
     }
   }
 
+  // a preset that is not placed in a composition has no moment it starts at: the preview
+  // clock has been running since the designer was opened, so a curve that stops after a
+  // while would always be over already. repeat its run instead, the way the grid of the
+  // effect shows it.
+  private getCurveTimeMillis(curve: EffectCurve, effectTimeMillis: number, preset: PresetRegionScene, fixtureCount: number): number {
+    if (preset.region) {
+      return effectTimeMillis;
+    }
+
+    const loopMillis = curve.getRunLoopMillis(fixtureCount);
+
+    if (loopMillis === undefined) {
+      return effectTimeMillis;
+    }
+
+    return ((effectTimeMillis % loopMillis) + loopMillis) % loopMillis;
+  }
+
   private mixEffects(
     timeMillis: number,
     fixtureIndex: number,
@@ -433,6 +451,7 @@ export class PreviewService implements OnDestroy {
         // EffectCurve
         if (effect instanceof EffectCurve) {
           const effectCurve = effect as EffectCurve;
+          const curveTimeMillis = this.getCurveTimeMillis(effectCurve, effectTimeMillis, preset, fixtureCount);
 
           // capabilities
           for (const capability of effectCurve.capabilities) {
@@ -450,12 +469,16 @@ export class PreviewService implements OnDestroy {
                     null
                   )
                 ) {
-                  const fixtureChannelValue = new FixtureChannelValue();
-                  fixtureChannelValue.channelName = cachedChannel.name;
-                  fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                  fixtureChannelValue.value =
-                    cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
-                  this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+                  const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount);
+
+                  // the curve does not apply anymore after it has finished running
+                  if (value !== undefined) {
+                    const fixtureChannelValue = new FixtureChannelValue();
+                    fixtureChannelValue.channelName = cachedChannel.name;
+                    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+                    fixtureChannelValue.value = cachedChannel.maxValue * value;
+                    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+                  }
                 }
               }
             }
@@ -467,12 +490,16 @@ export class PreviewService implements OnDestroy {
               for (const channel of channelProfile.channels) {
                 for (const cachedChannel of cachedFixture.channels) {
                   if (cachedChannel.name === channel) {
-                    const fixtureChannelValue = new FixtureChannelValue();
-                    fixtureChannelValue.channelName = cachedChannel.name;
-                    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                    fixtureChannelValue.value =
-                      cachedChannel.maxValue * effectCurve.getValueAtMillis(effectTimeMillis, fixtureIndex, fixtureCount);
-                    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+                    const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount);
+
+                    // the curve does not apply anymore after it has finished running
+                    if (value !== undefined) {
+                      const fixtureChannelValue = new FixtureChannelValue();
+                      fixtureChannelValue.channelName = cachedChannel.name;
+                      fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+                      fixtureChannelValue.value = cachedChannel.maxValue * value;
+                      this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+                    }
                   }
                 }
               }

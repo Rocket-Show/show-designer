@@ -1,0 +1,125 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.effect.curve-advanced' | translate }}</h4>
+  <button type="button" class="close pull-right" aria-label="Close" (click)="close()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <!-- how long the curve keeps running -->
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-run' | translate }}</label>
+    <div class="col-lg-8 d-flex align-items-center">
+      <select class="sd-time-field" [ngModel]="curve.runMode" (ngModelChange)="setRunMode($event)">
+        <option [value]="'infinite'">
+          {{ 'designer.effect.curve-run-infinite' | translate }}
+        </option>
+        <option [value]="'cycles'">
+          {{ 'designer.effect.curve-run-cycles' | translate }}
+        </option>
+        <option [value]="'duration'">
+          {{ 'designer.effect.curve-run-duration' | translate }}
+        </option>
+      </select>
+
+      @if (curve.runMode === 'cycles') {
+      <input type="text" class="slider-input" [ngModel]="curve.runCycles" (ngModelChange)="setRunCycles($event)" />
+
+      <div class="ml-2">
+        {{ 'designer.effect.curve-run-cycles-unit' | translate }}
+      </div>
+      } @if (curve.runMode === 'duration') {
+      <input type="text" class="slider-input" [ngModel]="curve.runDurationMillis" (ngModelChange)="setRunDurationMillis($event)" />
+
+      <div class="ml-2">
+        {{ 'designer.misc.ms' | translate }}
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- what the curve leaves behind once it has finished running -->
+  @if (curve.runMode !== 'infinite') {
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-end' | translate }}</label>
+    <div class="col-lg-8 d-flex align-items-center">
+      <select [ngModel]="curve.endMode" (ngModelChange)="setEndMode($event)">
+        <option [value]="'hold'">
+          {{ 'designer.effect.curve-end-hold' | translate }}
+        </option>
+        <option [value]="'base'">
+          {{ 'designer.effect.curve-end-base' | translate }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <div class="col-lg-8 offset-lg-4">
+      <p class="setting-hint mb-0">{{ 'designer.effect.curve-run-hint' | translate }}</p>
+    </div>
+  </div>
+  }
+
+  <hr />
+
+  <!-- the part of the period the curve is on -->
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-duty' | translate }}</label>
+    <div class="col-lg-8 d-flex align-items-center">
+      @if (curve.hasDutyCycle()) {
+      <mv-slider
+        [value]="dutyCyclePercent"
+        (valueChange)="setDutyCyclePercent($event)"
+        style="width: 160px"
+        [tooltip]="'hide'"
+        [min]="dutyCyclePercentMin"
+        [max]="dutyCyclePercentMax"
+        [step]="1"
+      ></mv-slider>
+
+      <input type="text" class="slider-input" [ngModel]="dutyCyclePercent" (ngModelChange)="setDutyCyclePercent($event)" />
+
+      <div class="ml-2">%</div>
+      } @else {
+      <p class="setting-hint mb-0">{{ 'designer.effect.curve-duty-unsupported' | translate }}</p>
+      }
+    </div>
+  </div>
+
+  @if (curve.hasDutyCycle()) {
+  <div class="form-group row">
+    <div class="col-lg-8 offset-lg-4">
+      <p class="setting-hint mb-0">{{ 'designer.effect.curve-duty-hint' | translate }}</p>
+    </div>
+  </div>
+  }
+
+  <hr />
+
+  <!-- how many fixtures the chase moves at a time -->
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-chase-group' | translate }}</label>
+    <div class="col-lg-8 d-flex align-items-center">
+      <mv-slider
+        [value]="curve.phasingGroupSize"
+        (valueChange)="setPhasingGroupSize($event)"
+        style="width: 160px"
+        [tooltip]="'hide'"
+        [min]="phasingGroupSizeMin"
+        [max]="phasingGroupSizeMax"
+        [step]="1"
+      ></mv-slider>
+
+      <input type="text" class="slider-input" [ngModel]="curve.phasingGroupSize" (ngModelChange)="setPhasingGroupSize($event)" />
+    </div>
+  </div>
+
+  <div class="form-group row mb-0">
+    <div class="col-lg-8 offset-lg-4">
+      <p class="setting-hint mb-0">{{ 'designer.effect.curve-chase-group-hint' | translate }}</p>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-primary" (click)="close()">{{ 'designer.misc.ok' | translate }}</button>
+</div>
