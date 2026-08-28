@@ -29,6 +29,7 @@ import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { UniverseConfig } from './models/universe-config';
+import { UndoService } from './services/undo.service';
 
 @Component({
   selector: 'lib-designer',
@@ -148,7 +149,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     public presetService: PresetService,
     public colorService: ColorService,
     private effectService: EffectService,
-    private hardwarePromoService: HardwarePromoService
+    private hardwarePromoService: HardwarePromoService,
+    public undoService: UndoService
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
@@ -290,6 +292,14 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.fixturePoolService.open();
   }
 
+  undo() {
+    this.undoService.undo();
+  }
+
+  redo() {
+    this.undoService.redo();
+  }
+
   setProjectName(name: string) {
     if (this.projectService.project) {
       this.projectService.project.name = name;
@@ -416,6 +426,19 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
     if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
       this.projectOpen();
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+      this.undo();
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    // both of the two common ways to redo: the one Windows uses and the one macOS uses
+    if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) {
+      this.redo();
       event.stopPropagation();
       event.preventDefault();
     }

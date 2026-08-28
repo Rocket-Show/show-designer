@@ -38,6 +38,9 @@
     },
     "navigation": {
       "project": "项目",
+      "edit": "编辑",
+      "undo": "撤销",
+      "redo": "重做",
       "settings": "设置",
       "help": "帮助",
       "fixture-pool": "灯具库",

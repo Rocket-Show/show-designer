@@ -38,6 +38,9 @@
     },
     "navigation": {
       "project": "Projekt",
+      "edit": "Bearbeiten",
+      "undo": "Rückgängig",
+      "redo": "Wiederherstellen",
       "settings": "Einstellungen",
       "help": "Hilfe",
       "fixture-pool": "Fixture pool",

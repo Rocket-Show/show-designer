@@ -18,6 +18,8 @@ import { PresetFixture } from '../models/preset-fixture';
 import { WarningDialogService } from './warning-dialog.service';
 import { LivePreviewService } from './live-preview.service';
 import { ConfigService } from './config.service';
+import { EffectService } from './effect.service';
+import { Composition } from '../models/composition';
 
 @Injectable({
   providedIn: 'root',
@@ -37,7 +39,8 @@ export class ProjectLoadService {
     private activatedRoute: ActivatedRoute,
     private warningDialogService: WarningDialogService,
     private livePreviewService: LivePreviewService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private effectService: EffectService
   ) {}
 
   private migrateToVersion2() {
@@ -353,6 +356,82 @@ export class ProjectLoadService {
     this.projectService.project = project;
 
     this.selectScenesPresetComposition();
+    this.afterLoad();
+  }
+
+  // the composition the timeline shows after a state of the project has been put back.
+  // Its audio file is only loaded again, if another composition is selected now, so
+  // that undoing an edit does not interrupt what is playing.
+  private restoreSelectedComposition(previousComposition: Composition) {
+    const project = this.projectService.project;
+    const index = project.compositions.findIndex((composition) => composition.uuid === project.selectedCompositionUuid);
+
+    this.timelineService.selectedPlaybackRegion = undefined;
+
+    if (index < 0) {
+      // the composition which was selected is not part of the restored project -> show
+      // the first one there is, the same way deleting a composition does
+      this.timelineService.selectedComposition = undefined;
+      this.timelineService.selectedCompositionIndex = undefined;
+      this.timelineService.destroyWaveSurfer();
+
+      if (project.compositions.length > 0) {
+        this.timelineService.selectCompositionIndex(0);
+      }
+
+      return;
+    }
+
+    const composition = project.compositions[index];
+
+    if (
+      previousComposition &&
+      previousComposition.uuid === composition.uuid &&
+      previousComposition.audioFileName === composition.audioFileName
+    ) {
+      // the same audio file is still the one to play -> keep it loaded and only point
+      // the timeline at the restored objects
+      this.timelineService.selectedComposition = composition;
+      this.timelineService.selectedCompositionIndex = index;
+      this.timelineService.redrawAllRegions();
+      return;
+    }
+
+    this.timelineService.selectCompositionIndex(index);
+  }
+
+  // put a state of the project back in place, e.g. after an undo. Everything a load
+  // sets up is built again from the restored project, which consists of new objects:
+  // what was being edited before is picked up again by its uuid, so the panels keep
+  // showing what they were showing.
+  restoreProject(project: Project) {
+    const previousComposition = this.timelineService.selectedComposition;
+    const selectedEffectUuid = this.effectService.selectedEffect ? this.effectService.selectedEffect.uuid : undefined;
+    const selectedSettingsFixtureUuids = this.fixtureService.selectedSettingsFixtures.map((fixture) => fixture.uuid);
+
+    this.projectService.project = project;
+
+    this.presetService.selectedPreset = this.presetService.getPresetByUuid(project.selectedPresetUuid);
+    this.sceneService.selectedScenes = (project.selectedSceneUuids || [])
+      .map((uuid) => this.sceneService.getSceneByUuid(uuid))
+      .filter((scene) => !!scene);
+
+    this.restoreSelectedComposition(previousComposition);
+
+    if (this.sceneService.selectedScenes.length === 0 && project.scenes.length > 0) {
+      // the scenes which were selected are not part of the restored project -> play the
+      // first one there is, the same way a project which has just been opened does
+      this.sceneService.selectScene(0);
+    }
+
+    this.effectService.selectedEffect = this.presetService.selectedPreset
+      ? this.presetService.selectedPreset.effects.find((effect) => effect.uuid === selectedEffectUuid)
+      : undefined;
+
+    this.fixtureService.selectedSettingsFixtures = selectedSettingsFixtureUuids
+      .map((uuid) => this.fixtureService.getFixtureByUuid(uuid))
+      .filter((fixture) => !!fixture);
+
     this.afterLoad();
   }
 }

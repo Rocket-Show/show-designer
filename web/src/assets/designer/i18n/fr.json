@@ -38,6 +38,9 @@
     },
     "navigation": {
       "project": "Projet",
+      "edit": "Édition",
+      "undo": "Annuler",
+      "redo": "Rétablir",
       "settings": "Paramètres",
       "help": "Aide",
       "fixture-pool": "Parc de fixtures",
