@@ -311,6 +311,37 @@ export class PresetComponent implements OnInit, OnDestroy {
     this.buildTree();
   }
 
+  // a copy of the preset being edited, placed right below it. It is played wherever the
+  // preset it was copied from is played in the current scene, so it can be turned into
+  // a variant of it right away.
+  duplicatePreset() {
+    const preset = this.presetService.selectedPreset;
+
+    if (!preset) {
+      return;
+    }
+
+    const scene = this.singleSelectedScene();
+    const index = scene ? scene.presetUuids.indexOf(preset.uuid) : -1;
+
+    // the copy is what the trash acts on now
+    this.targetFolder = undefined;
+
+    const copy = this.presetService.duplicatePreset(preset, this.copyName(preset.name));
+
+    if (copy && index >= 0) {
+      // it is layered right below the preset it was copied from
+      this.sceneService.addPresetToScene(scene, copy, index + 1);
+    }
+
+    this.buildTree();
+  }
+
+  // the name a copy is given, so it can be told apart from the preset it was copied from
+  private copyName(name: string): string {
+    return this.translateService.instant('designer.misc.copy-name', { name });
+  }
+
   addFolder() {
     const folder = this.folderService.createFolder(
       this.projectService.project.presetFolders,

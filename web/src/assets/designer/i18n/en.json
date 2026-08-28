@@ -32,7 +32,8 @@
       "toast-upload-error": "The file could not be uploaded because of the following error: ",
       "color": "Color",
       "icon": "Icon",
-      "icon-default": "Default icon"
+      "icon-default": "Default icon",
+      "copy-name": "{{name}} copy"
     },
     "loading": {
       "title": "Loading...",
@@ -102,11 +103,13 @@
       "collapse-all": "Collapse all scenes",
       "expand-all": "Expand all scenes",
       "add": "Add scene",
+      "duplicate": "Duplicate scene",
       "add-folder": "Add folder",
       "remove": "Delete scene",
       "remove-folder": "Delete folder",
       "new-folder": "New Folder",
       "remove-preset": "Remove preset from scene",
+      "duplicate-preset": "Duplicate preset",
       "settings-dimmer": "Dimmer",
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
@@ -130,6 +133,7 @@
       "expand-all": "Expand all folders",
       "solo": "Solo",
       "add": "Add preset",
+      "duplicate": "Duplicate preset",
       "add-folder": "Add folder",
       "remove-folder": "Delete folder",
       "new-folder": "New Folder",
@@ -227,6 +231,7 @@
     },
     "effect": {
       "add-new": "Add new Effect",
+      "duplicate": "Duplicate effect",
       "type-curve": "Curve",
       "type-pan-tilt": "Pan-Tilt",
       "curve": "Curve",

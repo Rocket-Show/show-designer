@@ -32,7 +32,8 @@
       "toast-upload-error": "El archivo no pudo cargarse debido al siguiente error: ",
       "color": "Color",
       "icon": "Icono",
-      "icon-default": "Icono predeterminado"
+      "icon-default": "Icono predeterminado",
+      "copy-name": "{{name}} copia"
     },
     "loading": {
       "title": "Cargando...",
@@ -102,11 +103,13 @@
       "collapse-all": "Contraer todas las escenas",
       "expand-all": "Expandir todas las escenas",
       "add": "Añadir escena",
+      "duplicate": "Duplicar escena",
       "add-folder": "Añadir carpeta",
       "remove": "Eliminar escena",
       "remove-folder": "Eliminar carpeta",
       "new-folder": "Nueva carpeta",
       "remove-preset": "Quitar preajuste de la escena",
+      "duplicate-preset": "Duplicar preajuste",
       "settings-dimmer": "Dimmer",
       "settings-fade-in": "Fundido de entrada",
       "settings-fade-out": "Fundido de salida",
@@ -130,6 +133,7 @@
       "expand-all": "Expandir todas las carpetas",
       "solo": "Solo",
       "add": "Añadir preajuste",
+      "duplicate": "Duplicar preajuste",
       "add-folder": "Añadir carpeta",
       "remove-folder": "Eliminar carpeta",
       "new-folder": "Nueva carpeta",
@@ -227,6 +231,7 @@
     },
     "effect": {
       "add-new": "Añadir nuevo efecto",
+      "duplicate": "Duplicar efecto",
       "type-curve": "Curva",
       "type-pan-tilt": "Pan-Tilt",
       "curve": "Curva",

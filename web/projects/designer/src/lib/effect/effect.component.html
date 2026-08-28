@@ -22,6 +22,17 @@
                 ></i>
               </div>
               <div class="mr-2">
+                <i
+                  (click)="this.duplicateEffect(item); $event.stopPropagation()"
+                  class="fa fa-clone fa-fw"
+                  popover="{{ 'designer.effect.duplicate' | translate }}"
+                  container="body"
+                  placement="bottom"
+                  triggers="mouseenter:mouseleave"
+                  aria-hidden="true"
+                ></i>
+              </div>
+              <div class="mr-2">
                 <i (click)="this.deleteEffect(item); $event.stopPropagation()" class="fa fa-trash fa-fw" aria-hidden="true"></i>
               </div>
               <div class="mr-2">

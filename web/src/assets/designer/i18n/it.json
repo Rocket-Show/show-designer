@@ -32,7 +32,8 @@
       "toast-upload-error": "Il file non ha potuto essere caricato per il seguente errore: ",
       "color": "Colore",
       "icon": "Icona",
-      "icon-default": "Icona predefinita"
+      "icon-default": "Icona predefinita",
+      "copy-name": "{{name}} copia"
     },
     "loading": {
       "title": "Caricamento...",
@@ -102,11 +103,13 @@
       "collapse-all": "Comprimi tutte le scene",
       "expand-all": "Espandi tutte le scene",
       "add": "Aggiungi scena",
+      "duplicate": "Duplica scena",
       "add-folder": "Aggiungi cartella",
       "remove": "Elimina scena",
       "remove-folder": "Elimina cartella",
       "new-folder": "Nuova cartella",
       "remove-preset": "Rimuovi preset dalla scena",
+      "duplicate-preset": "Duplica preset",
       "settings-dimmer": "Dimmer",
       "settings-fade-in": "Fade In",
       "settings-fade-out": "Fade Out",
@@ -130,6 +133,7 @@
       "expand-all": "Espandi tutte le cartelle",
       "solo": "Solo",
       "add": "Aggiungi preset",
+      "duplicate": "Duplica preset",
       "add-folder": "Aggiungi cartella",
       "remove-folder": "Elimina cartella",
       "new-folder": "Nuova cartella",
@@ -227,6 +231,7 @@
     },
     "effect": {
       "add-new": "Aggiungi nuovo effetto",
+      "duplicate": "Duplica effetto",
       "type-curve": "Curva",
       "type-pan-tilt": "Pan-Tilt",
       "curve": "Curva",

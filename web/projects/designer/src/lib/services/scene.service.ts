@@ -215,6 +215,30 @@ export class SceneService {
     return scene;
   }
 
+  // a copy of a scene, placed right below the one it was copied from. Its presets stay
+  // shared: they are played in both scenes, so editing one of them changes what both
+  // scenes show. Where the scene is played is not copied, the copy is placed on the
+  // timeline by hand.
+  duplicateScene(scene: Scene, name?: string): Scene {
+    const copy = new Scene(JSON.parse(JSON.stringify(scene)));
+
+    copy.uuid = this.uuidService.getUuid();
+    copy.name = name || scene.name;
+
+    // right below the original, inside the same folder
+    copy.folderUuid = scene.folderUuid;
+    copy.sortIndex = (scene.sortIndex || 0) + 0.5;
+
+    this.projectService.project.scenes.push(copy);
+    this.folderService.renumber(this.projectService.project.sceneFolders, this.projectService.project.scenes, copy.folderUuid);
+    this.folderService.sortItems(this.projectService.project.sceneFolders, this.projectService.project.scenes);
+
+    this.scenesChanged.next();
+    this.selectScenes([copy]);
+
+    return copy;
+  }
+
   removeScene(scene: Scene): void {
     const index = this.projectService.project.scenes.indexOf(scene);
 

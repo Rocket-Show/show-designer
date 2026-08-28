@@ -63,6 +63,15 @@ export class EffectComponent implements OnInit {
     }
   }
 
+  duplicateEffect(effect: Effect) {
+    if (!this.presetService.selectedPreset) {
+      return;
+    }
+
+    this.effectService.duplicateEffect(this.presetService.selectedPreset, effect);
+    this.livePreviewService.previewLive();
+  }
+
   deleteEffect(effect: Effect) {
     this.warningDialogService
       .show('designer.effect.delete-warning')

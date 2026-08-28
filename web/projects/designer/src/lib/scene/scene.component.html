@@ -27,6 +27,16 @@
       <a
         href="#"
         class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        popover="{{ duplicateLabel() | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="duplicate(); (false)"
+        ><i class="fa fa-clone fa-fw" aria-hidden="true"></i
+      ></a>
+      <a
+        href="#"
+        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
         popover="{{ 'designer.scene.add-folder' | translate }}"
         container="body"
         placement="bottom"
