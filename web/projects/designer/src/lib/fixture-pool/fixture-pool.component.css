@@ -1,8 +1,19 @@
+/* The map is its own layout unit: without that, hovering anything in this dialog makes
+   the browser repaint all 512 channels along with whatever changed, which is what made
+   the hover effects lag behind the cursor. It contains its floated cells as well, so
+   what follows no longer has to clear them. */
+.dmx-map {
+  contain: layout;
+}
+
 .dmx-channel {
   display: flex;
   float: left;
   position: relative;
   width: 28px;
+  /* the size a line of (blank) text used to give the cell, which cost three more
+     elements per channel to paint and to hit-test */
+  height: 20.5px;
   border: 1px solid var(--sd-border);
   margin-left: -1px;
   margin-bottom: -1px;
@@ -88,10 +99,8 @@
   overflow: auto;
 }
 
-/* the dmx channels are floated, so the hint below them has to clear the grid.
-   The clearance would swallow a top margin, hence the padding. */
+/* the map contains its floats, so this only needs the distance to it */
 .dmx-promo-hint {
-  clear: both;
   padding-top: var(--sd-space-5);
 }
 
