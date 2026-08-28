@@ -205,6 +205,20 @@
           >
             <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
           </a>
+
+          <a
+            class="nav-link px-3 nav-link-divider"
+            href="#"
+            [class.text-primary]="presetService.stepsVisible"
+            popover="{{ 'designer.preset.steps' | translate }}"
+            container="body"
+            placement="right"
+            triggers="mouseenter:mouseleave"
+            (click)="presetService.switchStepsVisible(); (false)"
+          >
+            <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
+          </a>
+
           <a
             class="nav-link px-3 nav-link-divider"
             (click)="openTab('settings')"
@@ -220,18 +234,6 @@
             aria-selected="false"
           >
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
-          </a>
-          <a
-            class="nav-link px-3 nav-link-divider"
-            href="#"
-            [class.text-primary]="presetService.stepsVisible"
-            popover="{{ 'designer.preset.steps' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            (click)="presetService.switchStepsVisible(); (false)"
-          >
-            <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
           </a>
         </div>
 
