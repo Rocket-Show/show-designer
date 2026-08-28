@@ -411,16 +411,28 @@ export class PreviewService implements OnDestroy {
     }
   }
 
+  // the tempo the curves synced to the beat follow. a preset can be edited without a
+  // composition being open, which leaves the curves on their default tempo.
+  private getBeatsPerMinute(): number {
+    return this.timelineService.selectedComposition?.beatsPerMinute ?? EffectCurve.defaultBeatsPerMinute;
+  }
+
   // a preset that is not placed in a composition has no moment it starts at: the preview
   // clock has been running since the designer was opened, so a curve that stops after a
   // while would always be over already. repeat its run instead, the way the grid of the
   // effect shows it.
-  private getCurveTimeMillis(curve: EffectCurve, effectTimeMillis: number, preset: PresetRegionScene, fixtureCount: number): number {
+  private getCurveTimeMillis(
+    curve: EffectCurve,
+    effectTimeMillis: number,
+    preset: PresetRegionScene,
+    fixtureCount: number,
+    beatsPerMinute: number
+  ): number {
     if (preset.region) {
       return effectTimeMillis;
     }
 
-    const loopMillis = curve.getRunLoopMillis(fixtureCount);
+    const loopMillis = curve.getRunLoopMillis(fixtureCount, beatsPerMinute);
 
     if (loopMillis === undefined) {
       return effectTimeMillis;
@@ -454,7 +466,8 @@ export class PreviewService implements OnDestroy {
         // EffectCurve
         if (effect instanceof EffectCurve) {
           const effectCurve = effect as EffectCurve;
-          const curveTimeMillis = this.getCurveTimeMillis(effectCurve, effectTimeMillis, preset, fixtureCount);
+          const beatsPerMinute = this.getBeatsPerMinute();
+          const curveTimeMillis = this.getCurveTimeMillis(effectCurve, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
 
           // capabilities
           for (const capability of effectCurve.capabilities) {
@@ -472,7 +485,7 @@ export class PreviewService implements OnDestroy {
                     null
                   )
                 ) {
-                  const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount);
+                  const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
 
                   // the curve does not apply anymore after it has finished running
                   if (value !== undefined) {
@@ -493,7 +506,7 @@ export class PreviewService implements OnDestroy {
               for (const channel of channelProfile.channels) {
                 for (const cachedChannel of cachedFixture.channels) {
                   if (cachedChannel.name === channel) {
-                    const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount);
+                    const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
 
                     // the curve does not apply anymore after it has finished running
                     if (value !== undefined) {
