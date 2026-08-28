@@ -127,11 +127,8 @@
           <div class="ml-auto">
             <a
               href="#"
-              class="btn btn-secondary m-0 p-0"
-              popover="{{ (allFoldersCollapsed() ? 'designer.fixture.expand-all' : 'designer.fixture.collapse-all') | translate }}"
-              container="body"
-              placement="bottom"
-              triggers="mouseenter:mouseleave"
+              class="btn btn-secondary m-0 p-0 sd-tip"
+              [attr.data-tip]="(allFoldersCollapsed() ? 'designer.fixture.expand-all' : 'designer.fixture.collapse-all') | translate"
               (click)="switchAllFoldersCollapsed(); (false)"
               ><i
                 class="fa fa-fw"
@@ -142,21 +139,15 @@
             ></a>
             <a
               href="#"
-              class="btn btn-secondary m-0 p-0"
-              popover="{{ 'designer.fixture.remove-folder' | translate }}"
-              container="body"
-              placement="bottom"
-              triggers="mouseenter:mouseleave"
+              class="btn btn-secondary m-0 p-0 sd-tip"
+              [attr.data-tip]="'designer.fixture.remove-folder' | translate"
               (click)="removeFolder(); (false)"
               ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
             ></a>
             <a
               href="#"
-              class="btn btn-secondary m-0 p-0"
-              popover="{{ 'designer.fixture.add-folder' | translate }}"
-              container="body"
-              placement="bottom"
-              triggers="mouseenter:mouseleave"
+              class="btn btn-secondary m-0 p-0 sd-tip"
+              [attr.data-tip]="'designer.fixture.add-folder' | translate"
               (click)="addFolder(); (false)"
               ><i class="fa fa-folder-o fa-fw" aria-hidden="true"></i
             ></a>
@@ -228,7 +219,7 @@
         <div class="tab-pane show active" id="dmx" role="tabpanel">
           <!-- List of DMX channels. The map is its own layout unit (see the css), without
                which hovering anything in this dialog repaints all 512 channels with it. -->
-          <div class="dmx-map">
+          <div class="dmx-map" #dmxMap (mousedown)="channelMouseDown($event)">
             @for (channel of dmxChannels; track $index; let i = $index) {
             <div
               class="dmx-channel"
@@ -237,8 +228,6 @@
               [class.dmx-channel-occupied-end]="channel.end"
               [class.dmx-channel-selected]="channel.selected"
               [class.dmx-channel-overlapped]="channel.overlapped"
-              (mousedown)="channelMouseDown($event)"
-              (mouseover)="channelMouseOver($event)"
               [attr.data-index]="i"
               [attr.data-channel]="i + 1"
             ></div>

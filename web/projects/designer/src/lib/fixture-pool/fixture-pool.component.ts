@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrService } from 'ngx-toastr';
@@ -50,7 +50,7 @@ interface DmxChannel {
   styleUrls: ['./fixture-pool.component.css'],
   standalone: false,
 })
-export class FixturePoolComponent implements OnInit {
+export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   // the profiles the search list shows, and how many more the search matched (see
   // maxShownProfiles)
   public filteredProfiles: FixtureProfile[] = [];
@@ -73,6 +73,10 @@ export class FixturePoolComponent implements OnInit {
   public focusedNode: TreeNode = undefined;
 
   public dmxChannels: DmxChannel[] = [];
+
+  // the channel map, which watches the pointer itself while a fixture is dragged over it
+  @ViewChild('dmxMap') dmxMap: ElementRef<HTMLElement>;
+
   public selectedFixture: Fixture;
   public selectedFixtureProfile: FixtureProfile;
   public channelDragFixture: Fixture;
@@ -128,6 +132,7 @@ export class FixturePoolComponent implements OnInit {
     private modalService: BsModalService,
     private folderService: FolderService,
     private fixtureOrderService: FixtureOrderService,
+    private ngZone: NgZone,
     private hotkeyTargetExcludeService: HotkeyTargetExcludeService,
     private livePreviewService: LivePreviewService,
     public hardwarePromoService: HardwarePromoService
@@ -196,6 +201,30 @@ export class FixturePoolComponent implements OnInit {
     this.updateChannelMap();
     this.loadProfiles();
   }
+
+  ngAfterViewInit() {
+    // The map is 512 elements, and every one of them used to carry a mouseover binding.
+    // Angular runs a change detection cycle for each of those, which walks the whole
+    // dialog - the map and the channel select alone are a thousand views - so the
+    // pointer merely crossing the map kept the app busy. Nothing here has to happen
+    // until a fixture is actually dragged, so the map listens for itself and only comes
+    // back into angular while there is something to move.
+    this.ngZone.runOutsideAngular(() => {
+      this.dmxMap.nativeElement.addEventListener('mouseover', this.channelHovered);
+    });
+  }
+
+  ngOnDestroy() {
+    this.dmxMap?.nativeElement.removeEventListener('mouseover', this.channelHovered);
+  }
+
+  private channelHovered = (event: MouseEvent) => {
+    if (!this.channelDragFixture) {
+      return;
+    }
+
+    this.ngZone.run(() => this.channelMouseOver(event));
+  };
 
   private loadProfiles() {
     this.loadingProfiles = true;
