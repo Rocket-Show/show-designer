@@ -12,6 +12,7 @@ import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
+import { getStepMarkers } from '../models/timeline-step-marker';
 import { ColorService } from './color.service';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
@@ -58,6 +59,10 @@ export class TimelineService {
     this.presetService.previewSelectionChanged.subscribe(() => {
       this.selectedPlaybackRegion = undefined;
       this.updateRegionSelection();
+      this.updateStepMarkers();
+    });
+    this.presetService.stepsChanged.subscribe(() => {
+      this.updateStepMarkers();
     });
     this.sceneService.sceneDeleted.subscribe(() => {
       this.redrawAllRegions();
@@ -691,7 +696,64 @@ export class TimelineService {
       }
       scenePlaybackRegion.startMillis = Math.round(waveSurferRegion.start * 1000);
       scenePlaybackRegion.endMillis = Math.round(waveSurferRegion.end * 1000);
+
+      // the steps keep their own times while the region around them is resized, so
+      // where they sit inside it changes with every update
+      this.drawStepMarkers(waveSurferRegion);
     });
+  }
+
+  // The steps of the preset being edited, marked inside every region the preset plays
+  // in: a tick where each step is reached and a ramp over the time its transition
+  // travels to get there. They sit inside the region's own element, so they follow it
+  // through zooming and scrolling on their own.
+  updateStepMarkers() {
+    if (!this.isWaveSurferReady()) {
+      return;
+    }
+
+    for (const key of Object.keys(this.waveSurfer.regions.list)) {
+      const region: any = this.waveSurfer.regions.list[key];
+
+      if (region.element) {
+        this.drawStepMarkers(region);
+      }
+    }
+  }
+
+  private drawStepMarkers(region: any) {
+    for (const marker of Array.from(region.element.querySelectorAll('.step-marker'))) {
+      (marker as HTMLElement).remove();
+    }
+
+    const markers = getStepMarkers(this.presetService.selectedPreset, region.scene, region.scenePlaybackRegion);
+
+    markers.forEach((marker, index) => {
+      const selected = marker.step === this.presetService.selectedStep;
+
+      if (marker.transitionWidthPercentage > 0) {
+        const transition = this.createStepMarker('step-marker step-marker-transition', marker.transitionLeftPercentage, selected);
+        transition.style.width = marker.transitionWidthPercentage + '%';
+        region.element.appendChild(transition);
+      }
+
+      const tick = this.createStepMarker('step-marker step-marker-tick', marker.leftPercentage, selected);
+      tick.setAttribute('data-step-name', String(index + 1));
+      region.element.appendChild(tick);
+    });
+  }
+
+  private createStepMarker(className: string, leftPercentage: number, selected: boolean): HTMLElement {
+    const marker = document.createElement('div');
+
+    marker.className = className;
+    marker.style.left = leftPercentage + '%';
+
+    if (selected) {
+      marker.setAttribute('data-step-selected', 'true');
+    }
+
+    return marker;
   }
 
   private drawRegion(scenePlaybackRegion: ScenePlaybackRegion, scene: Scene) {
@@ -708,6 +770,7 @@ export class TimelineService {
       data: { handled: true },
     });
     this.connectRegion(waveSurferRegion, scene, scenePlaybackRegion);
+    this.drawStepMarkers(waveSurferRegion);
 
     // TODO show the all presets
     // for (let presetUuid of scene.presetUuids) {

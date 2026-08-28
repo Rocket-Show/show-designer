@@ -41,6 +41,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   private updateTimer: any;
   private capabilityValuesChangedSubscription: Subscription;
   private effectsChangedSubscription: Subscription;
+  private stepsChangedSubscription: Subscription;
 
   @Input()
   profile: FixtureProfile;
@@ -67,6 +68,11 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.effectsChangedSubscription = this.effectService.effectsChanged.subscribe(() => {
       this.scheduleUpdate();
     });
+
+    // the channels carry their values per step as well, so they follow the selection
+    this.stepsChangedSubscription = this.presetService.stepsChanged.subscribe(() => {
+      this.scheduleUpdate();
+    });
   }
 
   // the preset has been changed somewhere else -> show what it does to this channel. This
@@ -79,7 +85,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.updateTimer = setTimeout(() => {
       this.updateTimer = undefined;
 
-      if (!this._channel || !this.profile || !this.presetService.selectedPreset) {
+      if (!this._channel || !this.profile || !this.presetService.selectedPreset || !this.presetService.selectedStep) {
         return;
       }
 
@@ -94,7 +100,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.value = this.presetService.getChannelValue(this._channel.name, this.profile.uuid);
 
     const capabilityValue = this.presetService.getChannelValueFromCapabilities(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep.fixtureCapabilityValues,
       this._channel,
       this.profile.uuid
     );
@@ -251,6 +257,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.capabilityValuesChangedSubscription.unsubscribe();
     this.effectsChangedSubscription.unsubscribe();
+    this.stepsChangedSubscription.unsubscribe();
     clearTimeout(this.updateTimer);
     clearTimeout(this.valueSetTimer);
   }

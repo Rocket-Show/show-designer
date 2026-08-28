@@ -44,6 +44,12 @@
         {{ 'designer.misc.ms' | translate }}
       </div>
 
+      <select class="form-control sd-time-field ml-4" [ngModel]="fadeInCurve" (ngModelChange)="fadeInCurve = $event">
+        @for (curveType of transitionCurveTypes; track curveType) {
+        <option [value]="curveType">{{ 'designer.misc.transition-curve-' + curveType | translate }}</option>
+        }
+      </select>
+
       <div class="form-check ml-4">
         <input type="checkbox" [ngModel]="fadeInPre" (ngModelChange)="fadeInPre = $event" class="form-check-input" id="fadeInPre" />
 
@@ -62,6 +68,12 @@
       <div class="ml-2">
         {{ 'designer.misc.ms' | translate }}
       </div>
+
+      <select class="form-control sd-time-field ml-4" [ngModel]="fadeOutCurve" (ngModelChange)="fadeOutCurve = $event">
+        @for (curveType of transitionCurveTypes; track curveType) {
+        <option [value]="curveType">{{ 'designer.misc.transition-curve-' + curveType | translate }}</option>
+        }
+      </select>
 
       <div class="form-check ml-4">
         <input type="checkbox" [ngModel]="fadeOutPost" (ngModelChange)="fadeOutPost = $event" class="form-check-input" id="fadeOutPost" />

@@ -44,7 +44,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     let blue: number;
     let capabilityValue: FixtureCapabilityValue;
     capabilityValue = this.presetService.getCapabilityValue(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep,
       FixtureCapabilityType.ColorIntensity,
       FixtureCapabilityColor.Red
     );
@@ -52,7 +52,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
       red = 255 * capabilityValue.valuePercentage;
     }
     capabilityValue = this.presetService.getCapabilityValue(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep,
       FixtureCapabilityType.ColorIntensity,
       FixtureCapabilityColor.Green
     );
@@ -60,7 +60,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
       green = 255 * capabilityValue.valuePercentage;
     }
     capabilityValue = this.presetService.getCapabilityValue(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep,
       FixtureCapabilityType.ColorIntensity,
       FixtureCapabilityColor.Blue
     );
@@ -111,24 +111,24 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
   }
 
   private updateFixtureColor(color: any) {
-    if (this.presetService.selectedPreset) {
+    if (this.presetService.selectedStep) {
       if (color) {
         this.presetService.setCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           color.rgb.r / 255,
           undefined,
           FixtureCapabilityColor.Red
         );
         this.presetService.setCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           color.rgb.g / 255,
           undefined,
           FixtureCapabilityColor.Green
         );
         this.presetService.setCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           color.rgb.b / 255,
           undefined,
@@ -136,17 +136,17 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
         );
       } else {
         this.presetService.deleteCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           FixtureCapabilityColor.Red
         );
         this.presetService.deleteCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           FixtureCapabilityColor.Green
         );
         this.presetService.deleteCapabilityValue(
-          this.presetService.selectedPreset,
+          this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
           FixtureCapabilityColor.Blue
         );

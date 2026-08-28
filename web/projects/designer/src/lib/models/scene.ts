@@ -1,4 +1,4 @@
-import { ScenePlaybackRegion } from './scene-playback-region';
+import { TransitionCurveType } from './transition-curve';
 
 export class Scene {
   uuid: string;
@@ -29,6 +29,10 @@ export class Scene {
   fadeInMillis = 0;
   fadeOutMillis = 0;
 
+  // how the fades are shaped over their time (see transition-curve)
+  fadeInCurve: TransitionCurveType = 'linear';
+  fadeOutCurve: TransitionCurveType = 'linear';
+
   // fade in/out outside the start/end times?
   fadeInPre = false;
   fadeOutPost = false;
@@ -53,6 +57,10 @@ export class Scene {
     }
     this.fadeInMillis = data.fadeInMillis;
     this.fadeOutMillis = data.fadeOutMillis;
+
+    // projects before version 7 only knew linear fades
+    this.fadeInCurve = data.fadeInCurve || 'linear';
+    this.fadeOutCurve = data.fadeOutCurve || 'linear';
     this.fadeInPre = data.fadeInPre;
     this.fadeOutPost = data.fadeOutPost;
   }

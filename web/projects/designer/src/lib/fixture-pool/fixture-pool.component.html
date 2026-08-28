@@ -188,14 +188,13 @@
               } @else {
               <div class="d-flex">
                 <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
+                <!-- no tooltip on the rows: one is built, placed and thrown away again for
+                     every row the cursor crosses, and a minus on a fixture speaks for itself -->
                 <a
                   href="#"
                   class="fixture-remove ml-auto my-auto"
                   role="button"
-                  popover="{{ 'designer.fixture-pool.remove-fixture' | translate }}"
-                  container="body"
-                  placement="left"
-                  triggers="mouseenter:mouseleave"
+                  [attr.aria-label]="'designer.fixture-pool.remove-fixture' | translate"
                   (click)="removeFixture(node.fixture); $event.stopPropagation(); (false)"
                   ><i class="fa fa-minus fa-fw" aria-hidden="true"></i
                 ></a>
@@ -227,20 +226,9 @@
       <div class="tab-content" id="myTabContent">
         <!-- DMX universe overview-->
         <div class="tab-pane show active" id="dmx" role="tabpanel">
-          <!-- Show all channel numbers -->
-          <!-- <div class="form-group row">
-            <div class="col-auto flex-grow"></div>
-            <div class="col-lg-3 d-flex">
-              <div class="form-check my-auto ml-auto">
-                <input type="checkbox" class="form-check-input" id="showChannelNumbers" [ngModel]="showChannelNumbers"
-                  (ngModelChange)="showChannelNumbers = $event">
-                <label class="form-check-label" for="showChannelNumbers">Show channels</label>
-              </div>
-            </div>
-          </div> -->
-
-          <!-- List of DMX channels -->
-          <div>
+          <!-- List of DMX channels. The map is its own layout unit (see the css), without
+               which hovering anything in this dialog repaints all 512 channels with it. -->
+          <div class="dmx-map">
             @for (channel of dmxChannels; track $index; let i = $index) {
             <div
               class="dmx-channel"
@@ -253,11 +241,7 @@
               (mouseover)="channelMouseOver($event)"
               [attr.data-index]="i"
               [attr.data-channel]="i + 1"
-            >
-              <div class="d-flex w-100 dmx-channel-text" [attr.data-index]="i" [class.dmx-channel-text-visible]="showChannelNumbers">
-                <div class="m-auto" style="font-size: 11px" [attr.data-index]="i"><small [attr.data-index]="i">&nbsp;</small></div>
-              </div>
-            </div>
+            ></div>
             }
           </div>
 

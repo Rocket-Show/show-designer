@@ -75,7 +75,6 @@ export class FixturePoolComponent implements OnInit {
   public dmxChannels: DmxChannel[] = [];
   public selectedFixture: Fixture;
   public selectedFixtureProfile: FixtureProfile;
-  public showChannelNumbers = false;
   public channelDragFixture: Fixture;
   public channelDragOffset: number;
 

@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
+import { TransitionCurveType, transitionCurveTypes } from '../../models/transition-curve';
 import { Scene } from '../../models/scene';
 import { ColorService } from '../../services/color.service';
 import { SceneService } from '../../services/scene.service';
@@ -21,6 +22,10 @@ export class SceneSettingsComponent implements OnInit {
   fadeOutMillis: number;
   fadeInPre: boolean;
   fadeOutPost: boolean;
+  fadeInCurve: TransitionCurveType;
+  fadeOutCurve: TransitionCurveType;
+
+  transitionCurveTypes = transitionCurveTypes;
 
   // the color the scene takes from its presets, which cannot change while the dialog
   // is open
@@ -41,6 +46,8 @@ export class SceneSettingsComponent implements OnInit {
     this.fadeOutMillis = this.scene.fadeOutMillis;
     this.fadeInPre = this.scene.fadeInPre;
     this.fadeOutPost = this.scene.fadeOutPost;
+    this.fadeInCurve = this.scene.fadeInCurve;
+    this.fadeOutCurve = this.scene.fadeOutCurve;
 
     this.derivedColor = this.colorService.getDerivedSceneColor(this.scene);
     this.palette = this.colorService.pickerColors;
@@ -67,6 +74,8 @@ export class SceneSettingsComponent implements OnInit {
 
     this.scene.fadeInPre = this.fadeInPre;
     this.scene.fadeOutPost = this.fadeOutPost;
+    this.scene.fadeInCurve = this.fadeInCurve;
+    this.scene.fadeOutCurve = this.fadeOutCurve;
 
     // the icon and the color of the scene are part of the tree and of the timeline
     // regions, which are only built again when the scenes change

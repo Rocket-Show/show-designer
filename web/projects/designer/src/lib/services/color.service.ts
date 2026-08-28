@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Color } from '../models/color';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
+import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
 import { FixtureService } from './fixture.service';
@@ -61,8 +62,13 @@ export class ColorService {
 
   // the color a preset puts on its fixtures: the one mixed from its color intensities,
   // or the color of the wheel slot it selects. undefined, if it sets no color at all.
+  //
+  // A preset with steps is read from its first step, the look it opens with, so the
+  // color it is marked with stays the same while another step is edited or played.
   getDerivedPresetColor(preset: Preset): string {
-    return this.getColorIntensityColor(preset) || this.getWheelSlotColor(preset);
+    const capabilityValues = this.getPresetCapabilityValues(preset);
+
+    return this.getColorIntensityColor(capabilityValues) || this.getWheelSlotColor(capabilityValues);
   }
 
   // the color a scene is marked with (undefined = none, it is shown unmarked)
@@ -117,12 +123,21 @@ export class ColorService {
     return 'rgba(' + Math.round(rgb.red) + ', ' + Math.round(rgb.green) + ', ' + Math.round(rgb.blue) + ', ' + alpha + ')';
   }
 
+  // the values a preset is read from: the ones of its first step. The preset carries
+  // those on itself as well, but only after it has been saved (see
+  // writeCompatibilityValues), so the step is what a color has to follow.
+  private getPresetCapabilityValues(preset: Preset): FixtureCapabilityValue[] {
+    const step = preset.steps[0];
+
+    return (step ? step.fixtureCapabilityValues : preset.fixtureCapabilityValues) || [];
+  }
+
   // the rgb color a preset mixes from its color intensities (what the color picker of
   // the fixtures sets)
-  private getColorIntensityColor(preset: Preset): string {
-    const red = this.getColorIntensity(preset, FixtureCapabilityColor.Red);
-    const green = this.getColorIntensity(preset, FixtureCapabilityColor.Green);
-    const blue = this.getColorIntensity(preset, FixtureCapabilityColor.Blue);
+  private getColorIntensityColor(capabilityValues: FixtureCapabilityValue[]): string {
+    const red = this.getColorIntensity(capabilityValues, FixtureCapabilityColor.Red);
+    const green = this.getColorIntensity(capabilityValues, FixtureCapabilityColor.Green);
+    const blue = this.getColorIntensity(capabilityValues, FixtureCapabilityColor.Blue);
 
     if (red === undefined || green === undefined || blue === undefined) {
       return undefined;
@@ -131,16 +146,16 @@ export class ColorService {
     return this.toDisplayColor(new Color(red, green, blue));
   }
 
-  private getColorIntensity(preset: Preset, color: FixtureCapabilityColor): number {
-    const capabilityValue = this.presetService.getCapabilityValue(preset, FixtureCapabilityType.ColorIntensity, color);
+  private getColorIntensity(capabilityValues: FixtureCapabilityValue[], color: FixtureCapabilityColor): number {
+    const capabilityValue = this.presetService.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, color);
 
     return capabilityValue ? 255 * capabilityValue.valuePercentage : undefined;
   }
 
   // the color of the wheel slots a preset selects, for the fixtures which are colored
   // by a color wheel instead of by color intensities
-  private getWheelSlotColor(preset: Preset): string {
-    for (const capabilityValue of preset.fixtureCapabilityValues) {
+  private getWheelSlotColor(capabilityValues: FixtureCapabilityValue[]): string {
+    for (const capabilityValue of capabilityValues) {
       if (capabilityValue.type !== FixtureCapabilityType.WheelSlot || capabilityValue.slotNumber === undefined) {
         continue;
       }

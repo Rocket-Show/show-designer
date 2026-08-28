@@ -8,6 +8,7 @@ import { Project } from '../models/project';
 import { WaitDialogComponent } from '../wait-dialog/wait-dialog.component';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
+import { PresetStepService } from './preset-step.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
@@ -27,6 +28,7 @@ export class ProjectLoadService {
     private previewService: PreviewService,
     private fixtureService: FixtureService,
     private presetService: PresetService,
+    private presetStepService: PresetStepService,
     private sceneService: SceneService,
     private modalService: BsModalService,
     private uuidService: UuidService,
@@ -132,6 +134,17 @@ export class ProjectLoadService {
     this.projectService.project.version = 6;
   }
 
+  private migrateToVersion7() {
+    // a preset runs through steps now: the single look it had so far becomes its first
+    // one, which is the whole preset for as long as no further step is added
+    for (const preset of this.projectService.project.presets) {
+      preset.steps = [];
+      this.presetStepService.ensureStep(preset);
+    }
+
+    this.projectService.project.version = 7;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -172,6 +185,11 @@ export class ProjectLoadService {
       migrated = true;
     }
 
+    if (this.projectService.project.version < 7) {
+      this.migrateToVersion7();
+      migrated = true;
+    }
+
     if (migrated) {
       this.warningDialogService.show('designer.project.migrated').subscribe();
     }
@@ -207,6 +225,7 @@ export class ProjectLoadService {
 
   private afterLoad() {
     this.migrateFromOldProject();
+    this.presetService.selectStepFromProject();
     this.projectService.projectChanged.next();
     this.setupUniverses();
     this.fixtureService.updateCachedFixtures();
