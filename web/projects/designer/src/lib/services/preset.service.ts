@@ -529,7 +529,8 @@ export class PresetService {
   getCapabilityChannelValue(
     capabilityValue: FixtureCapabilityValue,
     channel: CachedFixtureChannel,
-    channelCapability: CachedFixtureCapability
+    channelCapability: CachedFixtureCapability,
+    preset?: Preset
   ): number {
     if (
       (capabilityValue.type === FixtureCapabilityType.Intensity || capabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
@@ -563,7 +564,12 @@ export class PresetService {
       (capabilityValue.type === FixtureCapabilityType.Pan || capabilityValue.type === FixtureCapabilityType.Tilt) &&
       capabilityValue.valuePercentage >= 0
     ) {
-      return channel.maxValue * capabilityValue.valuePercentage;
+      // a preset which mirrors this axis points its fixtures at the mirrored position
+      const valuePercentage = preset
+        ? preset.getMirroredValuePercentage(capabilityValue.type, capabilityValue.valuePercentage)
+        : capabilityValue.valuePercentage;
+
+      return channel.maxValue * valuePercentage;
     }
 
     if (
@@ -579,7 +585,12 @@ export class PresetService {
 
   // the value a channel is driven to by the capability values of a preset, or undefined, if no
   // capability touches it. A channel value set on the channel itself wins over this one.
-  getChannelValueFromCapabilities(capabilityValues: FixtureCapabilityValue[], channel: CachedFixtureChannel, profileUuid: string): number {
+  getChannelValueFromCapabilities(
+    capabilityValues: FixtureCapabilityValue[],
+    channel: CachedFixtureChannel,
+    profileUuid: string,
+    preset?: Preset
+  ): number {
     let value: number;
 
     for (const capabilityValue of capabilityValues) {
@@ -596,7 +607,7 @@ export class PresetService {
             profileUuid
           )
         ) {
-          const capabilityChannelValue = this.getCapabilityChannelValue(capabilityValue, channel, channelCapability);
+          const capabilityChannelValue = this.getCapabilityChannelValue(capabilityValue, channel, channelCapability, preset);
 
           if (capabilityChannelValue !== undefined) {
             // a later capability value overwrites an earlier one, just like in the preview

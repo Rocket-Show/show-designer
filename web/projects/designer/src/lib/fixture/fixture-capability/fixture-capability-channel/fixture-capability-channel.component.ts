@@ -102,7 +102,8 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     const capabilityValue = this.presetService.getChannelValueFromCapabilities(
       this.presetService.selectedStep.fixtureCapabilityValues,
       this._channel,
-      this.profile.uuid
+      this.profile.uuid,
+      this.presetService.selectedPreset
     );
     // the capabilities calculate in percentages, the channels show dmx values
     this.capabilityValue = capabilityValue === undefined ? undefined : Math.round(capabilityValue);

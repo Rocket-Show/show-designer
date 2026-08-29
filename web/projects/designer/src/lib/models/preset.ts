@@ -1,6 +1,7 @@
 import { Effect } from './effect';
 import { EffectCurve } from './effect-curve';
 import { EffectPanTilt } from './effect-pan-tilt';
+import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureChannelValue } from './fixture-channel-value';
 import { FolderPosition } from './folder-position';
@@ -74,6 +75,13 @@ export class Preset {
   // that they keep their phase across a step transition: a step only opens or closes
   // them (see PresetStep.effectAmounts).
   effects: Effect[] = [];
+
+  // mirror what the preset puts on the pan or the tilt of its moving heads: every one of
+  // its fixtures is pointed at the mirrored position (1 - value) on that axis, its steps
+  // and its effects alike, which turns a copy of a preset into the same movement played
+  // the other way round without touching a single value it is written with.
+  mirrorPan = false;
+  mirrorTilt = false;
 
   // position offset, relative to the scene start
   // (undefined = start/end of the scene itself)
@@ -155,6 +163,11 @@ export class Preset {
         }
       }
     }
+
+    // a preset written before the designer knew the mirror does not mirror anything
+    this.mirrorPan = data.mirrorPan === true;
+    this.mirrorTilt = data.mirrorTilt === true;
+
     this.startMillis = data.startMillis;
     this.endMillis = data.endMillis;
     this.fadeInMillis = data.fadeInMillis;
@@ -168,5 +181,16 @@ export class Preset {
 
     // projects before version 3 did not know a preset-specific fixture order
     this.useGlobalFixtureOrder = data.useGlobalFixtureOrder !== false;
+  }
+
+  // whether the preset mirrors what it puts on the passed capability
+  public mirrorsCapability(type: FixtureCapabilityType): boolean {
+    return (type === FixtureCapabilityType.Pan && this.mirrorPan) || (type === FixtureCapabilityType.Tilt && this.mirrorTilt);
+  }
+
+  // the position the preset points its fixtures at on the passed capability: a mirrored
+  // axis is folded around the middle of its range, the rest is passed through
+  public getMirroredValuePercentage(type: FixtureCapabilityType, valuePercentage: number): number {
+    return this.mirrorsCapability(type) ? 1 - valuePercentage : valuePercentage;
   }
 }

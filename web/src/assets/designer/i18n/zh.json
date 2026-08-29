@@ -180,6 +180,7 @@
       "capability-color": "颜色",
       "capability-color-wheel": "色轮",
       "capability-pan-tilt": "水平/垂直",
+      "capability-pan-tilt-mirror": "镜像",
       "profiles": "配置文件",
       "setting-position-title": "灯具位置",
       "setting-position": "位置",

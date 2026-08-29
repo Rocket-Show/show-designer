@@ -323,7 +323,8 @@ export class PreviewService implements OnDestroy {
     state: PresetStepState,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
-    intensityPercentage: number
+    intensityPercentage: number,
+    preset: Preset
   ) {
     let hasColor = false;
 
@@ -345,7 +346,7 @@ export class PreviewService implements OnDestroy {
               )
             ) {
               // the capabilities match -> apply the value, if possible
-              const value = this.presetService.getCapabilityChannelValue(presetCapabilityValue, cachedChannel, channelCapability);
+              const value = this.presetService.getCapabilityChannelValue(presetCapabilityValue, cachedChannel, channelCapability, preset);
 
               if (value !== undefined) {
                 const fixtureChannelValue = new FixtureChannelValue();
@@ -485,10 +486,13 @@ export class PreviewService implements OnDestroy {
                     null
                   )
                 ) {
-                  const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+                  let value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
 
                   // the curve does not apply anymore after it has finished running
                   if (value !== undefined) {
+                    // a preset which mirrors this axis mirrors the movement of its curves as well
+                    value = preset.preset.getMirroredValuePercentage(capability.type, value);
+
                     const fixtureChannelValue = new FixtureChannelValue();
                     fixtureChannelValue.channelName = cachedChannel.name;
                     fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
@@ -610,7 +614,7 @@ export class PreviewService implements OnDestroy {
                 timeMillis - this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
               );
 
-            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage);
+            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
             this.mixEffects(
               timeMillis,
