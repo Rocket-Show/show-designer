@@ -14,20 +14,17 @@ export class UndoService implements OnDestroy {
   // weighs a few megabytes, so a number of steps alone is not much of a bound.
   private static readonly maxCharacters = 64 * 1024 * 1024;
 
-  // how often the project is compared against the state the history holds
-  private static readonly checkIntervalMillis = 500;
+  // how long the project is given to come to a rest before it is looked at. A click is
+  // only handled once the button comes up, and what it changes can travel through a
+  // handler or two before it lands in the project; a project which has just been loaded
+  // gets the positions the preview calculates for its fixtures written into it on the
+  // first frame it is drawn in.
+  private static readonly settleMillis = 250;
 
-  // how long the changes are collected before they become one step, counted from the
-  // last thing the user did. Dragging a slider or typing a name changes the project
-  // with every mouse move and every key stroke, which would otherwise leave one step
-  // per pixel and per letter behind.
-  private static readonly collectMillis = 700;
-
-  // how long the project keeps being watched after the last thing the user did. It only
-  // ever changes because of the user, so there is nothing to look for once things have
-  // settled, apart from what an answered request writes into it a little later. A change
-  // arriving after that is not lost, it just joins the next step.
-  private static readonly watchMillis = 10000;
+  // how long the changes of the keyboard are collected. Typing a name changes the
+  // project with every key stroke, which would otherwise leave one step per letter
+  // behind.
+  private static readonly typingMillis = 700;
 
   // the parts of the project which are not undone, because they say what the user is
   // looking at rather than what the show is, or because they identify the project on
@@ -44,21 +41,15 @@ export class UndoService implements OnDestroy {
     'stepPreviewStartMillis',
   ];
 
-  // everything the user can change the project with
-  private static readonly interactionEvents = [
-    'mousedown',
-    'mousemove',
-    'mouseup',
-    'touchstart',
-    'touchmove',
-    'touchend',
-    'keydown',
-    'keyup',
-    'input',
-    'change',
-    'drop',
-    'dragend',
-  ];
+  // a gesture of the pointer starts here. Everything it changes belongs to one step,
+  // no matter how many values it moves on the way.
+  private static readonly gestureStartEvents = ['mousedown', 'touchstart'];
+
+  // and ends here, which is where that step is cut
+  private static readonly gestureEndEvents = ['mouseup', 'touchend', 'touchcancel', 'drop', 'dragend'];
+
+  // the keyboard changes the project without a gesture around it
+  private static readonly typingEvents = ['keydown', 'keyup', 'input', 'change'];
 
   // the states to go back to, the one an undo returns to last
   private undoSteps: string[] = [];
@@ -72,12 +63,24 @@ export class UndoService implements OnDestroy {
   // don't take the project apart while it is being put back together
   private restoring = false;
 
-  private lastInteractionMillis = 0;
+  // is a gesture of the pointer running? Nothing is cut into a step while it is.
+  private pointerDown = false;
 
-  private checkTimer: any;
+  private captureTimer: any;
 
-  private interactionListener = () => {
-    this.lastInteractionMillis = Date.now();
+  private gestureStartListener = () => {
+    // whatever was changed before this gesture belongs to the step before it
+    this.capturePending();
+    this.pointerDown = true;
+  };
+
+  private gestureEndListener = () => {
+    this.pointerDown = false;
+    this.scheduleCapture(UndoService.settleMillis);
+  };
+
+  private typingListener = () => {
+    this.scheduleCapture(UndoService.typingMillis);
   };
 
   constructor(private projectService: ProjectService, private projectLoadService: ProjectLoadService, private ngZone: NgZone) {
@@ -88,23 +91,31 @@ export class UndoService implements OnDestroy {
       }
     });
 
-    // neither watching the project nor noticing the user has anything to show, so keep
-    // both of them out of the change detection
+    // neither noticing the user nor looking at the project has anything to show, so
+    // keep both of them out of the change detection
     this.ngZone.runOutsideAngular(() => {
-      for (const event of UndoService.interactionEvents) {
-        document.addEventListener(event, this.interactionListener, { capture: true, passive: true });
-      }
-
-      this.checkTimer = setInterval(() => this.check(), UndoService.checkIntervalMillis);
+      this.eachInteractionEvent((event, listener) => document.addEventListener(event, listener, { capture: true, passive: true }));
     });
   }
 
   ngOnDestroy() {
-    for (const event of UndoService.interactionEvents) {
-      document.removeEventListener(event, this.interactionListener, { capture: true });
+    this.eachInteractionEvent((event, listener) => document.removeEventListener(event, listener, { capture: true }));
+
+    clearTimeout(this.captureTimer);
+  }
+
+  private eachInteractionEvent(each: (event: string, listener: () => void) => void) {
+    for (const event of UndoService.gestureStartEvents) {
+      each(event, this.gestureStartListener);
     }
 
-    clearInterval(this.checkTimer);
+    for (const event of UndoService.gestureEndEvents) {
+      each(event, this.gestureEndListener);
+    }
+
+    for (const event of UndoService.typingEvents) {
+      each(event, this.typingListener);
+    }
   }
 
   get canUndo(): boolean {
@@ -137,20 +148,38 @@ export class UndoService implements OnDestroy {
     }
   }
 
-  private check() {
-    const sinceInteractionMillis = Date.now() - this.lastInteractionMillis;
+  // look at the project once the user has come to a rest
+  private scheduleCapture(delayMillis: number) {
+    clearTimeout(this.captureTimer);
 
-    if (sinceInteractionMillis < UndoService.collectMillis || sinceInteractionMillis > UndoService.watchMillis) {
-      // the user is still at it, or has long since stopped
-      return;
-    }
+    this.captureTimer = setTimeout(() => {
+      this.captureTimer = undefined;
 
-    this.captureChanges();
+      // a gesture which is still running becomes a step of its own once it is over
+      if (!this.pointerDown) {
+        this.capture();
+      }
+    }, delayMillis);
   }
 
-  // turn everything changed since the last state into a step of its own. It is done on
-  // its own as well, e.g. before showing whether there is anything to undo at all.
+  // cut the step which is waiting to be cut, if there is one
+  private capturePending() {
+    if (this.captureTimer) {
+      this.captureChanges();
+    }
+  }
+
+  // turn everything changed since the last state into a step of its own, right now.
+  // It is done on its own as well, e.g. before showing whether there is anything to
+  // undo at all.
   captureChanges() {
+    clearTimeout(this.captureTimer);
+    this.captureTimer = undefined;
+
+    this.capture();
+  }
+
+  private capture() {
     if (!this.projectService.project) {
       return;
     }
@@ -180,11 +209,8 @@ export class UndoService implements OnDestroy {
     this.undoSteps = [];
     this.redoSteps = [];
     this.currentState = undefined;
-    this.lastInteractionMillis = Date.now();
 
-    this.ngZone.runOutsideAngular(() => {
-      setTimeout(() => this.captureChanges());
-    });
+    this.ngZone.runOutsideAngular(() => this.scheduleCapture(UndoService.settleMillis));
   }
 
   private apply(state: string) {
@@ -207,7 +233,6 @@ export class UndoService implements OnDestroy {
     // it, so that whatever a project does not carry through being read again cannot
     // look like the user changing something afterwards
     this.currentState = this.serialize(this.projectService.project);
-    this.lastInteractionMillis = Date.now();
   }
 
   undo() {

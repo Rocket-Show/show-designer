@@ -400,6 +400,10 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: any) {
+    if (this.handleUndoRedo(event)) {
+      return;
+    }
+
     if (this.hotkeyTargetExcludeService.exclude(event)) {
       return;
     }
@@ -429,19 +433,33 @@ export class DesignerComponent implements OnInit, AfterViewInit {
       event.stopPropagation();
       event.preventDefault();
     }
+  }
 
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
-      this.undo();
-      event.stopPropagation();
-      event.preventDefault();
+  // Undo and redo on ctrl/cmd+z and, both of the common ways to redo, on ctrl/cmd+y and
+  // ctrl/cmd+shift+z. They are only left alone while the user types, where the browser
+  // undoes what was typed; anything else which happens to be in focus (a checkbox of
+  // the fixture list, a slider) has no undo of its own to get in the way of.
+  private handleUndoRedo(event: any): boolean {
+    if (!(event.ctrlKey || event.metaKey) || this.hotkeyTargetExcludeService.excludeTyping(event)) {
+      return false;
     }
 
-    // both of the two common ways to redo: the one Windows uses and the one macOS uses
-    if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) {
+    const key = event.key.toLowerCase();
+
+    if (key !== 'z' && key !== 'y') {
+      return false;
+    }
+
+    if (key === 'y' || event.shiftKey) {
       this.redo();
-      event.stopPropagation();
-      event.preventDefault();
+    } else {
+      this.undo();
     }
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    return true;
   }
 
   switchLanguage(language: string) {

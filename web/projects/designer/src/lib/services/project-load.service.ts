@@ -239,6 +239,22 @@ export class ProjectLoadService {
     this.previewService.updateStage();
     this.livePreviewService.previewLive();
     this.sceneService.selectPresetFromSelectedScene();
+    this.announceChanges();
+  }
+
+  // The panels keep what they show in fields of their own and only read the project
+  // again when they are told that it changed. A project which has just been loaded or
+  // put back by an undo changed all of it at once, so tell them everything: otherwise
+  // e.g. the color picker keeps showing the color of the project before it, and the
+  // next turn of its wheel writes that color back.
+  private announceChanges() {
+    this.presetService.previewSelectionChanged.next();
+    this.presetService.presetsChanged.next();
+    this.presetService.capabilityValuesChanged.next();
+    this.presetService.fixtureColorChanged.next();
+    this.presetService.fixtureSelectionSettingsChanged.next();
+    this.sceneService.scenesChanged.next();
+    this.effectService.effectsChanged.next();
   }
 
   private selectScenesPresetComposition() {
