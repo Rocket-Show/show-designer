@@ -1,0 +1,29 @@
+<div class="inline-edit d-inline-flex align-items-center">
+  @if (!editing) {
+  <!-- Display mode: clicking the value itself starts the editing -->
+  <span
+    class="inline-edit-value"
+    [class.inline-edit-placeholder]="!value"
+    role="button"
+    tabindex="0"
+    [attr.aria-label]="'designer.misc.edit' | translate"
+    (click)="startEdit()"
+    (keydown.enter)="startEdit()"
+    >{{ value || placeholder }}</span
+  >
+  } @else {
+  <!-- Edit mode: the value is stored as soon as the field is left, escape discards it -->
+  <input
+    #editInput
+    type="text"
+    class="inline-edit-input"
+    [placeholder]="placeholder"
+    [size]="inputSize"
+    [ngModel]="editValue"
+    (ngModelChange)="editValue = $event"
+    (blur)="save()"
+    (keydown.enter)="save()"
+    (keydown.escape)="cancel()"
+  />
+  }
+</div>

@@ -8,6 +8,7 @@ import { Project } from '../models/project';
 import { WaitDialogComponent } from '../wait-dialog/wait-dialog.component';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
+import { PresetStepService } from './preset-step.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
@@ -17,6 +18,8 @@ import { PresetFixture } from '../models/preset-fixture';
 import { WarningDialogService } from './warning-dialog.service';
 import { LivePreviewService } from './live-preview.service';
 import { ConfigService } from './config.service';
+import { EffectService } from './effect.service';
+import { Composition } from '../models/composition';
 
 @Injectable({
   providedIn: 'root',
@@ -27,6 +30,7 @@ export class ProjectLoadService {
     private previewService: PreviewService,
     private fixtureService: FixtureService,
     private presetService: PresetService,
+    private presetStepService: PresetStepService,
     private sceneService: SceneService,
     private modalService: BsModalService,
     private uuidService: UuidService,
@@ -35,7 +39,8 @@ export class ProjectLoadService {
     private activatedRoute: ActivatedRoute,
     private warningDialogService: WarningDialogService,
     private livePreviewService: LivePreviewService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private effectService: EffectService
   ) {}
 
   private migrateToVersion2() {
@@ -79,12 +84,112 @@ export class ProjectLoadService {
     this.projectService.project.version = 2;
   }
 
+  private migrateToVersion3() {
+    // the presets of a scene and the fixtures of a preset are ordered per scene/preset
+    // now. Until now, the global lists defined both orders -> sort them accordingly, so
+    // the projects still look exactly the same.
+    for (const scene of this.projectService.project.scenes) {
+      scene.presetUuids = this.projectService.project.presets
+        .filter((preset) => scene.presetUuids.indexOf(preset.uuid) >= 0)
+        .map((preset) => preset.uuid);
+    }
+
+    for (const preset of this.projectService.project.presets) {
+      preset.fixtures.sort((fixture1, fixture2) => this.globalFixtureIndex(fixture1) - this.globalFixtureIndex(fixture2));
+      preset.useGlobalFixtureOrder = true;
+    }
+
+    this.projectService.project.version = 3;
+  }
+
+  private migrateToVersion4() {
+    // previewPreset used to mean "a preset was clicked last", it is the solo switch of
+    // the preset now -> don't open an old project soloed
+    this.projectService.project.previewPreset = false;
+
+    this.projectService.project.version = 4;
+  }
+
+  private migrateToVersion5() {
+    // the presets can be grouped in folders now -> put them all at the top level, in
+    // the order they had so far
+    this.projectService.project.presets.forEach((preset, index) => {
+      preset.folderUuid = undefined;
+      preset.sortIndex = index;
+    });
+
+    this.projectService.project.version = 5;
+  }
+
+  private migrateToVersion6() {
+    // the scenes and the fixtures can be grouped in folders now, like the presets ->
+    // put them all at the top level, in the order they had so far
+    this.projectService.project.scenes.forEach((scene, index) => {
+      scene.folderUuid = undefined;
+      scene.sortIndex = index;
+    });
+
+    this.projectService.project.presetFixtures.forEach((presetFixture, index) => {
+      presetFixture.folderUuid = undefined;
+      presetFixture.sortIndex = index;
+    });
+
+    this.projectService.project.version = 6;
+  }
+
+  private migrateToVersion7() {
+    // a preset runs through steps now: the single look it had so far becomes its first
+    // one, which is the whole preset for as long as no further step is added
+    for (const preset of this.projectService.project.presets) {
+      preset.steps = [];
+      this.presetStepService.ensureStep(preset);
+    }
+
+    this.projectService.project.version = 7;
+  }
+
+  private globalFixtureIndex(presetFixture: PresetFixture): number {
+    return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
+      this.presetService.fixtureUuidAndPixelKeyEquals(
+        projectFixture.fixtureUuid,
+        presetFixture.fixtureUuid,
+        projectFixture.pixelKey,
+        presetFixture.pixelKey
+      )
+    );
+  }
+
   private migrateFromOldProject() {
     let migrated = false;
 
     if (!this.projectService.project.version) {
       // Migrate from version 1
       this.migrateToVersion2();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 3) {
+      this.migrateToVersion3();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 4) {
+      this.migrateToVersion4();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 5) {
+      this.migrateToVersion5();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 6) {
+      this.migrateToVersion6();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 7) {
+      this.migrateToVersion7();
       migrated = true;
     }
 
@@ -123,6 +228,8 @@ export class ProjectLoadService {
 
   private afterLoad() {
     this.migrateFromOldProject();
+    this.presetService.selectStepFromProject();
+    this.projectService.projectChanged.next();
     this.setupUniverses();
     this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
@@ -132,6 +239,22 @@ export class ProjectLoadService {
     this.previewService.updateStage();
     this.livePreviewService.previewLive();
     this.sceneService.selectPresetFromSelectedScene();
+    this.announceChanges();
+  }
+
+  // The panels keep what they show in fields of their own and only read the project
+  // again when they are told that it changed. A project which has just been loaded or
+  // put back by an undo changed all of it at once, so tell them everything: otherwise
+  // e.g. the color picker keeps showing the color of the project before it, and the
+  // next turn of its wheel writes that color back.
+  private announceChanges() {
+    this.presetService.previewSelectionChanged.next();
+    this.presetService.presetsChanged.next();
+    this.presetService.capabilityValuesChanged.next();
+    this.presetService.fixtureColorChanged.next();
+    this.presetService.fixtureSelectionSettingsChanged.next();
+    this.sceneService.scenesChanged.next();
+    this.effectService.effectsChanged.next();
   }
 
   private selectScenesPresetComposition() {
@@ -213,7 +336,7 @@ export class ProjectLoadService {
     this.sceneService.addScene();
     this.projectService.project.scenes[0].presetUuids.push(preset.uuid);
 
-    this.projectService.project.previewPreset = true;
+    this.projectService.project.previewPreset = false;
 
     this.sceneService.selectedScenes = [this.projectService.project.scenes[0]];
     this.presetService.selectedPreset = this.projectService.project.presets[0];
@@ -249,6 +372,82 @@ export class ProjectLoadService {
     this.projectService.project = project;
 
     this.selectScenesPresetComposition();
+    this.afterLoad();
+  }
+
+  // the composition the timeline shows after a state of the project has been put back.
+  // Its audio file is only loaded again, if another composition is selected now, so
+  // that undoing an edit does not interrupt what is playing.
+  private restoreSelectedComposition(previousComposition: Composition) {
+    const project = this.projectService.project;
+    const index = project.compositions.findIndex((composition) => composition.uuid === project.selectedCompositionUuid);
+
+    this.timelineService.selectedPlaybackRegion = undefined;
+
+    if (index < 0) {
+      // the composition which was selected is not part of the restored project -> show
+      // the first one there is, the same way deleting a composition does
+      this.timelineService.selectedComposition = undefined;
+      this.timelineService.selectedCompositionIndex = undefined;
+      this.timelineService.destroyWaveSurfer();
+
+      if (project.compositions.length > 0) {
+        this.timelineService.selectCompositionIndex(0);
+      }
+
+      return;
+    }
+
+    const composition = project.compositions[index];
+
+    if (
+      previousComposition &&
+      previousComposition.uuid === composition.uuid &&
+      previousComposition.audioFileName === composition.audioFileName
+    ) {
+      // the same audio file is still the one to play -> keep it loaded and only point
+      // the timeline at the restored objects
+      this.timelineService.selectedComposition = composition;
+      this.timelineService.selectedCompositionIndex = index;
+      this.timelineService.redrawAllRegions();
+      return;
+    }
+
+    this.timelineService.selectCompositionIndex(index);
+  }
+
+  // put a state of the project back in place, e.g. after an undo. Everything a load
+  // sets up is built again from the restored project, which consists of new objects:
+  // what was being edited before is picked up again by its uuid, so the panels keep
+  // showing what they were showing.
+  restoreProject(project: Project) {
+    const previousComposition = this.timelineService.selectedComposition;
+    const selectedEffectUuid = this.effectService.selectedEffect ? this.effectService.selectedEffect.uuid : undefined;
+    const selectedSettingsFixtureUuids = this.fixtureService.selectedSettingsFixtures.map((fixture) => fixture.uuid);
+
+    this.projectService.project = project;
+
+    this.presetService.selectedPreset = this.presetService.getPresetByUuid(project.selectedPresetUuid);
+    this.sceneService.selectedScenes = (project.selectedSceneUuids || [])
+      .map((uuid) => this.sceneService.getSceneByUuid(uuid))
+      .filter((scene) => !!scene);
+
+    this.restoreSelectedComposition(previousComposition);
+
+    if (this.sceneService.selectedScenes.length === 0 && project.scenes.length > 0) {
+      // the scenes which were selected are not part of the restored project -> play the
+      // first one there is, the same way a project which has just been opened does
+      this.sceneService.selectScene(0);
+    }
+
+    this.effectService.selectedEffect = this.presetService.selectedPreset
+      ? this.presetService.selectedPreset.effects.find((effect) => effect.uuid === selectedEffectUuid)
+      : undefined;
+
+    this.fixtureService.selectedSettingsFixtures = selectedSettingsFixtureUuids
+      .map((uuid) => this.fixtureService.getFixtureByUuid(uuid))
+      .filter((fixture) => !!fixture);
+
     this.afterLoad();
   }
 }

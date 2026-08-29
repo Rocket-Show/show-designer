@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CachedFixtureCapability } from '../../../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../../models/fixture-profile';
 import { PresetService } from '../../../services/preset.service';
+import { EffectService } from '../../../services/effect.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
 
 @Component({
@@ -12,7 +14,7 @@ import { LivePreviewService } from '../../../services/live-preview.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class FixtureCapabilityChannelComponent implements OnInit {
+export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   @ViewChild('sliderValue', { static: false }) sliderValue: ElementRef;
 
   selectedCapability: CachedFixtureCapability;
@@ -20,6 +22,12 @@ export class FixtureCapabilityChannelComponent implements OnInit {
 
   defaultValue = 0;
   value = 0;
+  // the value the capabilities of the preset (dimmer, color, pan/tilt, wheel slot) drive this
+  // channel to, if any. It is shown as long as the channel carries no value of its own.
+  capabilityValue: number;
+  // an effect of the preset drives this channel. Its value moves and, while the effect is
+  // chasing, differs from fixture to fixture, so the channel only says that it is driven.
+  drivenByEffect = false;
   templateValue = 0;
   description: string;
 
@@ -30,6 +38,10 @@ export class FixtureCapabilityChannelComponent implements OnInit {
   descriptionEnd: string;
 
   valueSetTimer: any;
+  private updateTimer: any;
+  private capabilityValuesChangedSubscription: Subscription;
+  private effectsChangedSubscription: Subscription;
+  private stepsChangedSubscription: Subscription;
 
   @Input()
   profile: FixtureProfile;
@@ -43,20 +55,72 @@ export class FixtureCapabilityChannelComponent implements OnInit {
   @Input()
   capabilityIndex: number;
 
-  constructor(private presetService: PresetService, private livePreviewService: LivePreviewService) {}
+  constructor(
+    private presetService: PresetService,
+    private effectService: EffectService,
+    private livePreviewService: LivePreviewService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {
+    this.capabilityValuesChangedSubscription = this.presetService.capabilityValuesChanged.subscribe(() => {
+      this.scheduleUpdate();
+    });
+
+    this.effectsChangedSubscription = this.effectService.effectsChanged.subscribe(() => {
+      this.scheduleUpdate();
+    });
+
+    // the channels carry their values per step as well, so they follow the selection
+    this.stepsChangedSubscription = this.presetService.stepsChanged.subscribe(() => {
+      this.scheduleUpdate();
+    });
+  }
+
+  // the preset has been changed somewhere else -> show what it does to this channel. This
+  // happens while a capability slider is being dragged, so don't redraw on every single step.
+  private scheduleUpdate() {
+    if (this.updateTimer) {
+      return;
+    }
+
+    this.updateTimer = setTimeout(() => {
+      this.updateTimer = undefined;
+
+      if (!this._channel || !this.profile || !this.presetService.selectedPreset || !this.presetService.selectedStep) {
+        return;
+      }
+
+      this.updateChannel();
+      this.changeDetectorRef.detectChanges();
+    }, 30);
+  }
 
   private updateChannel() {
     this.selectedCapability = this._channel.capabilities[0];
 
     this.value = this.presetService.getChannelValue(this._channel.name, this.profile.uuid);
+
+    const capabilityValue = this.presetService.getChannelValueFromCapabilities(
+      this.presetService.selectedStep.fixtureCapabilityValues,
+      this._channel,
+      this.profile.uuid,
+      this.presetService.selectedPreset
+    );
+    // the capabilities calculate in percentages, the channels show dmx values
+    this.capabilityValue = capabilityValue === undefined ? undefined : Math.round(capabilityValue);
+
+    this.drivenByEffect = this.presetService.channelIsDrivenByEffect(this.presetService.selectedPreset, this._channel, this.profile.uuid);
+
     this.calculateTemplateValue();
 
-    if (this.value >= 0) {
+    // whatever the channel shows also decides which of its capabilities is the current one
+    const shownValue = this.value === undefined ? this.capabilityValue : this.value;
+
+    if (shownValue >= 0) {
       for (const capability of this._channel.capabilities) {
         if (
           capability.capability.dmxRange.length > 0 &&
-          capability.capability.dmxRange[0] <= this.value &&
-          this.value <= capability.capability.dmxRange[1]
+          capability.capability.dmxRange[0] <= shownValue &&
+          shownValue <= capability.capability.dmxRange[1]
         ) {
           this.selectedCapability = capability;
           break;
@@ -191,6 +255,14 @@ export class FixtureCapabilityChannelComponent implements OnInit {
 
   ngOnInit() {}
 
+  ngOnDestroy() {
+    this.capabilityValuesChangedSubscription.unsubscribe();
+    this.effectsChangedSubscription.unsubscribe();
+    this.stepsChangedSubscription.unsubscribe();
+    clearTimeout(this.updateTimer);
+    clearTimeout(this.valueSetTimer);
+  }
+
   setValue(value: any, ignoreCapabilityRange: boolean = false) {
     if (isNaN(value)) {
       return;
@@ -221,7 +293,14 @@ export class FixtureCapabilityChannelComponent implements OnInit {
   }
 
   private calculateTemplateValue() {
-    this.templateValue = this.value ? this.value : this.getDefaultValue();
+    if (this.value !== undefined) {
+      this.templateValue = this.value;
+    } else if (this.capabilityValue !== undefined) {
+      // the channel is deactivated, but a capability of the preset drives it
+      this.templateValue = this.capabilityValue;
+    } else {
+      this.templateValue = this.getDefaultValue();
+    }
   }
 
   private getDefaultValue(): number {
@@ -234,12 +313,12 @@ export class FixtureCapabilityChannelComponent implements OnInit {
 
   changeActive(active: boolean) {
     if (active) {
-      this.setValue(this.getDefaultValue(), true);
+      // keep what the channel was showing: the value a capability drives it to, or the
+      // default value of the channel, if no capability reaches it
+      this.setValue(this.templateValue, true);
     } else {
       this.presetService.deleteChannelValue(this._channel.name, this.profile.uuid);
-      this.selectedCapability = this._channel.capabilities[0];
-      this.value = undefined;
-      this.calculateTemplateValue();
+      this.updateChannel();
     }
     this.livePreviewService.previewLive();
   }

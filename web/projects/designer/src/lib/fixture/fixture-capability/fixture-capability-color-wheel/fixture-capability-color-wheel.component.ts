@@ -128,7 +128,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
 
   getCurrentSlotNumber(): number {
     const capabilityValue = this.presetService.getCapabilityValue(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep,
       FixtureCapabilityType.WheelSlot,
       undefined,
       this.wheelName,
@@ -151,7 +151,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       // no slot is selected and the capability is inactive
       // -> show the approx. color, if a color or a similar slot from a different wheel has been selected
       const approximatedCapability = this.presetService.getApproximatedColorWheelCapability(
-        this.presetService.selectedPreset,
+        this.presetService.selectedStep.fixtureCapabilityValues,
         this._channel
       );
 
@@ -166,7 +166,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
   changeActive(active: boolean) {
     if (active) {
       this.presetService.setCapabilityValue(
-        this.presetService.selectedPreset,
+        this.presetService.selectedStep,
         FixtureCapabilityType.WheelSlot,
         undefined,
         1,
@@ -176,7 +176,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       );
     } else {
       this.presetService.deleteCapabilityValue(
-        this.presetService.selectedPreset,
+        this.presetService.selectedStep,
         FixtureCapabilityType.WheelSlot,
         undefined,
         this.wheelName,
@@ -189,7 +189,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
 
   selectSlotNumber(slotNumber: number) {
     this.presetService.setCapabilityValue(
-      this.presetService.selectedPreset,
+      this.presetService.selectedStep,
       FixtureCapabilityType.WheelSlot,
       undefined,
       slotNumber,

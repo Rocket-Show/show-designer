@@ -12,11 +12,21 @@
       {{ 'designer.intro.title-' + introService.activeStep | translate }}
     </div>
     <div class="ml-auto">
-      <a href="#" class="btn btn-secondary m-0, p-0" (click)="close(); (false)"><i class="fa fa-times" aria-hidden="true"></i></a>
+      <button type="button" class="close pull-right" aria-label="Close" (click)="close(); (false)">
+        <span aria-hidden="true">&times;</span>
+      </button>
     </div>
   </div>
   <div class="card-body h-100">
     <p>{{ 'designer.intro.step-' + introService.activeStep | translate }}</p>
+
+    <!-- the user just walked through the whole designer: a good moment to mention the hardware -->
+    @if (introService.activeStep == 'finish' && hardwarePromoService.enabled) {
+    <p class="mb-0">
+      {{ 'designer.hardware-promo.intro-finish' | translate }}
+      <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+    </p>
+    }
   </div>
   <div class="card-footer">
     @if (introService.activeStep != 'start') {

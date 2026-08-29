@@ -2,6 +2,7 @@ import { Component, HostListener } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { UniverseConfig } from '../../models/universe-config';
+import { HardwarePromoService } from '../../services/hardware-promo.service';
 import { UuidService } from '../../services/uuid.service';
 
 @Component({
@@ -14,8 +15,11 @@ export class FixturePoolEditUniversesComponent {
   public universes: UniverseConfig[] = [];
   public newUniverseName = '';
   public onClose: Subject<UniverseConfig[] | undefined> = new Subject();
+  public promoLink: string;
 
-  constructor(public bsModalRef: BsModalRef, private uuidService: UuidService) {}
+  constructor(public bsModalRef: BsModalRef, private uuidService: UuidService, public hardwarePromoService: HardwarePromoService) {
+    this.promoLink = this.hardwarePromoService.link('universes');
+  }
 
   addUniverse() {
     const name = (this.newUniverseName || '').trim();

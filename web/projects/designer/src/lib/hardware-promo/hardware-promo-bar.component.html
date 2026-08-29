@@ -1,0 +1,27 @@
+@if (show) {
+<div class="hardware-promo-bar">
+  <i class="fa fa-lightbulb-o hardware-promo-bar-icon" aria-hidden="true"></i>
+
+  <div class="hardware-promo-bar-text">
+    <div class="hardware-promo-bar-title">{{ 'designer.hardware-promo.bar-title' | translate }}</div>
+    <div class="hardware-promo-bar-lead">{{ 'designer.hardware-promo.bar-text' | translate }}</div>
+  </div>
+
+  <a class="btn btn-primary btn-sm" [href]="link" target="_blank" rel="noopener" (click)="dismiss()">
+    {{ 'designer.hardware-promo.cta' | translate }}
+  </a>
+
+  <a
+    href="#"
+    class="hardware-promo-bar-close"
+    aria-label="Close"
+    popover="{{ 'designer.hardware-promo.dismiss' | translate }}"
+    container="body"
+    placement="top"
+    triggers="mouseenter:mouseleave"
+    (click)="dismiss(); (false)"
+  >
+    <i class="fa fa-times" aria-hidden="true"></i>
+  </a>
+</div>
+}

@@ -91,6 +91,24 @@
         </div>
       </div>
     </div>
+    <div class="form-group row">
+      <label class="col-sm-4 col-form-label"></label>
+      <div class="col-sm-8 d-flex">
+        <div class="form-check my-auto">
+          <input
+            [disabled]="registering"
+            name="newsletter"
+            [(ngModel)]="newsletter"
+            type="checkbox"
+            class="form-check-input"
+            id="newsletter"
+          />
+          <label class="form-check-label" for="newsletter">
+            {{ 'designer.user.newsletter' | translate }}
+          </label>
+        </div>
+      </div>
+    </div>
     @if (error) {
     <div class="alert alert-primary" role="alert">
       {{ 'designer.user.error.' + error | translate }}

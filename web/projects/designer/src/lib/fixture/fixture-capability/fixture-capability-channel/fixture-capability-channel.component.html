@@ -12,6 +12,16 @@
         <label class="form-check-label" for="capabilityGeneric{{ capabilityIndex }}Active">
           {{ _channel?.name }}
         </label>
+        @if (drivenByEffect) {
+        <i
+          class="fa fa-magic ml-1 text-primary"
+          popover="{{ 'designer.fixture.channel-effect-driven' | translate }}"
+          container="body"
+          placement="top"
+          triggers="mouseenter:mouseleave"
+          aria-hidden="true"
+        ></i>
+        }
       </div>
     </div>
   </div>
@@ -73,14 +83,7 @@
       @if (hasRange) {
       <div class="col col-auto d-flex mx-auto" [class.pl-0]="_channel.capabilities?.length > 1" style="flex-direction: column">
         <div class="mb-2 w-100 d-flex">
-          <input
-            #sliderValue
-            class="mx-auto"
-            type="text"
-            [ngModel]="templateValue"
-            (ngModelChange)="setValue($event)"
-            style="width: 45px; height: 20px; text-align: center; font-size: 12px; font-family: monospace"
-          />
+          <input #sliderValue class="mx-auto sd-value-input" type="text" [ngModel]="templateValue" (ngModelChange)="setValue($event)" />
         </div>
         <div class="mx-auto mb-2">{{ descriptionEnd }}</div>
         <div class="h-100 w-100 d-flex">

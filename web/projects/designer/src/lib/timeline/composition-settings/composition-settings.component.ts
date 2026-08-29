@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Composition } from '../../models/composition';
 import { ConfigService } from '../../services/config.service';
+import { HardwarePromoService } from '../../services/hardware-promo.service';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { WarningDialogService } from '../../services/warning-dialog.service';
@@ -32,6 +33,8 @@ export class CompositionSettingsComponent implements OnInit {
 
   public uploading = false;
 
+  public promoLink: string;
+
   constructor(
     public bsModalRef: BsModalRef,
     private timelineService: TimelineService,
@@ -40,8 +43,11 @@ export class CompositionSettingsComponent implements OnInit {
     private http: HttpClient,
     private warningDialogService: WarningDialogService,
     private toastrService: ToastrService,
-    public projectService: ProjectService
-  ) {}
+    public projectService: ProjectService,
+    public hardwarePromoService: HardwarePromoService
+  ) {
+    this.promoLink = this.hardwarePromoService.link('composition-audio');
+  }
 
   ngOnInit() {
     this.loadFiles();

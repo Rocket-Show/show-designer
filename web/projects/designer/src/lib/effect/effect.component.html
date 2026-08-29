@@ -4,7 +4,7 @@
     <div class="m-3">
       <accordion [closeOthers]="true">
         @for (item of presetService.selectedPreset.effects; track item; let i = $index) {
-        <accordion-group [isOpen]="effectService.selectedEffect == item" (isOpenChange)="openEffect(item, $event)" style="margin-top: 1px">
+        <accordion-group [isOpen]="effectService.selectedEffect == item" (isOpenChange)="openEffect(item, $event)">
           <button class="btn btn-link btn-block clearfix" accordion-heading>
             <div class="pull-left float-left d-flex w-100">
               @if (item.type == 'curve') {
@@ -15,9 +15,20 @@
               <span class="ml-2">{{ 'designer.effect.type-' + item.type | translate }}</span>
               <div class="ml-auto mr-2">
                 <i
-                  (click)="item.visible = !item.visible; livePreviewService.previewLive(); $event.stopPropagation()"
+                  (click)="toggleVisible(item); $event.stopPropagation()"
                   class="fa fa-eye fa-fw"
                   [class.text-primary]="item.visible"
+                  aria-hidden="true"
+                ></i>
+              </div>
+              <div class="mr-2">
+                <i
+                  (click)="this.duplicateEffect(item); $event.stopPropagation()"
+                  class="fa fa-clone fa-fw"
+                  popover="{{ 'designer.effect.duplicate' | translate }}"
+                  container="body"
+                  placement="bottom"
+                  triggers="mouseenter:mouseleave"
                   aria-hidden="true"
                 ></i>
               </div>

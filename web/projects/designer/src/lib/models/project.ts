@@ -1,5 +1,6 @@
 import { Composition } from './composition';
 import { Fixture } from './fixture';
+import { Folder } from './folder';
 import { FixtureProfile } from './fixture-profile';
 import { Preset } from './preset';
 import { PresetFixture } from './preset-fixture';
@@ -26,8 +27,17 @@ export class Project {
   public selectedPresetUuid: string;
   public selectedSceneUuids: string[] = [];
 
-  // true = show the preset, false = show the selected scene
-  public previewPreset = true;
+  // the step of the selected preset the panels are editing
+  public selectedStepUuid: string;
+
+  // watch the steps of the selected preset run instead of holding the one being edited,
+  // and the point on the clock the run was started from. Both only travel to the live
+  // preview, they are never loaded back from a project.
+  public stepPreviewRunning = false;
+  public stepPreviewStartMillis = 0;
+
+  // true = play the selected preset on its own (solo), false = play the selected scenes
+  public previewPreset = false;
 
   public selectedCompositionUuid: string;
 
@@ -46,6 +56,11 @@ export class Project {
 
   public scenes: Scene[] = [];
   public presets: Preset[] = [];
+
+  // the folders grouping the scenes, the presets and the fixtures
+  public sceneFolders: Folder[] = [];
+  public presetFolders: Folder[] = [];
+  public fixtureFolders: Folder[] = [];
 
   constructor(data?: any) {
     if (!data) {
@@ -70,6 +85,11 @@ export class Project {
 
     this.selectedPresetUuid = data.selectedPresetUuid;
     this.selectedSceneUuids = data.selectedSceneUuids;
+    this.selectedStepUuid = data.selectedStepUuid;
+
+    // never open a project watching the steps run (see stepPreviewRunning)
+    this.stepPreviewRunning = false;
+    this.stepPreviewStartMillis = 0;
     this.previewPreset = data.previewPreset;
     this.selectedCompositionUuid = data.selectedCompositionUuid;
 
@@ -112,6 +132,16 @@ export class Project {
     if (data.presets) {
       for (const preset of data.presets) {
         this.presets.push(new Preset(preset));
+      }
+    }
+
+    for (const [source, target] of [
+      [data.sceneFolders, this.sceneFolders],
+      [data.presetFolders, this.presetFolders],
+      [data.fixtureFolders, this.fixtureFolders],
+    ] as [any[], Folder[]][]) {
+      for (const folder of source ?? []) {
+        target.push(new Folder(folder));
       }
     }
   }

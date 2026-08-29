@@ -27,8 +27,11 @@ export class UserService {
   }
 
   // register a new user
-  register(email: string, username: string, password: string): Observable<any> {
-    return this.http.post('register?email=' + email + '&username=' + username + '&password=' + password, null);
+  register(email: string, username: string, password: string, newsletter: boolean): Observable<any> {
+    return this.http.post(
+      'register?email=' + email + '&username=' + username + '&password=' + password + '&newsletter=' + newsletter,
+      null
+    );
   }
 
   // login a user in the api

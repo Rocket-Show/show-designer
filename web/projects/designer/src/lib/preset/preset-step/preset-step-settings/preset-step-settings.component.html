@@ -1,0 +1,70 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ ('designer.preset.step' | translate) + ' ' + stepNumber }}</h4>
+  <button type="button" class="close pull-right" aria-label="Close" (click)="bsModalRef.hide()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.preset.step-start' | translate }}</label>
+    <div class="col-lg-7">
+      <input type="text" class="form-control" [ngModel]="startMillis" (ngModelChange)="startMillis = $event" />
+    </div>
+    <div class="col-lg-1 d-flex p-0">
+      <div class="my-auto">
+        {{ 'designer.misc.ms' | translate }}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.preset.step-transition' | translate }}</label>
+    <div class="col-lg-7">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="{{ wholeStepMillis }}"
+        [ngModel]="transitionMillis"
+        (ngModelChange)="transitionMillis = $event"
+      />
+    </div>
+    <div class="col-lg-1 d-flex p-0">
+      <div class="my-auto">
+        {{ 'designer.misc.ms' | translate }}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.misc.transition-curve' | translate }}</label>
+    <div class="col-lg-7">
+      <select class="form-control" [ngModel]="transitionCurve" (ngModelChange)="transitionCurve = $event">
+        @for (curveType of transitionCurveTypes; track curveType) {
+        <option [value]="curveType">{{ 'designer.misc.transition-curve-' + curveType | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- the effects stay on the preset and keep running through the steps: a step only
+       says how much of each of them it lets through -->
+  @if (preset.effects.length > 0) {
+  <hr />
+  @for (effect of preset.effects; track effect.uuid; let i = $index) {
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label"> {{ 'designer.effect.type-' + effect.type | translate }} {{ i + 1 }} </label>
+    <div class="col-lg-7">
+      <input type="text" class="form-control" [ngModel]="effectAmounts[i]" (ngModelChange)="effectAmounts[i] = $event" />
+    </div>
+    <div class="col-lg-1 d-flex p-0">
+      <div class="my-auto">%</div>
+    </div>
+  </div>
+  } }
+</div>
+<div class="modal-footer">
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">
+    {{ 'designer.misc.cancel' | translate }}
+  </a>
+  <button type="button" class="btn btn-primary" (click)="ok()">{{ 'designer.misc.ok' | translate }}</button>
+</div>

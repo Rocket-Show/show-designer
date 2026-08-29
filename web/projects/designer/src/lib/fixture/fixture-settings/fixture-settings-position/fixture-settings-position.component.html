@@ -39,7 +39,7 @@
         <div class="my-auto" style="width: 20px; float: left">Y</div>
         <div class="my-auto" style="float: left">
           <mv-slider
-            style="width: 80px; height: 18px"
+            style="width: 80px"
             [tooltip]="'hide'"
             [value]="positionZ ? positionZ : (positionZMax + positionZMin) / 2"
             [min]="positionZMin"
@@ -108,7 +108,7 @@
         <div class="my-auto" style="width: 20px; float: left">Z</div>
         <div class="my-auto" style="float: left">
           <mv-slider
-            style="width: 80px; height: 18px"
+            style="width: 80px"
             [tooltip]="'hide'"
             [value]="rotationZ ? rotationZ : 0"
             [min]="rotationMin"
@@ -126,7 +126,7 @@
   </div>
   } @if (fixtureService.selectedSettingsFixtures.length == 0) {
   <div class="card-body h-100 d-flex">
-    <p class="m-auto" style="color: #717171">{{ 'designer.fixture.no-fixtures-settings-selected' | translate }}</p>
+    <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures-settings-selected' | translate }}</p>
   </div>
   }
 </div>

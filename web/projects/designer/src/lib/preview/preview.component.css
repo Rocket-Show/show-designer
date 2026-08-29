@@ -1,0 +1,128 @@
+:host {
+  position: relative;
+  display: block;
+}
+
+/* the render, while the preview is turned off */
+.preview-canvas-hidden {
+  display: none;
+}
+
+/* sits on top of the 3d preview, along its upper edge: what is being played on
+   the left, the controls on the right. Only the elements themselves take the
+   mouse, so the stage can still be dragged in the gap between them. */
+.preview-chrome {
+  position: absolute;
+  top: var(--sd-space-2);
+  left: var(--sd-space-2);
+  right: var(--sd-space-2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sd-space-2);
+  pointer-events: none;
+}
+
+.preview-target {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-1);
+  min-width: 0;
+  padding: 2px var(--sd-space-2) 2px var(--sd-space-1);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* the names, which can get long */
+.preview-target-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--sd-text);
+}
+
+/* a square icon button in the chrome, pushed against its right edge */
+.preview-chrome-button {
+  flex: none;
+  margin-left: auto;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sd-control-height-sm);
+  height: var(--sd-control-height-sm);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.preview-chrome-button:hover,
+.preview-chrome-button:focus {
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+/* fills the area the render would take while the preview is hidden */
+.preview-off {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sd-space-1);
+  padding: var(--sd-space-4);
+  color: var(--sd-text-dim);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+.preview-off .fa {
+  margin-bottom: var(--sd-space-1);
+  font-size: 1.5rem;
+}
+
+.preview-off-title {
+  color: var(--sd-text-muted);
+}
+
+/* sits in the lower right corner of the 3d preview, opposite the target badge */
+.preview-simulation {
+  position: absolute;
+  right: var(--sd-space-2);
+  bottom: var(--sd-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-1);
+  max-width: calc(100% - 2 * var(--sd-space-2));
+  padding: 2px var(--sd-space-2);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.preview-simulation:hover {
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--sd-text-muted);
+  text-decoration: none;
+}
+
+/* the call to action, separated from the label by a thin divider */
+.preview-simulation-cta {
+  padding-left: var(--sd-space-2);
+  border-left: 1px solid var(--sd-border-strong);
+  color: var(--sd-primary-text);
+}

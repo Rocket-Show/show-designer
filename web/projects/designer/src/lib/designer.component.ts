@@ -8,12 +8,14 @@ import { ProjectBrowserComponent } from './project/project-browser/project-brows
 import { ProjectImportComponent } from './project/project-import/project-import.component';
 import { ProjectSaveComponent } from './project/project-save/project-save.component';
 import { ProjectShareComponent } from './project/project-share/project-share.component';
+import { ColorService } from './services/color.service';
 import { ConfigService } from './services/config.service';
 import { ErrorDialogService } from './services/error-dialog.service';
 import { FixturePoolService } from './services/fixture-pool.service';
 import { FixtureService } from './services/fixture.service';
 import { HotkeyTargetExcludeService } from './services/hotkey-target-exclude.service';
 import { IntroService } from './services/intro.service';
+import { PresetService } from './services/preset.service';
 import { ProjectLoadService } from './services/project-load.service';
 import { ProjectService } from './services/project.service';
 import { TimelineService } from './services/timeline.service';
@@ -24,7 +26,10 @@ import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EffectService } from './services/effect.service';
+import { HardwarePromoService } from './services/hardware-promo.service';
+import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { UniverseConfig } from './models/universe-config';
+import { UndoService } from './services/undo.service';
 
 @Component({
   selector: 'lib-designer',
@@ -106,8 +111,13 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.freeUniverseEdit = value;
   }
 
+  @Input()
+  set hardwarePromo(value: boolean) {
+    this.configService.hardwarePromo = value;
+  }
+
   // the size of the menu used in the designer
-  private designerMenuSizePx = 20;
+  private designerMenuSizePx = 34;
 
   private splitGutterSizePx = 13;
 
@@ -136,7 +146,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private fixtureService: FixtureService,
     private timelineService: TimelineService,
     public introService: IntroService,
-    private effectService: EffectService
+    public presetService: PresetService,
+    public colorService: ColorService,
+    private effectService: EffectService,
+    private hardwarePromoService: HardwarePromoService,
+    public undoService: UndoService
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
@@ -164,6 +178,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.hardwarePromoService.countSession();
+
     if (localStorage.getItem('language')) {
       this.translateService.use(localStorage.getItem('language'));
     } else {
@@ -207,7 +223,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   private calcTotalMenuHeight() {
-    this.totalMenuHeightPx = this.designerMenuSizePx + this.splitGutterSizePx + this.configService.menuHeightPx;
+    // split.js already subtracts the gutters from the rows themselves, so
+    // reserving another gutter here only left dead space under the timeline
+    this.totalMenuHeightPx = this.designerMenuSizePx + this.configService.menuHeightPx;
   }
 
   private onResize() {
@@ -274,6 +292,20 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.fixturePoolService.open();
   }
 
+  undo() {
+    this.undoService.undo();
+  }
+
+  redo() {
+    this.undoService.redo();
+  }
+
+  setProjectName(name: string) {
+    if (this.projectService.project) {
+      this.projectService.project.name = name;
+    }
+  }
+
   projectNew() {
     this.warningDialogService
       .show('designer.misc.warning-proceed-unsaved')
@@ -338,6 +370,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectExport() {
+    this.projectService.writeCompatibilityValues(this.projectService.project);
+
     const json = JSON.stringify(this.projectService.project, null, 2);
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=UTF-8,' + encodeURIComponent(json));
@@ -346,6 +380,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+
+    // the exported show has nowhere to be played yet -> point at the hardware
+    if (this.hardwarePromoService.enabled) {
+      this.modalService.show(HardwarePromoDialogComponent, { keyboard: true, ignoreBackdropClick: false });
+    }
   }
 
   projectShare() {
@@ -361,6 +400,10 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: any) {
+    if (this.handleUndoRedo(event)) {
+      return;
+    }
+
     if (this.hotkeyTargetExcludeService.exclude(event)) {
       return;
     }
@@ -390,6 +433,33 @@ export class DesignerComponent implements OnInit, AfterViewInit {
       event.stopPropagation();
       event.preventDefault();
     }
+  }
+
+  // Undo and redo on ctrl/cmd+z and, both of the common ways to redo, on ctrl/cmd+y and
+  // ctrl/cmd+shift+z. They are only left alone while the user types, where the browser
+  // undoes what was typed; anything else which happens to be in focus (a checkbox of
+  // the fixture list, a slider) has no undo of its own to get in the way of.
+  private handleUndoRedo(event: any): boolean {
+    if (!(event.ctrlKey || event.metaKey) || this.hotkeyTargetExcludeService.excludeTyping(event)) {
+      return false;
+    }
+
+    const key = event.key.toLowerCase();
+
+    if (key !== 'z' && key !== 'y') {
+      return false;
+    }
+
+    if (key === 'y' || event.shiftKey) {
+      this.redo();
+    } else {
+      this.undo();
+    }
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    return true;
   }
 
   switchLanguage(language: string) {

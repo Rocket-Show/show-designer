@@ -36,6 +36,17 @@
     </li>
     }
   </ul>
+
+  <!-- these universes are not wired to anything in the free online designer -->
+  @if (hardwarePromoService.enabled) {
+  <div class="hardware-promo-hint mt-3">
+    <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
+    <span>
+      {{ 'designer.hardware-promo.universes-hint' | translate }}
+      <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+    </span>
+  </div>
+  }
 </div>
 <div class="modal-footer">
   <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">

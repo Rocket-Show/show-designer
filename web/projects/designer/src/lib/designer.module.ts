@@ -12,7 +12,9 @@ import { TypeaheadModule } from 'ngx-bootstrap/typeahead';
 import { DropzoneModule } from 'ngx-dropzone-wrapper';
 import { ToastrModule } from 'ngx-toastr';
 import { ArraySortPipe } from './array-sort-pipe';
+import { ColorPickerComponent } from './color-picker/color-picker.component';
 import { DesignerComponent } from './designer.component';
+import { EffectCurveAdvancedComponent } from './effect/effect-curve/effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect/effect-curve/effect-curve.component';
 import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt.component';
 import { EffectComponent } from './effect/effect.component';
@@ -31,9 +33,15 @@ import { FixtureSettingsPositionComponent } from './fixture/fixture-settings/fix
 import { FixtureSettingsStageComponent } from './fixture/fixture-settings/fixture-settings-stage/fixture-settings-stage.component';
 import { FixtureSettingsComponent } from './fixture/fixture-settings/fixture-settings.component';
 import { FixtureComponent } from './fixture/fixture.component';
+import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
+import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { IconPickerComponent } from './icon-picker/icon-picker.component';
 import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
 import { PresetSettingsComponent } from './preset/preset-settings/preset-settings.component';
+import { PresetStepSettingsComponent } from './preset/preset-step/preset-step-settings/preset-step-settings.component';
+import { PresetStepsSettingsComponent } from './preset/preset-step/preset-steps-settings/preset-steps-settings.component';
+import { PresetStepComponent } from './preset/preset-step/preset-step.component';
 import { PresetComponent } from './preset/preset.component';
 import { PreviewComponent } from './preview/preview.component';
 import { ProjectBrowserComponent } from './project/project-browser/project-browser.component';
@@ -52,6 +60,7 @@ import { WarningDialogComponent } from './warning-dialog/warning-dialog.componen
 import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
+import { InlineEditComponent } from './inline-edit/inline-edit.component';
 
 @NgModule({
   declarations: [
@@ -59,6 +68,7 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     WarningDialogComponent,
     PreviewComponent,
     EffectCurveComponent,
+    EffectCurveAdvancedComponent,
     EffectPanTiltComponent,
     SceneComponent,
     TimelineComponent,
@@ -89,6 +99,9 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     FixtureSettingsStageComponent,
     IntroComponent,
     PresetSettingsComponent,
+    PresetStepComponent,
+    PresetStepSettingsComponent,
+    PresetStepsSettingsComponent,
     SceneSettingsComponent,
     ProjectSaveComponent,
     FixturePoolCreateFromFileComponent,
@@ -96,6 +109,11 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
     DropzoneComponent,
     SortablejsDirective,
     TreeComponent,
+    InlineEditComponent,
+    ColorPickerComponent,
+    IconPickerComponent,
+    HardwarePromoBarComponent,
+    HardwarePromoDialogComponent,
   ],
   exports: [DesignerComponent],
   imports: [

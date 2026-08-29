@@ -1,9 +1,10 @@
-<div class="mr-3" style="float: left">
-  <div class="mb-2">
+<div class="mr-3">
+  <div class="mb-2 d-flex" style="width: 200px">
     <select
+      class="flex-grow-1"
+      style="min-width: 0"
       [ngModel]="curve.curveType"
       (ngModelChange)="curve.curveType = $event; livePreviewService.previewLive()"
-      style="width: 200px; height: 20px"
     >
       <option [value]="'sine'">
         {{ 'designer.effect.curve-sine' | translate }}
@@ -11,41 +12,88 @@
       <option [value]="'square'">
         {{ 'designer.effect.curve-square' | translate }}
       </option>
-      <!-- <option [value]="'triangle'">
-    {{ 'designer.effect.curve-triangle' | translate }}</option>
-    <option [value]="'sawtooth'">
-    {{ 'designer.effect.curve-sawtooth' | translate }}</option>
-    <option [value]="'reverse-sawtooth'">
-    {{ 'designer.effect.curve-reverse-sawtooth' | translate }}</option> -->
+      <option [value]="'triangle'">
+        {{ 'designer.effect.curve-triangle' | translate }}
+      </option>
+      <option [value]="'sawtooth'">
+        {{ 'designer.effect.curve-sawtooth' | translate }}
+      </option>
+      <option [value]="'reverse-sawtooth'">
+        {{ 'designer.effect.curve-reverse-sawtooth' | translate }}
+      </option>
     </select>
+
+    <!-- everything that does not fit next to the grid anymore -->
+    <a
+      href="#"
+      class="btn m-0 ml-1 px-2"
+      [class.btn-primary]="advancedActive()"
+      [class.btn-secondary]="!advancedActive()"
+      popover="{{ 'designer.effect.curve-advanced' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="openAdvanced(); (false)"
+      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+    ></a>
   </div>
   <div>
     <canvas #curveGrid class="curve-grid" width="200" height="100" viewBox="150 -75 4850 5150" preserveAspectRatio="none"></canvas>
   </div>
 </div>
 
-<div class="mr-4" style="float: left">
+<div class="mr-4">
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ 'designer.effect.curve-length' | translate }}
     </div>
+    @if (curve.lengthMode === 'beats') {
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); livePreviewService.previewLive()"
-        [(value)]="curve.lengthMillis"
+        [value]="curve.lengthBeats"
+        (valueChange)="setLengthBeatsFromSlider($event)"
         style="width: 80px"
         [tooltip]="'hide'"
-        [value]="0"
+        [min]="lengthBeatsMin"
+        [max]="lengthBeatsMax"
+        [step]="0.25"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.lengthBeats" (ngModelChange)="setLengthBeats($event)" />
+    </div>
+    } @else {
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        [value]="curve.lengthMillis"
+        (valueChange)="setLengthMillisFromSlider($event)"
+        style="width: 80px"
+        [tooltip]="'hide'"
         [min]="lengthMillisMin"
         [max]="lengthMillisMax"
         [step]="1"
       ></mv-slider>
     </div>
     <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.lengthMillis" (ngModelChange)="setLengthMillis($event); redraw()" />
+      <input type="text" class="slider-input" [ngModel]="curve.lengthMillis" (ngModelChange)="setLengthMillis($event)" />
     </div>
+    }
     <div class="my-auto ml-1">
-      {{ 'designer.misc.ms' | translate }}
+      <select
+        [ngModel]="curve.lengthMode"
+        (ngModelChange)="setLengthMode($event)"
+        popover="{{ 'designer.effect.curve-length-beats-hint' | translate }}"
+        container="body"
+        placement="right"
+        triggers="mouseenter:mouseleave"
+      >
+        <option [value]="'millis'">
+          {{ 'designer.misc.ms' | translate }}
+        </option>
+        <option [value]="'beats'">
+          {{ 'designer.misc.beats' | translate }}
+        </option>
+      </select>
     </div>
   </div>
 
@@ -55,7 +103,7 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); livePreviewService.previewLive()"
+        (change)="livePreviewService.previewLive()"
         [(value)]="curve.amplitude"
         style="width: 80px"
         [tooltip]="'hide'"
@@ -65,7 +113,7 @@
       ></mv-slider>
     </div>
     <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.amplitude" (ngModelChange)="setAmplitude($event); redraw()" />
+      <input type="text" class="slider-input" [ngModel]="curve.amplitude" (ngModelChange)="setAmplitude($event)" />
     </div>
   </div>
 
@@ -75,9 +123,9 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); livePreviewService.previewLive()"
+        (change)="livePreviewService.previewLive()"
         [(value)]="curve.position"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="percentageMin"
         [max]="percentageMax"
@@ -86,7 +134,7 @@
       </mv-slider>
     </div>
     <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.position" (ngModelChange)="setPosition($event); redraw()" />
+      <input type="text" class="slider-input" [ngModel]="curve.position" (ngModelChange)="setPosition($event)" />
     </div>
   </div>
 
@@ -96,32 +144,72 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); livePreviewService.previewLive()"
-        [(value)]="curve.phaseMillis"
-        style="width: 80px; height: 18px"
+        [value]="phaseCycles"
+        (valueChange)="setPhaseCycles($event)"
+        style="width: 80px"
         [tooltip]="'hide'"
-        [min]="phaseMillisMin"
-        [max]="phaseMillisMax"
-        [step]="1"
+        [min]="phaseCyclesMin"
+        [max]="phaseCyclesMax"
+        [step]="0.01"
       ></mv-slider>
     </div>
+    @if (curve.lengthMode === 'beats') {
     <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.phaseMillis" (ngModelChange)="setPhaseMillis($event); redraw()" />
+      <input type="text" class="slider-input" [ngModel]="curve.phaseBeats" (ngModelChange)="setPhaseBeats($event)" />
+    </div>
+    <div class="my-auto ml-1">
+      {{ 'designer.misc.beats' | translate }}
+    </div>
+    } @else {
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.phaseMillis" (ngModelChange)="setPhaseMillis($event)" />
     </div>
     <div class="my-auto ml-1">
       {{ 'designer.misc.ms' | translate }}
     </div>
+    }
   </div>
 
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ 'designer.effect.curve-chase' | translate }}
     </div>
+    @if (curve.phasingMode === 'spread') {
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="redraw(); livePreviewService.previewLive()"
+        (change)="livePreviewService.previewLive()"
+        [(value)]="curve.phasingCycles"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="phasingCyclesMin"
+        [max]="phasingCyclesMax"
+        [step]="0.05"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.phasingCycles" (ngModelChange)="setPhasingCycles($event)" />
+    </div>
+    } @else if (curve.phasingMode === 'beats') {
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        (change)="livePreviewService.previewLive()"
+        [(value)]="curve.phasingBeats"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="phasingBeatsMin"
+        [max]="phasingBeatsMax"
+        [step]="0.25"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" [ngModel]="curve.phasingBeats" (ngModelChange)="setPhasingBeats($event)" />
+    </div>
+    } @else {
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        (change)="livePreviewService.previewLive()"
         [(value)]="curve.phasingMillis"
-        style="width: 80px; height: 18px"
+        style="width: 80px"
         [tooltip]="'hide'"
         [min]="phasingMillisMin"
         [max]="phasingMillisMax"
@@ -129,17 +217,28 @@
       ></mv-slider>
     </div>
     <div class="my-auto">
-      <input type="text" class="slider-input" [ngModel]="curve.phasingMillis" (ngModelChange)="setPhasingMillis($event); redraw()" />
+      <input type="text" class="slider-input" [ngModel]="curve.phasingMillis" (ngModelChange)="setPhasingMillis($event)" />
     </div>
+    }
     <div class="my-auto ml-1">
-      {{ 'designer.misc.ms' | translate }}
+      <select [ngModel]="curve.phasingMode" (ngModelChange)="setPhasingMode($event)">
+        <option [value]="'millis'">
+          {{ 'designer.misc.ms' | translate }}
+        </option>
+        <option [value]="'beats'">
+          {{ 'designer.misc.beats' | translate }}
+        </option>
+        <option [value]="'spread'">
+          {{ 'designer.effect.curve-chase-spread' | translate }}
+        </option>
+      </select>
     </div>
   </div>
 </div>
 
 <!-- Menu for the capabilities and channels-->
-<div class="col col-auto p-0" style="margin-right: 1px; width: 50px; float: left">
-  <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+<div class="col col-auto p-0 effect-tab-rail">
+  <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     <a
       class="nav-link px-3 active"
       id="v-pills-effect-capabilities-tab"
@@ -173,20 +272,20 @@
   </div>
 </div>
 
-<div class="h-100" class="applying-to">
+<div class="applying-to">
   <div class="tab-content h-100" id="v-pills-tabContent">
     <div class="tab-pane h-100 show active" id="v-pills-effect-capabilities-{{ curve?.uuid }}" role="tabpanel">
       <!-- Capabilities-->
-      @for (capability of availableCapabilities; track $index; let i = $index) {
+      @for (option of capabilityOptions; track option.id) {
       <div class="form-check">
         <input
           type="checkbox"
           class="form-check-input"
-          id="capability_{{ curve?.uuid + '_' + i }}"
-          [ngModel]="capabilityChecked(capability)"
-          (change)="toggleCapability($event, capability)"
+          [id]="option.id"
+          [ngModel]="option.checked"
+          (change)="toggleCapability($event, option)"
         />
-        <label class="form-check-label" for="capability_{{ curve?.uuid + '_' + i }}">{{ getCapabilityName(capability) | async }}</label>
+        <label class="form-check-label" [for]="option.id">{{ option.name }}</label>
       </div>
       }
     </div>
@@ -196,13 +295,13 @@
       <!-- profile selection -->
       @if (availableProfiles.length > 1) {
       <div>
-        @for (profile of availableProfiles; track profile; let i = $index) {
+        @for (profile of availableProfiles; track profile) {
         <div class="form-check">
           <input
             type="checkbox"
             class="form-check-input"
             id="channel_profile_{{ curve?.uuid }}_{{ profile.uuid }}"
-            [ngModel]="selectedProfiles.indexOf(profile) >= 0"
+            [ngModel]="profileChecked(profile)"
             (change)="changeProfileSelection($event, profile)"
           />
           <label class="form-check-label" for="channel_profile_{{ curve?.uuid }}_{{ profile.uuid }}">{{ profile.name }}</label>
@@ -213,21 +312,18 @@
       }
 
       <!-- channels -->
-      @for (entry of availableChannels | keyvalue; track entry; let i = $index) { @for (channel of entry.value; track channel; let j =
-      $index) {
+      @for (option of channelOptions; track option.id) {
       <div class="form-check">
         <input
           type="checkbox"
           class="form-check-input"
-          id="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}"
-          [ngModel]="channelChecked(entry.key, channel)"
-          (change)="toggleChannel($event, entry.key, channel)"
+          [id]="option.id"
+          [ngModel]="option.checked"
+          (change)="toggleChannel($event, option)"
         />
-        <label class="form-check-label" for="channel_{{ curve?.uuid }}_{{ i }}_{{ j }}">{{
-          getChannelName(entry.key.name, channel.name)
-        }}</label>
+        <label class="form-check-label" [for]="option.id">{{ option.name }}</label>
       </div>
-      } }
+      }
     </div>
   </div>
 </div>

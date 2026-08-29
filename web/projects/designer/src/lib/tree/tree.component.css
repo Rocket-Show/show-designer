@@ -1,11 +1,16 @@
+/* fill the panel, so the empty space below the last row belongs to the tree and can
+   take a drop (see .tree-tail) instead of being dead */
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .tree {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  padding: 5px;
+  padding: var(--sd-space-1);
   /* avoid selecting text while shift/ctrl clicking */
   user-select: none;
 }
@@ -15,20 +20,31 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  height: 23px;
-  line-height: 23px;
+  height: var(--sd-row-height);
   padding-left: var(--tree-indent, 4px);
-  padding-right: 4px;
+  padding-right: var(--sd-space-1);
+  border-radius: var(--sd-radius-sm);
+  /* keep the rounded rows apart, so neighbouring selected ones stay distinguishable */
+  margin-bottom: 2px;
+  color: var(--sd-text);
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 0.12s ease;
 }
 
 .tree-node:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .tree-node.selected {
-  background-color: #906543;
+  background-color: var(--sd-primary-soft-strong);
+  color: #ffd0a8;
+}
+
+/* the row a click went to last: what the panel's buttons act on */
+.tree-node.focused {
+  outline: 1px solid var(--sd-primary);
+  outline-offset: -1px;
 }
 
 .tree-node.dragging {
@@ -43,11 +59,26 @@
   z-index: 1;
 }
 
+/* opens and closes an expandable row, so its type icon can stay what it is */
+.tree-caret {
+  flex: 0 0 auto;
+  width: 10px;
+  text-align: center;
+  color: var(--sd-text-dim);
+  cursor: pointer;
+}
+
 .tree-icon {
   flex: 0 0 auto;
   width: 16px;
-  margin-right: 5px;
+  margin-right: var(--sd-space-1);
   text-align: center;
+  color: var(--sd-text-muted);
+}
+
+.tree-node.selected .tree-caret,
+.tree-node.selected .tree-icon {
+  color: inherit;
 }
 
 .tree-label {
@@ -64,27 +95,29 @@
   content: '';
   position: absolute;
   left: var(--tree-drop-indent, var(--tree-indent, 4px));
-  right: 4px;
+  right: var(--sd-space-1);
   height: 2px;
-  background-color: #d39661;
+  border-radius: 1px;
+  background-color: var(--sd-primary);
   pointer-events: none;
 }
 
 .tree-node.drop-before::before {
-  top: -1px;
+  top: -2px;
 }
 
 .tree-node.drop-after::after {
-  bottom: -1px;
+  bottom: -2px;
 }
 
 .tree-node.drop-inside {
-  outline: 2px solid #d39661;
+  outline: 2px solid var(--sd-primary);
   outline-offset: -2px;
 }
 
-/* trailing strip below the last row: a drop target for "after the last folder",
-   at the root level. grows to fill any spare space so it is easy to hit */
+/* the empty space below the last row: a drop target for "after the last folder", at
+   the root level, which an open folder's own row cannot offer. It fills the panel, so
+   it is easy to hit even when only a few rows are in the tree. */
 .tree-tail {
   flex: 1 1 auto;
   min-height: 16px;
@@ -94,6 +127,7 @@
   content: '';
   display: block;
   height: 2px;
-  margin: 0 4px;
-  background-color: #d39661;
+  margin: 0 var(--sd-space-1);
+  border-radius: 1px;
+  background-color: var(--sd-primary);
 }

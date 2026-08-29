@@ -1,0 +1,53 @@
+/* floats above the designer, so it cannot disturb the split layout */
+.hardware-promo-bar {
+  position: fixed;
+  right: var(--sd-space-4);
+  bottom: var(--sd-space-4);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+  max-width: 540px;
+  padding: var(--sd-space-3) var(--sd-space-3) var(--sd-space-3) var(--sd-space-4);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius-lg);
+  background-color: var(--sd-surface-3);
+  box-shadow: var(--sd-shadow-3);
+}
+
+.hardware-promo-bar-icon {
+  font-size: 1.25rem;
+  color: var(--sd-primary-text);
+}
+
+.hardware-promo-bar-text {
+  min-width: 0;
+}
+
+.hardware-promo-bar-title {
+  color: var(--sd-text);
+  font-weight: 600;
+}
+
+.hardware-promo-bar-lead {
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* the call to action must never wrap onto a second line */
+.hardware-promo-bar .btn {
+  white-space: nowrap;
+}
+
+/* the small x closing the card for good */
+.hardware-promo-bar-close {
+  align-self: flex-start;
+  color: var(--sd-text-dim);
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.hardware-promo-bar-close:hover {
+  color: var(--sd-text);
+}

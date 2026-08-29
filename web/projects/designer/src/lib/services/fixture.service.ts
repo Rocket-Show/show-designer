@@ -26,6 +26,15 @@ import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.s
 export class FixtureService {
   cachedFixtures: CachedFixture[] = [];
 
+  // The uuid lookups below are called from templates and therefore run for every fixture on
+  // every change detection cycle, which a slider being dragged triggers with each mouse move.
+  // Walking the whole project each time makes that quadratic, so keep an index instead.
+  // A list is only ever exchanged as a whole or grown/shrunk, never modified in place, so the
+  // list itself together with its length tells us whether the index is still valid.
+  private fixtureIndex: { list: Fixture[]; length: number; byUuid: Map<string, Fixture> };
+  private profileIndex: { list: FixtureProfile[]; length: number; byUuid: Map<string, FixtureProfile> };
+  private cachedFixtureIndex: { list: CachedFixture[]; length: number; byUuid: Map<string, CachedFixture[]> };
+
   // is the side-tab settings currently selected?
   settingsSelection = false;
 
@@ -41,11 +50,21 @@ export class FixtureService {
   ) {}
 
   getFixtureByUuid(uuid: string): Fixture {
-    for (const fixture of this.projectService.project.fixtures) {
-      if (fixture.uuid === uuid) {
-        return fixture;
+    const fixtures = this.projectService.project.fixtures;
+
+    if (!this.fixtureIndex || this.fixtureIndex.list !== fixtures || this.fixtureIndex.length !== fixtures.length) {
+      const byUuid = new Map<string, Fixture>();
+
+      for (const fixture of fixtures) {
+        if (!byUuid.has(fixture.uuid)) {
+          byUuid.set(fixture.uuid, fixture);
+        }
       }
+
+      this.fixtureIndex = { list: fixtures, length: fixtures.length, byUuid };
     }
+
+    return this.fixtureIndex.byUuid.get(uuid);
   }
 
   private fixtureUuidAndPixelKeyEquals(fixtureUuid1: string, fixtureUuid2: string, pixelKey1: string, pixelKey2: string): boolean {
@@ -53,7 +72,10 @@ export class FixtureService {
   }
 
   getCachedFixtureByUuid(uuid: string, pixelKey: string): CachedFixture {
-    for (const fixture of this.cachedFixtures) {
+    // only the cached fixtures of this uuid can match, which are the fixture itself and its pixels
+    const fixtures = this.getCachedFixturesByUuid(uuid);
+
+    for (const fixture of fixtures) {
       if (this.fixtureUuidAndPixelKeyEquals(fixture.fixture.uuid, uuid, fixture.pixel?.key, pixelKey)) {
         return fixture;
       }
@@ -64,11 +86,35 @@ export class FixtureService {
       return undefined;
     }
 
-    for (const fixture of this.cachedFixtures) {
-      if (!fixture.pixel && fixture.fixture.uuid === uuid) {
+    for (const fixture of fixtures) {
+      if (!fixture.pixel) {
         return fixture;
       }
     }
+  }
+
+  private getCachedFixturesByUuid(uuid: string): CachedFixture[] {
+    if (
+      !this.cachedFixtureIndex ||
+      this.cachedFixtureIndex.list !== this.cachedFixtures ||
+      this.cachedFixtureIndex.length !== this.cachedFixtures.length
+    ) {
+      const byUuid = new Map<string, CachedFixture[]>();
+
+      for (const fixture of this.cachedFixtures) {
+        const fixturesOfUuid = byUuid.get(fixture.fixture.uuid);
+
+        if (fixturesOfUuid) {
+          fixturesOfUuid.push(fixture);
+        } else {
+          byUuid.set(fixture.fixture.uuid, [fixture]);
+        }
+      }
+
+      this.cachedFixtureIndex = { list: this.cachedFixtures, length: this.cachedFixtures.length, byUuid };
+    }
+
+    return this.cachedFixtureIndex.byUuid.get(uuid) || [];
   }
 
   // Get all profiles to search for (only metadata)
@@ -87,11 +133,21 @@ export class FixtureService {
   }
 
   getProfileByUuid(uuid: string): FixtureProfile {
-    for (const fixtureProfile of this.projectService.project.fixtureProfiles) {
-      if (fixtureProfile.uuid === uuid) {
-        return fixtureProfile;
+    const profiles = this.projectService.project.fixtureProfiles;
+
+    if (!this.profileIndex || this.profileIndex.list !== profiles || this.profileIndex.length !== profiles.length) {
+      const byUuid = new Map<string, FixtureProfile>();
+
+      for (const profile of profiles) {
+        if (!byUuid.has(profile.uuid)) {
+          byUuid.set(profile.uuid, profile);
+        }
       }
+
+      this.profileIndex = { list: profiles, length: profiles.length, byUuid };
     }
+
+    return this.profileIndex.byUuid.get(uuid);
   }
 
   loadProfileByUuid(uuid: string): Observable<void> {

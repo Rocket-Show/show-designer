@@ -1,0 +1,92 @@
+@if (presetService.stepsVisible && presetService.selectedPreset && presetService.selectedStep) {
+<div class="step-list d-flex flex-column h-100">
+  <!-- what the sequence as a whole does -->
+  <div class="step-list-actions d-flex">
+    <a
+      href="#"
+      class="btn btn-secondary"
+      [class.text-primary]="presetService.stepPreviewRunning"
+      [class.disabled]="presetService.selectedPreset.steps.length < 2"
+      popover="{{ 'designer.preset.steps-run' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="switchStepPreview(); (false)"
+      ><i
+        class="fa fa-fw"
+        [class.fa-play]="!presetService.stepPreviewRunning"
+        [class.fa-pause]="presetService.stepPreviewRunning"
+        aria-hidden="true"
+      ></i
+    ></a>
+    <a
+      href="#"
+      class="btn btn-secondary"
+      popover="{{ 'designer.preset.steps-settings' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="openStepsSettings(); (false)"
+      ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
+    ></a>
+  </div>
+
+  <!-- the states the selected preset runs through, in the order they are reached. The
+       capability, channel and effect panels edit the selected one, and the one the
+       preset is on while it runs is marked along its edge. -->
+  <div class="steps flex-grow-1">
+    @for (step of presetService.selectedPreset.steps; track step.uuid; let i = $index) {
+    <div
+      class="step"
+      [class.step-selected]="step === presetService.selectedStep"
+      popover="{{ stepDescription(step, i) }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="selectStep(step)"
+      (dblclick)="openSettings(step)"
+    >
+      @if (step === activeStep) {
+      <div class="step-progress" [style.width.%]="activeStepPercentage"></div>
+      }
+      <span class="step-number">{{ i + 1 }}</span>
+    </div>
+    }
+    <a
+      href="#"
+      class="step step-add"
+      popover="{{ 'designer.preset.step-add' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="addStep(); (false)"
+      ><i class="fa fa-plus" aria-hidden="true"></i
+    ></a>
+  </div>
+
+  <!-- what the selected step can be done with -->
+  <div class="step-list-actions d-flex">
+    <a
+      href="#"
+      class="btn btn-secondary"
+      popover="{{ 'designer.preset.step-settings' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="openSettings(presetService.selectedStep); (false)"
+      ><i class="fa fa-ellipsis-h fa-fw" aria-hidden="true"></i
+    ></a>
+    <a
+      href="#"
+      class="btn btn-secondary"
+      [class.disabled]="presetService.selectedPreset.steps.length < 2"
+      popover="{{ 'designer.preset.step-remove' | translate }}"
+      container="body"
+      placement="left"
+      triggers="mouseenter:mouseleave"
+      (click)="deleteStep(); (false)"
+      ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i
+    ></a>
+  </div>
+</div>
+}

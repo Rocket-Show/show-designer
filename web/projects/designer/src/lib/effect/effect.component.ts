@@ -32,6 +32,14 @@ export class EffectComponent implements OnInit {
     if (this.presetService.selectedPreset) {
       this.presetService.selectedPreset.effects.push(effect);
     }
+
+    this.effectService.effectsChanged.next();
+  }
+
+  toggleVisible(effect: Effect) {
+    effect.visible = !effect.visible;
+    this.effectService.effectsChanged.next();
+    this.livePreviewService.previewLive();
   }
 
   addCurveEffect() {
@@ -55,6 +63,15 @@ export class EffectComponent implements OnInit {
     }
   }
 
+  duplicateEffect(effect: Effect) {
+    if (!this.presetService.selectedPreset) {
+      return;
+    }
+
+    this.effectService.duplicateEffect(this.presetService.selectedPreset, effect);
+    this.livePreviewService.previewLive();
+  }
+
   deleteEffect(effect: Effect) {
     this.warningDialogService
       .show('designer.effect.delete-warning')
@@ -62,6 +79,7 @@ export class EffectComponent implements OnInit {
         map((result) => {
           if (result) {
             this.presetService.selectedPreset.effects.splice(this.presetService.selectedPreset.effects.indexOf(effect), 1);
+            this.effectService.effectsChanged.next();
             this.livePreviewService.previewLive();
           }
         })

@@ -28,6 +28,11 @@ export class ConfigService {
   // by the host application.
   public freeUniverseEdit = false;
 
+  // When true, the designer points the user towards the Rocket Show
+  // hardware. Only meant for the free online designer: somebody running
+  // this on a device already owns one.
+  public hardwarePromo = false;
+
   public menuHeightChanged: Subject<void> = new Subject<void>();
 
   constructor() {}

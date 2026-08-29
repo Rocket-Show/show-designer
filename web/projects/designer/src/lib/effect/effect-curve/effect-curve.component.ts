@@ -1,7 +1,6 @@
 import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable, Subscription, timer } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { EffectCurveProfileChannels } from '../../models/effect-curve-profile-channel';
 import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
@@ -12,6 +11,28 @@ import { EffectCurve } from './../../models/effect-curve';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
+import { TimelineService } from '../../services/timeline.service';
+import { BsModalService } from 'ngx-bootstrap/modal';
+import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
+
+// a capability checkbox, prepared for the template. the name and the checked state are
+// calculated whenever they change instead of on each change detection cycle, because the
+// sliders trigger change detection with each mouse move.
+export interface CurveCapabilityOption {
+  id: string;
+  name: string;
+  checked: boolean;
+  capability: FixtureCapability;
+}
+
+// a channel checkbox, prepared for the template (see CurveCapabilityOption)
+export interface CurveChannelOption {
+  id: string;
+  name: string;
+  checked: boolean;
+  profile: FixtureProfile;
+  channel: CachedFixtureChannel;
+}
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -20,41 +41,65 @@ import { LivePreviewService } from '../../services/live-preview.service';
   standalone: false,
 })
 export class EffectCurveComponent implements OnInit, OnDestroy {
-  private gridUpdateSubscription: Subscription;
+  private animationFrameId: number;
   private ctx: any;
   private maxWidth: number;
   private maxHeight: number;
 
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
+  public lengthBeatsMin = 0.25;
+  public lengthBeatsMax = 16;
   public amplitudeMin = 0;
   public amplitudeMax = 4;
   public percentageMin = 0;
   public percentageMax = 1;
-  public phaseMillisMin = -1000;
-  public phaseMillisMax = 1000;
-  public phasingMillisMin = 0;
+  public phasingMillisMin = -1000;
   public phasingMillisMax = 1000;
+  public phasingCyclesMin = -4;
+  public phasingCyclesMax = 4;
+  public phasingBeatsMin = -4;
+  public phasingBeatsMax = 4;
 
-  // the selected capabilities
-  public availableCapabilities: FixtureCapability[] = [];
+  // the phase moves the curve inside its period, so a shift of a full period lands on
+  // the same curve again -> the slider spans one period in each direction, whatever the
+  // period is. it is set in cycles and shown in milliseconds.
+  public phaseCyclesMin = -1;
+  public phaseCyclesMax = 1;
 
-  // the selected channels
-  public availableChannels: Map<FixtureProfile, CachedFixtureChannel[]> = new Map<FixtureProfile, CachedFixtureChannel[]>();
+  // the capabilities to choose from
+  public capabilityOptions: CurveCapabilityOption[] = [];
+
+  // the channels to choose from
+  public channelOptions: CurveChannelOption[] = [];
+
+  private availableChannels: Map<FixtureProfile, CachedFixtureChannel[]> = new Map<FixtureProfile, CachedFixtureChannel[]>();
   public availableProfiles: FixtureProfile[] = [];
   public selectedProfiles: FixtureProfile[] = [];
 
   private effectsOpenChangedSubscription: Subscription;
+  private fixtureSelectionChangedSubscription: Subscription;
+  private langChangeSubscription: Subscription;
+
+  // whether this effect is the one currently opened in the accordion
+  private effectSelected = false;
+
+  // the number of fixtures the chase is distributed over. calculating it walks over all
+  // fixtures of the project, which is far too expensive to repeat on each animation frame.
+  private phasingCount = 0;
+  private phasingCountMillis: number;
 
   @Input() curve: EffectCurve;
 
   // whether the effect is currently being edited (open) or not
   @Input()
   set isSelected(value: boolean) {
+    this.effectSelected = value;
+
     if (value) {
-      this.startUpdateTimer();
+      this.startAnimation();
     } else {
-      this.stopUpdateTimer();
+      this.stopAnimation();
     }
   }
 
@@ -67,27 +112,35 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private effectService: EffectService,
     private ngZone: NgZone,
-    public livePreviewService: LivePreviewService
+    public livePreviewService: LivePreviewService,
+    private modalService: BsModalService,
+    private timelineService: TimelineService
   ) {
-    this.presetService.fixtureSelectionChanged.subscribe(() => {
+    this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.updateCapabilitiesAndChannels();
+
+      // the chase is spread over the fixtures of the preset
+      this.phasingCountMillis = undefined;
     });
 
-    this.updateCapabilitiesAndChannels();
+    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
+      this.updateOptionNames();
+    });
 
     this.effectsOpenChangedSubscription = this.effectService.effectsOpenChanged.subscribe(() => {
       if (this.effectService.effectsOpen) {
-        this.startUpdateTimer();
+        this.startAnimation();
       } else {
-        this.stopUpdateTimer();
+        this.stopAnimation();
       }
     });
-    if (this.effectService.effectsOpen) {
-      this.startUpdateTimer();
-    }
   }
 
   ngOnInit() {
+    // the capabilities and channels are checked against the curve, which is only available
+    // once the inputs have been set
+    this.updateCapabilitiesAndChannels();
+
     const canvas = this.curveGrid.nativeElement;
     this.ctx = canvas.getContext('2d');
     this.maxWidth = canvas.width;
@@ -97,30 +150,56 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.stopUpdateTimer();
+    this.stopAnimation();
     this.effectsOpenChangedSubscription.unsubscribe();
+    this.fixtureSelectionChangedSubscription.unsubscribe();
+    this.langChangeSubscription.unsubscribe();
   }
 
-  private startUpdateTimer() {
-    if (!this.gridUpdateSubscription) {
-      // Avoid triggering change detection with each animation frame -> run outside zone
-      this.ngZone.runOutsideAngular(() => {
-        this.gridUpdateSubscription = timer(0, 15).subscribe(() => {
-          this.redraw();
-        });
-      });
+  private startAnimation() {
+    if (this.animationFrameId !== undefined) {
+      return;
+    }
+
+    // only the effect opened in the accordion of the opened effects tab is visible
+    if (!this.effectSelected || !this.effectService.effectsOpen) {
+      return;
+    }
+
+    // Avoid triggering change detection with each animation frame -> run outside zone.
+    // requestAnimationFrame draws exactly once per frame and pauses in background tabs.
+    this.ngZone.runOutsideAngular(() => {
+      const animate = () => {
+        this.redraw();
+        this.animationFrameId = requestAnimationFrame(animate);
+      };
+
+      this.animationFrameId = requestAnimationFrame(animate);
+    });
+  }
+
+  private stopAnimation() {
+    if (this.animationFrameId !== undefined) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
     }
   }
 
-  private stopUpdateTimer() {
-    if (this.gridUpdateSubscription) {
-      this.gridUpdateSubscription.unsubscribe();
-      this.gridUpdateSubscription = undefined;
-    }
+  // the tempo the grid draws a curve synced to the beat at. a preset can be edited without
+  // a composition being open, which leaves the curve on its default tempo.
+  public get beatsPerMinute(): number {
+    return this.timelineService.selectedComposition?.beatsPerMinute ?? EffectCurve.defaultBeatsPerMinute;
   }
 
   private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {
-    const currVal = 1 - this.curve.getValueAtMillis(currMillis);
+    const value = this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute);
+
+    if (value === undefined) {
+      // the curve has finished running and left the fixtures to the rest of the preset
+      return;
+    }
+
+    const currVal = 1 - value;
 
     const x = (this.maxWidth * (currMillis % durationMillis)) / durationMillis;
     const y = maxHeight * currVal + lineWidth;
@@ -135,36 +214,43 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   private getPhasingCount(): number {
-    let count = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
-
-    for (const presetFixture of this.presetService.selectedPreset.fixtures) {
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
-
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      // don't count it, if it has the same DMX universe, address and pixel key (if available),
-      // as an already counted one
-      if (!exists) {
-        count++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
-      }
+    if (!this.presetService.selectedPreset) {
+      return 0;
     }
 
-    return count;
+    // cache the count for a moment. it also depends on the addresses of the fixtures, which
+    // can be changed without notifying this component.
+    const nowMillis = Date.now();
+
+    if (this.phasingCountMillis === undefined || nowMillis - this.phasingCountMillis > 500) {
+      this.phasingCount = this.presetService.getPresetFixtureCount(this.presetService.selectedPreset);
+      this.phasingCountMillis = nowMillis;
+    }
+
+    return this.phasingCount;
+  }
+
+  // the time the grid shows. it is the same window the preview repeats, so the marks on
+  // the grid stay in step with the fixtures.
+  private getGridDurationMillis(): number {
+    const loopMillis = this.curve.getRunLoopMillis(this.getPhasingCount(), this.beatsPerMinute);
+
+    if (loopMillis !== undefined) {
+      return loopMillis;
+    }
+
+    // a short period is shown a few times over, so the grid does not only hold a single
+    // cycle of it
+    const lengthMillis = this.curve.getLengthMillis(this.beatsPerMinute);
+
+    return lengthMillis * Math.max(Math.round(4 - lengthMillis / 1000), 1);
   }
 
   redraw() {
+    if (!this.ctx) {
+      return;
+    }
+
     this.ctx.clearRect(0, 0, this.maxWidth, this.maxHeight);
     this.ctx.fillStyle = '#fff';
     this.ctx.strokeStyle = '#fff';
@@ -174,60 +260,69 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.lineWidth = width;
 
-    let oldX: number;
-    let oldY: number;
-
-    let step = 50;
-
-    if (length < 500) {
-      step = 5;
-    }
-
-    const durationMillis = this.curve.lengthMillis * Math.max(Math.round(4 - this.curve.lengthMillis / 1000), 1);
+    const durationMillis = this.getGridDurationMillis();
     const maxHeight = this.maxHeight - width * 2;
 
-    // draw the curve
-    for (let i = -step * 2; i < durationMillis + step * 2; i += step) {
-      const val = 1 - this.curve.getValueAtMillis(i);
+    // sample the curve once per pixel of the grid. a finer resolution only produces line
+    // segments the canvas cannot resolve anyway.
+    const samples = Math.ceil(this.maxWidth);
+    const stepMillis = durationMillis / samples;
 
-      // Scale the values to the grid dimensions
-      const x = (this.maxWidth * i) / durationMillis;
-      const y = maxHeight * val + width;
+    // draw the whole curve as a single path. stroking each segment on its own is by far the
+    // most expensive part of the redraw and the redraw runs on each animation frame.
+    this.ctx.beginPath();
 
-      if (oldY) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(oldX, oldY);
-        this.ctx.lineTo(x, y);
-        this.ctx.stroke();
+    let drawing = false;
+
+    for (let i = -2; i <= samples + 2; i++) {
+      const millis = i * stepMillis;
+      const value = this.curve.getValueAtMillis(millis, undefined, undefined, this.beatsPerMinute);
+
+      if (value === undefined) {
+        // the curve does not apply here (before or after its run) -> leave a gap
+        drawing = false;
+        continue;
       }
 
-      oldX = x;
-      oldY = y;
+      // Scale the values to the grid dimensions
+      const x = (this.maxWidth * millis) / durationMillis;
+      const y = maxHeight * (1 - value) + width;
+
+      if (drawing) {
+        this.ctx.lineTo(x, y);
+      } else {
+        this.ctx.moveTo(x, y);
+        drawing = true;
+      }
     }
+
+    this.ctx.stroke();
 
     // draw the current value
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
 
-    // draw the phasing values (chase), if required
-    let phasingCount = 0;
+    // draw the phasing values (chase), if required. the fixtures of a group run the same
+    // step of the chase, so the grid marks each step once, not each fixture of it.
+    const phasingCount = this.getPhasingCount();
+    const stepCount = this.curve.getPhasingStepCount(phasingCount);
 
-    if (this.curve.phasingMillis > 0 && this.presetService.selectedPreset) {
-      phasingCount = this.getPhasingCount();
+    if (this.curve.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) === 0) {
+      // the steps are not shifted against each other -> they all run on the mark that
+      // has just been drawn
+      return;
     }
 
-    for (let i = 1; i < phasingCount; i++) {
-      this.drawCurrentValue(
-        (this.animationService.timeMillis - i * this.curve.phasingMillis) % durationMillis,
-        3,
-        width,
-        durationMillis,
-        maxHeight
-      );
+    for (let step = 1; step < stepCount; step++) {
+      // the phasing can be negative, which the modulo has to be normalized for
+      const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingStepMillis(step, phasingCount, this.beatsPerMinute);
+
+      this.drawCurrentValue(((phasedMillis % durationMillis) + durationMillis) % durationMillis, 3, width, durationMillis, maxHeight);
     }
   }
 
   private calculateChannelCapabilities() {
     this.availableChannels = this.presetService.getSelectedProfileChannels(this.selectedProfiles);
+    this.updateChannelOptions();
   }
 
   changeProfileSelection($event: any, profile: FixtureProfile) {
@@ -240,42 +335,55 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.calculateChannelCapabilities();
   }
 
+  profileChecked(profile: FixtureProfile): boolean {
+    return this.selectedProfiles.indexOf(profile) >= 0;
+  }
+
   private updateCapabilitiesAndChannels() {
     // capabilities
-    this.availableCapabilities = [];
+    const availableCapabilities: FixtureCapability[] = [];
 
     if (this.presetService.hasCapabilityDimmer()) {
       const capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Intensity;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
 
     if (this.presetService.hasCapabilityColor()) {
       let capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Red;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Green;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.ColorIntensity;
       capability.color = FixtureCapabilityColor.Blue;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
 
     if (this.presetService.hasCapabilityPanTilt()) {
       let capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Pan;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
 
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Tilt;
-      this.availableCapabilities.push(capability);
+      availableCapabilities.push(capability);
     }
+
+    this.capabilityOptions = availableCapabilities.map((capability, index) => ({
+      id: 'capability_' + this.curve?.uuid + '_' + index,
+      name: '',
+      checked: this.capabilityChecked(capability),
+      capability,
+    }));
+
+    this.updateCapabilityNames();
 
     // calculate all profiles
     this.availableProfiles = this.presetService.getSelectedProfiles();
@@ -287,26 +395,52 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.calculateChannelCapabilities();
   }
 
-  getCapabilityName(capability: FixtureCapability): Observable<string> {
-    return this.translate
-      .get(['designer.fixtureCapabilityType.' + capability.type, 'designer.fixtureCapabilityColor.' + capability.color])
-      .pipe(
-        map((result: string) => {
-          let name = '';
-          name += result['designer.fixtureCapabilityType.' + capability.type];
+  private updateChannelOptions() {
+    const channelOptions: CurveChannelOption[] = [];
+    let profileIndex = 0;
 
-          if (capability.color) {
-            name += ', ' + result['designer.fixtureCapabilityColor.' + capability.color];
-          } else {
-            return name;
-          }
+    this.availableChannels.forEach((channels: CachedFixtureChannel[], profile: FixtureProfile) => {
+      channels.forEach((channel: CachedFixtureChannel, channelIndex: number) => {
+        channelOptions.push({
+          id: 'channel_' + this.curve?.uuid + '_' + profileIndex + '_' + channelIndex,
+          name: this.getChannelName(profile.name, channel.name),
+          checked: this.channelChecked(profile, channel),
+          profile,
+          channel,
+        });
+      });
 
-          return name;
-        })
-      );
+      profileIndex++;
+    });
+
+    this.channelOptions = channelOptions;
   }
 
-  capabilityChecked(capability: FixtureCapability): boolean {
+  private updateOptionNames() {
+    this.updateCapabilityNames();
+
+    for (const option of this.channelOptions) {
+      option.name = this.getChannelName(option.profile.name, option.channel.name);
+    }
+  }
+
+  private updateCapabilityNames() {
+    for (const option of this.capabilityOptions) {
+      const capability = option.capability;
+      const typeKey = 'designer.fixtureCapabilityType.' + capability.type;
+      const colorKey = 'designer.fixtureCapabilityColor.' + capability.color;
+
+      this.translate.get([typeKey, colorKey]).subscribe((result: any) => {
+        option.name = capability.color ? result[typeKey] + ', ' + result[colorKey] : result[typeKey];
+      });
+    }
+  }
+
+  private capabilityChecked(capability: FixtureCapability): boolean {
+    if (!this.curve) {
+      return false;
+    }
+
     for (const existingCapability of this.curve.capabilities) {
       if (
         this.fixtureService.capabilitiesMatch(
@@ -326,7 +460,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  toggleCapability(event: any, capability: FixtureCapability) {
+  toggleCapability(event: any, option: CurveCapabilityOption) {
+    const capability = option.capability;
+
     if (event.currentTarget.checked) {
       // add the capability
       this.curve.capabilities.push(capability);
@@ -351,10 +487,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       }
     }
 
+    option.checked = this.capabilityChecked(capability);
+
+    this.effectService.effectsChanged.next();
     this.livePreviewService.previewLive();
   }
 
-  getChannelName(profileName: string, channelName: string) {
+  private getChannelName(profileName: string, channelName: string) {
     if (this.availableProfiles.length > 1) {
       return profileName + ' - ' + channelName;
     }
@@ -362,7 +501,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return channelName;
   }
 
-  channelChecked(profile: FixtureProfile, channel: CachedFixtureChannel): boolean {
+  private channelChecked(profile: FixtureProfile, channel: CachedFixtureChannel): boolean {
+    if (!this.curve) {
+      return false;
+    }
+
     for (const profileChannels of this.curve.channels) {
       if (profileChannels.profileUuid === profile.uuid) {
         if (profileChannels.channels.includes(channel.name)) {
@@ -376,7 +519,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  toggleChannel(event: any, profile: FixtureProfile, channel: CachedFixtureChannel) {
+  toggleChannel(event: any, option: CurveChannelOption) {
+    const profile = option.profile;
+    const channel = option.channel;
+
     // add the profile, if necessary
     let profileContained = false;
     for (const profileChannels of this.curve.channels) {
@@ -407,14 +553,129 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       }
     }
 
+    option.checked = this.channelChecked(profile, channel);
+
+    this.effectService.effectsChanged.next();
     this.livePreviewService.previewLive();
   }
 
   setLengthMillis(value: any) {
     if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisMax) {
       this.curve.lengthMillis = +value;
-      this.livePreviewService.previewLive();
+      this.lengthChanged();
     }
+  }
+
+  // the slider reports its value after it has changed, so the period cannot be bound to
+  // it directly: the phase has to be brought along with the new period, not the old one
+  setLengthMillisFromSlider(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    this.curve.lengthMillis = Math.round(+value);
+    this.lengthChanged();
+  }
+
+  setLengthBeats(value: any) {
+    if (!isNaN(value) && value >= this.lengthBeatsMin && value <= this.lengthBeatsMax) {
+      this.curve.lengthBeats = +value;
+      this.lengthChanged();
+    }
+  }
+
+  // see setLengthMillisFromSlider
+  setLengthBeatsFromSlider(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    this.curve.lengthBeats = +value;
+    this.lengthChanged();
+  }
+
+  // the curve keeps the speed and the shape it had when it starts or stops following the
+  // tempo, so switching the unit does not throw away what has been set on it
+  setLengthMode(lengthMode: string) {
+    if (lengthMode === this.curve.lengthMode) {
+      return;
+    }
+
+    const phaseCycles = this.phaseCycles;
+
+    if (lengthMode === 'beats') {
+      // the beats the current period lasts, snapped to the steps the slider offers
+      const beats = this.curve.lengthMillis / EffectCurve.getBeatMillis(this.beatsPerMinute);
+      this.curve.lengthBeats = this.clamp(Math.round(beats * 4) / 4, this.lengthBeatsMin, this.lengthBeatsMax);
+    } else {
+      const millis = this.curve.getLengthMillis(this.beatsPerMinute);
+      this.curve.lengthMillis = this.clamp(Math.round(millis), this.lengthMillisMin, this.lengthMillisMax);
+    }
+
+    this.curve.lengthMode = lengthMode;
+
+    // the phase is bound to the period, which is now measured in another unit
+    this.setPhaseCycles(phaseCycles);
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(Math.min(value, max), min);
+  }
+
+  private lengthChanged() {
+    // the phase is bound to the period, which just changed under it
+    this.wrapPhase();
+    this.livePreviewService.previewLive();
+  }
+
+  // the phase repeats with the period: shifting the curve by a full period lands on the
+  // same curve again. keeping it inside one period does not change what the curve puts
+  // on its fixtures and keeps it on the scale of its slider.
+  private wrapPhase() {
+    if (this.curve.isBeatSynced()) {
+      if (this.curve.lengthBeats > 0 && Math.abs(this.curve.phaseBeats) > this.curve.lengthBeats) {
+        this.curve.phaseBeats = this.curve.phaseBeats % this.curve.lengthBeats;
+      }
+
+      return;
+    }
+
+    if (this.curve.lengthMillis > 0 && Math.abs(this.curve.phaseMillis) > this.curve.lengthMillis) {
+      this.curve.phaseMillis = Math.round(this.curve.phaseMillis % this.curve.lengthMillis);
+    }
+  }
+
+  // the phase as the part of the period it shifts the curve by
+  get phaseCycles(): number {
+    if (this.curve.isBeatSynced()) {
+      if (!this.curve.lengthBeats) {
+        return 0;
+      }
+
+      return this.curve.phaseBeats / this.curve.lengthBeats;
+    }
+
+    if (!this.curve.lengthMillis) {
+      return 0;
+    }
+
+    return this.curve.phaseMillis / this.curve.lengthMillis;
+  }
+
+  setPhaseCycles(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    if (this.curve.isBeatSynced()) {
+      // the slider walks the period in small steps, which would leave the phase with far
+      // more decimals than its input box can show
+      this.curve.phaseBeats = Math.round(+value * this.curve.lengthBeats * 1000) / 1000;
+    } else {
+      this.curve.phaseMillis = Math.round(+value * this.curve.lengthMillis);
+    }
+
+    this.livePreviewService.previewLive();
   }
 
   setAmplitude(value: any) {
@@ -432,8 +693,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setPhaseMillis(value: any) {
-    if (!isNaN(value) && value >= this.phaseMillisMin && value <= this.phaseMillisMax) {
+    if (!isNaN(value) && Math.abs(value) <= this.curve.lengthMillis) {
       this.curve.phaseMillis = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhaseBeats(value: any) {
+    if (!isNaN(value) && Math.abs(value) <= this.curve.lengthBeats) {
+      this.curve.phaseBeats = +value;
       this.livePreviewService.previewLive();
     }
   }
@@ -443,5 +711,41 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       this.curve.phasingMillis = +value;
       this.livePreviewService.previewLive();
     }
+  }
+
+  setPhasingBeats(value: any) {
+    if (!isNaN(value) && value >= this.phasingBeatsMin && value <= this.phasingBeatsMax) {
+      this.curve.phasingBeats = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhasingCycles(value: any) {
+    if (!isNaN(value) && value >= this.phasingCyclesMin && value <= this.phasingCyclesMax) {
+      this.curve.phasingCycles = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPhasingMode(phasingMode: string) {
+    this.curve.phasingMode = phasingMode;
+    this.livePreviewService.previewLive();
+  }
+
+  // whether the advanced settings hold anything else than their defaults. the button
+  // marks it, so settings that are not on this screen are not lost out of sight.
+  advancedActive(): boolean {
+    return (
+      this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5) || this.curve.phasingGroupSize !== 1
+    );
+  }
+
+  openAdvanced() {
+    this.modalService.show(EffectCurveAdvancedComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      class: '',
+      initialState: { curve: this.curve },
+    });
   }
 }

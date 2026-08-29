@@ -1,0 +1,46 @@
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sd-space-4);
+}
+
+/* iro draws its svg in here, which brings its own size */
+.color-picker-wheel {
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.color-picker-controls {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+  min-width: 0;
+}
+
+/* the colors offered for a quick choice, in rows of six */
+.color-picker-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--sd-space-1);
+  max-width: 168px;
+}
+
+.color-picker-swatch {
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius-sm);
+  cursor: pointer;
+}
+
+.color-picker-swatch:hover {
+  border-color: var(--sd-text-muted);
+}
+
+/* the color the item is marked with right now */
+.color-picker-swatch.picked {
+  border-color: var(--sd-text);
+  box-shadow: 0 0 0 1px var(--sd-text);
+}

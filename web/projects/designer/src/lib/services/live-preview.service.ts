@@ -9,9 +9,15 @@ import { TimelineStateService } from './timeline-state.service';
   providedIn: 'root',
 })
 export class LivePreviewService {
+  // the shortest time between two updates sent to the backend. every update serializes the
+  // whole project, so sending one per mouse move of a slider would flood both the browser
+  // and the backend.
+  private static readonly throttleMillis = 50;
+
   private livePreviewTimer: any;
-  private liveChangePending = false;
-  private livePreviewPendingPositionMillis: number;
+
+  // the position of the update collected while the throttle timer is running, if any
+  private pendingPositionMillis: number;
 
   constructor(
     private configService: ConfigService,
@@ -36,36 +42,44 @@ export class LivePreviewService {
       position = Math.round(this.animationService.timeMillis);
     }
 
-    // collect all changes and delay them to not flood the backend
-    // (except composition-bound updates. they need to be delivered always)
-    if (this.livePreviewTimer && !compositionName) {
-      this.livePreviewPendingPositionMillis = position;
-      this.liveChangePending = true;
+    // composition-bound updates need to be delivered always
+    if (compositionName) {
+      this.postPreview(position, compositionName);
       return;
     }
 
-    this.http
-      .post('preview?positionMillis=' + position + '&compositionName=' + compositionName, JSON.stringify(this.projectService.project))
-      .subscribe();
-
-    this.liveChangePending = false;
-
-    if (!compositionName) {
-      this.livePreviewTimer = setTimeout(() => {
-        this.livePreviewTimer = undefined;
-        if (this.liveChangePending) {
-          const pendingPosition = this.livePreviewPendingPositionMillis !== undefined ? this.livePreviewPendingPositionMillis : position;
-          this.livePreviewPendingPositionMillis = undefined;
-
-          this.http
-            .post(
-              'preview?positionMillis=' + pendingPosition + '&compositionName=' + compositionName,
-              JSON.stringify(this.projectService.project)
-            )
-            .subscribe();
-        }
-      }, 50);
+    // collect all changes in between and send only the last one of them
+    if (this.livePreviewTimer) {
+      this.pendingPositionMillis = position;
+      return;
     }
+
+    this.postPreview(position, '');
+    this.startThrottleTimer();
+  }
+
+  private startThrottleTimer() {
+    this.livePreviewTimer = setTimeout(() => {
+      this.livePreviewTimer = undefined;
+
+      if (this.pendingPositionMillis === undefined) {
+        return;
+      }
+
+      const position = this.pendingPositionMillis;
+      this.pendingPositionMillis = undefined;
+
+      this.postPreview(position, '');
+
+      // keep throttling as long as the changes keep coming in
+      this.startThrottleTimer();
+    }, LivePreviewService.throttleMillis);
+  }
+
+  private postPreview(positionMillis: number, compositionName: string) {
+    this.http
+      .post('preview?positionMillis=' + positionMillis + '&compositionName=' + compositionName, JSON.stringify(this.projectService.project))
+      .subscribe();
   }
 
   stopPreviewPlay() {

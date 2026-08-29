@@ -4,10 +4,7 @@
 <!-- <div style="height: calc(100% - 33px)"> -->
 <div id="designer" [ngStyle]="{ height: 'calc(100% - ' + totalMenuHeightPx + 'px)' }">
   <!-- Navigation -->
-  <nav
-    class="navbar navbar-expand-lg navbar-light bg-light border-secondary"
-    style="border-bottom: 1px solid #444; height: 20px; z-index: 9999"
-  >
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <!-- Menu buttons -->
     <ul class="navbar-nav mr-auto">
       <li class="nav-item dropdown">
@@ -32,6 +29,28 @@
           >
           <a class="dropdown-item d-none d-md-block" href="#" (click)="projectExport(); (false)"
             ><i class="fa fa-fw fa-external-link" aria-hidden="true"></i> {{ 'designer.navigation.project-export' | translate }}</a
+          >
+        </div>
+      </li>
+      <li class="nav-item dropdown d-none d-md-block">
+        <!-- collect what has been changed so far before showing whether there is anything to undo -->
+        <a
+          class="nav-link dropdown-toggle"
+          href="#"
+          id="editDropdown"
+          data-toggle="dropdown"
+          aria-haspopup="true"
+          aria-expanded="false"
+          (click)="undoService.captureChanges()"
+        >
+          {{ 'designer.navigation.edit' | translate }}
+        </a>
+        <div class="dropdown-menu" aria-labelledby="editDropdown">
+          <a class="dropdown-item" [class.disabled]="!undoService.canUndo" href="#" (click)="undo(); (false)"
+            ><i class="fa fa-fw fa-undo" aria-hidden="true"></i> {{ 'designer.navigation.undo' | translate }}</a
+          >
+          <a class="dropdown-item" [class.disabled]="!undoService.canRedo" href="#" (click)="redo(); (false)"
+            ><i class="fa fa-fw fa-repeat" aria-hidden="true"></i> {{ 'designer.navigation.redo' | translate }}</a
           >
         </div>
       </li>
@@ -70,6 +89,16 @@
         </div>
       </li>
     </ul>
+
+    <!-- Project name shown in the middle, editable inline -->
+    @if (projectService.project) {
+    <lib-app-inline-edit
+      class="project-name d-none d-md-inline-flex"
+      [value]="projectService.project.name"
+      [placeholder]="'designer.project.name' | translate"
+      (valueChange)="setProjectName($event)"
+    ></lib-app-inline-edit>
+    }
 
     <ul class="navbar-nav">
       @if (configService.shareAvailable) {
@@ -148,8 +177,8 @@
     <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
       <!-- Menu for the capabilities, channels, effects and settings -->
       @if (projectService.project) {
-      <div class="col col-auto p-0" style="margin-right: -1px">
-        <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+      <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
+        <div class="nav flex-column nav-pills nav-pills-attached h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
           <a
             class="nav-link px-3 active"
             (click)="openTab('capabilities')"
@@ -198,8 +227,22 @@
           >
             <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
           </a>
+
           <a
-            class="nav-link px-3"
+            class="nav-link px-3 nav-link-divider"
+            href="#"
+            [class.text-primary]="presetService.stepsVisible"
+            popover="{{ 'designer.preset.steps' | translate }}"
+            container="body"
+            placement="right"
+            triggers="mouseenter:mouseleave"
+            (click)="presetService.switchStepsVisible(); (false)"
+          >
+            <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
+          </a>
+
+          <a
+            class="nav-link px-3 nav-link-divider"
             (click)="openTab('settings')"
             id="v-pills-settings-tab"
             popover="{{ 'designer.misc.settings' | translate }}"
@@ -211,19 +254,36 @@
             role="tab"
             aria-controls="v-pills-settings"
             aria-selected="false"
-            style="border-top: 1px solid #444"
           >
             <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
           </a>
         </div>
+
+        <!-- which preset the panels on the right are editing, marked the way the preset
+             list marks it -->
+        @if (presetService.selectedPreset) {
+        <div class="edit-target">
+          <i
+            class="fa fa-fw {{ presetService.getPresetIcon(presetService.selectedPreset) }}"
+            [style.color]="colorService.getPresetColor(presetService.selectedPreset)"
+            aria-hidden="true"
+          ></i>
+          {{ presetService.selectedPreset.name }}
+        </div>
+        }
       </div>
       }
 
-      <div id="capabilities" class="split split-horizontal h-100" style="padding-left: 1rem">
+      <div id="capabilities" class="split split-horizontal h-100">
         @if (projectService.project) {
-        <div class="row h-100">
+        <div class="row h-100 flex-nowrap">
+          <!-- which step of the selected preset these panels are editing -->
+          <div class="col col-auto p-0 h-100">
+            <lib-app-preset-step></lib-app-preset-step>
+          </div>
+
           <!-- Content for the capabilities, channels, effects and settings -->
-          <div class="col pl-0 h-100">
+          <div class="col px-0 h-100">
             <div class="tab-content h-100" id="v-pills-tabContent">
               <div class="tab-pane h-100 show active" id="v-pills-capabilities" role="tabpanel">
                 <lib-app-fixture-capability></lib-app-fixture-capability>
@@ -259,7 +319,7 @@
     </div>
 
     <!-- Timeline -->
-    <div id="row3" class="split split-vertical clearfix px-3 pb-3" style="padding-bottom: 20px">
+    <div id="row3" class="split split-vertical clearfix px-3 pb-3">
       @if (projectService.project) {
       <lib-app-timeline></lib-app-timeline>
       }
@@ -283,3 +343,5 @@
 </div>
 
 <lib-app-intro class="d-none d-md-flex"></lib-app-intro>
+
+<lib-app-hardware-promo-bar class="d-none d-md-block"></lib-app-hardware-promo-bar>

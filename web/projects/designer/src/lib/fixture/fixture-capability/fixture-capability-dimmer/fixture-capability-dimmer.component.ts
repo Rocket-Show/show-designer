@@ -19,7 +19,7 @@ export class FixtureCapabilityDimmerComponent implements OnInit {
   ngOnInit() {}
 
   getValue(): number {
-    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Intensity);
+    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity);
     if (capabilityValue) {
       return capabilityValue.valuePercentage;
     }
@@ -43,7 +43,7 @@ export class FixtureCapabilityDimmerComponent implements OnInit {
       return;
     }
 
-    this.presetService.setCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Intensity, value);
+    this.presetService.setCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity, value);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }
@@ -52,7 +52,7 @@ export class FixtureCapabilityDimmerComponent implements OnInit {
     if (active) {
       this.setValue(1);
     } else {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedPreset, FixtureCapabilityType.Intensity);
+      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity);
       this.changeDetectorRef.detectChanges();
     }
     this.livePreviewService.previewLive();

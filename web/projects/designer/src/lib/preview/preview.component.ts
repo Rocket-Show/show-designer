@@ -4,14 +4,20 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
-import { PreviewService } from '../services/preview.service';
+import { HardwarePromoService } from '../services/hardware-promo.service';
+import { PresetService } from '../services/preset.service';
+import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
+import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
 import { Positioning } from './../models/fixture';
 import { AnimationService } from './../services/animation.service';
 import { ColorChanger3d } from './models/color-changer-3d';
 import { Fixture3d } from './models/fixture-3d';
 import { MovingHead3d } from './models/moving-head-3d';
+
+// remembers whether the render is turned off, across sessions
+const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
 
 @Component({
   selector: 'lib-app-preview',
@@ -33,15 +39,26 @@ export class PreviewComponent implements AfterViewInit {
   @ViewChild('canvas')
   private canvasRef: ElementRef;
 
+  // Rendering the stage is the most expensive thing on the screen, so it can be
+  // turned off while nobody is looking at it. Remembered across sessions.
+  public previewHidden = localStorage.getItem(PREVIEW_HIDDEN_STORAGE_KEY) === 'true';
+
+  public promoLink: string;
+
   constructor(
     private fixtureService: FixtureService,
     private previewMeshService: PreviewMeshService,
     private animationService: AnimationService,
     private previewService: PreviewService,
     private timelineService: TimelineService,
-    private projectService: ProjectService,
-    private ngZone: NgZone
+    public projectService: ProjectService,
+    private presetService: PresetService,
+    private sceneService: SceneService,
+    private ngZone: NgZone,
+    public hardwarePromoService: HardwarePromoService
   ) {
+    this.promoLink = this.hardwarePromoService.link('preview-badge');
+
     this.previewService.doUpdateFixtureSetup.subscribe(() => {
       this.syncFixtures();
     });
@@ -171,19 +188,8 @@ export class PreviewComponent implements AfterViewInit {
     });
   }
 
-  private animate(timeMillis: number) {
-    if (this.timelineService.playState === 'playing') {
-      // Overwrite the current time with the playing time, if we're in playback mode
-      timeMillis = this.timelineService.waveSurfer.getCurrentTime() * 1000;
-    }
-
-    this.animationService.timeMillis = timeMillis;
-
-    // Update the controls
-    if (this.controls) {
-      this.controls.update();
-    }
-
+  // Everything a rendered frame needs, and where nearly all of its cost sits
+  private updateFixtures(timeMillis: number) {
     // Update the positions
     this.updateStagePosition(
       Positioning.topFront,
@@ -244,11 +250,32 @@ export class PreviewComponent implements AfterViewInit {
         fixture3d.isSelected = this.previewService.fixtureIsSelected(fixture3d.fixture.fixture.uuid, fixture3d.fixture.pixel?.key, presets);
       }
     }
+  }
 
-    // Render the scene
-    this.render();
+  private animate(timeMillis: number) {
+    if (this.timelineService.playState === 'playing') {
+      // Overwrite the current time with the playing time, if we're in playback mode
+      timeMillis = this.timelineService.waveSurfer.getCurrentTime() * 1000;
+    }
 
-    this.previewService.stageAndPositionsDirty = false;
+    this.animationService.timeMillis = timeMillis;
+
+    // While the preview is hidden, only the clock above keeps running: the effect
+    // curves and the live preview still read it. The rest of the frame is what
+    // hiding the preview is meant to save.
+    if (!this.previewHidden) {
+      // Update the controls
+      if (this.controls) {
+        this.controls.update();
+      }
+
+      this.updateFixtures(timeMillis);
+
+      // Render the scene
+      this.render();
+
+      this.previewService.stageAndPositionsDirty = false;
+    }
 
     requestAnimationFrame(this.animate.bind(this));
   }
@@ -265,6 +292,11 @@ export class PreviewComponent implements AfterViewInit {
 
   @HostListener('window:resize')
   public onResize() {
+    if (this.previewHidden) {
+      // the hidden canvas measures 0. It is measured again when it comes back.
+      return;
+    }
+
     this.camera.aspect = this.getAspectRatio();
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
@@ -302,7 +334,8 @@ export class PreviewComponent implements AfterViewInit {
   }
 
   private setupScene() {
-    // this.scene.background = new THREE.Color(0x080808);
+    // match the surrounding panels instead of the renderer's default black
+    this.scene.background = new THREE.Color(PREVIEW_BACKGROUND_COLOR);
     // this.scene.fog	= new THREE.FogExp2( 0x000000, 0.1 );
 
     this.previewService.scene = this.scene;
@@ -332,6 +365,37 @@ export class PreviewComponent implements AfterViewInit {
     this.scene.add(lights[2]);
 
     this.previewService.updateFixtureSetup();
+  }
+
+  // only the selected preset is played, not the scenes it is part of
+  soloPreset(): boolean {
+    return this.projectService.project.previewPreset || this.sceneService.selectedScenes.length === 0;
+  }
+
+  // turn the 3d render off (to save performance) and on again
+  switchPreviewHidden() {
+    this.previewHidden = !this.previewHidden;
+    localStorage.setItem(PREVIEW_HIDDEN_STORAGE_KEY, this.previewHidden ? 'true' : 'false');
+
+    if (!this.previewHidden) {
+      // nothing followed the stage while the preview was hidden
+      this.previewService.stageAndPositionsDirty = true;
+
+      // the canvas only regains its size once the template has been updated, so
+      // it can not be measured before the next turn
+      setTimeout(() => {
+        this.onResize();
+      });
+    }
+  }
+
+  // the name of what is currently being played
+  previewName(): string {
+    if (this.soloPreset()) {
+      return this.presetService.selectedPreset ? this.presetService.selectedPreset.name : '';
+    }
+
+    return this.sceneService.selectedScenes.map((scene) => scene.name).join(', ');
   }
 
   ngAfterViewInit(): void {

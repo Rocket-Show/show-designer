@@ -1,0 +1,105 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* the far edge of the panel which edits the steps, carrying on its card: the panel
+   squares off the corners they share (see #capabilities.has-steps) */
+.step-list {
+  /* two of the header-sized icon actions fit side by side */
+  width: 54px;
+  border: 1px solid var(--sd-border);
+  border-right: 0;
+  background-color: var(--sd-surface-1);
+  overflow: hidden;
+}
+
+.step-list-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: var(--sd-space-1) 0;
+}
+
+.step-list-actions:first-child {
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.step-list-actions:last-child {
+  border-top: 1px solid var(--sd-border);
+}
+
+/* the steps take the room between the two action rows and scroll once they outgrow it */
+.steps {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--sd-space-1);
+}
+
+/* a step is only its number: what it does is read in the timeline and in its settings */
+.step {
+  position: relative;
+  padding: 2px 0;
+  margin-bottom: var(--sd-space-1);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-2);
+  color: var(--sd-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease;
+}
+
+.step:hover {
+  background-color: var(--sd-surface-3);
+}
+
+/* the next step is added where it would show up, at the end of the list */
+.step-add {
+  display: block;
+  border-style: dashed;
+  background-color: transparent;
+  color: var(--sd-text-dim);
+  text-decoration: none;
+}
+
+.step-add:hover {
+  background-color: var(--sd-surface-3);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+/* the step the panels are editing */
+.step-selected {
+  border-color: var(--sd-primary);
+  background-color: var(--sd-primary-soft-strong);
+  color: #ffd0a8;
+}
+
+/* How far the preset has come through the step it is on while it runs, which is not
+   necessarily the step being edited. It keeps a sliver of itself once the step is
+   reached, so the step reads as the current one before it has filled anything. */
+.step-progress {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 3px;
+  border-radius: var(--sd-radius-sm) 0 0 var(--sd-radius-sm);
+  background-color: var(--sd-primary-soft-strong);
+  /* The width is read on a clock of its own rather than on every frame, so the fill
+     travels between two of its readings instead of stepping from one to the next. The
+     travel takes exactly as long as the clock's interval, so each one arrives as the
+     next reading comes in: any longer and the fill would never catch up with itself.
+     A step change swaps the element, which starts at its own width without moving. */
+  transition: width 0.1s linear;
+}
+
+/* the number reads over the fill rather than under it */
+.step-number {
+  position: relative;
+}

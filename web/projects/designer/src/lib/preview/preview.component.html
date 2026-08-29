@@ -1,1 +1,49 @@
-<div class="h-100" #canvas style="overflow: hidden"></div>
+<!-- The 3d render. It stays in the DOM while the preview is hidden: throwing the
+     WebGL context away and building it up again costs more than leaving it idle. -->
+<div class="h-100" #canvas style="overflow: hidden" [class.preview-canvas-hidden]="previewHidden"></div>
+
+@if (previewHidden) {
+<!-- nothing is rendered while the preview is hidden, so say so where the render was -->
+<div class="preview-off">
+  <i class="fa fa-eye-slash" aria-hidden="true"></i>
+  <span class="preview-off-title">{{ 'designer.preview.hidden' | translate }}</span>
+  <span>{{ 'designer.preview.hidden-hint' | translate }}</span>
+</div>
+} @if (projectService.project) {
+<div class="preview-chrome">
+  <!-- what the preview is playing, and which preset is being edited. The scenes carry
+       the same icon the scene tree gives them, the solo preset the one of the switch
+       which puts it on its own. -->
+  <div class="preview-target">
+    <i class="fa fa-fw" [class.fa-headphones]="soloPreset()" [class.fa-picture-o]="!soloPreset()" aria-hidden="true"></i>
+    <span class="preview-target-type">{{ (soloPreset() ? 'designer.preview.solo' : 'designer.preview.scene') | translate }}</span>
+    <span class="preview-target-name">{{ previewName() }}</span>
+  </div>
+
+  <!-- rendering the stage is the most expensive thing on the screen, so it can be
+       turned off while nobody is looking at it -->
+  <a
+    href="#"
+    class="preview-chrome-button"
+    popover="{{ (previewHidden ? 'designer.preview.show' : 'designer.preview.hide') | translate }}"
+    container="body"
+    placement="left"
+    triggers="mouseenter:mouseleave"
+    (click)="switchPreviewHidden(); (false)"
+    ><i class="fa fa-fw" [class.fa-eye]="previewHidden" [class.fa-eye-slash]="!previewHidden" aria-hidden="true"></i
+  ></a>
+</div>
+}
+
+<!-- the preview is only a simulation: the free online designer has no output. The
+     badge captions the render, so it goes away together with it. -->
+@if (hardwarePromoService.enabled && !previewHidden) {
+<a class="preview-simulation" [href]="promoLink" target="_blank" rel="noopener">
+  <i class="fa fa-cube" aria-hidden="true"></i>
+  <span>{{ 'designer.hardware-promo.preview-badge' | translate }}</span>
+  <span class="preview-simulation-cta">
+    {{ 'designer.hardware-promo.preview-badge-cta' | translate }}
+    <i class="fa fa-long-arrow-right" aria-hidden="true"></i>
+  </span>
+</a>
+}

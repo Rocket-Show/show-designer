@@ -1,59 +1,98 @@
-.list-group-item {
-  padding: 0.3rem 1.25rem;
+/* The look of the labels this dialog explains itself with: the ones on its icons and
+   the number of the channel under the cursor. A tooltip component is built, placed at
+   body level and thrown away again for every hover, and each of those hovers also runs
+   a change detection cycle over the dialog - more work than what it explains. */
+.sd-tip:hover::after,
+.dmx-channel-label {
+  position: absolute;
+  z-index: 3;
+  padding: 0.1875rem var(--sd-space-2);
+  background-color: var(--sd-surface-3);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius);
+  box-shadow: var(--sd-shadow-2);
+  color: var(--sd-text);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
-.dmx-channel {
-  display: flex;
-  float: left;
-  width: 28px;
-  border: 1px solid white;
-  margin-left: -1px;
-  margin-bottom: -1px;
-  padding-bottom: 2px;
+/* the icons sit at the right edge of a card which clips what leaves it, so their label
+   hangs to the left instead of being centred */
+.sd-tip {
+  position: relative;
+}
+
+.sd-tip:hover::after {
+  content: attr(data-tip);
+  top: calc(100% + 6px);
+  right: 0;
+}
+
+/* The list of fixtures takes the height the profiles next to it need, so both columns
+   of the dialog end on the same line and the dialog stays as short as it can - it has
+   nowhere to scroll if it outgrows the window. */
+.fixtures-card {
+  flex: 1 1 0;
+  /* without this it would insist on being as tall as all its rows together */
+  min-height: 150px;
+}
+
+/* The tree and the profile list are their own paint units, like the channel map below:
+   what paints inside one of them stops at its edge instead of taking the rest of the
+   dialog with it. */
+lib-tree,
+.list-group {
+  contain: paint;
+}
+
+/* The channel map. It is drawn on a canvas: an element per channel put 512 of them in
+   the page, which every hover had to walk through - and 512 more views for angular on
+   top of that. The colours stay here, so the map is themed with everything else. */
+.dmx-map {
+  position: relative;
+  contain: layout;
+
+  --dmx-line: var(--sd-border);
+  --dmx-fill: var(--sd-primary-soft-strong);
+  --dmx-edge: var(--sd-primary);
+  --dmx-selected-fill: var(--sd-primary);
+  --dmx-overlap-fill: rgba(229, 84, 75, 0.55);
+  --dmx-overlap-edge: var(--sd-danger);
+}
+
+.dmx-canvas {
+  display: block;
+  cursor: move;
 
   -webkit-touch-callout: none;
-  /* iOS Safari */
   -webkit-user-select: none;
-  /* Safari */
-  -khtml-user-select: none;
-  /* Konqueror HTML */
   -moz-user-select: none;
-  /* Firefox */
   -ms-user-select: none;
-  /* Internet Explorer/Edge */
   user-select: none;
-  /* Non-prefixed version, currently supported by Chrome and Opera */
 }
 
-.dmx-channel-occupied {
-  background-color: #63462e;
-  border-left: none;
-  border-right: none;
-  cursor: move;
+/* the number of the channel under the cursor, above it */
+.dmx-channel-label {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 5px));
 }
 
-.dmx-channel-occupied-start {
-  border-left: 1px solid white;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+/* the hint keeps its distance to the map above it */
+.dmx-promo-hint {
+  padding-top: var(--sd-space-5);
 }
 
-.dmx-channel-occupied-end {
-  border-right: 1px solid white;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
+/* The fixtures of the project, grouped in the folders of the fixture panel. The rows
+   carry their own remove button, which must not stretch the row it sits in. */
+.fixture-remove {
+  padding: 0 var(--sd-space-1);
+  line-height: 1;
+  color: var(--sd-text-dim);
 }
 
-.dmx-channel-selected {
-  background-color: #fd7e14;
-}
-
-.dmx-channel-overlapped {
-  background-color: red;
-  border: 1px solid red;
-  cursor: move;
-}
-
-.card {
-  overflow: auto;
+.fixture-remove:hover {
+  color: var(--sd-text);
 }

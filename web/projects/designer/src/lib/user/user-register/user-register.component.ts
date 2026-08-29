@@ -18,6 +18,8 @@ export class UserRegisterComponent implements OnInit {
   email = '';
   password = '';
   passwordRepeat = '';
+  // the user wants to receive news and updates by email
+  newsletter = false;
 
   // emits, when logged in
   subject: Subject<void>;
@@ -64,7 +66,7 @@ export class UserRegisterComponent implements OnInit {
       return;
     }
 
-    this.userService.register(this.email, this.username, this.password).subscribe(
+    this.userService.register(this.email, this.username, this.password, this.newsletter).subscribe(
       () => {
         // automatically login after registering
         this.userService.login(this.email, this.password).subscribe(() => {

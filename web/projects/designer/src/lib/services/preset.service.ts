@@ -7,13 +7,18 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureProfile } from '../models/fixture-profile';
+import { EffectCurve } from '../models/effect-curve';
 import { Preset } from '../models/preset';
+import { PresetStep } from '../models/preset-step';
 import { EffectService } from './effect.service';
+import { PresetStepService } from './preset-step.service';
 import { FixtureService } from './fixture.service';
+import { FolderService } from './folder.service';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from './live-preview.service';
+import { AnimationService } from './animation.service';
 
 @Injectable({
   providedIn: 'root',
@@ -21,8 +26,25 @@ import { LivePreviewService } from './live-preview.service';
 export class PresetService {
   selectedPreset: Preset;
 
+  // the icon a preset is shown with, while none has been picked for it
+  static readonly defaultIcon = 'fa-lightbulb-o';
+
+  // the step of the selected preset the capability, channel and effect panels edit. It
+  // is also what the preview shows while nothing is playing.
+  selectedStep: PresetStep;
+
+  // the fixtures of a preset indexed by fixture uuid (see getPresetFixturesByUuid)
+  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byUuid: Map<string, PresetFixture[]> }>();
+
   // fires, when the current preview element has changed (scene/preset)
   previewSelectionChanged: Subject<void> = new Subject<void>();
+
+  // fires, when presets have been added or removed
+  presetsChanged: Subject<void> = new Subject<void>();
+
+  // fires, when the steps of the selected preset have changed or another one of them
+  // has been selected
+  stepsChanged: Subject<void> = new Subject<void>();
 
   // fires, when the fixture selection has changed
   fixtureSelectionChanged: Subject<void> = new Subject<void>();
@@ -34,13 +56,25 @@ export class PresetService {
   // because detectChanges is not enough to trigger different components.
   fixtureColorChanged: Subject<void> = new Subject<void>();
 
+  // fires, when a capability value has been set or deleted (dimmer, color, pan/tilt,
+  // wheel slot). The channels driven by these capabilities show what they do to them.
+  capabilityValuesChanged: Subject<void> = new Subject<void>();
+
   constructor(
     private effectService: EffectService,
+    private presetStepService: PresetStepService,
     private uuidService: UuidService,
     private projectService: ProjectService,
     private fixtureService: FixtureService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    private animationService: AnimationService,
+    private folderService: FolderService
   ) {}
+
+  // the icon of a preset: the one picked for it, or the default one
+  getPresetIcon(preset: Preset): string {
+    return preset.icon || PresetService.defaultIcon;
+  }
 
   getPresetByUuid(uuid: string): Preset {
     for (const preset of this.projectService.project.presets) {
@@ -55,13 +89,103 @@ export class PresetService {
   }
 
   getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
-    for (const fixture of preset.fixtures) {
+    // only the fixtures of this uuid can match, which are the fixture itself and its pixels
+    for (const fixture of this.getPresetFixturesByUuid(preset, fixtureUuid)) {
       if (this.fixtureUuidAndPixelKeyEquals(fixture.fixtureUuid, fixtureUuid, fixture.pixelKey, pixelKey)) {
         return fixture;
       }
     }
 
     return null;
+  }
+
+  // getPresetFixture() is called from templates and therefore runs for every fixture on every
+  // change detection cycle, which a slider being dragged triggers with each mouse move. Walking
+  // all fixtures of the preset each time makes that quadratic, so index them by uuid instead.
+  // A preset only ever gets fixtures added, removed or reordered, never exchanged in place, so
+  // the list itself together with its length tells us whether the index is still valid.
+  // Reordering leaves it valid, because a preset holds at most one entry per fixture and pixel.
+  private getPresetFixturesByUuid(preset: Preset, fixtureUuid: string): PresetFixture[] {
+    let index = this.presetFixtureIndex.get(preset);
+
+    if (!index || index.list !== preset.fixtures || index.length !== preset.fixtures.length) {
+      const byUuid = new Map<string, PresetFixture[]>();
+
+      for (const fixture of preset.fixtures) {
+        const fixturesOfUuid = byUuid.get(fixture.fixtureUuid);
+
+        if (fixturesOfUuid) {
+          fixturesOfUuid.push(fixture);
+        } else {
+          byUuid.set(fixture.fixtureUuid, [fixture]);
+        }
+      }
+
+      index = { list: preset.fixtures, length: preset.fixtures.length, byUuid };
+      this.presetFixtureIndex.set(preset, index);
+    }
+
+    return index.byUuid.get(fixtureUuid) || [];
+  }
+
+  // all fixtures of a preset in the order they are chased in: either the global
+  // order of the project or the preset's own one
+  getOrderedPresetFixtures(preset: Preset): PresetFixture[] {
+    if (!preset.useGlobalFixtureOrder) {
+      return preset.fixtures;
+    }
+
+    return this.projectService.project.presetFixtures.filter((projectFixture) =>
+      this.getPresetFixture(preset, projectFixture.fixtureUuid, projectFixture.pixelKey)
+    );
+  }
+
+  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
+  // and pixel key are the same lamp and therefore count only once
+  getPresetFixtureCount(preset: Preset): number {
+    let count = 0;
+    const countedFirstDmxChannelPixelKey: any[] = [];
+
+    for (const presetFixture of preset.fixtures) {
+      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+
+      if (!fixture) {
+        continue;
+      }
+
+      const firstDmxChannelAndFixtureUuid = {
+        dmxUniverseUuid: fixture.dmxUniverseUuid,
+        firstDmxChannel: fixture.dmxFirstChannel,
+        pixelKey: presetFixture.pixelKey,
+      };
+
+      const exists = countedFirstDmxChannelPixelKey.some(
+        (item) =>
+          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
+          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
+          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
+      );
+
+      if (!exists) {
+        count++;
+        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
+      }
+    }
+
+    return count;
+  }
+
+  setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
+    if (!useGlobalFixtureOrder) {
+      // start from the order which has been in effect so far, so the chasing does
+      // not change just because the preset got its own order - the folders included,
+      // which sit where the project puts them until this preset moves them
+      preset.fixtures = this.getOrderedPresetFixtures(preset).map((presetFixture) => new PresetFixture(presetFixture));
+      preset.fixtureFolders = [];
+    }
+
+    preset.useGlobalFixtureOrder = useGlobalFixtureOrder;
+    this.livePreviewService.previewLive();
   }
 
   fixtureIsSelected(fixture: Fixture, pixelKey: string, preset?: Preset): boolean {
@@ -202,33 +326,44 @@ export class PresetService {
   }
 
   deleteCapabilityValue(
-    preset: Preset,
+    step: PresetStep,
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
     profileUuid?: string
   ) {
-    for (let i = 0; i < preset.fixtureCapabilityValues.length; i++) {
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
+    this.capabilityValuesChanged.next();
+  }
+
+  private removeCapabilityValue(
+    step: PresetStep,
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string
+  ) {
+    for (let i = 0; i < step.fixtureCapabilityValues.length; i++) {
       if (
         this.fixtureService.capabilitiesMatch(
-          preset.fixtureCapabilityValues[i].type,
+          step.fixtureCapabilityValues[i].type,
           capabilityType,
-          preset.fixtureCapabilityValues[i].color,
+          step.fixtureCapabilityValues[i].color,
           color,
-          preset.fixtureCapabilityValues[i].wheel,
+          step.fixtureCapabilityValues[i].wheel,
           wheel,
-          preset.fixtureCapabilityValues[i].profileUuid,
+          step.fixtureCapabilityValues[i].profileUuid,
           profileUuid
         )
       ) {
-        preset.fixtureCapabilityValues.splice(i, 1);
+        step.fixtureCapabilityValues.splice(i, 1);
         return;
       }
     }
   }
 
   setCapabilityValue(
-    preset: Preset,
+    step: PresetStep,
     capabilityType: FixtureCapabilityType,
     valuePercentage: number,
     slotNumber?: number,
@@ -237,7 +372,7 @@ export class PresetService {
     profileUuid?: string
   ) {
     // Delete existant properties with this type and set the new value
-    this.deleteCapabilityValue(preset, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
 
     const fixtureCapabilityValue = new FixtureCapabilityValue();
     fixtureCapabilityValue.type = capabilityType;
@@ -247,17 +382,34 @@ export class PresetService {
     fixtureCapabilityValue.slotNumber = slotNumber;
     fixtureCapabilityValue.profileUuid = profileUuid;
 
-    preset.fixtureCapabilityValues.push(fixtureCapabilityValue);
+    step.fixtureCapabilityValues.push(fixtureCapabilityValue);
+    this.capabilityValuesChanged.next();
   }
 
   getCapabilityValue(
-    preset: Preset,
+    step: PresetStep,
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
     profileUuid?: string
   ): FixtureCapabilityValue {
-    for (const capabilityValue of preset.fixtureCapabilityValues) {
+    if (!step) {
+      return undefined;
+    }
+
+    return this.getCapabilityValueOf(step.fixtureCapabilityValues, capabilityType, color, wheel, profileUuid);
+  }
+
+  // the same lookup on a set of values which is not stored on a step: while a
+  // transition runs, the values shown are the ones interpolated between two steps
+  getCapabilityValueOf(
+    capabilityValues: FixtureCapabilityValue[],
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string
+  ): FixtureCapabilityValue {
+    for (const capabilityValue of capabilityValues) {
       if (
         this.fixtureService.capabilitiesMatch(
           capabilityValue.type,
@@ -277,18 +429,26 @@ export class PresetService {
   }
 
   deleteChannelValue(channelName: string, profileUuid: string) {
-    for (let i = 0; i < this.selectedPreset.fixtureChannelValues.length; i++) {
+    if (!this.selectedStep) {
+      return;
+    }
+
+    for (let i = 0; i < this.selectedStep.fixtureChannelValues.length; i++) {
       if (
-        this.selectedPreset.fixtureChannelValues[i].channelName === channelName &&
-        this.selectedPreset.fixtureChannelValues[i].profileUuid === profileUuid
+        this.selectedStep.fixtureChannelValues[i].channelName === channelName &&
+        this.selectedStep.fixtureChannelValues[i].profileUuid === profileUuid
       ) {
-        this.selectedPreset.fixtureChannelValues.splice(i, 1);
+        this.selectedStep.fixtureChannelValues.splice(i, 1);
         return;
       }
     }
   }
 
   setChannelValue(channelName: string, profileUuid: string, value: number) {
+    if (!this.selectedStep) {
+      return;
+    }
+
     // Delete existant properties with this type and set the new value
     this.deleteChannelValue(channelName, profileUuid);
 
@@ -297,18 +457,25 @@ export class PresetService {
     fixtureChannelValue.profileUuid = profileUuid;
     fixtureChannelValue.value = value;
 
-    this.selectedPreset.fixtureChannelValues.push(fixtureChannelValue);
+    this.selectedStep.fixtureChannelValues.push(fixtureChannelValue);
   }
 
   getChannelValue(channelName: string, profileUuid: string): number {
-    for (const channelValue of this.selectedPreset.fixtureChannelValues) {
+    if (!this.selectedStep) {
+      return undefined;
+    }
+
+    for (const channelValue of this.selectedStep.fixtureChannelValues) {
       if (channelValue.channelName === channelName && channelValue.profileUuid === profileUuid) {
         return channelValue.value;
       }
     }
   }
 
-  getApproximatedColorWheelCapability(preset: Preset, cachedChannel: CachedFixtureChannel): CachedFixtureCapability {
+  getApproximatedColorWheelCapability(
+    capabilityValues: FixtureCapabilityValue[],
+    cachedChannel: CachedFixtureChannel
+  ): CachedFixtureCapability {
     // return an approximated wheel slot channel capability, if a color or a slot on a different
     // wheel has been selected
     let colorRed: number;
@@ -318,15 +485,15 @@ export class PresetService {
     let lowestDiffCapability: CachedFixtureCapability;
     let capabilityValue: FixtureCapabilityValue;
 
-    capabilityValue = this.getCapabilityValue(preset, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
+    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
     if (capabilityValue) {
       colorRed = 255 * capabilityValue.valuePercentage;
     }
-    capabilityValue = this.getCapabilityValue(preset, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
+    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
     if (capabilityValue) {
       colorGreen = 255 * capabilityValue.valuePercentage;
     }
-    capabilityValue = this.getCapabilityValue(preset, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
+    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
     if (capabilityValue) {
       colorBlue = 255 * capabilityValue.valuePercentage;
     }
@@ -356,7 +523,162 @@ export class PresetService {
     return lowestDiffCapability;
   }
 
+  // the value a single capability value of a preset produces on a channel capability, or
+  // undefined, if it does not reach that capability at all. This is what the preview and the
+  // player make of a capability, and what the channels have to show while it is in effect.
+  getCapabilityChannelValue(
+    capabilityValue: FixtureCapabilityValue,
+    channel: CachedFixtureChannel,
+    channelCapability: CachedFixtureCapability,
+    preset?: Preset
+  ): number {
+    if (
+      (capabilityValue.type === FixtureCapabilityType.Intensity || capabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
+      capabilityValue.valuePercentage >= 0
+    ) {
+      // intensity and colorIntensity (dimmer and color)
+      if (channel.capabilities.length === 1) {
+        // the only capability in this channel -> it takes the whole channel
+        return channel.maxValue * capabilityValue.valuePercentage;
+      }
+
+      // more than one capability in the channel -> only a brightness capability can be dimmed
+      if (channelCapability.capability.brightness === 'off' && capabilityValue.valuePercentage === 0) {
+        return channelCapability.centerValue;
+      }
+
+      if (
+        (channelCapability.capability.brightnessStart === 'dark' || channelCapability.capability.brightnessStart === 'off') &&
+        channelCapability.capability.brightnessEnd === 'bright'
+      ) {
+        return (
+          (channelCapability.capability.dmxRange[1] - channelCapability.capability.dmxRange[0]) * capabilityValue.valuePercentage +
+          channelCapability.capability.dmxRange[0]
+        );
+      }
+
+      return undefined;
+    }
+
+    if (
+      (capabilityValue.type === FixtureCapabilityType.Pan || capabilityValue.type === FixtureCapabilityType.Tilt) &&
+      capabilityValue.valuePercentage >= 0
+    ) {
+      // a preset which mirrors this axis points its fixtures at the mirrored position
+      const valuePercentage = preset
+        ? preset.getMirroredValuePercentage(capabilityValue.type, capabilityValue.valuePercentage)
+        : capabilityValue.valuePercentage;
+
+      return channel.maxValue * valuePercentage;
+    }
+
+    if (
+      capabilityValue.type === FixtureCapabilityType.WheelSlot &&
+      channelCapability.capability.slotNumber === capabilityValue.slotNumber
+    ) {
+      // wheel slot (color, gobo, etc.)
+      return channelCapability.centerValue;
+    }
+
+    return undefined;
+  }
+
+  // the value a channel is driven to by the capability values of a preset, or undefined, if no
+  // capability touches it. A channel value set on the channel itself wins over this one.
+  getChannelValueFromCapabilities(
+    capabilityValues: FixtureCapabilityValue[],
+    channel: CachedFixtureChannel,
+    profileUuid: string,
+    preset?: Preset
+  ): number {
+    let value: number;
+
+    for (const capabilityValue of capabilityValues) {
+      for (const channelCapability of channel.capabilities) {
+        if (
+          this.fixtureService.capabilitiesMatch(
+            capabilityValue.type,
+            channelCapability.capability.type,
+            capabilityValue.color,
+            channelCapability.capability.color,
+            capabilityValue.wheel,
+            channelCapability.wheelName,
+            capabilityValue.profileUuid,
+            profileUuid
+          )
+        ) {
+          const capabilityChannelValue = this.getCapabilityChannelValue(capabilityValue, channel, channelCapability, preset);
+
+          if (capabilityChannelValue !== undefined) {
+            // a later capability value overwrites an earlier one, just like in the preview
+            value = capabilityChannelValue;
+          }
+        }
+      }
+    }
+
+    if (value === undefined && channel.colorWheel) {
+      // no slot has been picked on this wheel -> it shows the color approximated from a color
+      // or from a slot on a different wheel
+      const approximatedCapability = this.getApproximatedColorWheelCapability(capabilityValues, channel);
+
+      if (approximatedCapability) {
+        value = approximatedCapability.centerValue;
+      }
+    }
+
+    return value;
+  }
+
+  // whether an effect of the preset drives a channel. An effect overwrites whatever the
+  // capabilities and the channel itself say, but its value is a moving one and, as soon as the
+  // effect is chasing, a different one for every fixture -> the channel can only tell that it is
+  // in the hands of an effect, not which value it is at.
+  // this follows the same rules as mixEffects() in the preview service.
+  channelIsDrivenByEffect(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): boolean {
+    for (const effect of preset.effects) {
+      if (!effect.visible || !(effect instanceof EffectCurve)) {
+        continue;
+      }
+
+      // the capabilities of the effect reach this type of channel on every profile
+      for (const capability of effect.capabilities) {
+        for (const channelCapability of channel.capabilities) {
+          if (
+            this.fixtureService.capabilitiesMatch(
+              capability.type,
+              channelCapability.capability.type,
+              capability.color,
+              channelCapability.capability.color,
+              null,
+              null,
+              null,
+              null
+            )
+          ) {
+            return true;
+          }
+        }
+      }
+
+      // the channels of the effect are named per profile
+      for (const profileChannels of effect.channels) {
+        if (profileChannels.profileUuid === profileUuid && profileChannels.channels.indexOf(channel.name) >= 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   private hasCapabilityType(type: FixtureCapabilityType): boolean {
+    // nothing is being edited yet: the panels are asked while the project is still
+    // being loaded, before a preset has been picked
+    if (!this.selectedPreset) {
+      return false;
+    }
+
     // there is at least one channel with at least one intensity capability
     for (const presetFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
@@ -396,6 +718,10 @@ export class PresetService {
       return true;
     }
 
+    if (!this.selectedPreset) {
+      return false;
+    }
+
     // a color wheel is involved
     for (const projectFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(projectFixture.fixtureUuid, projectFixture.pixelKey);
@@ -429,13 +755,153 @@ export class PresetService {
     return false;
   }
 
+  // switch between previewing the selected scenes and the preset being edited
+  setPreviewPreset(previewPreset: boolean) {
+    this.projectService.project.previewPreset = previewPreset;
+    this.previewSelectionChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
   selectPreset(index: number) {
     this.effectService.selectedEffect = undefined;
     this.selectedPreset = this.projectService.project.presets[index];
     this.projectService.project.selectedPresetUuid = this.projectService.project.presets[index].uuid;
+    this.presetStepService.ensureStep(this.selectedPreset);
+    this.selectStep(this.selectedPreset.steps[0]);
     this.autoOpenFirstEffect();
     this.previewSelectionChanged.next();
     this.livePreviewService.previewLive();
+  }
+
+  // the step the panels are editing, which is what the preview shows while nothing is
+  // playing. The presets which are not being edited show what they start out with.
+  getEditStep(preset: Preset): PresetStep {
+    if (preset === this.selectedPreset && this.selectedStep && preset.steps.indexOf(this.selectedStep) >= 0) {
+      return this.selectedStep;
+    }
+
+    return preset.steps[0];
+  }
+
+  selectStep(step: PresetStep) {
+    this.selectedStep = step;
+    this.projectService.project.selectedStepUuid = step ? step.uuid : undefined;
+    this.stepsChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // pick up the step the panels edit after a project has been loaded or migrated
+  selectStepFromProject() {
+    for (const preset of this.projectService.project.presets) {
+      this.presetStepService.ensureStep(preset);
+    }
+
+    this.projectService.project.stepPreviewRunning = false;
+
+    if (!this.selectedPreset) {
+      this.selectedStep = undefined;
+      this.stepsChanged.next();
+      return;
+    }
+
+    const selectedStepUuid = this.projectService.project.selectedStepUuid;
+    this.selectStep(this.selectedPreset.steps.find((step) => step.uuid === selectedStepUuid) || this.selectedPreset.steps[0]);
+  }
+
+  addStep(): PresetStep {
+    if (!this.selectedPreset) {
+      return undefined;
+    }
+
+    const step = this.presetStepService.addStep(this.selectedPreset, this.selectedStep);
+    this.selectStep(step);
+
+    return step;
+  }
+
+  deleteStep(step: PresetStep) {
+    if (!this.selectedPreset) {
+      return;
+    }
+
+    this.presetStepService.deleteStep(this.selectedPreset, step);
+
+    if (this.selectedPreset.steps.indexOf(this.selectedStep) < 0) {
+      this.selectStep(this.selectedPreset.steps[0]);
+    } else {
+      this.stepsChanged.next();
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  // the steps of a preset only ever run in the order they are reached, so a step whose
+  // time was changed takes its new place right away
+  stepChanged() {
+    if (this.selectedPreset) {
+      this.presetStepService.sortSteps(this.selectedPreset);
+    }
+
+    this.stepsChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // the step the selected preset is on while it plays, which is what its rail marks.
+  // The preview works it out on every frame, outside of Angular, so the rail reads it
+  // on a clock of its own rather than being told about it.
+  activeStep: PresetStep;
+
+  // how far the preset has come through that step, between 0 and 1
+  activeStepProgress = 0;
+
+  // Whether the steps are shown beside the panels which edit them. Left alone they
+  // show themselves once a preset runs through more than one of them, since a single
+  // step is the static look a preset has always been; switching them decides it by
+  // hand from then on.
+  private stepsVisibleOverride: boolean;
+
+  get stepsVisible(): boolean {
+    if (this.stepsVisibleOverride !== undefined) {
+      return this.stepsVisibleOverride;
+    }
+
+    return !!this.selectedPreset && this.selectedPreset.steps.length > 1;
+  }
+
+  switchStepsVisible() {
+    this.stepsVisibleOverride = !this.stepsVisible;
+  }
+
+  // run the steps of the selected preset in the preview instead of holding the step
+  // being edited, so that the sequence can be watched without a composition
+  get stepPreviewRunning(): boolean {
+    return this.projectService.project && this.projectService.project.stepPreviewRunning === true;
+  }
+
+  setStepPreviewRunning(running: boolean) {
+    // the run starts at the first step rather than wherever the clock happens to stand
+    this.projectService.project.stepPreviewStartMillis = this.animationService.timeMillis;
+    this.projectService.project.stepPreviewRunning = running;
+    this.stepsChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // A run which does not loop is over once a whole pass of the sequence has gone by:
+  // the last step is held for its share of that pass first, so the run ends on the look
+  // it was building towards instead of stopping the moment it arrives there.
+  stepPreviewFinished(): boolean {
+    const preset = this.selectedPreset;
+
+    if (!preset || preset.stepsLoop || preset.steps.length === 0) {
+      return false;
+    }
+
+    const passMillis = preset.steps[0].startMillis + this.presetStepService.getStepsLoopMillis(preset);
+
+    return this.animationService.timeMillis - this.stepPreviewStartMillis >= passMillis;
+  }
+
+  get stepPreviewStartMillis(): number {
+    return this.projectService.project ? this.projectService.project.stepPreviewStartMillis : 0;
   }
 
   autoOpenFirstEffect() {
@@ -461,7 +927,75 @@ export class PresetService {
     }
 
     this.projectService.project.presets.splice(highestSelectedPresetIndex, 0, preset);
+    this.presetsChanged.next();
     this.selectPreset(highestSelectedPresetIndex);
+  }
+
+  // a copy of a preset, placed right below the one it was copied from. Its steps and
+  // effects belong to the preset, so they are copied along with it; which scenes play
+  // the copy is decided in the scene tree.
+  duplicatePreset(preset: Preset, name?: string): Preset {
+    const index = this.projectService.project.presets.indexOf(preset);
+
+    if (index < 0) {
+      return undefined;
+    }
+
+    const copy = new Preset(JSON.parse(JSON.stringify(preset)));
+
+    copy.uuid = this.uuidService.getUuid();
+    copy.name = name || preset.name;
+
+    // the steps of the copy open and close its own effects, not the ones of the preset
+    // it was copied from
+    const effectUuids = new Map<string, string>();
+
+    for (const effect of copy.effects) {
+      const effectUuid = this.uuidService.getUuid();
+      effectUuids.set(effect.uuid, effectUuid);
+      effect.uuid = effectUuid;
+    }
+
+    for (const step of copy.steps) {
+      step.uuid = this.uuidService.getUuid();
+
+      for (const effectAmount of step.effectAmounts) {
+        effectAmount.effectUuid = effectUuids.get(effectAmount.effectUuid) || effectAmount.effectUuid;
+      }
+    }
+
+    // right below the original, inside the same folder
+    copy.folderUuid = preset.folderUuid;
+    copy.sortIndex = (preset.sortIndex || 0) + 0.5;
+
+    this.projectService.project.presets.splice(index + 1, 0, copy);
+    this.folderService.renumber(this.projectService.project.presetFolders, this.projectService.project.presets, copy.folderUuid);
+    this.folderService.sortItems(this.projectService.project.presetFolders, this.projectService.project.presets);
+
+    this.presetsChanged.next();
+    this.selectPreset(this.projectService.project.presets.indexOf(copy));
+
+    return copy;
+  }
+
+  removePreset(preset: Preset): void {
+    const index = this.projectService.project.presets.indexOf(preset);
+
+    if (index < 0) {
+      return;
+    }
+
+    this.projectService.project.presets.splice(index, 1);
+    this.presetsChanged.next();
+
+    if (this.projectService.project.presets.length > 0) {
+      this.selectPreset(0);
+    } else {
+      this.selectedPreset = undefined;
+      this.projectService.project.selectedPresetUuid = undefined;
+      this.selectStep(undefined);
+      this.previewSelectionChanged.next();
+    }
   }
 
   // return all fixture profiles used in the current preset selection

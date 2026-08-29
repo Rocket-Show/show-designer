@@ -12,6 +12,8 @@ import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
+import { getStepMarkers } from '../models/timeline-step-marker';
+import { ColorService } from './color.service';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
@@ -46,6 +48,7 @@ export class TimelineService {
   constructor(
     private sceneService: SceneService,
     private presetService: PresetService,
+    private colorService: ColorService,
     private projectService: ProjectService,
     private http: HttpClient,
     private configService: ConfigService,
@@ -56,12 +59,24 @@ export class TimelineService {
     this.presetService.previewSelectionChanged.subscribe(() => {
       this.selectedPlaybackRegion = undefined;
       this.updateRegionSelection();
+      this.updateStepMarkers();
+    });
+    this.presetService.stepsChanged.subscribe(() => {
+      this.updateStepMarkers();
     });
     this.sceneService.sceneDeleted.subscribe(() => {
       this.redrawAllRegions();
     });
     this.sceneService.sceneSelected.subscribe(() => {
       this.redrawAllRegions();
+    });
+    // the color of a scene follows the presets played in it, so both a scene and a
+    // preset can change what the regions are painted in
+    this.sceneService.scenesChanged.subscribe(() => {
+      this.updateRegionSelection();
+    });
+    this.presetService.presetsChanged.subscribe(() => {
+      this.updateRegionSelection();
     });
   }
 
@@ -89,7 +104,7 @@ export class TimelineService {
     this.timelineStateService.selectedCompositionIndex = selectedCompositionIndex;
   }
 
-  private redrawAllRegions() {
+  redrawAllRegions() {
     // remove all regions from wavesurver
     if (this.waveSurfer) {
       for (const key of Object.keys(this.waveSurfer.regions.list)) {
@@ -351,16 +366,7 @@ export class TimelineService {
     this.selectedPlaybackRegion = scenePlaybackRegion;
 
     if (waveSurferRegion) {
-      waveSurferRegion.color =
-        'rgba(' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).r +
-        ', ' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).g +
-        ', ' +
-        this.hexToRgb(this.sceneService.selectedScenes[0].color).b +
-        ', ' +
-        this.intensityHighlighted +
-        ')';
+      waveSurferRegion.color = this.regionColor(this.sceneService.selectedScenes[0], this.intensityHighlighted);
       waveSurferRegion.attributes.selectable = true;
       this.connectRegion(waveSurferRegion, this.sceneService.selectedScenes[0], scenePlaybackRegion);
       this.updateRegionSelection();
@@ -415,8 +421,8 @@ export class TimelineService {
     setTimeout(() => {
       this.waveSurfer = WaveSurfer.create({
         container: '#waveform',
-        waveColor: 'white',
-        progressColor: 'white',
+        waveColor: '#8b939e',
+        progressColor: '#8b939e',
         // barWidth: 2,
         height: 1,
         interact: false,
@@ -443,8 +449,8 @@ export class TimelineService {
           }),
           TimeLinePlugin.create({
             container: '#waveform-timeline',
-            primaryFontColor: '#fff',
-            secondaryFontColor: '#fff',
+            primaryFontColor: '#99a1ac',
+            secondaryFontColor: '#6b7280',
             offset: this.getSnapToGridOffset(),
             formatTimeCallback: this.formatTimeCallback.bind(this),
             timeInterval: this.timeInterval.bind(this),
@@ -585,15 +591,10 @@ export class TimelineService {
     }, 0);
   }
 
-  private hexToRgb(hex: string) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
+  // a region is painted in the color of its scene, at the intensity which says whether
+  // the scene is played and whether the region itself is the selected one
+  private regionColor(scene: Scene, intensity: number): string {
+    return this.colorService.toRgba(this.colorService.getSceneColor(scene), intensity);
   }
 
   private updateRegionSelection() {
@@ -627,16 +628,7 @@ export class TimelineService {
           region.attributes.selected = true;
         }
 
-        region.color =
-          'rgba(' +
-          this.hexToRgb(region.scene.color).r +
-          ', ' +
-          this.hexToRgb(region.scene.color).g +
-          ', ' +
-          this.hexToRgb(region.scene.color).b +
-          ', ' +
-          intensity +
-          ')';
+        region.color = this.regionColor(region.scene, intensity);
         region.updateRender();
       }
     }
@@ -704,7 +696,64 @@ export class TimelineService {
       }
       scenePlaybackRegion.startMillis = Math.round(waveSurferRegion.start * 1000);
       scenePlaybackRegion.endMillis = Math.round(waveSurferRegion.end * 1000);
+
+      // the steps keep their own times while the region around them is resized, so
+      // where they sit inside it changes with every update
+      this.drawStepMarkers(waveSurferRegion);
     });
+  }
+
+  // The steps of the preset being edited, marked inside every region the preset plays
+  // in: a tick where each step is reached and a ramp over the time its transition
+  // travels to get there. They sit inside the region's own element, so they follow it
+  // through zooming and scrolling on their own.
+  updateStepMarkers() {
+    if (!this.isWaveSurferReady()) {
+      return;
+    }
+
+    for (const key of Object.keys(this.waveSurfer.regions.list)) {
+      const region: any = this.waveSurfer.regions.list[key];
+
+      if (region.element) {
+        this.drawStepMarkers(region);
+      }
+    }
+  }
+
+  private drawStepMarkers(region: any) {
+    for (const marker of Array.from(region.element.querySelectorAll('.step-marker'))) {
+      (marker as HTMLElement).remove();
+    }
+
+    const markers = getStepMarkers(this.presetService.selectedPreset, region.scene, region.scenePlaybackRegion);
+
+    markers.forEach((marker, index) => {
+      const selected = marker.step === this.presetService.selectedStep;
+
+      if (marker.transitionWidthPercentage > 0) {
+        const transition = this.createStepMarker('step-marker step-marker-transition', marker.leftPercentage, selected);
+        transition.style.width = marker.transitionWidthPercentage + '%';
+        region.element.appendChild(transition);
+      }
+
+      const tick = this.createStepMarker('step-marker step-marker-tick', marker.leftPercentage, selected);
+      tick.setAttribute('data-step-name', String(index + 1));
+      region.element.appendChild(tick);
+    });
+  }
+
+  private createStepMarker(className: string, leftPercentage: number, selected: boolean): HTMLElement {
+    const marker = document.createElement('div');
+
+    marker.className = className;
+    marker.style.left = leftPercentage + '%';
+
+    if (selected) {
+      marker.setAttribute('data-step-selected', 'true');
+    }
+
+    return marker;
   }
 
   private drawRegion(scenePlaybackRegion: ScenePlaybackRegion, scene: Scene) {
@@ -721,6 +770,7 @@ export class TimelineService {
       data: { handled: true },
     });
     this.connectRegion(waveSurferRegion, scene, scenePlaybackRegion);
+    this.drawStepMarkers(waveSurferRegion);
 
     // TODO show the all presets
     // for (let presetUuid of scene.presetUuids) {
@@ -781,26 +831,24 @@ export class TimelineService {
     for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
       const scene = this.projectService.project.scenes[sceneIndex];
 
+      // the presets are ordered inside their scene: the first one is the topmost
+      // layer -> process it last, so it overwrites the ones below it
+      const scenePresets = this.sceneService.getScenePresets(scene);
+
       for (const region of this.selectedComposition.scenePlaybackRegions) {
         if (region.sceneUuid === scene.uuid) {
-          for (let presetIndex = this.projectService.project.presets.length - 1; presetIndex >= 0; presetIndex--) {
-            for (const presetUuid of scene.presetUuids) {
-              if (presetUuid === this.projectService.project.presets[presetIndex].uuid) {
-                const preset = this.presetService.getPresetByUuid(presetUuid);
+          for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
+            const preset = scenePresets[presetIndex];
 
-                if (preset) {
-                  let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
-                  let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
+            let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
+            let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
 
-                  // extend the running time, if fading is done outside the boundaries
-                  presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
-                  presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
+            // extend the running time, if fading is done outside the boundaries
+            presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
+            presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
 
-                  if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
-                    activePresets.push(new PresetRegionScene(preset, region, scene));
-                  }
-                }
-              }
+            if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
+              activePresets.push(new PresetRegionScene(preset, region, scene));
             }
           }
         }
