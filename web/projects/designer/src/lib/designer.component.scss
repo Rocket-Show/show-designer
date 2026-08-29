@@ -605,6 +605,19 @@
     }
   }
 
+  // a fader which is meant to take the width of the row it sits in. bootstrap-slider
+  // gives the element it builds a fixed width of its own, so both that element and the
+  // fader around it have to be told to follow the row instead - otherwise the fader
+  // keeps its 210 px and pushes whatever stands beside it out of the dialog.
+  .sd-slider-fill {
+    flex: 1 1 0;
+    min-width: 0;
+
+    .slider.slider-horizontal {
+      width: 100%;
+    }
+  }
+
   .slider-input,
   .slider-input-readonly {
     width: 64px;
