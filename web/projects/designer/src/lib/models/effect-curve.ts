@@ -153,15 +153,22 @@ export class EffectCurve extends Effect {
     return EffectCurve.dutyCycleTypes.indexOf(this.curveType) >= 0;
   }
 
-  // the time the curve is shifted by for the passed fixture of the preset
-  public getPhasingMillis(fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number {
-    const groupSize = Math.max(Math.round(this.phasingGroupSize), 1);
-    const step = Math.floor((fixtureIndex || 0) / groupSize);
+  // how many fixtures run the same step of the chase
+  private getPhasingGroupSize(): number {
+    return Math.max(Math.round(this.phasingGroupSize), 1);
+  }
 
+  // the number of chase steps the fixtures of the preset are divided into. a group runs
+  // as one step, so grouping leaves fewer steps than there are fixtures.
+  public getPhasingStepCount(fixtureCount?: number): number {
+    return Math.max(Math.ceil((fixtureCount || 1) / this.getPhasingGroupSize()), 1);
+  }
+
+  // the time the curve is shifted by for the passed step of the chase
+  public getPhasingStepMillis(step: number, fixtureCount?: number, beatsPerMinute?: number): number {
     if (this.phasingMode === 'spread') {
       // distribute the cycles over all chase steps of the preset
-      const steps = Math.max(Math.ceil((fixtureCount || 1) / groupSize), 1);
-      return (step / steps) * this.phasingCycles * this.getLengthMillis(beatsPerMinute);
+      return (step / this.getPhasingStepCount(fixtureCount)) * this.phasingCycles * this.getLengthMillis(beatsPerMinute);
     }
 
     if (this.phasingMode === 'beats') {
@@ -169,6 +176,13 @@ export class EffectCurve extends Effect {
     }
 
     return step * this.phasingMillis;
+  }
+
+  // the time the curve is shifted by for the passed fixture of the preset
+  public getPhasingMillis(fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number {
+    const step = Math.floor((fixtureIndex || 0) / this.getPhasingGroupSize());
+
+    return this.getPhasingStepMillis(step, fixtureCount, beatsPerMinute);
   }
 
   // how long the curve runs, measured from the moment its fixture starts, or undefined

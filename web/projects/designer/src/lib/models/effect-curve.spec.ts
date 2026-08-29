@@ -112,6 +112,58 @@ describe('EffectCurve', () => {
     expect(curve.getValueAtMillis(700, 1, 4, 60)).toBe(curve.getValueAtMillis(700, 1, 4, 240));
   });
 
+  it('should hold the fixtures of a group on the same step of the chase', () => {
+    const curve = timedCurve();
+    curve.phasingMode = 'millis';
+    curve.phasingMillis = 100;
+    curve.phasingGroupSize = 2;
+
+    // two fixtures per group leaves four fixtures with two steps
+    expect(curve.getPhasingMillis(0, 4, 120)).toBe(0);
+    expect(curve.getPhasingMillis(1, 4, 120)).toBe(0);
+    expect(curve.getPhasingMillis(2, 4, 120)).toBe(100);
+    expect(curve.getPhasingMillis(3, 4, 120)).toBe(100);
+  });
+
+  it('should divide the fixtures of a preset into chase steps', () => {
+    const curve = timedCurve();
+
+    curve.phasingGroupSize = 1;
+    expect(curve.getPhasingStepCount(4)).toBe(4);
+
+    curve.phasingGroupSize = 2;
+    expect(curve.getPhasingStepCount(4)).toBe(2);
+
+    // a group the fixtures do not fill completely still runs as a step of its own
+    expect(curve.getPhasingStepCount(5)).toBe(3);
+
+    // a group holding all fixtures leaves a single step, which is not a chase anymore
+    curve.phasingGroupSize = 8;
+    expect(curve.getPhasingStepCount(4)).toBe(1);
+  });
+
+  it('should shift the steps of a grouped chase against each other', () => {
+    const curve = timedCurve();
+    curve.phasingMode = 'millis';
+    curve.phasingMillis = 100;
+    curve.phasingGroupSize = 2;
+
+    // the second group runs a step later, however many fixtures it holds
+    expect(curve.getPhasingStepMillis(0, 4, 120)).toBe(0);
+    expect(curve.getPhasingStepMillis(1, 4, 120)).toBe(100);
+  });
+
+  it('should spread a chase over the groups instead of the fixtures', () => {
+    const curve = timedCurve();
+    curve.phasingMode = 'spread';
+    curve.phasingCycles = 1;
+    curve.phasingGroupSize = 2;
+
+    // one full cycle distributed over the two groups of four fixtures
+    expect(curve.getPhasingMillis(2, 4, 120)).toBe(1000);
+    expect(curve.getPhasingStepMillis(1, 4, 120)).toBe(1000);
+  });
+
   it('should read a project written before the curves could follow a tempo', () => {
     const curve = new EffectCurve({
       lengthMillis: 1000,
