@@ -28,6 +28,7 @@ If the linter fails, you can check and try to automatically fix it with `ng lint
 ## Build & publish as NPM package
 
 ```shell
+npm login
 cd web
 cd projects/designer
 npm version minor
