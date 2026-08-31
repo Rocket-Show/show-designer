@@ -287,6 +287,7 @@
       "remove-composition": "Komposition entfernen",
       "composition-settings": "Kompositionseinstellungen",
       "no-compositions": "Erstelle eine Komposition, um die Szenen zu synchronisieren",
+      "audio-file-error": "Die Audiodatei dieser Komposition konnte nicht geladen werden. Wähle sie in den Kompositions-Einstellungen erneut aus.",
       "composition-name": "Name",
       "composition-sync-type": "Synchronisierung",
       "composition-sync-type-none": "Keine",
