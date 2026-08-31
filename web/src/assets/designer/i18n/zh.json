@@ -286,6 +286,7 @@
       "remove-composition": "删除合成",
       "composition-settings": "合成设置",
       "no-compositions": "创建合成以同步场景",
+      "audio-file-error": "无法加载此合成的音频文件。请在合成设置中重新选择该文件。",
       "composition-name": "名称",
       "composition-sync-type": "同步",
       "composition-sync-type-none": "无",
