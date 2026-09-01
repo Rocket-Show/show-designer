@@ -286,6 +286,7 @@
       "remove-composition": "Supprimer la composition",
       "composition-settings": "Paramètres de composition",
       "no-compositions": "Créez une composition pour synchroniser les scènes",
+      "audio-file-error": "Le fichier audio de cette composition n'a pas pu être chargé. Sélectionnez-le à nouveau dans les paramètres de la composition.",
       "composition-name": "Nom",
       "composition-sync-type": "Synchronisation",
       "composition-sync-type-none": "Aucune",

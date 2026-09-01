@@ -131,6 +131,12 @@
     <div class="w-100 d-flex">
       <i class="fa fa-circle-o-notch fa-spin m-auto" style="margin-top: -30px"></i>
     </div>
+    } @if (timelineService.audioFileError) {
+    <div class="w-100 d-flex">
+      <a href="#" class="m-auto text-warning" (click)="compositionSettings(); (false)"
+        ><i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.audio-file-error' | translate }}</a
+      >
+    </div>
     } @if (timelineService.selectedComposition) {
     <div>
       <div id="waveform-timeline"></div>

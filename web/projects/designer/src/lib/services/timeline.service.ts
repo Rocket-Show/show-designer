@@ -45,6 +45,10 @@ export class TimelineService {
 
   public loadingAudioFile = false;
 
+  // could the audio file of the selected composition not be read? (it is missing, the
+  // server did not hand it out or the browser cannot play it)
+  public audioFileError = false;
+
   constructor(
     private sceneService: SceneService,
     private presetService: PresetService,
@@ -399,9 +403,23 @@ export class TimelineService {
     }
   }
 
+  // the audio file of the selected composition could not be read: it is missing, the
+  // server did not hand it out or the browser cannot play it. The composition itself is
+  // kept - it carries the scenes played over the song, which is the work of the show and
+  // not the file's to take with it. Say that the file is the part which is missing, so
+  // that another one can be picked in the composition settings instead.
+  private audioFileLoadFailed(error: any) {
+    console.error('Could not load the audio file of the composition', error);
+
+    this.audioFileError = true;
+    this.loadingAudioFile = false;
+    this.detectChanges.next();
+  }
+
   destroyWaveSurfer() {
     this.duration = undefined;
     this.loadingAudioFile = false;
+    this.audioFileError = false;
 
     if (this.waveSurfer) {
       this.waveSurfer.destroy();
@@ -554,9 +572,7 @@ export class TimelineService {
       });
 
       this.waveSurfer.on('error', (error: any) => {
-        // could not load the composition --> delete it
-        // (this may occur, when the composition has been deleted but the project is not saved afterwards)
-        this.deleteSelectedComposition();
+        this.audioFileLoadFailed(error);
       });
 
       this.waveSurfer.on('seek', () => {
