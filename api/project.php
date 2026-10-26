@@ -14,6 +14,11 @@ function userHasProjectRole($conn, $userId, $projectId, $roleAlias)
 // Checks, whether a project share token is valid
 function projectShareTokenIsValid($conn, $projectId, $shareToken)
 {
+    // a project without a token of its own is not shared
+    if (strlen($shareToken) == 0) {
+        return false;
+    }
+
     $result = mysqli_query($conn, "SELECT 1 FROM project WHERE id = " . $projectId . " AND share_token = '" . $shareToken . "'");
     if ($result->num_rows > 0) {
         return true;
@@ -105,8 +110,14 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $projectString = file_get_contents('php://input');
         $projectObject = json_decode($projectString);
         $name = mysqli_real_escape_string($conn, $projectObject->{'name'});
-        if (isset($projectObject->{'shareToken'})) {
+        $shareToken = '';
+        if (isset($projectObject->{'shareToken'}) && is_string($projectObject->{'shareToken'})) {
             $shareToken = mysqli_real_escape_string($conn, $projectObject->{'shareToken'});
+        }
+        if (strlen($shareToken) == 0) {
+            // a project without a share token (e.g. imported from a file which had none) was
+            // stored with an empty one, which opened it to anyone -> it gets one of its own
+            $shareToken = bin2hex(random_bytes(16));
         }
 
         if (isset($projectObject->{'id'})) {
@@ -146,6 +157,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
             if (!$result) {
                 error();
             }
+
+            // a project stored without a share token before gets one now
+            $result = mysqli_query($conn, "UPDATE project SET share_token = '" . $shareToken . "' WHERE id = " . $projectId . " AND share_token = ''");
+            if (!$result) {
+                error();
+            }
         }
 
         // delete unused composition files from this project
@@ -173,8 +190,16 @@ switch ($_SERVER['REQUEST_METHOD']) {
             }
         }
 
+        // hand the share token back, the designer takes it over for its share links
+        $result = mysqli_query($conn, "SELECT share_token FROM project WHERE id = " . $projectId);
+        if (!$result) {
+            error();
+        }
+        $row = mysqli_fetch_assoc($result);
+
         $project = array(
-            "id" => $projectId
+            "id" => $projectId,
+            "shareToken" => $row['share_token']
         );
         echo json_encode(utf8ize($project));
 
