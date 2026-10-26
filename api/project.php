@@ -37,7 +37,8 @@ function projectExists($conn, $projectId)
 $userId = getUserId($conn);
 $projectId = '';
 if (isset($_GET['id'])) {
-    $projectId = mysqli_real_escape_string($conn, $_GET['id']);
+    // the id is not quoted in the queries -> only a number may get there
+    $projectId = (int) $_GET['id'];
 }
 
 switch ($_SERVER['REQUEST_METHOD']) {
@@ -109,7 +110,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
 
         if (isset($projectObject->{'id'})) {
-            $projectId = mysqli_real_escape_string($conn, $projectObject->{'id'});
+            $projectId = (int) $projectObject->{'id'};
         }
 
         if (isset($projectId) && strlen($projectId) > 0 && projectExists($conn, $projectId)) {

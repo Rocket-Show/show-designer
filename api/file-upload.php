@@ -3,16 +3,20 @@ include_once 'global.php';
 
 $projectId = 'NULL';
 if (isset($_GET['projectId']) && strlen($_GET['projectId']) > 0) {
-    $projectId = mysqli_real_escape_string($conn, $_GET['projectId']);
+    // the id is not quoted in the query -> only a number may get there
+    $projectId = (int) $_GET['projectId'];
 }
 
-if (isset($_GET['compositionUuid'])) {
-    $compositionUuid = mysqli_real_escape_string($conn, $_GET['compositionUuid']);
-}
-
-if (!isset($compositionUuid)) {
+if (!isset($_GET['compositionUuid'])) {
     error('missing-parameters', 400);
 }
+
+// the uuid names the stored file -> it must not lead out of the file directory
+if (!isValidCompositionUuid($_GET['compositionUuid'])) {
+    error('wrong-parameters', 400);
+}
+
+$compositionUuid = mysqli_real_escape_string($conn, $_GET['compositionUuid']);
 
 // delete an existing file, if available
 $result = mysqli_query($conn, "SELECT id FROM composition_file WHERE composition_uuid = '" . $compositionUuid . "'");
@@ -30,9 +34,7 @@ $fileNameSplitted = explode('.', $fileName);
 $fileExtension = strtolower(end($fileNameSplitted));
 $fileError = $_FILES['file']['error'];
 
-$allowed = array('mp3', 'wav', 'ogg');
-
-if (in_array($fileExtension, $allowed)) {
+if (in_array($fileExtension, $compositionFileExtensions)) {
     if ($fileError === 0) {
         if ($fileSize < 100000000) { // 100 MB
             $fileNameNew = $compositionUuid . "." . $fileExtension;
