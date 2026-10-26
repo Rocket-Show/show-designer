@@ -288,14 +288,16 @@ export class EffectCurve extends Effect {
     return (warped + 0.75) % 1;
   }
 
-  // the value of the curve at a position inside its cycle, between 0 and 1
+  // the value of the curve at a position inside its cycle, between 0 and 1. every curve swings
+  // over its whole amplitude around its position (before project version 8, the curves except
+  // the square swung over half of it).
   private getCurveValue(cyclePosition: number): number {
     let value = 0;
 
     switch (this.curveType) {
       case 'sine': {
         const warped = this.warpCyclePosition(cyclePosition);
-        value = this.position + ((this.amplitude / 2) * Math.sin(2 * Math.PI * warped)) / 2;
+        value = this.position + (this.amplitude / 2) * Math.sin(2 * Math.PI * warped);
         break;
       }
       case 'square':
@@ -310,16 +312,16 @@ export class EffectCurve extends Effect {
       case 'triangle': {
         // rises and falls linearly, in phase with the sine
         const warped = this.warpCyclePosition(cyclePosition);
-        value = this.position + ((this.amplitude / 2) * (1 - 4 * Math.abs(((warped + 0.25) % 1) - 0.5))) / 2;
+        value = this.position + (this.amplitude / 2) * (1 - 4 * Math.abs(((warped + 0.25) % 1) - 0.5));
         break;
       }
       case 'sawtooth':
         // ramps up over the whole cycle, then jumps back
-        value = this.position + ((this.amplitude / 2) * (2 * cyclePosition - 1)) / 2;
+        value = this.position + (this.amplitude / 2) * (2 * cyclePosition - 1);
         break;
       case 'reverse-sawtooth':
         // ramps down over the whole cycle, then jumps back
-        value = this.position + ((this.amplitude / 2) * (1 - 2 * cyclePosition)) / 2;
+        value = this.position + (this.amplitude / 2) * (1 - 2 * cyclePosition);
         break;
     }
 

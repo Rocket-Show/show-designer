@@ -20,6 +20,7 @@ import { LivePreviewService } from './live-preview.service';
 import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { Composition } from '../models/composition';
+import { EffectCurve } from '../models/effect-curve';
 
 @Injectable({
   providedIn: 'root',
@@ -148,6 +149,20 @@ export class ProjectLoadService {
     this.projectService.project.version = 7;
   }
 
+  private migrateToVersion8() {
+    // every curve swings over its whole amplitude now, like the square did already. the
+    // others swung over half of it -> halve their amplitude, so the show looks the same.
+    for (const preset of this.projectService.project.presets) {
+      for (const effect of preset.effects) {
+        if (effect instanceof EffectCurve && effect.curveType !== 'square') {
+          effect.amplitude /= 2;
+        }
+      }
+    }
+
+    this.projectService.project.version = 8;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -190,6 +205,11 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 7) {
       this.migrateToVersion7();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 8) {
+      this.migrateToVersion8();
       migrated = true;
     }
 
