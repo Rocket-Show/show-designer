@@ -5,10 +5,15 @@ import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrModule } from 'ngx-toastr';
+import { of } from 'rxjs';
+
+import { EffectCurve } from '../models/effect-curve';
 
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { ProjectLoadService } from './project-load.service';
+import { ProjectService } from './project.service';
+import { WarningDialogService } from './warning-dialog.service';
 
 describe('ProjectLoadService', () => {
   beforeEach(() => {
@@ -58,10 +63,69 @@ describe('ProjectLoadService importing a project with fixtures new to the design
   });
 });
 
+// Until version 8, the curves except the square swung over half of their amplitude: the
+// migration halves it, so a show looks the same as before
+describe('ProjectLoadService migrating the curves of a project to version 8', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  it('halves the amplitude of every curve but the square', () => {
+    const project = projectWithSelectedPreset();
+    project.version = 7;
+    project.presets[0].effects = [curveEffect('sine', 1), curveEffect('triangle', 0.8), curveEffect('square', 1)];
+
+    service.import(JSON.stringify(project));
+
+    const effects = projectService.project.presets[0].effects as EffectCurve[];
+    expect(projectService.project.version).toBe(8);
+    expect(effects.map((effect) => effect.amplitude)).toEqual([0.5, 0.4, 1]);
+  });
+
+  it('keeps the amplitude of a project of version 8', () => {
+    const project = projectWithSelectedPreset();
+    project.presets[0].effects = [curveEffect('sine', 1)];
+
+    service.import(JSON.stringify(project));
+
+    expect((projectService.project.presets[0].effects[0] as EffectCurve).amplitude).toBe(1);
+  });
+});
+
+function curveEffect(curveType: string, amplitude: number): any {
+  return {
+    type: 'curve',
+    uuid: curveType,
+    curveType,
+    amplitude,
+    position: 0.5,
+    lengthMillis: 1000,
+    phaseMillis: 0,
+    phasingMillis: 0,
+    capabilities: [],
+    channels: [],
+  };
+}
+
 // a project with one dimmer, which its selected preset turns on
 function projectWithSelectedPreset(): any {
   return {
-    version: 7,
+    version: 8,
     name: 'Imported',
     fixtureProfiles: [
       {
