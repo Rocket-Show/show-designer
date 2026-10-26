@@ -3,6 +3,9 @@ include_once 'database.php';
 
 $compositionFileDirectory = 'composition-files';
 
+// the audio formats a composition file may have
+$compositionFileExtensions = array('mp3', 'wav', 'ogg');
+
 // Allow from any origin. When credentials are included (withCredentials on the
 // client), the spec forbids the '*' wildcard, so the requesting origin must be
 // echoed back instead. Vary: Origin keeps caches from serving one origin's
@@ -80,6 +83,13 @@ function userHasRole($conn, $userId, $roleAlias)
         return $row['user_id'];
     }
     return null;
+}
+
+// Whether the passed composition uuid can name a file: the designer builds them from
+// letters, digits and dashes only, so anything else (like a path) is refused
+function isValidCompositionUuid($uuid)
+{
+    return is_string($uuid) && preg_match('/^[A-Za-z0-9-]{1,64}$/', $uuid) === 1;
 }
 
 // Deletes a composition file and the entry in the databse

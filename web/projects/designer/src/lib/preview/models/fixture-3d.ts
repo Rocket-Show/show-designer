@@ -43,7 +43,6 @@ export abstract class Fixture3d {
   private bulbMaterial: THREE.MeshLambertMaterial;
   private bulbSphereRadius = 3;
   private bulbSphere: THREE.Mesh;
-  private blackColor = new THREE.Color(0x000000);
 
   constructor(
     public fixtureService: FixtureService,
@@ -328,11 +327,12 @@ export abstract class Fixture3d {
     }
 
     if (this.hasBulb) {
-      // Normalize 0–255 → 0–1
-      const intensity = Math.max(this.colorRed, this.colorGreen, this.colorBlue) / 255;
+      // the color carries the brightness of the pixel already, the dimmer (if the fixture
+      // has one) scales it. Taking the brightness away again turned a fully lit pixel black.
+      const bulbColor = color.clone().multiplyScalar(this.dimmer);
 
-      this.bulbMaterial.color.copy(color.clone().lerp(this.blackColor, intensity));
-      this.bulbMaterial.emissive.copy(color.clone().lerp(this.blackColor, intensity));
+      this.bulbMaterial.color.copy(bulbColor);
+      this.bulbMaterial.emissive.copy(bulbColor);
     }
   }
 

@@ -228,10 +228,13 @@ export class ProjectLoadService {
 
   private afterLoad() {
     this.migrateFromOldProject();
+    // the panels look the fixtures of the selected preset up in the cache as soon as they
+    // hear of the new project or of its selected step -> it has to hold the fixtures of
+    // the new project by then, not those of the one before it
+    this.fixtureService.updateCachedFixtures();
     this.presetService.selectStepFromProject();
     this.projectService.projectChanged.next();
     this.setupUniverses();
-    this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
     this.previewService.updateFixtureSetup();
     this.presetService.fixtureSelectionChanged.next();
