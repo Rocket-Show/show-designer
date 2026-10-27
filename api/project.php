@@ -77,7 +77,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
             errorUnauthorized();
         }
 
-        $result = mysqli_query($conn, "SELECT object FROM project WHERE active = 1 AND id = " . $projectId);
+        $result = mysqli_query($conn, "SELECT object, share_token FROM project WHERE active = 1 AND id = " . $projectId);
         if (!$result) {
             error();
         }
@@ -86,7 +86,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
 
         $row = mysqli_fetch_assoc($result);
-        echo $row['object'];
+
+        // the share token saved within the project may be missing or another one than the
+        // server holds for it (see the POST) -> hand out the project with the right one, so
+        // its share link works without saving it first
+        $storedProject = json_decode($row['object']);
+        if (is_object($storedProject) && strlen($row['share_token']) > 0) {
+            $storedProject->{'shareToken'} = $row['share_token'];
+            echo json_encode($storedProject, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
+        } else {
+            echo $row['object'];
+        }
 
         break;
     case 'POST':
@@ -110,15 +120,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $projectString = file_get_contents('php://input');
         $projectObject = json_decode($projectString);
         $name = mysqli_real_escape_string($conn, $projectObject->{'name'});
-        $shareToken = '';
-        if (isset($projectObject->{'shareToken'}) && is_string($projectObject->{'shareToken'})) {
-            $shareToken = mysqli_real_escape_string($conn, $projectObject->{'shareToken'});
-        }
-        if (strlen($shareToken) == 0) {
-            // a project without a share token (e.g. imported from a file which had none) was
-            // stored with an empty one, which opened it to anyone -> it gets one of its own
-            $shareToken = bin2hex(random_bytes(16));
-        }
+        // the server hands out the share tokens, the one the designer sends is not taken over:
+        // it is the token of the template every new project starts from (which anyone can
+        // read), the one of the project a file was exported from, or none at all (an empty
+        // token opened the project to anyone). A new project, or one stored without a token,
+        // gets this one. The response hands it back to the designer.
+        $shareToken = bin2hex(random_bytes(16));
 
         if (isset($projectObject->{'id'})) {
             $projectId = (int) $projectObject->{'id'};
