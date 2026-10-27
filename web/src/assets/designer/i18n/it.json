@@ -298,10 +298,12 @@
       "tracks": "Tracce",
       "add-track": "Aggiungi traccia",
       "audio": "Audio",
-      "move-track-up": "Sposta la traccia in alto",
-      "move-track-down": "Sposta la traccia in basso",
       "remove-track": "Rimuovi la traccia",
-      "warning-delete-track": "Vuoi davvero rimuovere questa traccia insieme alle scene riprodotte su di essa?"
+      "warning-delete-track": "Vuoi davvero rimuovere questa traccia insieme alle scene riprodotte su di essa?",
+      "hide-track": "Nascondi la traccia nell'anteprima",
+      "show-track": "Mostra di nuovo la traccia nell'anteprima",
+      "solo-track": "Solo: riproduci nell'anteprima solo le tracce in solo",
+      "no-tracks": "Trascina qui una scena, o disegna quella selezionata, per riprodurla su una traccia"
     },
     "intro": {
       "next": "Continua",

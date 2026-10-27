@@ -166,4 +166,39 @@ describe('TimelineService playing the tracks of a composition', () => {
 
     expect(scenesAt(5000)).toEqual(['third', 'first']);
   });
+
+  it('moves a track in front of another one, or to the end', () => {
+    const [top, bottom] = service.selectedComposition.tracks;
+    const names = () => service.selectedComposition.tracks.map((t) => t.uuid);
+
+    service.moveTrack(top, 2);
+    expect(names()).toEqual(['bottom', 'top']);
+
+    service.moveTrack(top, 0);
+    expect(names()).toEqual(['top', 'bottom']);
+
+    // in front of itself or right behind it, it stays where it is
+    service.moveTrack(bottom, 1);
+    service.moveTrack(bottom, 2);
+    expect(names()).toEqual(['top', 'bottom']);
+  });
+
+  // the designer is a preview: hiding and soloing tracks helps working on the show
+  it('leaves a hidden track out of the preview', () => {
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    service.toggleTrackHidden(service.selectedComposition.tracks[0]);
+
+    expect(scenesAt(5000)).toEqual(['first']);
+  });
+
+  it('plays only the soloed tracks in the preview', () => {
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    service.toggleTrackSolo(service.selectedComposition.tracks[1]);
+
+    expect(scenesAt(5000)).toEqual(['first']);
+  });
 });

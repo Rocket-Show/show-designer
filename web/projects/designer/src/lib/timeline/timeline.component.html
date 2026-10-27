@@ -140,7 +140,9 @@
       >
     </div>
     } @if (timelineService.selectedComposition) {
-    <div class="tl-frame">
+    <!-- takes the focus when something in it is clicked: the delete key removes the selected
+         clip (or the track whose name was clicked) -->
+    <div #frame class="tl-frame" tabindex="0" (keydown)="onKeyDown($event)">
       <div #scroller class="tl-scroller" (scroll)="onScroll()" (wheel)="onWheel($event)" (dragleave)="onSceneDragLeave($event)">
         <div class="tl-content" [style.width.px]="headerWidthPx + laneWidthPx">
           <!-- the ruler: click or drag on it to jump to a point in time -->
@@ -177,45 +179,51 @@
             </div>
           </div>
 
-          <!-- the tracks, the topmost one on top of the others where their scenes overlap -->
-          @for (view of trackViews; track view.track.uuid; let first = $first, last = $last) {
+          <!-- the tracks, the topmost one on top of the others where their scenes overlap.
+               Drag a track by its name to move it. -->
+          @for (view of trackViews; track view.track.uuid; let index = $index) {
           <div
             class="tl-row tl-track"
             [class.tl-track-selected]="view.track.uuid === timelineService.selectedTrackUuid"
+            [class.tl-track-silent]="view.silent"
+            [class.tl-track-dragging]="gesture?.kind === 'track' && gesture.moved && gesture.track === view.track"
+            [class.tl-insert-before]="trackInsertIndex === index"
             [class.tl-drop-target]="sceneDrop?.track === view.track"
           >
-            <div class="tl-head tl-track-head" (mousedown)="timelineService.selectTrack(view.track)">
+            <div class="tl-head tl-track-head" (mousedown)="onTrackHeadMouseDown($event, view.track)">
+              <i class="fa fa-bars tl-grip" aria-hidden="true"></i>
               <lib-app-inline-edit
                 class="tl-track-name"
+                editOn="dblclick"
                 [value]="view.track.name"
                 (valueChange)="renameTrack(view.track, $event)"
               ></lib-app-inline-edit>
               <div class="tl-track-buttons">
                 <a
                   href="#"
-                  class="tl-icon-button"
-                  [class.disabled]="first"
-                  (click)="timelineService.moveTrack(view.track, -1); (false)"
-                  popover="{{ 'designer.timeline.move-track-up' | translate }}"
+                  class="tl-icon-button tl-toggle"
+                  [class.tl-toggle-on]="view.track.hidden"
+                  (click)="timelineService.toggleTrackHidden(view.track); (false)"
+                  popover="{{ (view.track.hidden ? 'designer.timeline.show-track' : 'designer.timeline.hide-track') | translate }}"
                   container="body"
                   placement="top"
                   triggers="mouseenter:mouseleave"
-                  ><i class="fa fa-arrow-up" aria-hidden="true"></i
+                  ><i class="fa" [class.fa-eye]="!view.track.hidden" [class.fa-eye-slash]="view.track.hidden" aria-hidden="true"></i
                 ></a>
                 <a
                   href="#"
-                  class="tl-icon-button"
-                  [class.disabled]="last"
-                  (click)="timelineService.moveTrack(view.track, 1); (false)"
-                  popover="{{ 'designer.timeline.move-track-down' | translate }}"
+                  class="tl-icon-button tl-toggle tl-solo"
+                  [class.tl-toggle-on]="view.track.solo"
+                  (click)="timelineService.toggleTrackSolo(view.track); (false)"
+                  popover="{{ 'designer.timeline.solo-track' | translate }}"
                   container="body"
                   placement="top"
                   triggers="mouseenter:mouseleave"
-                  ><i class="fa fa-arrow-down" aria-hidden="true"></i
-                ></a>
+                  >S</a
+                >
                 <a
                   href="#"
-                  class="tl-icon-button"
+                  class="tl-icon-button tl-remove"
                   (click)="removeTrack(view.track); (false)"
                   popover="{{ 'designer.timeline.remove-track' | translate }}"
                   container="body"
@@ -240,8 +248,12 @@
           </div>
           }
 
-          <!-- below the tracks: add one, or drop a scene to play it on a new one -->
-          <div class="tl-row tl-add-row" [class.tl-drop-target]="sceneDropOnNewTrack">
+          <!-- below the tracks: add one, or drop or draw a scene to play it on a new one -->
+          <div
+            class="tl-row tl-add-row"
+            [class.tl-drop-target]="sceneDropOnNewTrack"
+            [class.tl-insert-before]="trackInsertIndex === trackViews.length"
+          >
             <div class="tl-head">
               <a href="#" class="tl-add-track" (click)="addTrack(); (false)"
                 ><i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.timeline.add-track' | translate }}</a
@@ -249,11 +261,14 @@
             </div>
             <div
               class="tl-lane tl-add-lane"
+              (mousedown)="onLaneMouseDown($event, undefined)"
               (dragenter)="onSceneDragOver($event, undefined)"
               (dragover)="onSceneDragOver($event, undefined)"
               (drop)="onSceneDrop($event)"
             >
-              @if (newTrackGhost) {
+              @if (trackViews.length === 0 && !newTrackGhost) {
+              <span class="tl-empty-hint">{{ 'designer.timeline.no-tracks' | translate }}</span>
+              } @if (newTrackGhost) {
               <ng-container *ngTemplateOutlet="clipTemplate; context: { $implicit: newTrackGhost }"></ng-container>
               }
             </div>

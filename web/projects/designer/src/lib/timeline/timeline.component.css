@@ -15,6 +15,10 @@
   background-color: var(--sd-bg);
 }
 
+.tl-frame:focus {
+  outline: none;
+}
+
 .tl-scroller {
   flex: 1 1 auto;
   overflow: auto;
@@ -76,11 +80,6 @@
   background-color: var(--sd-surface-3);
   color: var(--sd-text);
   text-decoration: none;
-}
-
-.tl-icon-button.disabled {
-  opacity: 0.35;
-  pointer-events: none;
 }
 
 /* ---- the ruler and the waveform ------------------------------------------ */
@@ -168,8 +167,16 @@
   height: var(--tl-track-height);
 }
 
+/* a track is dragged by its name to another place in the list */
 .tl-track-head {
-  cursor: default;
+  cursor: grab;
+  gap: 6px;
+}
+
+.tl-grip {
+  flex: 0 0 auto;
+  color: var(--sd-text-dim);
+  font-size: 0.6875rem;
 }
 
 .tl-track-name {
@@ -182,12 +189,53 @@
 .tl-track-buttons {
   display: flex;
   flex: 0 0 auto;
-  opacity: 0;
 }
 
-.tl-track-head:hover .tl-track-buttons,
-.tl-track-selected .tl-track-buttons {
-  opacity: 1;
+/* hide and solo are always there, like on a mixing desk. The bin only shows up on the track
+   the pointer is on, or the selected one. */
+.tl-toggle {
+  color: var(--sd-text-dim);
+}
+
+.tl-toggle-on,
+.tl-toggle-on:hover {
+  color: var(--sd-primary-text);
+  background-color: var(--sd-primary-soft);
+}
+
+.tl-solo {
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.tl-remove {
+  visibility: hidden;
+}
+
+.tl-track-head:hover .tl-remove,
+.tl-track-selected .tl-remove {
+  visibility: visible;
+}
+
+/* left out of the preview: hidden, or another track is soloed */
+.tl-track-silent .tl-track-name {
+  opacity: 0.45;
+}
+
+.tl-track-silent .tl-clip,
+.tl-track-silent .tl-fade-tail {
+  filter: grayscale(0.85);
+  opacity: 0.4;
+}
+
+.tl-track-dragging {
+  opacity: 0.5;
+}
+
+/* where the track being dragged goes */
+.tl-insert-before > .tl-head,
+.tl-insert-before > .tl-lane {
+  box-shadow: inset 0 2px 0 var(--sd-primary);
 }
 
 .tl-track-selected .tl-track-head {
@@ -255,6 +303,16 @@
   color: var(--sd-text);
   text-decoration: none;
   border-color: var(--sd-text-dim);
+}
+
+.tl-empty-hint {
+  position: absolute;
+  top: 8px;
+  left: var(--sd-space-3);
+  color: var(--sd-text-dim);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .tl-add-lane .tl-clip {

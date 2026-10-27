@@ -8,7 +8,7 @@ import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { getGridSpacing, getRulerTicks } from '../models/timeline-ruler';
 import { getStepMarkers, TimelineStepMarker } from '../models/timeline-step-marker';
-import { getFreeGap, getTrackRegions, isFreeOnTrack, TrackGap } from '../models/timeline-track';
+import { getFreeGap, getPreviewTracks, getTrackRegions, isFreeOnTrack, TrackGap } from '../models/timeline-track';
 import { Track } from '../models/track';
 import { getPeak } from '../models/waveform-peaks';
 import { ColorService } from '../services/color.service';
@@ -57,12 +57,16 @@ interface ClipView {
 interface TrackView {
   track: Track;
   clips: ClipView[];
+
+  // left out of the preview: hidden, or another track is soloed
+  silent: boolean;
 }
 
 // what the pointer is doing on the timeline since it went down
 interface PointerGesture {
-  kind: 'move' | 'start' | 'end' | 'create' | 'seek';
+  kind: 'move' | 'start' | 'end' | 'create' | 'seek' | 'track';
   startClientX: number;
+  startClientY?: number;
   moved: boolean;
   region?: ScenePlaybackRegion;
   track?: Track;
@@ -104,6 +108,9 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   // the pointer has to travel that far before a click becomes a drag
   private static readonly dragThresholdPx = 4;
 
+  @ViewChild('frame')
+  frame: ElementRef<HTMLElement>;
+
   @ViewChild('scroller')
   scroller: ElementRef<HTMLElement>;
 
@@ -142,7 +149,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   sceneDropOnNewTrack = false;
   newTrackGhost: ClipView;
 
-  private gesture: PointerGesture;
+  gesture: PointerGesture;
+
+  // where a track being dragged would be put: in front of the track at this index
+  trackInsertIndex: number;
+
+  // the name of a track has been clicked last (not a clip or a lane): the delete key
+  // removes that track
+  private trackFocused = false;
   private drawFrame: number;
   private subscriptions: Subscription[] = [];
 
@@ -244,7 +258,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.pxPerSecond = this.timelineService.zoom > 0 ? Math.max(fitPxPerSecond, this.timelineService.zoom) : fitPxPerSecond;
 
     this.gridStyle = this.getGridStyle();
-    this.trackViews = composition.tracks.map((track) => ({ track, clips: this.getClipViews(track) }));
+    const played = getPreviewTracks(composition);
+    this.trackViews = composition.tracks.map((track) => ({ track, clips: this.getClipViews(track), silent: played.indexOf(track) < 0 }));
     this.newTrackGhost =
       this.sceneDrop && !this.sceneDrop.track ? this.getClipView(this.ghostRegion(), this.sceneDrop.scene, true) : undefined;
 
@@ -527,6 +542,36 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.scheduleDraw();
   }
 
+  // ---- the keyboard ---------------------------------------------------------
+
+  // the timeline takes the focus when something in it is clicked, which is what the
+  // delete key goes by
+  private focusTimeline() {
+    if (this.frame) {
+      this.frame.nativeElement.focus({ preventScroll: true });
+    }
+  }
+
+  // delete removes the selected clip, or the track whose name was clicked last
+  onKeyDown(event: KeyboardEvent) {
+    if ((event.key !== 'Delete' && event.key !== 'Backspace') || this.hotkeyTargetExcludeService.exclude(event)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (this.timelineService.selectedPlaybackRegion) {
+      this.timelineService.removeRegion();
+      return;
+    }
+
+    const track = this.timelineService.getTrack(this.timelineService.selectedTrackUuid);
+
+    if (this.trackFocused && track) {
+      this.removeTrack(track);
+    }
+  }
+
   // ---- the pointer on the timeline -------------------------------------------
 
   private listen() {
@@ -546,6 +591,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     event.preventDefault();
+    this.focusTimeline();
     this.gesture = { kind: 'seek', startClientX: event.clientX, moved: false };
     this.timelineService.seekToMillis(this.millisAt(event.clientX));
     this.listen();
@@ -558,6 +604,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
     event.preventDefault();
     event.stopPropagation();
+    this.focusTimeline();
+    this.trackFocused = false;
 
     const region = clip.region;
     this.timelineService.selectRegion(region);
@@ -576,22 +624,30 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.listen();
   }
 
-  // On an empty spot of a track, the selected scene is drawn onto it
+  // On an empty spot of a track, the selected scene is drawn onto it. Drawn below the
+  // tracks (no track passed), it gets a new track of its own.
   onLaneMouseDown(event: MouseEvent, track: Track) {
     if (event.button !== 0) {
       return;
     }
 
     event.preventDefault();
+    this.focusTimeline();
+    this.trackFocused = false;
     this.timelineService.selectedPlaybackRegion = undefined;
-    this.timelineService.selectTrack(track);
+
+    if (track) {
+      this.timelineService.selectTrack(track);
+    } else {
+      this.timelineService.detectChanges.next();
+    }
 
     if (this.sceneService.selectedScenes.length !== 1) {
       return;
     }
 
     const anchorMillis = Math.max(0, Math.min(this.timelineService.snapMillis(this.millisAt(event.clientX)), this.timelineMillis));
-    const gap = getFreeGap(this.composition, track.uuid, anchorMillis);
+    const gap = track ? getFreeGap(this.composition, track.uuid, anchorMillis) : { startMillis: 0, endMillis: Infinity };
 
     if (!gap) {
       return;
@@ -601,10 +657,55 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.listen();
   }
 
+  // a track is selected by its name, and dragged by it to another place in the list
+  onTrackHeadMouseDown(event: MouseEvent, track: Track) {
+    const target = event.target as HTMLElement;
+
+    // the buttons and the name being edited keep their clicks
+    if (event.button !== 0 || target.closest('.tl-icon-button, input')) {
+      return;
+    }
+
+    // no text is selected while dragging (a double click on the name still renames it)
+    event.preventDefault();
+    this.focusTimeline();
+    this.trackFocused = true;
+    this.timelineService.selectedPlaybackRegion = undefined;
+    this.timelineService.selectTrack(track);
+
+    this.gesture = { kind: 'track', startClientX: event.clientX, startClientY: event.clientY, moved: false, track };
+    this.listen();
+  }
+
+  // in front of which track a track dragged to the pointer would be put
+  private trackInsertIndexAt(clientY: number): number {
+    const rows = this.scroller.nativeElement.querySelectorAll('.tl-track');
+
+    for (let index = 0; index < rows.length; index++) {
+      const rect = rows[index].getBoundingClientRect();
+
+      if (clientY < rect.top + rect.height / 2) {
+        return index;
+      }
+    }
+
+    return rows.length;
+  }
+
   private onPointerMove(event: MouseEvent) {
     const gesture = this.gesture;
 
     if (!gesture) {
+      return;
+    }
+
+    if (gesture.kind === 'track') {
+      if (!gesture.moved && Math.abs(event.clientY - gesture.startClientY) < TimelineComponent.dragThresholdPx) {
+        return;
+      }
+
+      gesture.moved = true;
+      this.trackInsertIndex = this.trackInsertIndexAt(event.clientY);
       return;
     }
 
@@ -686,7 +787,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     if (!gesture.region) {
-      gesture.region = this.timelineService.createRegion(gesture.track, this.sceneService.selectedScenes[0], startMillis, endMillis);
+      const scene = this.sceneService.selectedScenes[0];
+
+      // drawn below the tracks: on a new track, named after the scene
+      if (!gesture.track) {
+        gesture.track = this.timelineService.addTrack(undefined, scene.name);
+      }
+
+      gesture.region = this.timelineService.createRegion(gesture.track, scene, startMillis, endMillis);
       return;
     }
 
@@ -698,6 +806,17 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const gesture = this.gesture;
     this.gesture = undefined;
     this.stopListening();
+
+    if (gesture && gesture.kind === 'track') {
+      const insertIndex = this.trackInsertIndex;
+      this.trackInsertIndex = undefined;
+
+      if (gesture.moved && insertIndex !== undefined) {
+        this.timelineService.moveTrack(gesture.track, insertIndex);
+      }
+
+      return;
+    }
 
     if (!gesture || !gesture.moved || gesture.kind === 'seek') {
       return;

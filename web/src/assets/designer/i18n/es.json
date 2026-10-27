@@ -298,10 +298,12 @@
       "tracks": "Pistas",
       "add-track": "Añadir pista",
       "audio": "Audio",
-      "move-track-up": "Subir la pista",
-      "move-track-down": "Bajar la pista",
       "remove-track": "Eliminar la pista",
-      "warning-delete-track": "¿De verdad quieres eliminar esta pista junto con las escenas que se reproducen en ella?"
+      "warning-delete-track": "¿De verdad quieres eliminar esta pista junto con las escenas que se reproducen en ella?",
+      "hide-track": "Ocultar la pista en la vista previa",
+      "show-track": "Volver a mostrar la pista en la vista previa",
+      "solo-track": "Solo: reproducir solo las pistas en solo en la vista previa",
+      "no-tracks": "Arrastra una escena aquí, o dibuja la seleccionada, para reproducirla en una pista"
     },
     "intro": {
       "next": "Continuar",

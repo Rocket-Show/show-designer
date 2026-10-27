@@ -298,10 +298,12 @@
       "tracks": "Faixas",
       "add-track": "Adicionar faixa",
       "audio": "Áudio",
-      "move-track-up": "Mover a faixa para cima",
-      "move-track-down": "Mover a faixa para baixo",
       "remove-track": "Remover a faixa",
-      "warning-delete-track": "Deseja realmente remover esta faixa junto com as cenas reproduzidas nela?"
+      "warning-delete-track": "Deseja realmente remover esta faixa junto com as cenas reproduzidas nela?",
+      "hide-track": "Ocultar a faixa na pré-visualização",
+      "show-track": "Mostrar novamente a faixa na pré-visualização",
+      "solo-track": "Solo: reproduzir apenas as faixas em solo na pré-visualização",
+      "no-tracks": "Arraste uma cena para cá, ou desenhe a selecionada, para reproduzi-la numa faixa"
     },
     "intro": {
       "next": "Continuar",

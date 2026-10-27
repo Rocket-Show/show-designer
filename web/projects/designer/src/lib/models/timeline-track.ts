@@ -73,8 +73,8 @@ export function createTrack(composition: Composition, uuid: string, name?: strin
   return track;
 }
 
-// Put the clips which are on none of the composition's tracks onto tracks of their own.
-// Before there were tracks, all scenes played on one lane and the order of the scenes
+// Put the clips which are on none of the composition's tracks onto tracks of their own
+// (a composition without clips keeps having no track at all). Before there were tracks, all scenes played on one lane and the order of the scenes
 // decided which one was on top where they overlapped: the first one topmost. One track
 // per scene, in that order, plays such a show the same way. The clips of a scene which
 // overlap each other get another track right below the first one of the scene.
@@ -98,9 +98,13 @@ export function assignTracks(composition: Composition, scenes: Scene[], newUuid:
       region.trackUuid = track.uuid;
     }
   }
+}
 
-  // a composition shows at least one track to put the first scene on
-  if (composition.tracks.length === 0) {
-    composition.tracks.push(createTrack(composition, newUuid()));
-  }
+// The tracks a preview plays. A hidden track is left out, and once a track is soloed only
+// the soloed ones are played. The show itself always plays every track.
+export function getPreviewTracks(composition: Composition): Track[] {
+  const shown = composition.tracks.filter((track) => !track.hidden);
+  const soloed = shown.filter((track) => track.solo);
+
+  return soloed.length > 0 ? soloed : shown;
 }

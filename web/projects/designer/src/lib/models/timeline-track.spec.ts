@@ -1,7 +1,7 @@
 import { Composition } from './composition';
 import { Scene } from './scene';
 import { ScenePlaybackRegion } from './scene-playback-region';
-import { assignTracks, getFreeGap, getNewTrackName, getTrackRegions, isFreeOnTrack } from './timeline-track';
+import { assignTracks, getFreeGap, getNewTrackName, getPreviewTracks, getTrackRegions, isFreeOnTrack } from './timeline-track';
 import { Track } from './track';
 
 describe('timeline tracks', () => {
@@ -112,13 +112,12 @@ describe('timeline tracks', () => {
       expect(withoutTracks.scenePlaybackRegions.map((r) => r.trackUuid)).toEqual(['uuid-1', 'uuid-2', 'uuid-3']);
     });
 
-    it('gives a composition without clips a first track to put a scene on', () => {
+    it('leaves a composition without clips without tracks, e.g. one which only plays actions', () => {
       const empty = composition();
 
       assignTracks(empty, [scene('first')], newUuid);
 
-      expect(empty.tracks.length).toBe(1);
-      expect(empty.tracks[0].name).toBe('Track 1');
+      expect(empty.tracks.length).toBe(0);
     });
 
     it('leaves the clips which are on a track already where they are', () => {
@@ -129,6 +128,34 @@ describe('timeline tracks', () => {
 
       expect(withTracks.tracks.length).toBe(1);
       expect(withTracks.scenePlaybackRegions[0].trackUuid).toBe('track-1');
+    });
+  });
+
+  describe('the tracks of a preview', () => {
+    function tracks(...flags: string[]): Composition {
+      const withTracks = composition();
+      withTracks.tracks = flags.map((flag, index) => {
+        const flagged = track('track-' + index);
+        flagged.hidden = flag.indexOf('hidden') >= 0;
+        flagged.solo = flag.indexOf('solo') >= 0;
+        return flagged;
+      });
+
+      return withTracks;
+    }
+
+    const uuids = (withTracks: Composition) => getPreviewTracks(withTracks).map((t) => t.uuid);
+
+    it('plays every track which is not hidden', () => {
+      expect(uuids(tracks('', 'hidden', ''))).toEqual(['track-0', 'track-2']);
+    });
+
+    it('plays only the soloed tracks once a track is soloed', () => {
+      expect(uuids(tracks('', 'solo', '', 'solo'))).toEqual(['track-1', 'track-3']);
+    });
+
+    it('keeps a hidden track out, even if it is soloed', () => {
+      expect(uuids(tracks('', 'solo hidden', 'solo'))).toEqual(['track-2']);
     });
   });
 

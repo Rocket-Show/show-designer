@@ -1,13 +1,14 @@
 <div class="inline-edit d-inline-flex align-items-center">
   @if (!editing) {
-  <!-- Display mode: clicking the value itself starts the editing -->
+  <!-- Display mode: clicking the value itself starts the editing (or double clicking it, see editOn) -->
   <span
     class="inline-edit-value"
     [class.inline-edit-placeholder]="!value"
     role="button"
     tabindex="0"
     [attr.aria-label]="'designer.misc.edit' | translate"
-    (click)="startEdit()"
+    (click)="editOn === 'click' && startEdit()"
+    (dblclick)="editOn === 'dblclick' && startEdit()"
     (keydown.enter)="startEdit()"
     >{{ value || placeholder }}</span
   >

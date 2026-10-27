@@ -8,6 +8,12 @@ export class Track {
   uuid: string;
   name: string;
 
+  // Help while working on the show: a hidden track is left out of the preview, and as
+  // soon as a track is soloed, only the soloed ones are played there. The show itself
+  // always plays all of its tracks.
+  hidden = false;
+  solo = false;
+
   constructor(data?: any) {
     if (!data) {
       return;
@@ -15,5 +21,7 @@ export class Track {
 
     this.uuid = data.uuid;
     this.name = data.name;
+    this.hidden = data.hidden === true;
+    this.solo = data.solo === true;
   }
 }

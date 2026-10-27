@@ -299,10 +299,12 @@
       "tracks": "Spuren",
       "add-track": "Spur hinzufügen",
       "audio": "Audio",
-      "move-track-up": "Spur nach oben verschieben",
-      "move-track-down": "Spur nach unten verschieben",
       "remove-track": "Spur entfernen",
-      "warning-delete-track": "Möchtest du diese Spur zusammen mit den darauf abgespielten Szenen wirklich entfernen?"
+      "warning-delete-track": "Möchtest du diese Spur zusammen mit den darauf abgespielten Szenen wirklich entfernen?",
+      "hide-track": "Spur in der Vorschau ausblenden",
+      "show-track": "Spur in der Vorschau wieder einblenden",
+      "solo-track": "Solo: in der Vorschau nur die Solo-Spuren abspielen",
+      "no-tracks": "Ziehe eine Szene hierher oder zeichne die ausgewählte, um sie auf einer Spur abzuspielen"
     },
     "intro": {
       "next": "Weiter",

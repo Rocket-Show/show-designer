@@ -25,6 +25,31 @@ describe('InlineEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should start editing on a click', () => {
+    component.value = 'name';
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.inline-edit-value').click();
+
+    expect(component.editing).toBe(true);
+  });
+
+  // the name of a track is clicked to select the track and dragged to move it
+  it('should only start editing on a double click, where a click means something else', () => {
+    component.value = 'name';
+    component.editOn = 'dblclick';
+    fixture.detectChanges();
+
+    const value = fixture.nativeElement.querySelector('.inline-edit-value');
+    value.click();
+
+    expect(component.editing).toBe(false);
+
+    value.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(component.editing).toBe(true);
+  });
+
   it('should emit the new value when the field is left', () => {
     component.value = 'old';
     let emitted: string;

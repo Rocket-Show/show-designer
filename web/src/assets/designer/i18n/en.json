@@ -298,10 +298,12 @@
       "tracks": "Tracks",
       "add-track": "Add track",
       "audio": "Audio",
-      "move-track-up": "Move the track up",
-      "move-track-down": "Move the track down",
       "remove-track": "Remove the track",
-      "warning-delete-track": "Do you really want to remove this track together with the scenes played on it?"
+      "warning-delete-track": "Do you really want to remove this track together with the scenes played on it?",
+      "hide-track": "Hide the track in the preview",
+      "show-track": "Show the track in the preview again",
+      "solo-track": "Solo: play only the soloed tracks in the preview",
+      "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track"
     },
     "intro": {
       "next": "Continue",

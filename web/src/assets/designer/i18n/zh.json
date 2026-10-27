@@ -298,10 +298,12 @@
       "tracks": "轨道",
       "add-track": "添加轨道",
       "audio": "音频",
-      "move-track-up": "上移轨道",
-      "move-track-down": "下移轨道",
       "remove-track": "删除轨道",
-      "warning-delete-track": "确定要删除此轨道及其上播放的场景吗？"
+      "warning-delete-track": "确定要删除此轨道及其上播放的场景吗？",
+      "hide-track": "在预览中隐藏此轨道",
+      "show-track": "在预览中重新显示此轨道",
+      "solo-track": "独奏：预览中只播放独奏的轨道",
+      "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放"
     },
     "intro": {
       "next": "继续",

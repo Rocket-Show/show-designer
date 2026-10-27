@@ -8,7 +8,7 @@ import { Composition } from '../models/composition';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
-import { assignTracks, createTrack, getFreeGap, getTrackRegions } from '../models/timeline-track';
+import { assignTracks, createTrack, getFreeGap, getPreviewTracks, getTrackRegions } from '../models/timeline-track';
 import { Track } from '../models/track';
 import { computePeaks } from '../models/waveform-peaks';
 import { ConfigService } from './config.service';
@@ -262,13 +262,13 @@ export class TimelineService {
 
   // ---- tracks ---------------------------------------------------------------
 
-  // every clip of the composition is on one of its tracks, and there is at least one
-  // track to put a scene on
+  // every clip of the composition is on one of its tracks, and one of the tracks (if
+  // there are any) is the one a new clip is put on
   private ensureTracks(composition: Composition) {
     assignTracks(composition, this.projectService.project.scenes, () => this.uuidService.getUuid());
 
     if (!composition.tracks.some((track) => track.uuid === this.selectedTrackUuid)) {
-      this.selectedTrackUuid = composition.tracks[0].uuid;
+      this.selectedTrackUuid = composition.tracks.length > 0 ? composition.tracks[0].uuid : undefined;
     }
   }
 
@@ -277,9 +277,9 @@ export class TimelineService {
   }
 
   // add a track at the passed position (at the bottom, if none is passed)
-  addTrack(index?: number): Track {
+  addTrack(index?: number, name?: string): Track {
     const composition = this.selectedComposition;
-    const track = createTrack(composition, this.uuidService.getUuid());
+    const track = createTrack(composition, this.uuidService.getUuid(), name);
 
     if (index === undefined || index < 0 || index > composition.tracks.length) {
       composition.tracks.push(track);
@@ -314,13 +314,14 @@ export class TimelineService {
     this.livePreviewService.previewLive();
   }
 
-  // move a track up (-1) or down (+1): the one higher up is on top
-  moveTrack(track: Track, delta: number) {
+  // Move a track to another place in the list: in front of the track at the passed index
+  // as the list is now (or to the end). The one higher up is on top.
+  moveTrack(track: Track, beforeIndex: number) {
     const tracks = this.selectedComposition.tracks;
     const index = tracks.indexOf(track);
-    const target = index + delta;
+    const target = beforeIndex > index ? beforeIndex - 1 : beforeIndex;
 
-    if (index < 0 || target < 0 || target >= tracks.length) {
+    if (index < 0 || target === index || target < 0 || target >= tracks.length) {
       return;
     }
 
@@ -333,6 +334,20 @@ export class TimelineService {
   selectTrack(track: Track) {
     this.selectedTrackUuid = track.uuid;
     this.detectChanges.next();
+  }
+
+  // leave a track out of the preview, or show it again
+  toggleTrackHidden(track: Track) {
+    track.hidden = !track.hidden;
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // play only the soloed tracks in the preview
+  toggleTrackSolo(track: Track) {
+    track.solo = !track.solo;
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
   }
 
   // ---- clips ----------------------------------------------------------------
@@ -373,7 +388,7 @@ export class TimelineService {
   }
 
   // Put the selected scene on the selected track, at the position of the playback. If
-  // another scene plays there already, it goes onto a new track right below.
+  // another scene plays there already, or there is no track yet, it goes onto a new one.
   addRegion() {
     if (!this.isWaveSurferReady() || !this.selectedComposition) {
       return;
@@ -386,21 +401,22 @@ export class TimelineService {
     const composition = this.selectedComposition;
     this.ensureTracks(composition);
 
+    const scene = this.sceneService.selectedScenes[0];
     let track = this.getTrack(this.selectedTrackUuid);
     const startMillis = Math.max(
       0,
       Math.min(this.snapMillis(this.getCurrentMillis()), this.durationMillis - TimelineService.minRegionMillis)
     );
-    let gap = getFreeGap(composition, track.uuid, startMillis);
+    let gap = track ? getFreeGap(composition, track.uuid, startMillis) : undefined;
 
     if (!gap || gap.endMillis - startMillis < TimelineService.minRegionMillis) {
-      track = this.addTrack(composition.tracks.indexOf(track) + 1);
+      track = this.addTrack(track ? composition.tracks.indexOf(track) + 1 : undefined, scene.name);
       gap = { startMillis: 0, endMillis: Infinity };
     }
 
     const endMillis = Math.min(startMillis + this.getDefaultRegionMillis(), gap.endMillis, this.durationMillis);
 
-    this.createRegion(track, this.sceneService.selectedScenes[0], startMillis, endMillis);
+    this.createRegion(track, scene, startMillis, endMillis);
   }
 
   removeRegion() {
@@ -435,9 +451,12 @@ export class TimelineService {
 
     // the tracks are layered like the presets inside a scene: the topmost one is
     // processed last, so it overwrites the ones below it. On a track, a clip fading out
-    // past its end lies below the one following it.
-    for (let trackIndex = composition.tracks.length - 1; trackIndex >= 0; trackIndex--) {
-      for (const region of getTrackRegions(composition, composition.tracks[trackIndex].uuid)) {
+    // past its end lies below the one following it. The designer is a preview: the
+    // hidden tracks are left out, and only the soloed ones are played, if there are any.
+    const tracks = getPreviewTracks(composition);
+
+    for (let trackIndex = tracks.length - 1; trackIndex >= 0; trackIndex--) {
+      for (const region of getTrackRegions(composition, tracks[trackIndex].uuid)) {
         const scene = this.sceneService.getSceneByUuid(region.sceneUuid);
 
         if (!scene) {

@@ -18,6 +18,11 @@ export class InlineEditComponent {
   @Input()
   placeholder = '';
 
+  // start editing on a click, or only on a double click where a click means something
+  // else (selecting and dragging a track of the timeline by its name)
+  @Input()
+  editOn: 'click' | 'dblclick' = 'click';
+
   // whether we are currently in edit mode
   editing = false;
 
