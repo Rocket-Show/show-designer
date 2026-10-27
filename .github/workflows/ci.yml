@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Designer unit tests and build
+    # Pull requests from branches of this repository are already tested by the push
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the dependencies
+        # The builder of the library (@angular-devkit/build-ng-packagr) still asks for an old ng-packagr
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Run the unit tests
+        run: npx ng test designer --watch=false --browsers=ChromeHeadlessCI
+      - name: Build the library like for publishing
+        run: npx ng build --configuration production designer

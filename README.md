@@ -25,6 +25,22 @@ https://github.com/moritzvieli/show-designer-ofl-import
 
 If the linter fails, you can check and try to automatically fix it with `ng lint --fix`.
 
+## Tests
+
+The unit tests of the designer library (Karma and Jasmine, `*.spec.ts`) run in CI on every push
+(`.github/workflows/ci.yml`), followed by a build of the library like for publishing. Several of them mirror the tests
+of the engine in Rocket Show (e.g. the effect curves and the intensity of presets), so a show looks the same in the
+designer and on stage. They test behaviour: the generated specs, which only checked that a component or service could
+be created, were removed.
+
+Run them locally (`CHROME_BIN` if Karma doesn't find Chrome or Chromium by itself):
+
+```shell
+cd web
+npm ci --legacy-peer-deps
+npx ng test designer --watch=false --browsers=ChromeHeadlessCI
+```
+
 ## Build & publish as NPM package
 
 ```shell

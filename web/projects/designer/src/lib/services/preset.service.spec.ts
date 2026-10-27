@@ -1,23 +1,9 @@
-import { inject, TestBed } from '@angular/core/testing';
-
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { FixtureCapability, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
 import { PresetService } from './preset.service';
-
-describe('PresetService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [PresetService],
-    });
-  });
-
-  it('should be created', inject([PresetService], (service: PresetService) => {
-    expect(service).toBeTruthy();
-  }));
-});
 
 // what a preset drives a capability of its fixtures to. The mirror of a preset is
 // applied here, so the preview, the channels and the player all show the same position.

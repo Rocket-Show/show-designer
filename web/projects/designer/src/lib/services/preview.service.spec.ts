@@ -1,22 +1,8 @@
-import { inject, TestBed } from '@angular/core/testing';
-
 import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { PreviewService } from './preview.service';
-
-describe('PreviewService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [PreviewService],
-    });
-  });
-
-  it('should be created', inject([PreviewService], (service: PreviewService) => {
-    expect(service).toBeTruthy();
-  }));
-});
 
 // how much of what a preset puts out reaches the stage. These mirror the cases of
 // PresetIntensityTest in Rocket Show: a show has to look the same on stage as it
