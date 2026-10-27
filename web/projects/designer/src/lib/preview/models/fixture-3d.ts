@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CachedFixture } from '../../models/cached-fixture';
 import { CachedFixtureCapability } from '../../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
+import { Color } from '../../models/color';
 import { Positioning } from '../../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
@@ -262,6 +263,10 @@ export abstract class Fixture3d {
       this.colorBlue = 0;
     }
 
+    // the color of a selected color preset (e.g. a color macro). It takes over from the color
+    // channels, whichever order they come in, the way a fixture disables them for its macros.
+    let presetColor: Color;
+
     for (const channelValue of channelValues) {
       const channel = this.fixtureService.getChannelByName(this.fixture, channelValue.channelName);
       const capability = this.getCapabilityInValue(channel, channelValue.value);
@@ -300,8 +305,18 @@ export abstract class Fixture3d {
             }
             break;
           }
+          case FixtureCapabilityType.ColorPreset: {
+            presetColor = this.fixtureService.getColorPresetColor(capability.capability) || presetColor;
+            break;
+          }
         }
       }
+    }
+
+    if (presetColor) {
+      this.colorRed = Math.round(presetColor.red);
+      this.colorGreen = Math.round(presetColor.green);
+      this.colorBlue = Math.round(presetColor.blue);
     }
 
     // Apply the colors and intensities

@@ -194,18 +194,20 @@ export class FixtureService {
   }
 
   getMixedWheelSlotColor(wheel: FixtureWheel, slotNumber: number): Color {
-    const colors = this.getWheelSlotColors(wheel, slotNumber);
-    const colorsRgb: Color[] = [];
+    return this.mixHexColors(this.getWheelSlotColors(wheel, slotNumber));
+  }
 
+  // the color a color preset (e.g. a color macro) shows, mixed from its colors, if it names any
+  getColorPresetColor(capability: FixtureCapability): Color {
+    return this.mixHexColors(capability.colors || []);
+  }
+
+  private mixHexColors(colors: string[]): Color {
     if (colors.length === 0) {
       return undefined;
     }
 
-    for (const color of colors) {
-      colorsRgb.push(this.hexToRgb(color));
-    }
-
-    return this.mixColors(colorsRgb);
+    return this.mixColors(colors.map((color) => this.hexToRgb(color)));
   }
 
   private componentToHex(c: number): any {
