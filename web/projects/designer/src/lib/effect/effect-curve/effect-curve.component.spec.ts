@@ -1,29 +1,7 @@
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { EffectCurve } from '../../models/effect-curve';
 import { EffectCurveComponent } from './effect-curve.component';
-
-describe('EffectCurveComponent', () => {
-  let component: EffectCurveComponent;
-  let fixture: ComponentFixture<EffectCurveComponent>;
-
-  beforeEach(waitForAsync(() => {
-    TestBed.configureTestingModule({
-      declarations: [EffectCurveComponent],
-    }).compileComponents();
-  }));
-
-  beforeEach(() => {
-    fixture = TestBed.createComponent(EffectCurveComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
 
 // a canvas context that only counts what the grid draws on it: every mark of the chase
 // is a filled circle

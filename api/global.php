@@ -1,4 +1,10 @@
 <?php
+// a failing query throws (from PHP 8.1 on), which ended the request with an empty HTTP 500
+// -> answer with the error of the API all the same and log the cause
+set_exception_handler(function ($exception) {
+    error('internal', 500, (string) $exception);
+});
+
 include_once 'database.php';
 
 $compositionFileDirectory = 'composition-files';
@@ -44,8 +50,19 @@ function utf8ize($d)
     return $d;
 }
 
-function error($errorMessage = 'internal', $status = 500)
+function error($errorMessage = 'internal', $status = 500, $cause = null)
 {
+    global $conn;
+
+    // the client only learns that something went wrong -> keep what it was in the server
+    // log: the exception, or the database refusing a query
+    if ($cause === null && $status >= 500 && $conn instanceof mysqli && mysqli_errno($conn)) {
+        $cause = mysqli_error($conn);
+    }
+    if ($cause !== null) {
+        error_log('designer api ' . basename($_SERVER['SCRIPT_NAME']) . ': ' . $cause);
+    }
+
     $error = array(
         'error' => $errorMessage
     );

@@ -269,15 +269,8 @@ export abstract class Fixture3d {
       if (capability) {
         switch (capability.capability.type) {
           case FixtureCapabilityType.Intensity: {
-            let valuePercentage: number;
-            if (capability.capability.dmxRange.length > 0) {
-              valuePercentage =
-                (channelValue.value - capability.capability.dmxRange[0]) /
-                (capability.capability.dmxRange[1] - capability.capability.dmxRange[0]);
-            } else {
-              valuePercentage = channelValue.value / channel.maxValue;
-            }
-            this.dimmer = valuePercentage * masterDimmerValue;
+            // as bright as the capability lights at this value (also from bright to off)
+            this.dimmer = this.fixtureService.getBrightnessOfValue(channel, capability, channelValue.value) * masterDimmerValue;
             break;
           }
           case FixtureCapabilityType.ColorIntensity: {
@@ -313,15 +306,23 @@ export abstract class Fixture3d {
 
     // Apply the colors and intensities
     // Apply the dimmer value
-    // Take the color into account for the beam (don't show a black beam)
     const color = new THREE.Color('rgb(' + this.colorRed + ', ' + this.colorGreen + ', ' + this.colorBlue + ')');
-    const intensityColor = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
+
+    // how bright the color lights, e.g. less while a scene dimmer fades it
+    const colorMax = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
 
     if (this.hasSpotLight) {
       this.spotLight.color = color;
-      this.spotLightBeam.material.uniforms.lightColor.value = color;
 
-      this.spotLightBeam.material.uniforms.opacity.value = Math.min(intensityColor, this.dimmer);
+      // the beam shows the color at full and lets the brightness of the light make it
+      // fainter. A dark color drawn as it is covered the stage with a black beam.
+      const beamColor =
+        colorMax > 0
+          ? new THREE.Color().setRGB(this.colorRed / colorMax, this.colorGreen / colorMax, this.colorBlue / colorMax, THREE.SRGBColorSpace)
+          : color;
+      this.spotLightBeam.material.uniforms.lightColor.value = beamColor;
+
+      this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
     }

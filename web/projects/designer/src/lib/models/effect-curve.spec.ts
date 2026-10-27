@@ -18,6 +18,15 @@ function beatCurve(): EffectCurve {
   return curve;
 }
 
+// a curve of a second around the middle, at the default amplitude
+function curve(curveType: string): EffectCurve {
+  const curve = new EffectCurve();
+  curve.curveType = curveType;
+  curve.lengthMillis = 1000;
+
+  return curve;
+}
+
 describe('EffectCurve', () => {
   it('should measure a beat by the tempo', () => {
     expect(EffectCurve.getBeatMillis(120)).toBe(500);
@@ -179,5 +188,29 @@ describe('EffectCurve', () => {
     expect(curve.phaseBeats).toBe(0);
     expect(curve.phasingBeats).toBe(0);
     expect(curve.getLengthMillis(60)).toBe(1000);
+  });
+
+  it('should swing every curve over its whole amplitude, like the square', () => {
+    const sine = curve('sine');
+    expect(sine.getValueAtMillis(0, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sine.getValueAtMillis(250, 0, 1)).toBeCloseTo(1, 9);
+    expect(sine.getValueAtMillis(500, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sine.getValueAtMillis(750, 0, 1)).toBeCloseTo(0, 9);
+
+    const square = curve('square');
+    expect(square.getValueAtMillis(100, 0, 1)).toBeCloseTo(0, 9);
+    expect(square.getValueAtMillis(600, 0, 1)).toBeCloseTo(1, 9);
+
+    const triangle = curve('triangle');
+    expect(triangle.getValueAtMillis(250, 0, 1)).toBeCloseTo(1, 9);
+    expect(triangle.getValueAtMillis(750, 0, 1)).toBeCloseTo(0, 9);
+
+    const sawtooth = curve('sawtooth');
+    expect(sawtooth.getValueAtMillis(0, 0, 1)).toBeCloseTo(0, 9);
+    expect(sawtooth.getValueAtMillis(500, 0, 1)).toBeCloseTo(0.5, 9);
+
+    const reverseSawtooth = curve('reverse-sawtooth');
+    expect(reverseSawtooth.getValueAtMillis(0, 0, 1)).toBeCloseTo(1, 9);
+    expect(reverseSawtooth.getValueAtMillis(500, 0, 1)).toBeCloseTo(0.5, 9);
   });
 });

@@ -1,4 +1,4 @@
-import { inject, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -10,18 +10,6 @@ import { Project } from '../models/project';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { ProjectService } from './project.service';
 import { TimelineService } from './timeline.service';
-
-describe('TimelineService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [TimelineService],
-    });
-  });
-
-  it('should be created', inject([TimelineService], (service: TimelineService) => {
-    expect(service).toBeTruthy();
-  }));
-});
 
 // An audio file which cannot be read says nothing about the show written over it: the
 // composition holds the scenes played along the song, so it stays where it is and only
@@ -87,6 +75,9 @@ describe('TimelineService with an audio file which cannot be read', () => {
 
   // deleting a composition is still what the delete button does
   it('removes the composition when it is deleted', () => {
+    // The waveform of the next composition needs the timeline on the page
+    spyOn(service, 'createWaveSurfer');
+
     service.deleteSelectedComposition();
 
     expect(projectService.project.compositions.length).toBe(1);

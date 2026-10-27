@@ -5,22 +5,15 @@ import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrModule } from 'ngx-toastr';
+import { of } from 'rxjs';
+
+import { EffectCurve } from '../models/effect-curve';
 
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { ProjectLoadService } from './project-load.service';
-
-describe('ProjectLoadService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [ProjectLoadService],
-    });
-  });
-
-  it('should be created', inject([ProjectLoadService], (service: ProjectLoadService) => {
-    expect(service).toBeTruthy();
-  }));
-});
+import { ProjectService } from './project.service';
+import { WarningDialogService } from './warning-dialog.service';
 
 // The panels of the selected preset look its fixtures up in the fixture cache as soon as
 // they hear of a new step. An imported project brings fixtures of its own, so the cache
@@ -58,10 +51,181 @@ describe('ProjectLoadService importing a project with fixtures new to the design
   });
 });
 
+// Until version 8, the curves except the square swung over half of their amplitude: the
+// migration halves it, so a show looks the same as before
+describe('ProjectLoadService migrating the curves of a project to version 8', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  it('halves the amplitude of every curve but the square', () => {
+    const project = projectWithSelectedPreset();
+    project.version = 7;
+    project.presets[0].effects = [curveEffect('sine', 1), curveEffect('triangle', 0.8), curveEffect('square', 1)];
+
+    service.import(JSON.stringify(project));
+
+    const effects = projectService.project.presets[0].effects as EffectCurve[];
+    expect(projectService.project.version).toBe(9);
+    expect(effects.map((effect) => effect.amplitude)).toEqual([0.5, 0.4, 1]);
+  });
+
+  it('keeps the amplitude of a project of version 8', () => {
+    const project = projectWithSelectedPreset();
+    project.version = 8;
+    project.presets[0].effects = [curveEffect('sine', 1)];
+
+    service.import(JSON.stringify(project));
+
+    expect((projectService.project.presets[0].effects[0] as EffectCurve).amplitude).toBe(1);
+  });
+});
+
+// Until version 9, the pixels of a matrix given by its pixel count were named "Pixel 1-1-1"
+// and so on. They are named like in the fixture library now: the migration renames them, so a
+// preset still lights the same pixels.
+describe('ProjectLoadService migrating the pixel keys of a project to version 9', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  // a bar of 12 pixels and a plane of 2 x 2, a preset of some of their pixels with a value on
+  // the red channel of one of them and a curve on another one
+  function projectWithPixels(version: number): any {
+    const project = projectWithSelectedPreset();
+    project.version = version;
+    project.fixtureProfiles.push(pixelProfile('test/bar', [12, 1, 1]), pixelProfile('test/plane', [2, 2, 1]));
+    project.fixtures.push(pixelFixture('bar-1', 'test/bar'), pixelFixture('plane-1', 'test/plane'));
+    project.presetFixtures.push(
+      { fixtureUuid: 'bar-1', pixelKey: 'Pixel 1-1-1' },
+      { fixtureUuid: 'bar-1', pixelKey: 'Pixel 12-1-1' },
+      { fixtureUuid: 'plane-1', pixelKey: 'Pixel 2-1-1' },
+      { fixtureUuid: 'plane-1', pixelKey: 'Pixel 1-2-1' }
+    );
+    project.presets[0].fixtures.push(
+      { fixtureUuid: 'bar-1', pixelKey: 'Pixel 12-1-1' },
+      { fixtureUuid: 'plane-1', pixelKey: 'Pixel 1-2-1' }
+    );
+    project.presets[0].steps[0].fixtureChannelValues = [
+      { channelName: 'Red Pixel 12-1-1', profileUuid: 'test/bar', value: 255 },
+      { channelName: 'Red Pixel 1-1-1', profileUuid: 'test/bar', value: 128 },
+    ];
+    const curve = curveEffect('sine', 1);
+    curve.channels = [{ profileUuid: 'test/plane', channels: ['Red Pixel 2-2-1'] }];
+    project.presets[0].effects = [curve];
+    return project;
+  }
+
+  it('names the pixels like the fixture library', () => {
+    service.import(JSON.stringify(projectWithPixels(8)));
+
+    const project = projectService.project;
+    const preset = project.presets[0];
+    expect(project.version).toBe(9);
+    expect(project.presetFixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '1', '12', '(2, 1)', '(1, 2)']);
+    expect(preset.fixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '12', '(1, 2)']);
+    expect(preset.steps[0].fixtureChannelValues.map((value) => value.channelName)).toEqual(['Red 12', 'Red 1']);
+    expect((preset.effects[0] as EffectCurve).channels[0].channels).toEqual(['Red (2, 2)']);
+  });
+
+  it('keeps the pixel keys of a project of version 9', () => {
+    const project = projectWithPixels(9);
+
+    service.import(JSON.stringify(project));
+
+    expect(projectService.project.presetFixtures[1].pixelKey).toBe('Pixel 1-1-1');
+  });
+
+  it('keeps the channels of a curve when the project is loaded again', () => {
+    service.import(JSON.stringify(projectWithPixels(9)));
+
+    // saved and loaded again
+    service.import(JSON.stringify(projectService.project));
+
+    expect((projectService.project.presets[0].effects[0] as EffectCurve).channels[0].channels).toEqual(['Red Pixel 2-2-1']);
+  });
+});
+
+function pixelProfile(uuid: string, pixelCount: number[]): any {
+  return {
+    uuid,
+    name: uuid,
+    manufacturerShortName: 'test',
+    manufacturerName: 'Test',
+    categories: ['Pixel Bar'],
+    matrix: { pixelCount },
+    templateChannels: { 'Red $pixelKey': { capability: { type: 'ColorIntensity', color: 'Red' } } },
+    modes: [
+      {
+        name: 'Pixels',
+        shortName: 'pixels',
+        channels: [{ insert: 'matrixChannels', repeatFor: 'eachPixelXYZ', channelOrder: 'perPixel', templateChannels: ['Red $pixelKey'] }],
+      },
+    ],
+  };
+}
+
+function pixelFixture(uuid: string, profileUuid: string): any {
+  return {
+    uuid,
+    profileUuid,
+    name: uuid,
+    dmxUniverseUuid: 'universe-1',
+    dmxFirstChannel: 10,
+    modeShortName: 'pixels',
+    positioning: 'topFront',
+  };
+}
+
+function curveEffect(curveType: string, amplitude: number): any {
+  return {
+    type: 'curve',
+    uuid: curveType,
+    curveType,
+    amplitude,
+    position: 0.5,
+    lengthMillis: 1000,
+    phaseMillis: 0,
+    phasingMillis: 0,
+    capabilities: [],
+    channels: [],
+  };
+}
+
 // a project with one dimmer, which its selected preset turns on
 function projectWithSelectedPreset(): any {
   return {
-    version: 7,
+    version: 9,
     name: 'Imported',
     fixtureProfiles: [
       {

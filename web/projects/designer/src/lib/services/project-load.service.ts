@@ -20,6 +20,7 @@ import { LivePreviewService } from './live-preview.service';
 import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { Composition } from '../models/composition';
+import { EffectCurve } from '../models/effect-curve';
 
 @Injectable({
   providedIn: 'root',
@@ -148,6 +149,86 @@ export class ProjectLoadService {
     this.projectService.project.version = 7;
   }
 
+  private migrateToVersion8() {
+    // every curve swings over its whole amplitude now, like the square did already. the
+    // others swung over half of it -> halve their amplitude, so the show looks the same.
+    for (const preset of this.projectService.project.presets) {
+      for (const effect of preset.effects) {
+        if (effect instanceof EffectCurve && effect.curveType !== 'square') {
+          effect.amplitude /= 2;
+        }
+      }
+    }
+
+    this.projectService.project.version = 8;
+  }
+
+  private migrateToVersion9() {
+    // the pixels of a matrix given by its pixel count are named like in the fixture library now
+    // (e.g. "3" or "(2, 3)" instead of "Pixel 3-1-1") -> rename them in the presets and effects,
+    // so they still light the same pixels
+    const project = this.projectService.project;
+    const pixelCountByProfile = new Map<string, number[]>();
+    const pixelCountByFixture = new Map<string, number[]>();
+
+    for (const profile of project.fixtureProfiles) {
+      if (profile.matrix && !profile.matrix.pixelKeys && profile.matrix.pixelCount.length === 3) {
+        pixelCountByProfile.set(profile.uuid, profile.matrix.pixelCount);
+      }
+    }
+
+    for (const fixture of project.fixtures) {
+      if (pixelCountByProfile.has(fixture.profileUuid)) {
+        pixelCountByFixture.set(fixture.uuid, pixelCountByProfile.get(fixture.profileUuid));
+      }
+    }
+
+    // the pixel keys in a pixel key or a channel name (e.g. "Red Pixel 3-1-1")
+    const rename = (name: string, pixelCount: number[], pattern: RegExp) =>
+      name.replace(pattern, (key: string, x: string, y: string, z: string) =>
+        +x >= 1 && +x <= pixelCount[0] && +y >= 1 && +y <= pixelCount[1] && +z >= 1 && +z <= pixelCount[2]
+          ? FixtureService.getDefaultPixelKey(pixelCount, +x, +y, +z)
+          : key
+      );
+    const pixelKey = /^Pixel (\d+)-(\d+)-(\d+)$/;
+    const channelName = /Pixel (\d+)-(\d+)-(\d+)/g;
+
+    const renamePresetFixtures = (presetFixtures: PresetFixture[]) => {
+      for (const presetFixture of presetFixtures) {
+        if (presetFixture.pixelKey && pixelCountByFixture.has(presetFixture.fixtureUuid)) {
+          presetFixture.pixelKey = rename(presetFixture.pixelKey, pixelCountByFixture.get(presetFixture.fixtureUuid), pixelKey);
+        }
+      }
+    };
+
+    renamePresetFixtures(project.presetFixtures);
+
+    for (const preset of project.presets) {
+      renamePresetFixtures(preset.fixtures);
+
+      for (const step of preset.steps) {
+        for (const channelValue of step.fixtureChannelValues) {
+          if (channelValue.channelName && pixelCountByProfile.has(channelValue.profileUuid)) {
+            channelValue.channelName = rename(channelValue.channelName, pixelCountByProfile.get(channelValue.profileUuid), channelName);
+          }
+        }
+      }
+
+      for (const effect of preset.effects) {
+        if (effect instanceof EffectCurve) {
+          for (const profileChannels of effect.channels) {
+            if (pixelCountByProfile.has(profileChannels.profileUuid)) {
+              const pixelCount = pixelCountByProfile.get(profileChannels.profileUuid);
+              profileChannels.channels = profileChannels.channels.map((name) => rename(name, pixelCount, channelName));
+            }
+          }
+        }
+      }
+    }
+
+    project.version = 9;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -190,6 +271,16 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 7) {
       this.migrateToVersion7();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 8) {
+      this.migrateToVersion8();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 9) {
+      this.migrateToVersion9();
       migrated = true;
     }
 

@@ -1,23 +1,11 @@
-import { inject, TestBed } from '@angular/core/testing';
-
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { FixtureCapability, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
+import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
+import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
-
-describe('PresetService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [PresetService],
-    });
-  });
-
-  it('should be created', inject([PresetService], (service: PresetService) => {
-    expect(service).toBeTruthy();
-  }));
-});
 
 // what a preset drives a capability of its fixtures to. The mirror of a preset is
 // applied here, so the preview, the channels and the player all show the same position.
@@ -25,10 +13,11 @@ describe('PresetService pan/tilt mirror', () => {
   let service: PresetService;
 
   beforeEach(() => {
-    // the value is worked out from the passed capability, channel and preset alone, so
-    // the service is built without its dependencies rather than dragging the whole
-    // designer into the spec
-    service = new PresetService(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
+    // the value is worked out from the passed capability, channel and preset alone (and the
+    // brightness by the fixture service), so the service is built without its other
+    // dependencies rather than dragging the whole designer into the spec
+    const fixtureService = new FixtureService(undefined, undefined, undefined, undefined, undefined, new FixturePixelGroupResolveService());
+    service = new PresetService(undefined, undefined, undefined, undefined, fixtureService, undefined, undefined, undefined);
   });
 
   // a channel of a moving head driving the passed capability over its whole range
