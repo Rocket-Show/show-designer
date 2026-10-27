@@ -57,6 +57,13 @@ function rgbFixture(channels: string[]): CachedFixture {
           Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
           Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
           Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+          'Color Macros': {
+            capabilities: [
+              { dmxRange: [0, 0], type: 'NoFunction' },
+              { dmxRange: [1, 127], type: 'ColorPreset', comment: 'Amber', colors: ['#ff8000'] },
+              { dmxRange: [128, 255], type: 'ColorPreset', comment: 'Red/Blue', colors: ['#ff0000', '#0000ff'] },
+            ],
+          },
         },
         modes: [{ name: 'mode', shortName: 'mode', channels }],
       },
@@ -176,5 +183,61 @@ describe('Fixture3d beam', () => {
     fixture3d.updatePreview(values({ Red: 0, Green: 0, Blue: 0 }), 1);
 
     expect(fixture3d.beamOpacity).toBe(0);
+  });
+});
+
+// A color macro shows its own color: the fixture disables its color channels while one is
+// selected (e.g. the ADJ Dotz Par), while its dimmer still dims it.
+describe('Fixture3d color macro', () => {
+  beforeEach(() => {
+    configureTestingModule();
+  });
+
+  function beam(channels: string[]): Beam3d {
+    return new Beam3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), rgbFixture(channels));
+  }
+
+  function expectBeamColor(fixture3d: Beam3d, red: number, green: number, blue: number) {
+    const expected = new THREE.Color('rgb(' + red + ', ' + green + ', ' + blue + ')');
+
+    expect(fixture3d.beamColor.r).toBeCloseTo(expected.r, 2);
+    expect(fixture3d.beamColor.g).toBeCloseTo(expected.g, 2);
+    expect(fixture3d.beamColor.b).toBeCloseTo(expected.b, 2);
+  }
+
+  it('shows the color of the selected macro instead of the color channels', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue', 'Color Macros']);
+
+    // the macro comes first, the color channels can't take over after it
+    fixture3d.updatePreview(values({ 'Color Macros': 50, Red: 0, Green: 255, Blue: 0 }), 1);
+
+    expectBeamColor(fixture3d, 255, 128, 0);
+    expect(fixture3d.beamOpacity).toBeCloseTo(1, 5);
+  });
+
+  it('mixes the colors of a macro showing more than one', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue', 'Color Macros']);
+
+    fixture3d.updatePreview(values({ Red: 0, Green: 255, Blue: 0, 'Color Macros': 200 }), 1);
+
+    expectBeamColor(fixture3d, 255, 0, 255);
+  });
+
+  it('leaves the color to the color channels while no macro is selected', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue', 'Color Macros']);
+
+    fixture3d.updatePreview(values({ Red: 255, Green: 0, Blue: 0, 'Color Macros': 0 }), 1);
+
+    expectBeamColor(fixture3d, 255, 0, 0);
+    expect(fixture3d.beamOpacity).toBeCloseTo(1, 5);
+  });
+
+  it('dims a macro with the dimmer', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue', 'Dimmer', 'Color Macros']);
+
+    fixture3d.updatePreview(values({ Dimmer: 127.5, 'Color Macros': 50 }), 1);
+
+    expectBeamColor(fixture3d, 255, 128, 0);
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 5);
   });
 });
