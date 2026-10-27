@@ -241,3 +241,40 @@ describe('Fixture3d color macro', () => {
     expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 5);
   });
 });
+
+// A fixture lighting in colors without a dimmer has a virtual one: the preview dims it like Rocket
+// Show does on stage, by its virtual dimmer and by the master dimmer.
+describe('Fixture3d virtual dimmer', () => {
+  beforeEach(() => {
+    configureTestingModule();
+  });
+
+  function beam(channels: string[]): Beam3d {
+    return new Beam3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), rgbFixture(channels));
+  }
+
+  it('lights at full while nothing dims it', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+
+    fixture3d.updatePreview(values({ Red: 255 }), 1);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(1, 5);
+  });
+
+  it('dims the colors with the virtual dimmer', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+
+    fixture3d.updatePreview(values({ Red: 255, [FixtureService.virtualDimmerChannelName]: 127.5 }), 1);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 5);
+    expect(fixture3d.beamColor.r).toBeCloseTo(1, 5);
+  });
+
+  it('dims the colors with the master dimmer', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+
+    fixture3d.updatePreview(values({ Red: 255 }), 0.5);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 5);
+  });
+});

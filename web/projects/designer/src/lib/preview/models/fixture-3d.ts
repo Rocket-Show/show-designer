@@ -20,6 +20,10 @@ export abstract class Fixture3d {
 
   public fixture: CachedFixture;
   private fixtureHasDimmer = false;
+
+  // how bright the dimmer lights while no value is set for it: as far as its default value lets
+  // it (a virtual dimmer is at full, see FixtureService.addVirtualDimmers)
+  private dimmerDefaultBrightness = 0;
   private fixtureHasColorWheel = false;
   private fixtureHasColor = false;
 
@@ -67,6 +71,10 @@ export abstract class Fixture3d {
           switch (capability.capability.type) {
             case FixtureCapabilityType.Intensity:
               this.fixtureHasDimmer = true;
+              this.dimmerDefaultBrightness =
+                cachedChannel.defaultValue === undefined
+                  ? 0
+                  : this.fixtureService.getDimmerBrightnessOfValue(cachedChannel, cachedChannel.defaultValue);
               break;
             case FixtureCapabilityType.ColorIntensity:
               this.fixtureHasColor = true;
@@ -182,16 +190,7 @@ export abstract class Fixture3d {
   }
 
   protected getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
-    for (const capability of channel.capabilities) {
-      if (
-        capability.capability.dmxRange.length === 0 ||
-        (value >= capability.capability.dmxRange[0] && value <= capability.capability.dmxRange[1])
-      ) {
-        return capability;
-      }
-    }
-
-    return undefined;
+    return this.fixtureService.getCapabilityInValue(channel, value);
   }
 
   updatePosition(object?: THREE.Object3D) {
@@ -248,7 +247,7 @@ export abstract class Fixture3d {
   updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number) {
     // Apply default settings
     if (this.fixtureHasDimmer) {
-      this.dimmer = 0;
+      this.dimmer = this.dimmerDefaultBrightness * masterDimmerValue;
     } else {
       this.dimmer = 1;
     }
