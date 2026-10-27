@@ -26,53 +26,74 @@ class Bulb3d extends Fixture3d {
   }
 }
 
+// a fixture shown with a beam, the way the preview shows a par or a moving head
+class Beam3d extends Fixture3d {
+  constructor(fixtureService: FixtureService, previewService: PreviewService, fixture: CachedFixture) {
+    super(fixtureService, previewService, fixture, new THREE.Scene(), new THREE.Group(), true, false);
+    this.createObjects();
+  }
+
+  get beamColor(): THREE.Color {
+    return this.spotlightMaterial.uniforms.lightColor.value;
+  }
+
+  get beamOpacity(): number {
+    return this.spotlightMaterial.uniforms.opacity.value;
+  }
+}
+
+// an RGB fixture in a mode with the passed channels
+function rgbFixture(channels: string[]): CachedFixture {
+  const fixtureService = TestBed.inject(FixtureService);
+
+  TestBed.inject(ProjectService).project = new Project({
+    fixtureProfiles: [
+      {
+        uuid: 'test/rgb',
+        name: 'RGB',
+        categories: ['Color Changer'],
+        availableChannels: {
+          Dimmer: { capability: { type: 'Intensity' } },
+          Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+          Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+          Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+        },
+        modes: [{ name: 'mode', shortName: 'mode', channels }],
+      },
+    ],
+    fixtures: [{ uuid: 'fixture-1', profileUuid: 'test/rgb', modeShortName: 'mode', dmxFirstChannel: 0, positioning: 'topFront' }],
+  });
+  fixtureService.updateCachedFixtures();
+
+  return fixtureService.cachedFixtures[0];
+}
+
+function values(values: { [channelName: string]: number }): FixtureChannelValue[] {
+  return Object.keys(values).map((channelName) => {
+    const value = new FixtureChannelValue();
+    value.channelName = channelName;
+    value.profileUuid = 'test/rgb';
+    value.value = values[channelName];
+    return value;
+  });
+}
+
+function configureTestingModule() {
+  TestBed.configureTestingModule({
+    imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+  });
+}
+
 // The bulb shows the light of the fixture: the brighter it is set, the brighter it glows,
 // and a fixture which is set dark doesn't glow at all.
 describe('Fixture3d bulb', () => {
-  let fixtureService: FixtureService;
-  let previewService: PreviewService;
-
   beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
-    });
-
-    fixtureService = TestBed.inject(FixtureService);
-    previewService = TestBed.inject(PreviewService);
+    configureTestingModule();
   });
 
   function bulb(channels: string[]): Bulb3d {
-    TestBed.inject(ProjectService).project = new Project({
-      fixtureProfiles: [
-        {
-          uuid: 'test/rgb',
-          name: 'RGB',
-          categories: ['Color Changer'],
-          availableChannels: {
-            Dimmer: { capability: { type: 'Intensity' } },
-            Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
-            Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
-            Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
-          },
-          modes: [{ name: 'mode', shortName: 'mode', channels }],
-        },
-      ],
-      fixtures: [{ uuid: 'fixture-1', profileUuid: 'test/rgb', modeShortName: 'mode', dmxFirstChannel: 0, positioning: 'topFront' }],
-    });
-    fixtureService.updateCachedFixtures();
-
-    return new Bulb3d(fixtureService, previewService, fixtureService.cachedFixtures[0]);
-  }
-
-  function values(values: { [channelName: string]: number }): FixtureChannelValue[] {
-    return Object.keys(values).map((channelName) => {
-      const value = new FixtureChannelValue();
-      value.channelName = channelName;
-      value.profileUuid = 'test/rgb';
-      value.value = values[channelName];
-      return value;
-    });
+    return new Bulb3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), rgbFixture(channels));
   }
 
   it('glows in the full color of a fully lit pixel', () => {
@@ -101,5 +122,59 @@ describe('Fixture3d bulb', () => {
     expect(fixture3d.glow.r).toBeCloseTo(0.5, 5);
     expect(fixture3d.glow.g).toBeCloseTo(0.5, 5);
     expect(fixture3d.glow.b).toBeCloseTo(0.5, 5);
+  });
+});
+
+// The beam shows how bright the light is by how faint it is, always in the full color of
+// the light: a light which is set darker (e.g. faded by the scene dimmer) is a fainter beam,
+// not a dark one covering the stage.
+describe('Fixture3d beam', () => {
+  beforeEach(() => {
+    configureTestingModule();
+  });
+
+  function beam(channels: string[]): Beam3d {
+    return new Beam3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), rgbFixture(channels));
+  }
+
+  it('shows a darker color as a fainter beam of the same color', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+
+    // red at a fifth, the way a scene dimmer at 20 % hands it to a fixture without a dimmer
+    fixture3d.updatePreview(values({ Red: 51, Green: 0, Blue: 0 }), 1);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.2, 5);
+    expect(fixture3d.beamColor.r).toBeCloseTo(1, 5);
+    expect(fixture3d.beamColor.g).toBeCloseTo(0, 5);
+    expect(fixture3d.beamColor.b).toBeCloseTo(0, 5);
+  });
+
+  it('keeps the hue of a mixed color', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+    const fullColor = new THREE.Color('rgb(255, 128, 0)');
+
+    fixture3d.updatePreview(values({ Red: 127.5, Green: 64, Blue: 0 }), 1);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 2);
+    expect(fixture3d.beamColor.r).toBeCloseTo(fullColor.r, 2);
+    expect(fixture3d.beamColor.g).toBeCloseTo(fullColor.g, 2);
+    expect(fixture3d.beamColor.b).toBeCloseTo(fullColor.b, 2);
+  });
+
+  it('gets as faint as the dimmer and the color together let the light through', () => {
+    const fixture3d = beam(['Dimmer', 'Red', 'Green', 'Blue']);
+
+    fixture3d.updatePreview(values({ Dimmer: 127.5, Red: 127.5, Green: 0, Blue: 0 }), 1);
+
+    expect(fixture3d.beamOpacity).toBeCloseTo(0.25, 2);
+    expect(fixture3d.beamColor.r).toBeCloseTo(1, 5);
+  });
+
+  it('shows no beam while the light is off', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+
+    fixture3d.updatePreview(values({ Red: 0, Green: 0, Blue: 0 }), 1);
+
+    expect(fixture3d.beamOpacity).toBe(0);
   });
 });
