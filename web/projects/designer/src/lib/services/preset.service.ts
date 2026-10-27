@@ -536,28 +536,22 @@ export class PresetService {
       (capabilityValue.type === FixtureCapabilityType.Intensity || capabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
       capabilityValue.valuePercentage >= 0
     ) {
-      // intensity and colorIntensity (dimmer and color)
-      if (channel.capabilities.length === 1) {
-        // the only capability in this channel -> it takes the whole channel
-        return channel.maxValue * capabilityValue.valuePercentage;
-      }
-
-      // more than one capability in the channel -> only a brightness capability can be dimmed
-      if (channelCapability.capability.brightness === 'off' && capabilityValue.valuePercentage === 0) {
-        return channelCapability.centerValue;
-      }
+      // intensity and colorIntensity (dimmer and color): only one capability of the channel gives
+      // the brightness, e.g. of a dimmer sharing its channel with a strobe
+      const brightnessCapabilities = channel.capabilities.filter(
+        (capability) =>
+          capability.capability.type === capabilityValue.type &&
+          (!capabilityValue.color || capabilityValue.color === capability.capability.color) &&
+          (!capabilityValue.wheel || capabilityValue.wheel === capability.wheelName)
+      );
 
       if (
-        (channelCapability.capability.brightnessStart === 'dark' || channelCapability.capability.brightnessStart === 'off') &&
-        channelCapability.capability.brightnessEnd === 'bright'
+        this.fixtureService.getBrightnessCapability(channel, brightnessCapabilities, capabilityValue.valuePercentage) !== channelCapability
       ) {
-        return (
-          (channelCapability.capability.dmxRange[1] - channelCapability.capability.dmxRange[0]) * capabilityValue.valuePercentage +
-          channelCapability.capability.dmxRange[0]
-        );
+        return undefined;
       }
 
-      return undefined;
+      return this.fixtureService.getBrightnessValue(channel, channelCapability, capabilityValue.valuePercentage);
     }
 
     if (

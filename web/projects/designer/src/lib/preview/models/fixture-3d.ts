@@ -269,15 +269,8 @@ export abstract class Fixture3d {
       if (capability) {
         switch (capability.capability.type) {
           case FixtureCapabilityType.Intensity: {
-            let valuePercentage: number;
-            if (capability.capability.dmxRange.length > 0) {
-              valuePercentage =
-                (channelValue.value - capability.capability.dmxRange[0]) /
-                (capability.capability.dmxRange[1] - capability.capability.dmxRange[0]);
-            } else {
-              valuePercentage = channelValue.value / channel.maxValue;
-            }
-            this.dimmer = valuePercentage * masterDimmerValue;
+            // as bright as the capability lights at this value (also from bright to off)
+            this.dimmer = this.fixtureService.getBrightnessOfValue(channel, capability, channelValue.value) * masterDimmerValue;
             break;
           }
           case FixtureCapabilityType.ColorIntensity: {
