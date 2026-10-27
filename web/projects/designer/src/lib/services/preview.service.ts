@@ -319,6 +319,95 @@ export class PreviewService implements OnDestroy {
     return intensityPercentageScene * intensityPercentagePreset;
   }
 
+  private getChannelValue(values: FixtureChannelValue[], channelName: string, profileUuid: string): FixtureChannelValue {
+    return values.find((value) => value.channelName === channelName && value.profileUuid === profileUuid);
+  }
+
+  // how bright the dimmer of a fixture (its own or its virtual one) lights with the passed
+  // values, or undefined for a fixture without one (e.g. a pixel of a bar with a master dimmer)
+  private getDimmerBrightness(cachedFixture: CachedFixture, values: FixtureChannelValue[]): number {
+    for (const channel of cachedFixture.channels) {
+      if (channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)) {
+        const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
+        return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
+      }
+    }
+
+    return undefined;
+  }
+
+  // how bright a preset lets the dimmer of a fixture light: the dimmer it sets (a curve on the
+  // dimmer counts as lighting it), or the one below, if the preset leaves the dimmer alone
+  private getPresetDimmerBrightness(state: PresetStepState, cachedFixture: CachedFixture, preset: Preset, brightnessBelow: number): number {
+    let brightness: number;
+
+    for (const capabilityValue of state.fixtureCapabilityValues) {
+      if (
+        capabilityValue.type === FixtureCapabilityType.Intensity &&
+        capabilityValue.valuePercentage >= 0 &&
+        (!capabilityValue.profileUuid || capabilityValue.profileUuid === cachedFixture.profile.uuid)
+      ) {
+        // a later value overwrites an earlier one, like when they are mixed
+        brightness = capabilityValue.valuePercentage;
+      }
+    }
+
+    if (brightness !== undefined) {
+      return brightness;
+    }
+
+    for (const effect of preset.effects) {
+      if (
+        effect instanceof EffectCurve &&
+        effect.visible &&
+        state.getEffectAmount(effect.uuid) > 0 &&
+        effect.capabilities.some((capability) => capability.type === FixtureCapabilityType.Intensity)
+      ) {
+        return 1;
+      }
+    }
+
+    return brightnessBelow;
+  }
+
+  // A color of a fading preset on a fixture with a dimmer (its own or a virtual one) doesn't fade
+  // on its own: the dimmer carries the fade, or the fixture would get darker twice. The color
+  // blends with the one below instead, each of them weighted by how bright it lights, so the
+  // light is always the blend of the light below and the light of the preset. A color coming up
+  // on a dark fixture is there at once while the dimmer fades it in, and one going dark keeps its
+  // color. A fixture without a dimmer fades its colors, they are all there is to fade.
+  // This follows the same rules as mixColorValue() in Rocket Show.
+  private mixColorValue(
+    values: FixtureChannelValue[],
+    channelValue: FixtureChannelValue,
+    intensityPercentage: number,
+    brightnessBelow: number,
+    presetBrightness: number
+  ) {
+    const weightBelow = brightnessBelow === undefined ? 0 : (1 - intensityPercentage) * brightnessBelow;
+    const weight = intensityPercentage * presetBrightness;
+
+    if (brightnessBelow === undefined || weightBelow + weight <= 0) {
+      this.mixChannelValue(values, channelValue, intensityPercentage, 0);
+      return;
+    }
+
+    if (weightBelow === 0) {
+      // nothing to blend with (e.g. the preset doesn't fade)
+      this.mixChannelValue(values, channelValue, 1);
+      return;
+    }
+
+    const below = this.getChannelValue(values, channelValue.channelName, channelValue.profileUuid);
+    const valueBelow = below ? below.value : 0;
+
+    const blendedValue = new FixtureChannelValue();
+    blendedValue.channelName = channelValue.channelName;
+    blendedValue.profileUuid = channelValue.profileUuid;
+    blendedValue.value = (valueBelow * weightBelow + channelValue.value * weight) / (weightBelow + weight);
+    this.mixChannelValue(values, blendedValue, 1);
+  }
+
   private mixCapabilityValues(
     state: PresetStepState,
     cachedFixture: CachedFixture,
@@ -327,6 +416,12 @@ export class PreviewService implements OnDestroy {
     preset: Preset
   ) {
     let hasColor = false;
+
+    // how bright the fixture lights below this preset and how bright the preset lights it, to
+    // blend the colors while the preset fades (see mixColorValue)
+    const brightnessBelow = this.getDimmerBrightness(cachedFixture, values);
+    const presetBrightness =
+      brightnessBelow === undefined ? 0 : this.getPresetDimmerBrightness(state, cachedFixture, preset, brightnessBelow);
 
     // mix the capability values of the state the preset is in
     for (const presetCapabilityValue of state.fixtureCapabilityValues) {
@@ -354,16 +449,12 @@ export class PreviewService implements OnDestroy {
                 fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
                 fixtureChannelValue.value = value;
 
-                if (
-                  presetCapabilityValue.type === FixtureCapabilityType.Intensity ||
-                  presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity
-                ) {
-                  // dimmer and color fade with the preset
+                if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
+                  this.mixColorValue(values, fixtureChannelValue, intensityPercentage, brightnessBelow, presetBrightness);
+                  hasColor = true;
+                } else if (presetCapabilityValue.type === FixtureCapabilityType.Intensity) {
+                  // the dimmer fades with the preset
                   this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, 0);
-
-                  if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
-                    hasColor = true;
-                  }
                 } else {
                   this.mixChannelValue(values, fixtureChannelValue, 1);
 
