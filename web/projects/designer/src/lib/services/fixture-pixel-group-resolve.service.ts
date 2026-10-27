@@ -1,15 +1,51 @@
 import { Injectable } from '@angular/core';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
-import { FixtureProfile } from '../models/fixture-profile';
-
-type Axis = 'x' | 'y' | 'z';
-
-type GroupDef = 'all' | string[] | (Partial<Record<Axis, string[]>> & { name?: string[] });
+import { FixtureMatrix } from '../models/fixture-matrix';
+import { FixtureMatrixPixelGroup } from '../models/fixture-matrix-pixel-group';
+import { FixtureMatrixPixelGroupConstraints } from '../models/fixture-matrix-pixel-group-constraints';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FixturePixelGroupResolveService {
+  // pixel keys like the fixture library sorts them: numbers by their value (2 before 10), the
+  // rest alphabetically
+  static compareKeys(key1: string, key2: string): number {
+    let index1 = 0;
+    let index2 = 0;
+    const isDigit = (character: string) => character >= '0' && character <= '9';
+
+    while (index1 < key1.length && index2 < key2.length) {
+      const char1 = key1.charAt(index1);
+      const char2 = key2.charAt(index2);
+
+      if (isDigit(char1) && isDigit(char2)) {
+        const start1 = index1;
+        const start2 = index2;
+        while (index1 < key1.length && isDigit(key1.charAt(index1))) index1++;
+        while (index2 < key2.length && isDigit(key2.charAt(index2))) index2++;
+
+        // compare the numbers as long as they are, without their leading zeros
+        const number1 = key1.substring(start1, index1).replace(/^0+/, '');
+        const number2 = key2.substring(start2, index2).replace(/^0+/, '');
+        if (number1.length !== number2.length) return number1.length - number2.length;
+        if (number1 !== number2) return number1 < number2 ? -1 : 1;
+      } else {
+        const lower1 = char1.toLowerCase();
+        const lower2 = char2.toLowerCase();
+        if (lower1 !== lower2) return lower1 < lower2 ? -1 : 1;
+        index1++;
+        index2++;
+      }
+    }
+
+    return key1.length - index1 - (key2.length - index2);
+  }
+
+  private static sortedByKey(pixels: CachedFixturePixel[]): CachedFixturePixel[] {
+    return pixels.slice().sort((pixel1, pixel2) => FixturePixelGroupResolveService.compareKeys(pixel1.key, pixel2.key));
+  }
+
   private matchNumberRule(value: number, ruleRaw: string): boolean {
     const rule = ruleRaw.trim().toLowerCase();
 
@@ -37,60 +73,63 @@ export class FixturePixelGroupResolveService {
       return mod === ((rem % base) + base) % base;
     }
 
-    // If you want, you can treat a plain number as "=number"
-    const asNum = Number(rule);
-    if (!Number.isNaN(asNum)) return value === asNum;
+    // a plain number means "=number"
+    if (/^-?\d+$/.test(rule)) return value === Number(rule);
 
     throw new Error(`Unknown numeric rule: "${ruleRaw}"`);
   }
 
-  private matchesAllConstraints(p: CachedFixturePixel, def: Partial<Record<Axis, string[]>> & { name?: string[] }): boolean {
+  private matchesAllConstraints(p: CachedFixturePixel, constraints: FixtureMatrixPixelGroupConstraints): boolean {
     // AND across present fields
-    if (def.x && !def.x.every((rule) => this.matchNumberRule(p.x, rule))) return false;
-    if (def.y && !def.y.every((rule) => this.matchNumberRule(p.y, rule))) return false;
-    if (def.z && !def.z.every((rule) => this.matchNumberRule(p.z, rule))) return false;
+    if (constraints.x && !constraints.x.every((rule) => this.matchNumberRule(p.x, rule))) return false;
+    if (constraints.y && !constraints.y.every((rule) => this.matchNumberRule(p.y, rule))) return false;
+    if (constraints.z && !constraints.z.every((rule) => this.matchNumberRule(p.z, rule))) return false;
 
-    if (def.name) {
-      // Interpret each entry as a regex; AND across them (change to "some" if you want OR)
-      const ok = def.name.every((pattern) => {
-        const re = new RegExp(pattern);
-        return re.test(p.key);
-      });
-      if (!ok) return false;
-    }
+    // each entry is a regex, all of them have to match
+    if (constraints.name && !constraints.name.every((pattern) => new RegExp(pattern).test(p.key))) return false;
 
     return true;
   }
 
-  public resolveGroupPixels(group: string, pixelGroups: Record<string, GroupDef>, allPixels: CachedFixturePixel[]): CachedFixturePixel[] {
-    const def = pixelGroups[group];
-    if (!def) return []; // unknown group
+  // the pixels of a group in the order of the fixture library: the listed keys as listed, all
+  // pixels and pixels constrained by their name alphanumerically, the others by their position
+  // (X changes fastest). The passed pixels come in this order already.
+  public resolveGroupPixels(group: FixtureMatrixPixelGroup, allPixels: CachedFixturePixel[]): CachedFixturePixel[] {
+    if (!group || !allPixels) return [];
 
-    // 1) "all"
-    if (def === 'all') return allPixels.slice();
+    // 1) all
+    if (group.isAll) return FixturePixelGroupResolveService.sortedByKey(allPixels);
+
+    const constraints = group.constraints;
+    if (!constraints) return [];
 
     // 2) explicit keys
-    if (Array.isArray(def)) {
-      const wanted = new Set(def);
-      return allPixels.filter((p) => wanted.has(p.key));
+    if (constraints.keys && constraints.keys.length > 0) {
+      const result: CachedFixturePixel[] = [];
+      for (const key of constraints.keys) {
+        const pixel = allPixels.find((p) => p.key === key);
+        if (pixel) result.push(pixel);
+      }
+      return result;
     }
 
-    // 3) constraints object
-    return allPixels.filter((p) => this.matchesAllConstraints(p, def));
+    // 3) constraints by x/y/z/name
+    const candidates = constraints.name && constraints.name.length > 0 ? FixturePixelGroupResolveService.sortedByKey(allPixels) : allPixels;
+    return candidates.filter((p) => this.matchesAllConstraints(p, constraints));
   }
 
-  public getPixelsForKeyOrGroup(profile: FixtureProfile, allPixelKeys: CachedFixturePixel[], keyOrGroup: string): CachedFixturePixel[] {
-    let result: CachedFixturePixel[] = [];
+  public getPixelsForKeyOrGroup(matrix: FixtureMatrix, allPixels: CachedFixturePixel[], keyOrGroup: string): CachedFixturePixel[] {
+    if (!matrix || !allPixels) return [];
 
     // search for a key first
-    const pixel = allPixelKeys.find((p) => p.key === keyOrGroup);
+    const pixel = allPixels.find((p) => p.key === keyOrGroup);
     if (pixel) return [pixel];
 
     // search for a group
-    if (profile.matrix.pixelGroups[keyOrGroup]) {
-      result.push(...this.resolveGroupPixels(keyOrGroup, profile.matrix.pixelGroups, allPixelKeys));
+    if (matrix.pixelGroups && Object.prototype.hasOwnProperty.call(matrix.pixelGroups, keyOrGroup)) {
+      return this.resolveGroupPixels(matrix.pixelGroups[keyOrGroup], allPixels);
     }
 
-    return result;
+    return [];
   }
 }

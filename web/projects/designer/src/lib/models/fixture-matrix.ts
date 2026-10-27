@@ -1,9 +1,10 @@
 import { FixtureMatrixPixelGroup } from './fixture-matrix-pixel-group';
 
 export class FixtureMatrix {
-  pixelKeys: string[][];
+  // the pixel keys by Z, Y and X like in the fixture library (null for a hole)
+  pixelKeys: string[][][];
   pixelCount: number[] = [];
-  pixelGroups: any = {};
+  pixelGroups: { [name: string]: FixtureMatrixPixelGroup } = {};
 
   constructor(data?: any) {
     if (!data) {
@@ -20,8 +21,7 @@ export class FixtureMatrix {
     }
     if (data.pixelGroups) {
       for (const property of Object.keys(data.pixelGroups)) {
-        const pixelGroup = new FixtureMatrixPixelGroup(data.pixelGroups[property]);
-        this.pixelGroups[property] = pixelGroup;
+        this.pixelGroups[property] = new FixtureMatrixPixelGroup(data.pixelGroups[property]);
       }
     }
   }

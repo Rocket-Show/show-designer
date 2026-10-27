@@ -9,7 +9,10 @@ export class EffectCurveProfileChannels {
 
     this.profileUuid = data.profileUuid;
 
-    if (data.channels) {
+    if (Array.isArray(data.channels)) {
+      this.channels = data.channels.slice();
+    } else if (data.channels) {
+      // the channel names as the keys of an object
       for (const channel of Object.keys(data.channels)) {
         this.channels.push(channel);
       }
