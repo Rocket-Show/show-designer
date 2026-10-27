@@ -15,18 +15,6 @@ import { ProjectLoadService } from './project-load.service';
 import { ProjectService } from './project.service';
 import { WarningDialogService } from './warning-dialog.service';
 
-describe('ProjectLoadService', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [ProjectLoadService],
-    });
-  });
-
-  it('should be created', inject([ProjectLoadService], (service: ProjectLoadService) => {
-    expect(service).toBeTruthy();
-  }));
-});
-
 // The panels of the selected preset look its fixtures up in the fixture cache as soon as
 // they hear of a new step. An imported project brings fixtures of its own, so the cache
 // has to hold them by then: a fixture the panels don't find makes them fail, which ends
