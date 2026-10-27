@@ -294,7 +294,14 @@
       "composition-no-file-selected": "Aucun fichier sélectionné",
       "composition-file-upload": "Télécharger",
       "composition-file-library": "Médiathèque",
-      "warning-delete-composition": "Voulez-vous vraiment supprimer cette composition ? Cette action est irréversible."
+      "warning-delete-composition": "Voulez-vous vraiment supprimer cette composition ? Cette action est irréversible.",
+      "tracks": "Pistes",
+      "add-track": "Ajouter une piste",
+      "audio": "Audio",
+      "move-track-up": "Monter la piste",
+      "move-track-down": "Descendre la piste",
+      "remove-track": "Supprimer la piste",
+      "warning-delete-track": "Voulez-vous vraiment supprimer cette piste ainsi que les scènes qui y sont jouées ?"
     },
     "intro": {
       "next": "Continuer",

@@ -295,7 +295,14 @@
       "composition-no-file-selected": "Keine Datei ausgewählt",
       "composition-file-upload": "Hochladen",
       "composition-file-library": "Mediathek",
-      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "tracks": "Spuren",
+      "add-track": "Spur hinzufügen",
+      "audio": "Audio",
+      "move-track-up": "Spur nach oben verschieben",
+      "move-track-down": "Spur nach unten verschieben",
+      "remove-track": "Spur entfernen",
+      "warning-delete-track": "Möchtest du diese Spur zusammen mit den darauf abgespielten Szenen wirklich entfernen?"
     },
     "intro": {
       "next": "Weiter",

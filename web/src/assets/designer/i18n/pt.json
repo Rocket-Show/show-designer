@@ -294,7 +294,14 @@
       "composition-no-file-selected": "Nenhum ficheiro selecionado",
       "composition-file-upload": "Carregar",
       "composition-file-library": "Biblioteca de multimédia",
-      "warning-delete-composition": "Tem a certeza de que quer eliminar esta composição? Esta ação não pode ser desfeita."
+      "warning-delete-composition": "Tem a certeza de que quer eliminar esta composição? Esta ação não pode ser desfeita.",
+      "tracks": "Faixas",
+      "add-track": "Adicionar faixa",
+      "audio": "Áudio",
+      "move-track-up": "Mover a faixa para cima",
+      "move-track-down": "Mover a faixa para baixo",
+      "remove-track": "Remover a faixa",
+      "warning-delete-track": "Deseja realmente remover esta faixa junto com as cenas reproduzidas nela?"
     },
     "intro": {
       "next": "Continuar",

@@ -3,41 +3,58 @@ import { Injectable, NgZone } from '@angular/core';
 import { Observable, Subject, Subscription, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
-import CursorPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.cursor.min.js';
-import RegionsPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.regions.min.js';
-import TimeLinePlugin from 'wavesurfer.js/dist/plugin/wavesurfer.timeline.min.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
-import { Preset } from '../models/preset';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
-import { getStepMarkers } from '../models/timeline-step-marker';
-import { ColorService } from './color.service';
+import { assignTracks, createTrack, getFreeGap, getTrackRegions } from '../models/timeline-track';
+import { Track } from '../models/track';
+import { computePeaks } from '../models/waveform-peaks';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
 import { TimelineStateService } from './timeline-state.service';
 import { LivePreviewService } from './live-preview.service';
+import { UuidService } from './uuid.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TimelineService {
+  // how finely the waveform is kept: enough for the closest zoom
+  static readonly peaksPerSecond = 400;
+
+  // the shortest clip, so that a click on a track does not leave an invisible one behind
+  static readonly minRegionMillis = 100;
+
+  // WaveSurfer loads, decodes and plays the audio file. The timeline draws the waveform,
+  // the tracks and the clips on them itself.
   public waveSurfer: WaveSurfer;
 
+  // the loudness of the audio file over time, see computePeaks
+  public peaks: Float32Array = new Float32Array(0);
+
+  // 0 = the whole song fits the width, otherwise pixels per second
   public zoom = 0;
+
   private timeUpdateSubscription: Subscription;
   public currentTime: string;
-  private timelineClicking = false;
   public selectedPlaybackRegion: ScenePlaybackRegion;
-  private intensity = 0.2;
-  private intensitySelectedScene = 0.4;
-  private intensityHighlighted = 0.8;
+
+  // the track a new clip is put on
+  public selectedTrackUuid: string;
+
   public duration: string;
+  public durationMillis = 0;
   public waveSurferReady: Subject<void> = new Subject();
+
+  // the timeline has to be drawn again: the clips, the tracks or the grid changed
   public detectChanges: Subject<void> = new Subject();
+
+  // the position of the playback moved (outside of the Angular zone while playing)
+  public positionChanged: Subject<number> = new Subject();
 
   // can we add new compositions based on an external pool and
   // should new compositions not available in this pool be added there?
@@ -52,36 +69,25 @@ export class TimelineService {
   constructor(
     private sceneService: SceneService,
     private presetService: PresetService,
-    private colorService: ColorService,
     private projectService: ProjectService,
     private http: HttpClient,
     private configService: ConfigService,
     private ngZone: NgZone,
     private timelineStateService: TimelineStateService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    private uuidService: UuidService
   ) {
     this.presetService.previewSelectionChanged.subscribe(() => {
       this.selectedPlaybackRegion = undefined;
-      this.updateRegionSelection();
-      this.updateStepMarkers();
+      this.detectChanges.next();
     });
-    this.presetService.stepsChanged.subscribe(() => {
-      this.updateStepMarkers();
-    });
-    this.sceneService.sceneDeleted.subscribe(() => {
-      this.redrawAllRegions();
-    });
-    this.sceneService.sceneSelected.subscribe(() => {
-      this.redrawAllRegions();
-    });
-    // the color of a scene follows the presets played in it, so both a scene and a
-    // preset can change what the regions are painted in
-    this.sceneService.scenesChanged.subscribe(() => {
-      this.updateRegionSelection();
-    });
-    this.presetService.presetsChanged.subscribe(() => {
-      this.updateRegionSelection();
-    });
+    // the clips show the steps of the preset being edited, and are painted in the colors
+    // of their scenes, which follow the presets played in them
+    this.presetService.stepsChanged.subscribe(() => this.detectChanges.next());
+    this.presetService.presetsChanged.subscribe(() => this.detectChanges.next());
+    this.sceneService.sceneDeleted.subscribe(() => this.redrawAllRegions());
+    this.sceneService.sceneSelected.subscribe(() => this.detectChanges.next());
+    this.sceneService.scenesChanged.subscribe(() => this.detectChanges.next());
   }
 
   get playState(): string {
@@ -108,17 +114,17 @@ export class TimelineService {
     this.timelineStateService.selectedCompositionIndex = selectedCompositionIndex;
   }
 
+  // the composition has been replaced (e.g. by an undo): show what it holds now
   redrawAllRegions() {
-    // remove all regions from wavesurver
-    if (this.waveSurfer) {
-      for (const key of Object.keys(this.waveSurfer.regions.list)) {
-        const region: any = this.waveSurfer.regions.list[key];
-        region.remove();
+    if (this.selectedComposition) {
+      this.ensureTracks(this.selectedComposition);
+
+      if (this.selectedPlaybackRegion && this.selectedComposition.scenePlaybackRegions.indexOf(this.selectedPlaybackRegion) < 0) {
+        this.selectedPlaybackRegion = undefined;
       }
     }
 
-    // draw all regions
-    this.drawAllRegions();
+    this.detectChanges.next();
   }
 
   private pad(num: number, size: number): string {
@@ -134,7 +140,7 @@ export class TimelineService {
     return padded;
   }
 
-  private msToTime(millis: number, includeMillis: boolean = true): string {
+  msToTime(millis: number, includeMillis: boolean = true): string {
     const ms: number = Math.round(millis % 1000);
     const seconds: number = Math.floor(((millis % 360000) % 60000) / 1000);
     const minutes: number = Math.floor((millis % 3600000) / 60000);
@@ -146,47 +152,22 @@ export class TimelineService {
     }
   }
 
+  getCurrentMillis(): number {
+    if (!this.waveSurfer) {
+      return 0;
+    }
+
+    return this.waveSurfer.getCurrentTime() * 1000;
+  }
+
   private updateCurrentTime() {
     if (!this.waveSurfer) {
       return;
     }
 
-    // display the current time
-    this.currentTime = this.msToTime(this.waveSurfer.getCurrentTime() * 1000);
-
-    if (!this.waveSurfer.timeline.drawer) {
-      return;
-    }
-
-    // draw the current cursor on the timeline
-    // TODO redrawing the timeline each update is way to expensive.
-    // maybe as a better solution use an element, like the cursor inside Wavesurfer to
-    // display the progress?
-    let x = 0;
-    const duration: number = this.waveSurfer.backend.getDuration();
-    const width: number =
-      this.waveSurfer.params.fillParent && !this.waveSurfer.params.scrollParent
-        ? this.waveSurfer.timeline.drawer.getWidth()
-        : this.waveSurfer.timeline.drawer.wrapper.scrollWidth * this.waveSurfer.params.pixelRatio;
-
-    x = (width / duration) * this.waveSurfer.getCurrentTime() - 2;
-
-    // update the timeline canvas
-    this.waveSurfer.timeline.render();
-
-    // draw the cursor on the timeline
-    this.waveSurfer.timeline.canvases.forEach((canvas, i) => {
-      const leftOffset = i * this.waveSurfer.timeline.maxCanvasWidth;
-
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#fd7e14';
-      ctx.beginPath();
-      ctx.moveTo(x - 12 - leftOffset, 20);
-      ctx.lineTo(x + 12 - leftOffset, 20);
-      ctx.lineTo(x - leftOffset, 45);
-      ctx.fill();
-    });
+    const millis = this.getCurrentMillis();
+    this.currentTime = this.msToTime(millis);
+    this.positionChanged.next(millis);
   }
 
   private startTimeUpdater() {
@@ -207,112 +188,16 @@ export class TimelineService {
     }
   }
 
-  formatTimeCallback(seconds: number, pxPerSec: number) {
-    if (this.selectedComposition.gridType === 'musical') {
-      return Math.round(seconds / this.selectedComposition.timeSignatureUpper / (60 / this.selectedComposition.beatsPerMinute));
-    } else {
-      // calculate minutes and seconds from seconds count
-      const minutes = parseInt((seconds / 60) as any, 10);
-      seconds = parseInt((seconds % 60) as any, 10);
-
-      // fill up seconds with zeroes
-      const secondsStr = seconds < 10 ? '0' + seconds : seconds;
-      return `${minutes}:${secondsStr}`;
-    }
-  }
-
-  timeInterval(pxPerSec: number) {
-    if (this.selectedComposition.gridType === 'musical') {
-      const interval = 60 / this.selectedComposition.beatsPerMinute / this.selectedComposition.gridResolution;
-
-      if (pxPerSec < 40) {
-        return interval * 4;
-      } else if (pxPerSec < 80) {
-        return interval * 2;
-      }
-
-      return interval;
-    } else {
-      if (pxPerSec >= 25) {
-        return 1;
-      } else if (pxPerSec * 5 >= 25) {
-        return 5;
-      } else if (pxPerSec * 15 >= 25) {
-        return 15;
-      }
-
-      return Math.ceil(0.5 / pxPerSec) * 60;
-    }
-  }
-
-  primaryLabelInterval(pxPerSec: number) {
-    if (this.selectedComposition.gridType === 'musical') {
-      const interval = this.selectedComposition.timeSignatureUpper * this.selectedComposition.gridResolution;
-
-      return interval;
-    } else {
-      if (pxPerSec >= 25) {
-        return 10;
-      } else if (pxPerSec * 5 >= 25) {
-        return 6;
-      } else if (pxPerSec * 15 >= 25) {
-        return 4;
-      }
-
-      return 4;
-    }
-  }
-
-  secondaryLabelInterval(pxPerSec: number) {
-    if (this.selectedComposition.gridType === 'musical') {
-      return 0;
-    } else {
-      if (pxPerSec >= 25) {
-        return 5;
-      } else if (pxPerSec * 5 >= 25) {
-        return 2;
-      } else if (pxPerSec * 15 >= 25) {
-        return 2;
-      }
-      return 2;
-    }
-  }
-
-  private seekWithTimeline(e: any) {
-    // taken from wavesurfer -> drawer -> handleEvent
-    const clientX = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
-    const bbox = this.waveSurfer.timeline.wrapper.getBoundingClientRect();
-
-    const nominalWidth = this.waveSurfer.timeline.drawer.width;
-    const parentWidth = this.waveSurfer.timeline.drawer.getWidth();
-
-    let progress: number;
-
-    if (!this.waveSurfer.timeline.drawer.params.fillParent && nominalWidth < parentWidth) {
-      progress =
-        (this.waveSurfer.timeline.drawer.params.rtl ? bbox.right - clientX : clientX - bbox.left) *
-          (this.waveSurfer.timeline.drawer.params.pixelRatio / nominalWidth) || 0;
-
-      if (progress > 1) {
-        progress = 1;
-      }
-    } else {
-      progress =
-        ((this.waveSurfer.timeline.drawer.params.rtl ? bbox.right - clientX : clientX - bbox.left) +
-          this.waveSurfer.timeline.wrapper.scrollLeft) /
-          this.waveSurfer.timeline.wrapper.scrollWidth || 0;
+  // jump to a point in time of the song, e.g. when the ruler is clicked
+  seekToMillis(millis: number) {
+    if (!this.isWaveSurferReady() || !this.durationMillis) {
+      return;
     }
 
-    progress = Math.max(progress, 0);
+    const progress = Math.min(1, Math.max(0, millis / this.durationMillis));
 
-    setTimeout(() => {
-      this.waveSurfer.seekTo(progress);
-      this.detectChanges.next();
-      this.livePreviewService.previewLive(
-        this.selectedComposition.name,
-        Math.round(progress * this.waveSurfer.backend.getDuration() * 1000)
-      );
-    }, 0);
+    this.waveSurfer.seekTo(progress);
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(progress * this.durationMillis));
   }
 
   applyZoom(zoom: any) {
@@ -321,12 +206,7 @@ export class TimelineService {
     }
 
     this.zoom = zoom;
-    if (this.waveSurfer) {
-      setTimeout(() => {
-        this.waveSurfer.zoom(this.zoom);
-        this.updateCurrentTime();
-      }, 0);
-    }
+    this.detectChanges.next();
   }
 
   private isWaveSurferReady(): boolean {
@@ -341,45 +221,7 @@ export class TimelineService {
     return true;
   }
 
-  addRegion(waveSurferRegion?: any) {
-    if (!this.isWaveSurferReady()) {
-      return;
-    }
-
-    if (!this.sceneService.selectedScenes || this.sceneService.selectedScenes.length !== 1) {
-      return;
-    }
-
-    if (!this.selectedComposition) {
-      return;
-    }
-
-    const scenePlaybackRegion: ScenePlaybackRegion = new ScenePlaybackRegion();
-    scenePlaybackRegion.sceneUuid = this.sceneService.selectedScenes[0].uuid;
-
-    if (waveSurferRegion) {
-      scenePlaybackRegion.startMillis = waveSurferRegion.start * 1000;
-      scenePlaybackRegion.endMillis = waveSurferRegion.end * 1000;
-    } else {
-      scenePlaybackRegion.startMillis = (this.waveSurfer.getDuration() * 1000) / 3;
-      scenePlaybackRegion.endMillis = ((this.waveSurfer.getDuration() * 1000) / 3) * 2;
-    }
-
-    this.selectedComposition.scenePlaybackRegions.push(scenePlaybackRegion);
-
-    this.selectedPlaybackRegion = scenePlaybackRegion;
-
-    if (waveSurferRegion) {
-      waveSurferRegion.color = this.regionColor(this.sceneService.selectedScenes[0], this.intensityHighlighted);
-      waveSurferRegion.attributes.selectable = true;
-      this.connectRegion(waveSurferRegion, this.sceneService.selectedScenes[0], scenePlaybackRegion);
-      this.updateRegionSelection();
-    } else {
-      this.drawRegion(scenePlaybackRegion, this.sceneService.selectedScenes[0]);
-    }
-
-    this.livePreviewService.previewLive();
-  }
+  // ---- grid -----------------------------------------------------------------
 
   private getSnapToGridInterval(): number {
     if (this.selectedComposition.snapToGrid) {
@@ -392,6 +234,241 @@ export class TimelineService {
   private getSnapToGridOffset(): number {
     return this.selectedComposition.gridOffsetMillis / 1000;
   }
+
+  // the point in time on the grid closest to the passed one, if the clips snap to the grid
+  snapMillis(millis: number): number {
+    const interval = this.selectedComposition ? this.getSnapToGridInterval() : undefined;
+
+    if (!interval) {
+      return Math.round(millis);
+    }
+
+    const offset = (this.getSnapToGridOffset() || 0) * 1000;
+    const intervalMillis = interval * 1000;
+
+    return Math.round(Math.round((millis - offset) / intervalMillis) * intervalMillis + offset);
+  }
+
+  // the length of a clip which is put on a track without being drawn: four bars
+  private getDefaultRegionMillis(): number {
+    const composition = this.selectedComposition;
+
+    return (4 * (composition.timeSignatureUpper || 4) * 60000) / (composition.beatsPerMinute || 120);
+  }
+
+  updateGrid() {
+    this.detectChanges.next();
+  }
+
+  // ---- tracks ---------------------------------------------------------------
+
+  // every clip of the composition is on one of its tracks, and there is at least one
+  // track to put a scene on
+  private ensureTracks(composition: Composition) {
+    assignTracks(composition, this.projectService.project.scenes, () => this.uuidService.getUuid());
+
+    if (!composition.tracks.some((track) => track.uuid === this.selectedTrackUuid)) {
+      this.selectedTrackUuid = composition.tracks[0].uuid;
+    }
+  }
+
+  getTrack(uuid: string): Track {
+    return this.selectedComposition ? this.selectedComposition.tracks.find((track) => track.uuid === uuid) : undefined;
+  }
+
+  // add a track at the passed position (at the bottom, if none is passed)
+  addTrack(index?: number): Track {
+    const composition = this.selectedComposition;
+    const track = createTrack(composition, this.uuidService.getUuid());
+
+    if (index === undefined || index < 0 || index > composition.tracks.length) {
+      composition.tracks.push(track);
+    } else {
+      composition.tracks.splice(index, 0, track);
+    }
+
+    this.selectedTrackUuid = track.uuid;
+    this.detectChanges.next();
+
+    return track;
+  }
+
+  // remove a track together with the scenes played on it
+  removeTrack(track: Track) {
+    const composition = this.selectedComposition;
+    const index = composition.tracks.indexOf(track);
+
+    if (index < 0) {
+      return;
+    }
+
+    composition.tracks.splice(index, 1);
+    composition.scenePlaybackRegions = composition.scenePlaybackRegions.filter((region) => region.trackUuid !== track.uuid);
+
+    if (this.selectedPlaybackRegion && this.selectedPlaybackRegion.trackUuid === track.uuid) {
+      this.selectedPlaybackRegion = undefined;
+    }
+
+    this.ensureTracks(composition);
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // move a track up (-1) or down (+1): the one higher up is on top
+  moveTrack(track: Track, delta: number) {
+    const tracks = this.selectedComposition.tracks;
+    const index = tracks.indexOf(track);
+    const target = index + delta;
+
+    if (index < 0 || target < 0 || target >= tracks.length) {
+      return;
+    }
+
+    tracks.splice(index, 1);
+    tracks.splice(target, 0, track);
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  selectTrack(track: Track) {
+    this.selectedTrackUuid = track.uuid;
+    this.detectChanges.next();
+  }
+
+  // ---- clips ----------------------------------------------------------------
+
+  // select a clip, and the scene played in it with it
+  selectRegion(region: ScenePlaybackRegion) {
+    const scene = this.sceneService.getSceneByUuid(region.sceneUuid);
+
+    if (scene && !(this.sceneService.selectedScenes.length === 1 && this.sceneService.selectedScenes[0] === scene)) {
+      // forgets the selected clip -> select it afterwards
+      this.sceneService.selectScenes([scene]);
+    }
+
+    this.selectedPlaybackRegion = region;
+    this.selectedTrackUuid = region.trackUuid;
+    this.detectChanges.next();
+  }
+
+  // put a scene on a track. The caller makes sure the time is still free there.
+  createRegion(track: Track, scene: Scene, startMillis: number, endMillis: number): ScenePlaybackRegion {
+    const region = new ScenePlaybackRegion();
+    region.sceneUuid = scene.uuid;
+    region.trackUuid = track.uuid;
+    region.startMillis = Math.round(startMillis);
+    region.endMillis = Math.round(endMillis);
+
+    this.selectedComposition.scenePlaybackRegions.push(region);
+    this.selectRegion(region);
+    this.livePreviewService.previewLive();
+
+    return region;
+  }
+
+  // a clip has been moved or resized
+  regionChanged() {
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // Put the selected scene on the selected track, at the position of the playback. If
+  // another scene plays there already, it goes onto a new track right below.
+  addRegion() {
+    if (!this.isWaveSurferReady() || !this.selectedComposition) {
+      return;
+    }
+
+    if (!this.sceneService.selectedScenes || this.sceneService.selectedScenes.length !== 1) {
+      return;
+    }
+
+    const composition = this.selectedComposition;
+    this.ensureTracks(composition);
+
+    let track = this.getTrack(this.selectedTrackUuid);
+    const startMillis = Math.max(
+      0,
+      Math.min(this.snapMillis(this.getCurrentMillis()), this.durationMillis - TimelineService.minRegionMillis)
+    );
+    let gap = getFreeGap(composition, track.uuid, startMillis);
+
+    if (!gap || gap.endMillis - startMillis < TimelineService.minRegionMillis) {
+      track = this.addTrack(composition.tracks.indexOf(track) + 1);
+      gap = { startMillis: 0, endMillis: Infinity };
+    }
+
+    const endMillis = Math.min(startMillis + this.getDefaultRegionMillis(), gap.endMillis, this.durationMillis);
+
+    this.createRegion(track, this.sceneService.selectedScenes[0], startMillis, endMillis);
+  }
+
+  removeRegion() {
+    if (!this.selectedPlaybackRegion) {
+      return;
+    }
+
+    const regions = this.selectedComposition.scenePlaybackRegions;
+    const index = regions.indexOf(this.selectedPlaybackRegion);
+
+    if (index >= 0) {
+      regions.splice(index, 1);
+    }
+
+    this.selectedPlaybackRegion = undefined;
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // the start or the end of the selected clip has been typed in
+  updateSelectedRegion() {
+    this.regionChanged();
+  }
+
+  // ---- playback -------------------------------------------------------------
+
+  getPresetsInTime(timeMillis: number): PresetRegionScene[] {
+    // Return all presets which should be active during the specified time, the ones at
+    // the bottom first: the ones processed later overwrite them
+    const activePresets: PresetRegionScene[] = [];
+    const composition = this.selectedComposition;
+
+    // the tracks are layered like the presets inside a scene: the topmost one is
+    // processed last, so it overwrites the ones below it. On a track, a clip fading out
+    // past its end lies below the one following it.
+    for (let trackIndex = composition.tracks.length - 1; trackIndex >= 0; trackIndex--) {
+      for (const region of getTrackRegions(composition, composition.tracks[trackIndex].uuid)) {
+        const scene = this.sceneService.getSceneByUuid(region.sceneUuid);
+
+        if (!scene) {
+          continue;
+        }
+
+        // the presets are ordered inside their scene: the first one is the topmost
+        // layer -> process it last, so it overwrites the ones below it
+        const scenePresets = this.sceneService.getScenePresets(scene);
+
+        for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
+          const preset = scenePresets[presetIndex];
+
+          let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
+          let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
+
+          // extend the running time, if fading is done outside the boundaries
+          presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
+          presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
+
+          if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
+            activePresets.push(new PresetRegionScene(preset, region, scene));
+          }
+        }
+      }
+    }
+
+    return activePresets;
+  }
+
+  // ---- compositions and the audio file --------------------------------------
 
   deleteSelectedComposition() {
     this.projectService.project.compositions.splice(this.selectedCompositionIndex, 1);
@@ -417,7 +494,10 @@ export class TimelineService {
   }
 
   destroyWaveSurfer() {
+    this.stopTimeUpdater();
     this.duration = undefined;
+    this.durationMillis = 0;
+    this.peaks = new Float32Array(0);
     this.loadingAudioFile = false;
     this.audioFileError = false;
 
@@ -437,45 +517,15 @@ export class TimelineService {
     this.loadingAudioFile = true;
 
     setTimeout(() => {
+      // the container is hidden: only the audio is used, the timeline draws the waveform
       this.waveSurfer = WaveSurfer.create({
         container: '#waveform',
-        waveColor: '#8b939e',
-        progressColor: '#8b939e',
-        // barWidth: 2,
         height: 1,
         interact: false,
+        cursorWidth: 0,
         xhr: {
           credentials: 'include',
         },
-        // Use for timelines without sound. Wave will be displayed
-        // wrong, but should work for a dummy audio without any waves.
-        // duration: 400,
-        plugins: [
-          CursorPlugin.create({
-            // showTime: true,
-            opacity: 1,
-            color: '#fd7e14',
-            hideOnBlur: false /* don't show/hide the cursor on the wave (only on the timeline) */,
-          }),
-          RegionsPlugin.create({
-            dragSelection: {
-              slop: 5,
-            },
-            color: '#fff',
-            snapToGridInterval: this.getSnapToGridInterval(),
-            snapToGridOffset: this.getSnapToGridOffset(),
-          }),
-          TimeLinePlugin.create({
-            container: '#waveform-timeline',
-            primaryFontColor: '#99a1ac',
-            secondaryFontColor: '#6b7280',
-            offset: this.getSnapToGridOffset(),
-            formatTimeCallback: this.formatTimeCallback.bind(this),
-            timeInterval: this.timeInterval.bind(this),
-            primaryLabelInterval: this.primaryLabelInterval.bind(this),
-            secondaryLabelInterval: this.secondaryLabelInterval.bind(this),
-          }),
-        ],
       });
 
       let audioFileName: string;
@@ -509,60 +559,19 @@ export class TimelineService {
                 this.selectedComposition.beatsPerMinute = bpm;
                 this.selectedComposition.gridOffsetMillis = offset * 1000;
                 this.loadingAudioFile = false;
+                this.detectChanges.next();
               })
               .catch((err) => {
                 // something went wrong
                 console.error('Could not detect the BPM from the audio file', err);
                 this.loadingAudioFile = false;
+                this.detectChanges.next();
               });
           }
 
-          this.duration = this.msToTime(this.waveSurfer.getDuration() * 1000);
-          this.drawAllRegions();
-
-          // scroll wavesurfer in sync with the timeline
-          this.waveSurfer.timeline.wrapper.addEventListener('scroll', () => {
-            this.waveSurfer.drawer.wrapper.scrollLeft = this.waveSurfer.timeline.wrapper.scrollLeft;
-
-            // Set the scroll position of the timeline to the same position as the wavesurfer,
-            // because the timeline is larger than wavesurfer and might get out of sync.
-            // This way, if wavesurfer cannot scroll any further, we reset the position
-            // of the timeline as well.
-            this.waveSurfer.timeline.wrapper.scrollLeft = this.waveSurfer.drawer.wrapper.scrollLeft;
-          });
-
-          // display the cursor also on the timeline
-          this.waveSurfer.timeline.wrapper.addEventListener('mouseenter', () => {
-            this.waveSurfer.cursor.showCursor();
-          });
-          this.waveSurfer.timeline.wrapper.addEventListener('mouseleave', () => {
-            this.waveSurfer.cursor.hideCursor();
-          });
-          this.waveSurfer.timeline.wrapper.addEventListener('mousemove', (e: any) => {
-            const bbox = this.waveSurfer.container.getBoundingClientRect();
-            const x = e.clientX - bbox.left;
-            this.waveSurfer.cursor.updateCursorPosition(x, 0);
-          });
-
-          // hide the cursor on the wave initially. in combination with the param hideOnBlur = false,
-          // it will never be displayed on the wave now. we handle it on the timeline only.
-          this.waveSurfer.cursor.hideCursor();
-
-          // seek on timeline-click
-          this.waveSurfer.timeline.wrapper.addEventListener('mousedown', (e: any) => {
-            this.timelineClicking = true;
-            this.seekWithTimeline(e);
-          });
-
-          this.waveSurfer.timeline.wrapper.addEventListener('mousemove', (e: any) => {
-            if (this.timelineClicking) {
-              this.seekWithTimeline(e);
-            }
-          });
-
-          this.waveSurfer.timeline.wrapper.addEventListener('mouseup', (e: any) => {
-            this.timelineClicking = false;
-          });
+          this.durationMillis = this.waveSurfer.getDuration() * 1000;
+          this.duration = this.msToTime(this.durationMillis);
+          this.peaks = computePeaks(this.waveSurfer.backend.buffer, TimelineService.peaksPerSecond);
 
           this.updateCurrentTime();
 
@@ -585,335 +594,9 @@ export class TimelineService {
 
       this.waveSurfer.on('pause', () => {
         this.stopTimeUpdater();
-      });
-
-      this.waveSurfer.on('region-created', (region) => {
-        // region created by selection or programmatically
-        if (this.sceneService.selectedScenes && this.sceneService.selectedScenes.length === 1) {
-          if (!region.data.handled) {
-            this.addRegion(region);
-          }
-        } else {
-          if (!region.data.handled) {
-            region.remove();
-          }
-        }
-      });
-
-      this.waveSurfer.on('region-updated', (region: any) => {
-        this.detectChanges.next();
-        this.livePreviewService.previewLive();
+        this.updateCurrentTime();
       });
     }, 0);
-  }
-
-  // a region is painted in the color of its scene, at the intensity which says whether
-  // the scene is played and whether the region itself is the selected one
-  private regionColor(scene: Scene, intensity: number): string {
-    return this.colorService.toRgba(this.colorService.getSceneColor(scene), intensity);
-  }
-
-  private updateRegionSelection() {
-    if (!this.waveSurfer) {
-      return;
-    }
-
-    for (const key of Object.keys(this.waveSurfer.regions.list)) {
-      const region: any = this.waveSurfer.regions.list[key];
-
-      // if no scene is set, the region is not valid (e.g. has been created, while
-      // no scene has been selected and remove did not work properly)
-      if (region.scene) {
-        let intensity = this.intensity;
-
-        region.drag = false;
-        region.resize = false;
-        region.attributes.selectable = false;
-
-        if (this.sceneService.sceneIsSelected(region.scene)) {
-          intensity = this.intensitySelectedScene;
-          region.drag = true;
-          region.resize = true;
-          region.attributes.selectable = true;
-        }
-
-        region.attributes.selected = false;
-
-        if (this.selectedPlaybackRegion && this.selectedPlaybackRegion === region.scenePlaybackRegion) {
-          intensity = this.intensityHighlighted;
-          region.attributes.selected = true;
-        }
-
-        region.color = this.regionColor(region.scene, intensity);
-        region.updateRender();
-      }
-    }
-  }
-
-  updateSelectedRegion() {
-    if (!this.waveSurfer) {
-      return;
-    }
-
-    if (!this.selectedPlaybackRegion) {
-      return;
-    }
-
-    for (const key of Object.keys(this.waveSurfer.regions.list)) {
-      const region: any = this.waveSurfer.regions.list[key];
-
-      if (this.selectedPlaybackRegion === region.scenePlaybackRegion) {
-        region.start = this.selectedPlaybackRegion.startMillis / 1000;
-        region.end = this.selectedPlaybackRegion.endMillis / 1000;
-        region.updateRender();
-        break;
-      }
-    }
-  }
-
-  private setSelectedRegion(scenePlaybackRegion?: ScenePlaybackRegion) {
-    if (this.selectedPlaybackRegion && this.selectedPlaybackRegion === scenePlaybackRegion) {
-      // No update required
-      return;
-    }
-
-    if (scenePlaybackRegion) {
-      this.selectedPlaybackRegion = scenePlaybackRegion;
-    }
-
-    this.updateRegionSelection();
-  }
-
-  private getRegionSnapToGridValue(value: number): number {
-    // the regions should snap to a grid
-    const offset = this.getSnapToGridOffset() || 0;
-    const interval = this.getSnapToGridInterval() || 0;
-    return Math.round((value - offset) / interval) * interval + offset;
-  }
-
-  private connectRegion(waveSurferRegion: any, scene: Scene, scenePlaybackRegion: ScenePlaybackRegion, preset?: Preset) {
-    waveSurferRegion.scenePlaybackRegion = scenePlaybackRegion;
-    waveSurferRegion.scene = scene;
-    waveSurferRegion.preset = preset;
-
-    waveSurferRegion.on('click', (event) => {
-      if (this.sceneService.sceneIsSelected(scene)) {
-        this.setSelectedRegion(scenePlaybackRegion);
-      }
-    });
-
-    waveSurferRegion.on('update', () => {
-      this.setSelectedRegion(scenePlaybackRegion);
-      if (this.selectedComposition.snapToGrid) {
-        // update the regions boundaries. they may not snap to grid, if it has been
-        // disabled during creation of the region but activated afterwards.
-        waveSurferRegion.start = this.getRegionSnapToGridValue(waveSurferRegion.start);
-        waveSurferRegion.end = this.getRegionSnapToGridValue(waveSurferRegion.end);
-      }
-      scenePlaybackRegion.startMillis = Math.round(waveSurferRegion.start * 1000);
-      scenePlaybackRegion.endMillis = Math.round(waveSurferRegion.end * 1000);
-
-      // the steps keep their own times while the region around them is resized, so
-      // where they sit inside it changes with every update
-      this.drawStepMarkers(waveSurferRegion);
-    });
-  }
-
-  // The steps of the preset being edited, marked inside every region the preset plays
-  // in: a tick where each step is reached and a ramp over the time its transition
-  // travels to get there. They sit inside the region's own element, so they follow it
-  // through zooming and scrolling on their own.
-  updateStepMarkers() {
-    if (!this.isWaveSurferReady()) {
-      return;
-    }
-
-    for (const key of Object.keys(this.waveSurfer.regions.list)) {
-      const region: any = this.waveSurfer.regions.list[key];
-
-      if (region.element) {
-        this.drawStepMarkers(region);
-      }
-    }
-  }
-
-  private drawStepMarkers(region: any) {
-    for (const marker of Array.from(region.element.querySelectorAll('.step-marker'))) {
-      (marker as HTMLElement).remove();
-    }
-
-    const markers = getStepMarkers(this.presetService.selectedPreset, region.scene, region.scenePlaybackRegion);
-
-    markers.forEach((marker, index) => {
-      const selected = marker.step === this.presetService.selectedStep;
-
-      if (marker.transitionWidthPercentage > 0) {
-        const transition = this.createStepMarker('step-marker step-marker-transition', marker.leftPercentage, selected);
-        transition.style.width = marker.transitionWidthPercentage + '%';
-        region.element.appendChild(transition);
-      }
-
-      const tick = this.createStepMarker('step-marker step-marker-tick', marker.leftPercentage, selected);
-      tick.setAttribute('data-step-name', String(index + 1));
-      region.element.appendChild(tick);
-    });
-  }
-
-  private createStepMarker(className: string, leftPercentage: number, selected: boolean): HTMLElement {
-    const marker = document.createElement('div');
-
-    marker.className = className;
-    marker.style.left = leftPercentage + '%';
-
-    if (selected) {
-      marker.setAttribute('data-step-selected', 'true');
-    }
-
-    return marker;
-  }
-
-  private drawRegion(scenePlaybackRegion: ScenePlaybackRegion, scene: Scene) {
-    // draw the regions of the currently selected scene
-    if (!this.isWaveSurferReady()) {
-      return;
-    }
-
-    // add the playback region
-    const waveSurferRegion = this.waveSurfer.addRegion({
-      start: scenePlaybackRegion.startMillis / 1000,
-      end: scenePlaybackRegion.endMillis / 1000,
-      color: '#fff',
-      data: { handled: true },
-    });
-    this.connectRegion(waveSurferRegion, scene, scenePlaybackRegion);
-    this.drawStepMarkers(waveSurferRegion);
-
-    // TODO show the all presets
-    // for (let presetUuid of scene.presetUuids) {
-    //   const preset = this.presetService.getPresetByUuid(presetUuid);
-
-    //   let waveSurferRegion = this.timelineService.waveSurfer.addRegion({
-    //     start: (scenePlaybackRegion.startMillis + (preset.startMillis ? preset.startMillis : 0)) / 1000,
-    //     end: (scenePlaybackRegion.startMillis
-    //       + (preset.endMillis ? preset.endMillis : scenePlaybackRegion.endMillis - scenePlaybackRegion.startMillis)) / 1000,
-    //     color: '#fff',
-    //     data: { handled: true },
-    //     // TODO
-    //     attributes: {
-    //       preset: true,
-    //       name: 'Preset 1'
-    //     }
-    //   });
-    //   this.connectRegion(waveSurferRegion, scene, scenePlaybackRegion, preset);
-    // }
-
-    this.updateRegionSelection();
-  }
-
-  removeRegion() {
-    if (!this.selectedPlaybackRegion) {
-      return;
-    }
-
-    if (this.sceneService.selectedScenes.length !== 1) {
-      return;
-    }
-
-    for (let i = 0; i < this.selectedComposition.scenePlaybackRegions.length; i++) {
-      if (this.selectedComposition.scenePlaybackRegions[i] === this.selectedPlaybackRegion) {
-        // remove the region from wavesurfer
-        for (const key of Object.keys(this.waveSurfer.regions.list)) {
-          const region: any = this.waveSurfer.regions.list[key];
-
-          if (region.scenePlaybackRegion === this.selectedPlaybackRegion) {
-            region.remove();
-          }
-        }
-
-        this.selectedPlaybackRegion = undefined;
-        this.selectedComposition.scenePlaybackRegions.splice(i, 1);
-
-        return;
-      }
-    }
-
-    this.livePreviewService.previewLive();
-  }
-
-  getPresetsInTime(timeMillis: number): PresetRegionScene[] {
-    // Return all presets which should be active during the specified time
-    const activePresets: PresetRegionScene[] = [];
-
-    for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
-      const scene = this.projectService.project.scenes[sceneIndex];
-
-      // the presets are ordered inside their scene: the first one is the topmost
-      // layer -> process it last, so it overwrites the ones below it
-      const scenePresets = this.sceneService.getScenePresets(scene);
-
-      for (const region of this.selectedComposition.scenePlaybackRegions) {
-        if (region.sceneUuid === scene.uuid) {
-          for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
-            const preset = scenePresets[presetIndex];
-
-            let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
-            let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
-
-            // extend the running time, if fading is done outside the boundaries
-            presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
-            presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
-
-            if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
-              activePresets.push(new PresetRegionScene(preset, region, scene));
-            }
-          }
-        }
-      }
-    }
-
-    return activePresets;
-  }
-
-  drawAllRegions() {
-    if (!this.selectedComposition) {
-      return;
-    }
-
-    // draw the regions in the same order as their corresponding scenes, but draw
-    // the selected ones last, to make sure they're always clickable.
-    for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
-      const scene = this.projectService.project.scenes[sceneIndex];
-      if (!this.sceneService.sceneIsSelected(scene)) {
-        for (const scenePlaybackRegion of this.selectedComposition.scenePlaybackRegions) {
-          if (scenePlaybackRegion.sceneUuid === scene.uuid) {
-            this.drawRegion(scenePlaybackRegion, scene);
-          }
-        }
-      }
-    }
-
-    // draw all selected scenes afterwards
-    for (let sceneIndex = this.projectService.project.scenes.length - 1; sceneIndex >= 0; sceneIndex--) {
-      const scene = this.projectService.project.scenes[sceneIndex];
-
-      if (this.sceneService.sceneIsSelected(scene)) {
-        for (const scenePlaybackRegion of this.selectedComposition.scenePlaybackRegions) {
-          if (scenePlaybackRegion.sceneUuid === scene.uuid) {
-            this.drawRegion(scenePlaybackRegion, scene);
-          }
-        }
-      }
-    }
-  }
-
-  updateGrid() {
-    if (this.waveSurferReady) {
-      this.waveSurfer.timeline.params.offset = this.getSnapToGridOffset();
-
-      this.waveSurfer.regions.params.snapToGridInterval = this.getSnapToGridInterval();
-      this.waveSurfer.regions.params.snapToGridOffset = this.getSnapToGridOffset();
-    }
-    this.updateCurrentTime();
   }
 
   getExternalCompositionNames(): Observable<string[]> {
@@ -935,6 +618,8 @@ export class TimelineService {
     this.selectedComposition = this.projectService.project.compositions[index];
     this.selectedCompositionIndex = index;
     this.projectService.project.selectedCompositionUuid = this.selectedComposition.uuid;
+    this.selectedPlaybackRegion = undefined;
+    this.ensureTracks(this.selectedComposition);
     this.createWaveSurfer();
 
     // required to trigger timeline.component.resize()

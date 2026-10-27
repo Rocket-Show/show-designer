@@ -3,6 +3,9 @@ export class ScenePlaybackRegion {
   startMillis: number;
   endMillis: number;
 
+  // the track of the composition the scene is played on
+  trackUuid: string;
+
   constructor(data?: any) {
     if (!data) {
       return;
@@ -11,5 +14,6 @@ export class ScenePlaybackRegion {
     this.sceneUuid = data.sceneUuid;
     this.startMillis = data.startMillis;
     this.endMillis = data.endMillis;
+    this.trackUuid = data.trackUuid;
   }
 }

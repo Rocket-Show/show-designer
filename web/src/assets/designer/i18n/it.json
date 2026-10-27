@@ -294,7 +294,14 @@
       "composition-no-file-selected": "Nessun file selezionato",
       "composition-file-upload": "Carica",
       "composition-file-library": "Libreria media",
-      "warning-delete-composition": "Vuoi davvero eliminare questa composizione? Questa azione non può essere annullata."
+      "warning-delete-composition": "Vuoi davvero eliminare questa composizione? Questa azione non può essere annullata.",
+      "tracks": "Tracce",
+      "add-track": "Aggiungi traccia",
+      "audio": "Audio",
+      "move-track-up": "Sposta la traccia in alto",
+      "move-track-down": "Sposta la traccia in basso",
+      "remove-track": "Rimuovi la traccia",
+      "warning-delete-track": "Vuoi davvero rimuovere questa traccia insieme alle scene riprodotte su di essa?"
     },
     "intro": {
       "next": "Continua",

@@ -294,7 +294,14 @@
       "composition-no-file-selected": "Ningún archivo seleccionado",
       "composition-file-upload": "Subir",
       "composition-file-library": "Biblioteca multimedia",
-      "warning-delete-composition": "¿Realmente deseas eliminar esta composición? Esta acción no se puede deshacer."
+      "warning-delete-composition": "¿Realmente deseas eliminar esta composición? Esta acción no se puede deshacer.",
+      "tracks": "Pistas",
+      "add-track": "Añadir pista",
+      "audio": "Audio",
+      "move-track-up": "Subir la pista",
+      "move-track-down": "Bajar la pista",
+      "remove-track": "Eliminar la pista",
+      "warning-delete-track": "¿De verdad quieres eliminar esta pista junto con las escenas que se reproducen en ella?"
     },
     "intro": {
       "next": "Continuar",

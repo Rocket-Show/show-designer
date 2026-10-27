@@ -59,7 +59,9 @@
       <div class="d-flex w-100">
         @if (timelineService.duration) {
         <div class="my-auto mr-3">
-          <span style="width: 78px; text-align: left; display: inline-block; margin-left: 5px">{{ timelineService.currentTime }}</span>
+          <span #timeLabel style="width: 78px; text-align: left; display: inline-block; margin-left: 5px">{{
+            timelineService.currentTime
+          }}</span>
           <span style="display: inline-block"></span>- {{ timelineService.duration }}
         </div>
         }
@@ -138,14 +140,205 @@
       >
     </div>
     } @if (timelineService.selectedComposition) {
-    <div>
-      <div id="waveform-timeline"></div>
+    <div class="tl-frame">
+      <div #scroller class="tl-scroller" (scroll)="onScroll()" (wheel)="onWheel($event)" (dragleave)="onSceneDragLeave($event)">
+        <div class="tl-content" [style.width.px]="headerWidthPx + laneWidthPx">
+          <!-- the ruler: click or drag on it to jump to a point in time -->
+          <div class="tl-row tl-ruler-row">
+            <div class="tl-head tl-corner">
+              <span class="tl-corner-label">{{ 'designer.timeline.tracks' | translate }}</span>
+              <a
+                href="#"
+                class="tl-icon-button"
+                (click)="addTrack(); (false)"
+                popover="{{ 'designer.timeline.add-track' | translate }}"
+                container="body"
+                placement="top"
+                triggers="mouseenter:mouseleave"
+                ><i class="fa fa-plus" aria-hidden="true"></i
+              ></a>
+            </div>
+            <div class="tl-lane tl-ruler" (mousedown)="onSeekStart($event)">
+              <canvas #rulerCanvas class="tl-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- the song, only as a guide to line the scenes up with: nothing is put on it -->
+          <div class="tl-row tl-wave-row">
+            <div class="tl-head tl-wave-head">
+              <i class="fa fa-music fa-fw tl-dim" aria-hidden="true"></i>
+              <div class="tl-wave-title">
+                <span>{{ 'designer.timeline.audio' | translate }}</span>
+                <span class="tl-dim">{{ timelineService.selectedComposition.audioFileName }}</span>
+              </div>
+            </div>
+            <div class="tl-lane tl-wave" [ngStyle]="gridStyle" (mousedown)="onSeekStart($event)">
+              <canvas #waveCanvas class="tl-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- the tracks, the topmost one on top of the others where their scenes overlap -->
+          @for (view of trackViews; track view.track.uuid; let first = $first, last = $last) {
+          <div
+            class="tl-row tl-track"
+            [class.tl-track-selected]="view.track.uuid === timelineService.selectedTrackUuid"
+            [class.tl-drop-target]="sceneDrop?.track === view.track"
+          >
+            <div class="tl-head tl-track-head" (mousedown)="timelineService.selectTrack(view.track)">
+              <lib-app-inline-edit
+                class="tl-track-name"
+                [value]="view.track.name"
+                (valueChange)="renameTrack(view.track, $event)"
+              ></lib-app-inline-edit>
+              <div class="tl-track-buttons">
+                <a
+                  href="#"
+                  class="tl-icon-button"
+                  [class.disabled]="first"
+                  (click)="timelineService.moveTrack(view.track, -1); (false)"
+                  popover="{{ 'designer.timeline.move-track-up' | translate }}"
+                  container="body"
+                  placement="top"
+                  triggers="mouseenter:mouseleave"
+                  ><i class="fa fa-arrow-up" aria-hidden="true"></i
+                ></a>
+                <a
+                  href="#"
+                  class="tl-icon-button"
+                  [class.disabled]="last"
+                  (click)="timelineService.moveTrack(view.track, 1); (false)"
+                  popover="{{ 'designer.timeline.move-track-down' | translate }}"
+                  container="body"
+                  placement="top"
+                  triggers="mouseenter:mouseleave"
+                  ><i class="fa fa-arrow-down" aria-hidden="true"></i
+                ></a>
+                <a
+                  href="#"
+                  class="tl-icon-button"
+                  (click)="removeTrack(view.track); (false)"
+                  popover="{{ 'designer.timeline.remove-track' | translate }}"
+                  container="body"
+                  placement="top"
+                  triggers="mouseenter:mouseleave"
+                  ><i class="fa fa-trash-o" aria-hidden="true"></i
+                ></a>
+              </div>
+            </div>
+            <div
+              class="tl-lane tl-track-lane"
+              [ngStyle]="gridStyle"
+              (mousedown)="onLaneMouseDown($event, view.track)"
+              (dragenter)="onSceneDragOver($event, view.track)"
+              (dragover)="onSceneDragOver($event, view.track)"
+              (drop)="onSceneDrop($event)"
+            >
+              @for (clip of view.clips; track clip.region) {
+              <ng-container *ngTemplateOutlet="clipTemplate; context: { $implicit: clip }"></ng-container>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- below the tracks: add one, or drop a scene to play it on a new one -->
+          <div class="tl-row tl-add-row" [class.tl-drop-target]="sceneDropOnNewTrack">
+            <div class="tl-head">
+              <a href="#" class="tl-add-track" (click)="addTrack(); (false)"
+                ><i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.timeline.add-track' | translate }}</a
+              >
+            </div>
+            <div
+              class="tl-lane tl-add-lane"
+              (dragenter)="onSceneDragOver($event, undefined)"
+              (dragover)="onSceneDragOver($event, undefined)"
+              (drop)="onSceneDrop($event)"
+            >
+              @if (newTrackGhost) {
+              <ng-container *ngTemplateOutlet="clipTemplate; context: { $implicit: newTrackGhost }"></ng-container>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div #playhead class="tl-playhead"></div>
     </div>
-    } @if (timelineService.selectedComposition) {
-    <div #waveWrapper class="h-100" style="flex: 2; position: relative">
-      <div #waveElement id="waveform"></div>
-    </div>
-    } @if (projectService.project.compositions.length == 0) {
+    }
+
+    <!-- WaveSurfer only plays the song, the timeline draws it -->
+    <div id="waveform" class="tl-audio"></div>
+
+    <ng-template #clipTemplate let-clip>
+      <!-- a fade running past the start or the end of the clip -->
+      @if (clip.fadeInPre && clip.fadeInPx > 0) {
+      <div class="tl-fade-tail tl-fade-tail-in" [style.left.px]="clip.leftPx - clip.fadeInPx" [style.width.px]="clip.fadeInPx">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="0,100 100,0 100,100" [attr.fill]="clip.background"></polygon>
+          <line x1="0" y1="100" x2="100" y2="0" [attr.stroke]="clip.border" vector-effect="non-scaling-stroke"></line>
+        </svg>
+      </div>
+      } @if (clip.fadeOutPost && clip.fadeOutPx > 0) {
+      <div class="tl-fade-tail" [style.left.px]="clip.leftPx + clip.widthPx" [style.width.px]="clip.fadeOutPx">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="0,0 100,100 0,100" [attr.fill]="clip.background"></polygon>
+          <line x1="0" y1="0" x2="100" y2="100" [attr.stroke]="clip.border" vector-effect="non-scaling-stroke"></line>
+        </svg>
+      </div>
+      }
+      <div
+        class="tl-clip"
+        [class.tl-clip-selected]="clip.selected"
+        [class.tl-clip-ghost]="clip.ghost"
+        [class.tl-clip-invalid]="clip.invalid"
+        [class.tl-clip-narrow]="clip.widthPx < 48"
+        [style.left.px]="clip.leftPx"
+        [style.width.px]="clip.widthPx"
+        [style.background-color]="clip.background"
+        [style.border-color]="clip.border"
+        [style.padding-left.px]="clip.widthPx < 48 ? 0 : 6 + labelShiftPx(clip)"
+        (mousedown)="onClipMouseDown($event, clip, 'move')"
+      >
+        <!-- the fades inside the clip -->
+        @if (!clip.fadeInPre && clip.fadeInPx > 0) {
+        <svg class="tl-fade" [style.width.px]="clip.fadeInPx" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="0,0 100,0 0,100"></polygon>
+          <line x1="0" y1="100" x2="100" y2="0" vector-effect="non-scaling-stroke"></line>
+        </svg>
+        } @if (!clip.fadeOutPost && clip.fadeOutPx > 0) {
+        <svg class="tl-fade tl-fade-out" [style.width.px]="clip.fadeOutPx" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="0,0 100,0 100,100"></polygon>
+          <line x1="0" y1="0" x2="100" y2="100" vector-effect="non-scaling-stroke"></line>
+        </svg>
+        }
+
+        <!-- the steps of the preset being edited -->
+        @for (marker of clip.markers; track marker.step; let index = $index) { @if (marker.transitionWidthPercentage > 0) {
+        <div
+          class="step-marker step-marker-transition"
+          [attr.data-step-selected]="marker.step === presetService.selectedStep ? 'true' : null"
+          [style.left.%]="marker.leftPercentage"
+          [style.width.%]="marker.transitionWidthPercentage"
+        ></div>
+        }
+        <div
+          class="step-marker step-marker-tick"
+          [attr.data-step-selected]="marker.step === presetService.selectedStep ? 'true' : null"
+          [attr.data-step-name]="index + 1"
+          [style.left.%]="marker.leftPercentage"
+        ></div>
+        }
+
+        <i class="fa fa-fw tl-clip-icon {{ sceneService.getSceneIcon(clip.scene) }}" [style.color]="clip.color" aria-hidden="true"></i>
+        <span class="tl-clip-name">{{ clip.scene.name }}</span>
+
+        @if (clip.selected) {
+        <div class="tl-clip-handle tl-clip-handle-start" (mousedown)="onClipMouseDown($event, clip, 'start')"></div>
+        <div class="tl-clip-handle tl-clip-handle-end" (mousedown)="onClipMouseDown($event, clip, 'end')"></div>
+        }
+      </div>
+    </ng-template>
+
+    @if (projectService.project.compositions.length == 0) {
     <div class="w-100 d-flex">
       <a href="#" class="m-auto" (click)="addComposition(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.no-compositions' | translate }}</a

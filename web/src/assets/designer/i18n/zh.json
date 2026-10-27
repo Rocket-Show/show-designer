@@ -294,7 +294,14 @@
       "composition-no-file-selected": "未选择文件",
       "composition-file-upload": "上传",
       "composition-file-library": "媒体库",
-      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。"
+      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。",
+      "tracks": "轨道",
+      "add-track": "添加轨道",
+      "audio": "音频",
+      "move-track-up": "上移轨道",
+      "move-track-down": "下移轨道",
+      "remove-track": "删除轨道",
+      "warning-delete-track": "确定要删除此轨道及其上播放的场景吗？"
     },
     "intro": {
       "next": "继续",

@@ -1,4 +1,5 @@
 import { ScenePlaybackRegion } from './scene-playback-region';
+import { Track } from './track';
 
 export class Composition {
   public uuid: string;
@@ -28,7 +29,11 @@ export class Composition {
   // if no sync
   public durationMillis = 0;
 
-  // Regions, where the scene will be played
+  // the lanes of the timeline, the topmost first. Where the clips of two tracks overlap,
+  // the one higher up is on top.
+  public tracks: Track[] = [];
+
+  // Regions, where the scene will be played (the clips on the tracks)
   public scenePlaybackRegions: ScenePlaybackRegion[] = [];
 
   constructor(data?: any) {
@@ -53,6 +58,12 @@ export class Composition {
     this.gridOffsetMillis = data.gridOffsetMillis;
     this.gridResolution = data.gridResolution;
     this.durationMillis = data.durationMillis;
+
+    if (data.tracks) {
+      for (const track of data.tracks) {
+        this.tracks.push(new Track(track));
+      }
+    }
 
     if (data.scenePlaybackRegions) {
       for (const scenePlaybackRegion of data.scenePlaybackRegions) {

@@ -294,7 +294,14 @@
       "composition-no-file-selected": "No file selected",
       "composition-file-upload": "Upload",
       "composition-file-library": "Media library",
-      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone."
+      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone.",
+      "tracks": "Tracks",
+      "add-track": "Add track",
+      "audio": "Audio",
+      "move-track-up": "Move the track up",
+      "move-track-down": "Move the track down",
+      "remove-track": "Remove the track",
+      "warning-delete-track": "Do you really want to remove this track together with the scenes played on it?"
     },
     "intro": {
       "next": "Continue",

@@ -1386,32 +1386,10 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   }
 
   // -------------------------------------------------------------------------
-  // Wavesurfer
+  // Timeline
   // -------------------------------------------------------------------------
 
-  /* Display the regions in front of the played part*/
-  .wavesurfer-region {
-    z-index: 5 !important;
-    border-radius: $sd-radius-sm;
-  }
-
-  .wavesurfer-region[data-region-selected='true'] {
-    z-index: 6 !important;
-  }
-
-  /* Style the presets */
-  .wavesurfer-region[data-region-preset='true'] {
-    height: 50% !important;
-    top: 50% !important;
-  }
-
-  .wavesurfer-region[data-region-name]:after {
-    content: attr(data-region-name);
-    margin-left: $sd-space-5;
-    font-size: 0.75rem;
-  }
-
-  /* The steps of the preset being edited, marked inside the regions it plays in */
+  /* The steps of the preset being edited, marked inside the clips it plays in */
   .step-marker {
     position: absolute;
     top: 0;
@@ -1452,72 +1430,5 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
 
   .step-marker-transition[data-step-selected='true'] {
     background: linear-gradient(to right, rgba(253, 126, 20, 0.45), rgba(253, 126, 20, 0));
-  }
-
-  /* Wavesurfer region handle styles */
-  .wavesurfer-handle {
-    width: 10px !important;
-    max-width: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(0, 0, 0, 0.15);
-    box-sizing: border-box;
-    opacity: 0;
-    cursor: unset !important;
-  }
-
-  .wavesurfer-handle-end {
-    margin-left: -10px;
-  }
-
-  .wavesurfer-region[data-region-selectable='true'] .wavesurfer-handle {
-    opacity: 1;
-    cursor: col-resize !important;
-  }
-
-  .wavesurfer-handle:before,
-  .wavesurfer-handle:after {
-    content: '';
-    display: block;
-    position: absolute;
-    z-index: 1;
-    border-top: 1px solid rgba(255, 255, 255, 0.7);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.7);
-    height: 4px;
-    left: 5%;
-    right: 5%;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .wavesurfer-handle:before {
-    margin-top: -3px;
-  }
-
-  /* Allow scrolling of the wavesurfer timeline, but hide the scroll bars */
-  timeline {
-    overflow: scroll !important;
-    overflow: -moz-scrollbars-none;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    cursor: s-resize;
-  }
-
-  timeline::-webkit-scrollbar {
-    height: 0 !important;
-  }
-
-  /* Display the wavesurfer cursor over the timeline */
-  cursor {
-    top: -20px !important;
-  }
-
-  /* Change the progress line color and add the cursor */
-  wave {
-    border-right-color: $sd-primary !important;
-    cursor: col-resize;
-
-    canvas {
-      opacity: 0.35;
-    }
   }
 }

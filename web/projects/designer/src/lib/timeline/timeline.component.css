@@ -1,0 +1,410 @@
+/* The tracks scroll in both directions below the toolbar. The column with the names of the
+   tracks sticks to the left, the ruler and the waveform stick to the top. */
+.tl-frame {
+  --tl-head-width: 200px;
+  --tl-ruler-height: 24px;
+  --tl-wave-height: 56px;
+  --tl-track-height: 36px;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius);
+  overflow: hidden;
+  background-color: var(--sd-bg);
+}
+
+.tl-scroller {
+  flex: 1 1 auto;
+  overflow: auto;
+  position: relative;
+}
+
+.tl-content {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tl-row {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.tl-head {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex: 0 0 var(--tl-head-width);
+  width: var(--tl-head-width);
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  min-width: 0;
+  padding: 0 var(--sd-space-2) 0 var(--sd-space-3);
+  background-color: var(--sd-surface-1);
+  border-right: 1px solid var(--sd-border-strong);
+  border-bottom: 1px solid var(--sd-border);
+  font-size: 0.8125rem;
+}
+
+.tl-lane {
+  position: relative;
+  flex: 1 1 auto;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.tl-dim {
+  color: var(--sd-text-dim);
+}
+
+.tl-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+}
+
+.tl-icon-button:hover {
+  background-color: var(--sd-surface-3);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.tl-icon-button.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ---- the ruler and the waveform ------------------------------------------ */
+
+.tl-ruler-row,
+.tl-wave-row {
+  position: sticky;
+  z-index: 4;
+}
+
+.tl-ruler-row {
+  top: 0;
+  height: var(--tl-ruler-height);
+}
+
+.tl-wave-row {
+  top: var(--tl-ruler-height);
+  height: var(--tl-wave-height);
+}
+
+.tl-corner {
+  z-index: 5;
+  justify-content: space-between;
+}
+
+.tl-corner-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sd-text-dim);
+}
+
+.tl-ruler {
+  background-color: var(--sd-surface-1);
+  cursor: s-resize;
+}
+
+.tl-wave {
+  background-color: var(--sd-surface-1);
+  border-bottom-color: var(--sd-border-strong);
+  cursor: s-resize;
+}
+
+.tl-wave-row .tl-head {
+  border-bottom-color: var(--sd-border-strong);
+}
+
+.tl-wave-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.tl-wave-title span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tl-wave-title .tl-dim {
+  font-size: 0.6875rem;
+}
+
+/* the canvases only cover the visible part of their lane and stick to its left edge */
+.tl-canvas {
+  position: sticky;
+  left: var(--tl-head-width);
+  display: block;
+}
+
+/* WaveSurfer only plays the song: its own drawing is not shown */
+.tl-audio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- tracks -------------------------------------------------------------- */
+
+.tl-track {
+  height: var(--tl-track-height);
+}
+
+.tl-track-head {
+  cursor: default;
+}
+
+.tl-track-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tl-track-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  opacity: 0;
+}
+
+.tl-track-head:hover .tl-track-buttons,
+.tl-track-selected .tl-track-buttons {
+  opacity: 1;
+}
+
+.tl-track-selected .tl-track-head {
+  background-color: var(--sd-primary-soft);
+  color: var(--sd-primary-text);
+}
+
+/* every lane keeps the layers of its clips to itself: a selected clip never comes up over
+   the names of the tracks or the ruler stuck above them */
+.tl-track-lane,
+.tl-add-lane {
+  z-index: 0;
+}
+
+.tl-track-lane {
+  background-color: var(--sd-surface-1);
+}
+
+.tl-track:nth-child(even) .tl-track-lane {
+  background-color: #1b1e24;
+}
+
+.tl-track-selected .tl-track-lane {
+  background-color: #1f1c1a;
+}
+
+.tl-drop-target .tl-head {
+  background-color: var(--sd-primary-soft);
+}
+
+.tl-drop-target .tl-lane {
+  background-color: rgba(253, 126, 20, 0.06);
+  outline: 1px dashed rgba(253, 126, 20, 0.7);
+  outline-offset: -1px;
+}
+
+.tl-add-row {
+  flex: 1 0 auto;
+  min-height: 34px;
+}
+
+.tl-add-row .tl-head {
+  align-items: flex-start;
+  padding-top: 6px;
+  border-bottom: 0;
+}
+
+.tl-add-row .tl-lane {
+  border-bottom: 0;
+}
+
+.tl-add-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px dashed var(--sd-border-strong);
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+}
+
+.tl-add-track:hover {
+  color: var(--sd-text);
+  text-decoration: none;
+  border-color: var(--sd-text-dim);
+}
+
+.tl-add-lane .tl-clip {
+  top: 5px;
+  height: 24px;
+  bottom: auto;
+}
+
+/* ---- clips --------------------------------------------------------------- */
+
+.tl-clip {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: grab;
+}
+
+.tl-clip-icon,
+.tl-clip-name {
+  position: relative;
+  z-index: 2;
+}
+
+.tl-clip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* readable over the step markers and the fades */
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+}
+
+.tl-clip-narrow {
+  justify-content: center;
+  padding: 0;
+}
+
+.tl-clip-narrow .tl-clip-name {
+  display: none;
+}
+
+.tl-clip-selected {
+  z-index: 3;
+  box-shadow: 0 0 0 2px var(--sd-primary), var(--sd-shadow-2);
+}
+
+.tl-clip-ghost {
+  border-style: dashed;
+  border-width: 2px;
+  pointer-events: none;
+}
+
+.tl-clip-invalid {
+  border: 2px dashed var(--sd-danger) !important;
+  background-color: rgba(229, 84, 75, 0.2) !important;
+}
+
+.tl-clip-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 4;
+  width: 7px;
+  background-color: rgba(255, 255, 255, 0.16);
+  cursor: col-resize;
+}
+
+.tl-clip-handle-start {
+  left: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.tl-clip-handle-end {
+  right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* the fades of the scene: shaded over the time the scene is not fully there */
+.tl-fade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tl-fade-out {
+  left: auto;
+  right: 0;
+}
+
+.tl-fade polygon {
+  fill: rgba(0, 0, 0, 0.35);
+}
+
+.tl-fade line {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1px;
+}
+
+/* a fade running past the edge of the clip, into the time around it */
+.tl-fade-tail {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tl-fade-tail svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tl-fade-tail line {
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+}
+
+/* ---- the position of the playback ------------------------------------------ */
+
+.tl-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  z-index: 6;
+  background-color: var(--sd-primary);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.tl-playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -6px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid var(--sd-primary);
+}
