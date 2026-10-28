@@ -5,12 +5,28 @@
   </button>
 </div>
 <div class="modal-body">
+  @if (hasShareToken) {
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.project.share-link' | translate }}</label>
     <div class="col-lg-8 d-flex">
-      <input type="text" class="form-control" [ngModel]="shareLink" readonly />
+      <input
+        #shareLinkInput
+        type="text"
+        class="form-control selectable"
+        [ngModel]="shareLink"
+        readonly
+        (focus)="selectShareLink()"
+        (click)="selectShareLink()"
+      />
+      <button type="button" class="btn btn-secondary ml-2 text-nowrap" (click)="copyShareLink()">
+        <i class="fa fa-fw" [class.fa-check]="copied" [class.fa-clipboard]="!copied" aria-hidden="true"></i>
+        {{ (copied ? 'designer.project.share-copied' : 'designer.project.share-copy') | translate }}
+      </button>
     </div>
   </div>
+  } @else {
+  <p>{{ 'designer.project.share-no-token' | translate }}</p>
+  }
 
   <!-- sharing a show is a good moment to mention where it can be played for real -->
   @if (hardwarePromoService.enabled) {
