@@ -24,6 +24,9 @@ import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.s
   providedIn: 'root',
 })
 export class FixtureService {
+  // the dimmer a fixture lighting in colors without one gets, see addVirtualDimmers()
+  static readonly virtualDimmerChannelName = '$virtualDimmer';
+
   cachedFixtures: CachedFixture[] = [];
 
   // The uuid lookups below are called from templates and therefore run for every fixture on
@@ -194,18 +197,20 @@ export class FixtureService {
   }
 
   getMixedWheelSlotColor(wheel: FixtureWheel, slotNumber: number): Color {
-    const colors = this.getWheelSlotColors(wheel, slotNumber);
-    const colorsRgb: Color[] = [];
+    return this.mixHexColors(this.getWheelSlotColors(wheel, slotNumber));
+  }
 
+  // the color a color preset (e.g. a color macro) shows, mixed from its colors, if it names any
+  getColorPresetColor(capability: FixtureCapability): Color {
+    return this.mixHexColors(capability.colors || []);
+  }
+
+  private mixHexColors(colors: string[]): Color {
     if (colors.length === 0) {
       return undefined;
     }
 
-    for (const color of colors) {
-      colorsRgb.push(this.hexToRgb(color));
-    }
-
-    return this.mixColors(colorsRgb);
+    return this.mixColors(colors.map((color) => this.hexToRgb(color)));
   }
 
   private componentToHex(c: number): any {
@@ -775,13 +780,15 @@ export class FixtureService {
     this.cachedFixtures = [];
 
     for (const fixture of this.projectService.project.fixtures) {
+      const fixtureParts: CachedFixture[] = [];
+
       if (this.fixtureHasGeneralChannel(fixture)) {
         const cachedFixture = new CachedFixture();
         cachedFixture.fixture = fixture;
         cachedFixture.profile = this.getProfileByUuid(fixture.profileUuid);
         cachedFixture.mode = this.getModeByFixture(cachedFixture.profile, fixture);
         cachedFixture.channels = this.getCachedChannels(cachedFixture.profile, cachedFixture.mode, null);
-        this.cachedFixtures.push(cachedFixture);
+        fixtureParts.push(cachedFixture);
       }
 
       const pixels = this.fixtureGetUniquePixels(fixture);
@@ -793,7 +800,36 @@ export class FixtureService {
         cachedFixture.profile = this.getProfileByUuid(fixture.profileUuid);
         cachedFixture.mode = this.getModeByFixture(cachedFixture.profile, fixture);
         cachedFixture.channels = this.getCachedChannels(cachedFixture.profile, cachedFixture.mode, pixel.key);
-        this.cachedFixtures.push(cachedFixture);
+        fixtureParts.push(cachedFixture);
+      }
+
+      this.addVirtualDimmers(fixtureParts);
+      this.cachedFixtures.push(...fixtureParts);
+    }
+  }
+
+  private hasCapabilityType(cachedFixture: CachedFixture, type: FixtureCapabilityType): boolean {
+    return cachedFixture.channels.some((channel) => channel.capabilities.some((capability) => capability.capability.type === type));
+  }
+
+  // A fixture lighting in colors without a dimmer (e.g. the ADJ Dotz Par in its 3-channel mode) gets a virtual one,
+  // like in Rocket Show. It is dimmed, faded, chased and dimmed by the master dimmer like any dimmer and Rocket Show
+  // scales the colors with it when it sends them. It starts at full, so a fixture which is only given a color lights
+  // in it. A fixture with a dimmer in any of its parts (e.g. a pixel bar with a master dimmer) doesn't get one: that
+  // dimmer dims it already.
+  private addVirtualDimmers(fixtureParts: CachedFixture[]) {
+    if (fixtureParts.some((cachedFixture) => this.hasCapabilityType(cachedFixture, FixtureCapabilityType.Intensity))) {
+      return;
+    }
+
+    for (const cachedFixture of fixtureParts) {
+      if (this.hasCapabilityType(cachedFixture, FixtureCapabilityType.ColorIntensity)) {
+        // at full (a percentage would come out a little below it)
+        const channel = new FixtureChannel({ defaultValue: 255, capability: { type: FixtureCapabilityType.Intensity } });
+
+        const channels = cachedFixture.channels.slice();
+        this.addCachedChannel(channels, channel, FixtureService.virtualDimmerChannelName, null, cachedFixture.profile);
+        cachedFixture.channels = channels;
       }
     }
   }
@@ -953,6 +989,36 @@ export class FixtureService {
 
     const reached = Math.max(Math.min(range[0], range[1]), Math.min(Math.max(range[0], range[1]), brightness));
     return dmxRange[0] + ((dmxRange[1] - dmxRange[0]) * (reached - range[0])) / (range[1] - range[0]);
+  }
+
+  // the capability of a channel the passed value is in
+  getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
+    for (const capability of channel.capabilities) {
+      if (
+        capability.capability.dmxRange.length === 0 ||
+        (value >= capability.capability.dmxRange[0] && value <= capability.capability.dmxRange[1])
+      ) {
+        return capability;
+      }
+    }
+
+    return undefined;
+  }
+
+  // how bright a dimmer channel lights at the passed value (0 to 1). Another function sharing
+  // the channel (e.g. a strobe) counts as lighting.
+  getDimmerBrightnessOfValue(channel: CachedFixtureChannel, value: number): number {
+    const capability = this.getCapabilityInValue(channel, value);
+
+    if (!capability) {
+      return 0;
+    }
+
+    if (capability.capability.type !== FixtureCapabilityType.Intensity) {
+      return 1;
+    }
+
+    return this.getBrightnessOfValue(channel, capability, value);
   }
 
   // how bright a channel value lights through the passed capability (0 to 1)

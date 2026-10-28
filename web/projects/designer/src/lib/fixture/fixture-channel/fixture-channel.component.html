@@ -7,21 +7,26 @@
     <div class="row m-0 pl-3" [class.h-100]="isChrome()">
       <!-- profile selection -->
       @if (profiles.length > 1) {
-      <div class="col col-auto p-3 my-3 mr-3" style="height: calc(100% - 2rem); border: solid 1px #444; border-right: none">
-        @for (profile of profiles; track profile; let i = $index) {
-        <div class="form-check">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="capabilityFilter{{ i }}"
-            [ngModel]="selectedProfiles.indexOf(profile) >= 0"
-            (ngModelChange)="changeProfileSelection($event, profile)"
-          />
-          <label class="form-check-label" for="capabilityFilter{{ i }}">
-            {{ profile.name }}
-          </label>
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <div class="card border-secondary h-100">
+          <div class="card-header">{{ 'designer.fixture.profiles' | translate }}</div>
+          <div class="card-body overflow-auto">
+            @for (profile of profiles; track profile; let i = $index) {
+            <div class="form-check">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="capabilityFilter{{ i }}"
+                [ngModel]="selectedProfiles.indexOf(profile) >= 0"
+                (ngModelChange)="changeProfileSelection($event, profile)"
+              />
+              <label class="form-check-label" for="capabilityFilter{{ i }}">
+                {{ profile.name }}
+              </label>
+            </div>
+            }
+          </div>
         </div>
-        }
       </div>
       }
       <!-- all channel capabilities -->

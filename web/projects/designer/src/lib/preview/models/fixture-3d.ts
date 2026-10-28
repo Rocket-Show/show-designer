@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CachedFixture } from '../../models/cached-fixture';
 import { CachedFixtureCapability } from '../../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
+import { Color } from '../../models/color';
 import { Positioning } from '../../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
@@ -19,6 +20,10 @@ export abstract class Fixture3d {
 
   public fixture: CachedFixture;
   private fixtureHasDimmer = false;
+
+  // how bright the dimmer lights while no value is set for it: as far as its default value lets
+  // it (a virtual dimmer is at full, see FixtureService.addVirtualDimmers)
+  private dimmerDefaultBrightness = 0;
   private fixtureHasColorWheel = false;
   private fixtureHasColor = false;
 
@@ -66,6 +71,10 @@ export abstract class Fixture3d {
           switch (capability.capability.type) {
             case FixtureCapabilityType.Intensity:
               this.fixtureHasDimmer = true;
+              this.dimmerDefaultBrightness =
+                cachedChannel.defaultValue === undefined
+                  ? 0
+                  : this.fixtureService.getDimmerBrightnessOfValue(cachedChannel, cachedChannel.defaultValue);
               break;
             case FixtureCapabilityType.ColorIntensity:
               this.fixtureHasColor = true;
@@ -181,16 +190,7 @@ export abstract class Fixture3d {
   }
 
   protected getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
-    for (const capability of channel.capabilities) {
-      if (
-        capability.capability.dmxRange.length === 0 ||
-        (value >= capability.capability.dmxRange[0] && value <= capability.capability.dmxRange[1])
-      ) {
-        return capability;
-      }
-    }
-
-    return undefined;
+    return this.fixtureService.getCapabilityInValue(channel, value);
   }
 
   updatePosition(object?: THREE.Object3D) {
@@ -247,7 +247,7 @@ export abstract class Fixture3d {
   updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number) {
     // Apply default settings
     if (this.fixtureHasDimmer) {
-      this.dimmer = 0;
+      this.dimmer = this.dimmerDefaultBrightness * masterDimmerValue;
     } else {
       this.dimmer = 1;
     }
@@ -261,6 +261,10 @@ export abstract class Fixture3d {
       this.colorGreen = 0;
       this.colorBlue = 0;
     }
+
+    // the color of a selected color preset (e.g. a color macro). It takes over from the color
+    // channels, whichever order they come in, the way a fixture disables them for its macros.
+    let presetColor: Color;
 
     for (const channelValue of channelValues) {
       const channel = this.fixtureService.getChannelByName(this.fixture, channelValue.channelName);
@@ -300,21 +304,39 @@ export abstract class Fixture3d {
             }
             break;
           }
+          case FixtureCapabilityType.ColorPreset: {
+            presetColor = this.fixtureService.getColorPresetColor(capability.capability) || presetColor;
+            break;
+          }
         }
       }
     }
 
+    if (presetColor) {
+      this.colorRed = Math.round(presetColor.red);
+      this.colorGreen = Math.round(presetColor.green);
+      this.colorBlue = Math.round(presetColor.blue);
+    }
+
     // Apply the colors and intensities
     // Apply the dimmer value
-    // Take the color into account for the beam (don't show a black beam)
     const color = new THREE.Color('rgb(' + this.colorRed + ', ' + this.colorGreen + ', ' + this.colorBlue + ')');
-    const intensityColor = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
+
+    // how bright the color lights, e.g. less while a scene dimmer fades it
+    const colorMax = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
 
     if (this.hasSpotLight) {
       this.spotLight.color = color;
-      this.spotLightBeam.material.uniforms.lightColor.value = color;
 
-      this.spotLightBeam.material.uniforms.opacity.value = Math.min(intensityColor, this.dimmer);
+      // the beam shows the color at full and lets the brightness of the light make it
+      // fainter. A dark color drawn as it is covered the stage with a black beam.
+      const beamColor =
+        colorMax > 0
+          ? new THREE.Color().setRGB(this.colorRed / colorMax, this.colorGreen / colorMax, this.colorBlue / colorMax, THREE.SRGBColorSpace)
+          : color;
+      this.spotLightBeam.material.uniforms.lightColor.value = beamColor;
+
+      this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
     }

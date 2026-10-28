@@ -56,8 +56,6 @@ Tag the version correspondingly.
 
 ## Build online version for production
 
-Activate the online designer-part in web/src/app/app.component.html first.
-
 ```
 cd web
 ng build --configuration production --base-href /designer/app/

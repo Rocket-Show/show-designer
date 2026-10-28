@@ -15,7 +15,7 @@
     "precommit": "npm run pretty-quick && npm run lint",
     "copy_lib_assets": "ncp src/assets/designer dist/designer/assets",
     "build_lib": "ng build --configuration production designer && npm run copy_lib_assets",
-    "npm_pack": "cd dist/designer && npm pack",
+    "npm_pack": "cd dist/designer && npm pack --pack-destination ..",
     "package": "npm run build_lib && npm run npm_pack",
     "publish": "npm run package && cd dist/designer && npm publish --access public"
   },
