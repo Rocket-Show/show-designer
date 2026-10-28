@@ -91,6 +91,17 @@ describe('getClipsEndMillis', () => {
     expect(endOf(composition(['a', 0, 10000]))).toBe(13000);
   });
 
+  it('waits for a preset fading out past the end of a scene fading out past its clip', () => {
+    const fading = preset('p');
+    fading.fadeOutMillis = 3000;
+    fading.fadeOutPost = true;
+    const fadingScene = scene('a', fading);
+    fadingScene.fadeOutMillis = 2000;
+    fadingScene.fadeOutPost = true;
+
+    expect(endOf(composition(['a', 0, 10000]))).toBe(15000);
+  });
+
   it('follows a preset playing longer than its clip', () => {
     const longer = preset('p');
     longer.endMillis = 15000;

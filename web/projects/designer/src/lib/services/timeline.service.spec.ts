@@ -159,6 +159,21 @@ describe('TimelineService playing the tracks of a composition', () => {
     expect(scenesAt(7000)).toEqual(['second', 'third']);
   });
 
+  // the scene fades in before its clip and out past it: its presets play along meanwhile
+  it('plays a scene while it fades in or out outside its clip', () => {
+    const fading = projectService.project.scenes[0];
+    fading.fadeInMillis = 1000;
+    fading.fadeInPre = true;
+    fading.fadeOutMillis = 2000;
+    fading.fadeOutPost = true;
+    play('first', 'bottom', 5000, 10000);
+
+    expect(scenesAt(3900)).toEqual([]);
+    expect(scenesAt(4500)).toEqual(['first']);
+    expect(scenesAt(11500)).toEqual(['first']);
+    expect(scenesAt(12100)).toEqual([]);
+  });
+
   it('follows the tracks when they are moved', () => {
     play('first', 'bottom', 0, 10000);
     play('third', 'top', 0, 10000);

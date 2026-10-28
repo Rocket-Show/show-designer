@@ -1,5 +1,6 @@
 import { Composition } from './composition';
 import { Preset } from './preset';
+import { getPresetTimes, getSceneTimes } from './preset-region-scene';
 import { Scene } from './scene';
 
 // Where the lights of a composition have gone out: the end of its last clip, or of a fade
@@ -21,17 +22,11 @@ export function getClipsEndMillis(
       continue;
     }
 
-    endMillis = Math.max(endMillis, region.endMillis);
-
-    if (scene.fadeOutPost) {
-      endMillis = Math.max(endMillis, region.endMillis + (scene.fadeOutMillis || 0));
-    }
+    // the scene ends with its clip, or later when it fades out past it
+    endMillis = Math.max(endMillis, getSceneTimes(scene, region).endMillis);
 
     for (const preset of getScenePresets(scene)) {
-      const presetEndMillis =
-        preset.endMillis === undefined || preset.endMillis === null ? region.endMillis : region.startMillis + preset.endMillis;
-
-      endMillis = Math.max(endMillis, presetEndMillis + (preset.fadeOutPost ? preset.fadeOutMillis || 0 : 0));
+      endMillis = Math.max(endMillis, getPresetTimes(preset, region, scene).endMillis);
     }
   }
 

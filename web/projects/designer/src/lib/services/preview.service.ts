@@ -6,7 +6,7 @@ import { EffectCurve } from '../models/effect-curve';
 import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { PresetRegionScene } from '../models/preset-region-scene';
+import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
@@ -269,8 +269,9 @@ export class PreviewService implements OnDestroy {
       // Fade out is stronger than fade in (if they overlap)
 
       // Take away intensity for scene fading
-      const sceneStartMillis = preset.scene.fadeInPre ? preset.region.startMillis - preset.scene.fadeInMillis : preset.region.startMillis;
-      const sceneEndMillis = preset.scene.fadeOutPost ? preset.region.endMillis + preset.scene.fadeOutMillis : preset.region.endMillis;
+      const sceneTimes = getSceneTimes(preset.scene, preset.region);
+      const sceneStartMillis = sceneTimes.startMillis;
+      const sceneEndMillis = sceneTimes.endMillis;
 
       // the curve maps how far the fade has come to how much of the intensity it has
       // already handed over, which shapes a fade out just as well as a fade in
@@ -290,16 +291,11 @@ export class PreviewService implements OnDestroy {
     }
 
     if (preset.region && preset.preset) {
-      // Take away intensity for preset fading
-      let presetStartMillis =
-        preset.preset.startMillis === undefined ? preset.region.startMillis : preset.region.startMillis + preset.preset.startMillis;
-
-      let presetEndMillis =
-        preset.preset.endMillis === undefined ? preset.region.endMillis : preset.region.startMillis + preset.preset.endMillis;
-
-      // extend the running time, if fading is done outside the boundaries
-      presetStartMillis -= preset.preset.fadeInPre ? preset.preset.fadeInMillis : 0;
-      presetEndMillis += preset.preset.fadeOutPost ? preset.preset.fadeOutMillis : 0;
+      // Take away intensity for preset fading. Without times of its own, the preset plays
+      // as long as the scene, its fades outside the clip included.
+      const presetTimes = getPresetTimes(preset.preset, preset.region, preset.scene);
+      const presetStartMillis = presetTimes.startMillis;
+      const presetEndMillis = presetTimes.endMillis;
 
       if (timeMillis > presetEndMillis - preset.preset.fadeOutMillis && timeMillis < presetEndMillis) {
         // Preset fades out

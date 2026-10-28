@@ -6,7 +6,7 @@ import WaveSurfer from 'wavesurfer.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
 import { ExternalComposition } from '../models/external-composition';
-import { PresetRegionScene } from '../models/preset-region-scene';
+import { getPresetTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { getClipsEndMillis } from '../models/timeline-length';
@@ -627,14 +627,10 @@ export class TimelineService {
         for (let presetIndex = scenePresets.length - 1; presetIndex >= 0; presetIndex--) {
           const preset = scenePresets[presetIndex];
 
-          let presetStartMillis = preset.startMillis === undefined ? region.startMillis : region.startMillis + preset.startMillis;
-          let presetEndMillis = preset.endMillis === undefined ? region.endMillis : region.startMillis + preset.endMillis;
+          // the fades running outside the boundaries (of the preset, or of the scene) included
+          const presetTimes = getPresetTimes(preset, region, scene);
 
-          // extend the running time, if fading is done outside the boundaries
-          presetStartMillis -= preset.fadeInPre ? preset.fadeInMillis : 0;
-          presetEndMillis += preset.fadeOutPost ? preset.fadeOutMillis : 0;
-
-          if (presetStartMillis <= timeMillis && presetEndMillis >= timeMillis) {
+          if (presetTimes.startMillis <= timeMillis && presetTimes.endMillis >= timeMillis) {
             activePresets.push(new PresetRegionScene(preset, region, scene));
           }
         }
