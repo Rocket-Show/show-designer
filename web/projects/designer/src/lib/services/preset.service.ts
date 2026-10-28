@@ -140,39 +140,60 @@ export class PresetService {
     );
   }
 
-  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
-  // and pixel key are the same lamp and therefore count only once
-  getPresetFixtureCount(preset: Preset): number {
-    let count = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
+  // a fixture or one of its pixels, as getPresetFixtureIndices() keys them
+  getPresetFixtureKey(fixtureUuid: string, pixelKey: string): string {
+    return fixtureUuid + '\u0000' + (pixelKey || '');
+  }
 
-    for (const presetFixture of preset.fixtures) {
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+  // fixtures sharing a DMX universe, address and pixel key are the same lamp
+  private getLampKey(presetFixture: PresetFixture): string {
+    const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
 
-      if (!fixture) {
-        continue;
+    if (!fixture) {
+      return undefined;
+    }
+
+    return `${fixture.dmxUniverseUuid}\u0000${fixture.dmxFirstChannel}\u0000${presetFixture.pixelKey || ''}`;
+  }
+
+  // the place of each fixture (or pixel) of a preset in its chase, by getPresetFixtureKey(). The
+  // fixtures of the same lamp take one step only, a fixture listed more than once chases at its
+  // first place.
+  getPresetFixtureIndices(preset: Preset): Map<string, number> {
+    const indices = new Map<string, number>();
+    const countedLamps = new Set<string>();
+
+    for (const presetFixture of this.getOrderedPresetFixtures(preset)) {
+      const key = this.getPresetFixtureKey(presetFixture.fixtureUuid, presetFixture.pixelKey);
+
+      if (!indices.has(key)) {
+        indices.set(key, countedLamps.size);
       }
 
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
+      const lampKey = this.getLampKey(presetFixture);
 
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      if (!exists) {
-        count++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
+      if (lampKey !== undefined) {
+        countedLamps.add(lampKey);
       }
     }
 
-    return count;
+    return indices;
+  }
+
+  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
+  // and pixel key are the same lamp and therefore count only once
+  getPresetFixtureCount(preset: Preset): number {
+    const countedLamps = new Set<string>();
+
+    for (const presetFixture of preset.fixtures) {
+      const lampKey = this.getLampKey(presetFixture);
+
+      if (lampKey !== undefined) {
+        countedLamps.add(lampKey);
+      }
+    }
+
+    return countedLamps.size;
   }
 
   setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {

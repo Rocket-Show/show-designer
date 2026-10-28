@@ -173,59 +173,6 @@ export class PreviewService implements OnDestroy {
     existingChannelValues.push(fixtureChannelValue);
   }
 
-  // Get the fixture index inside the passed preset (used for chasing)
-  private getFixtureIndex(preset: Preset, fixtureUuid: string, pixelKey: string): number {
-    let index = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
-
-    if (!this.presetService.getPresetFixture(preset, fixtureUuid, pixelKey)) {
-      // fixture is not in preset
-      return undefined;
-    }
-
-    // either the global fixture order of the project or the preset's own one defines
-    // the order to chase in (avoid building up a list here, this runs for every
-    // fixture of every active preset on every frame)
-    const orderedFixtures = preset.useGlobalFixtureOrder ? this.projectService.project.presetFixtures : preset.fixtures;
-
-    for (const orderedFixture of orderedFixtures) {
-      // when using the global order, skip all fixtures which are not in this preset
-      const presetFixture = preset.useGlobalFixtureOrder
-        ? this.presetService.getPresetFixture(preset, orderedFixture.fixtureUuid, orderedFixture.pixelKey)
-        : orderedFixture;
-
-      if (!presetFixture) {
-        continue;
-      }
-
-      if (this.presetService.fixtureUuidAndPixelKeyEquals(presetFixture.fixtureUuid, fixtureUuid, presetFixture.pixelKey, pixelKey)) {
-        return index;
-      }
-
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
-
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      // don't count fixtures on the same universe and channel as already counted ones
-      if (!exists) {
-        index++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
-      }
-    }
-
-    return undefined;
-  }
-
   // where the preset itself starts, which is what its steps are timed against. The
   // fades may reach outside it, but a step at 0 belongs to the preset's own start.
   private getPresetStartMillis(preset: PresetRegionScene): number {
@@ -630,6 +577,11 @@ export class PreviewService implements OnDestroy {
     // over all fixtures of their preset)
     const fixtureCounts = new Map<Preset, number>();
 
+    // the place of each fixture in the chase of each preset, worked out once per frame and
+    // preset: looking it up for each fixture took most of the time of a frame with a few
+    // dozen fixtures
+    const fixtureIndices = new Map<Preset, Map<string, number>>();
+
     // which state each preset is in. The same preset can play in more than one region
     // at a time, each of them at a different point of its sequence, so the entry of the
     // playing preset is what this is keyed by.
@@ -643,6 +595,7 @@ export class PreviewService implements OnDestroy {
     for (const preset of presets) {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
+        fixtureIndices.set(preset.preset, this.presetService.getPresetFixtureIndices(preset.preset));
       }
 
       // a preset chasing its steps over its fixtures is at a different point of the
@@ -688,7 +641,9 @@ export class PreviewService implements OnDestroy {
 
         for (const preset of presets) {
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
-          const fixtureIndex = this.getFixtureIndex(preset.preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key);
+          const fixtureIndex = fixtureIndices
+            .get(preset.preset)
+            .get(this.presetService.getPresetFixtureKey(cachedFixture.fixture.uuid, cachedFixture.pixel?.key));
 
           if (fixtureIndex >= 0) {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,
