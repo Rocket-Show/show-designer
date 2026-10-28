@@ -143,7 +143,13 @@
     } @if (!folded && timelineService.selectedComposition) {
     <!-- takes the focus when something in it is clicked: the delete key removes the selected
          clip (or the track whose name was clicked) -->
-    <div #frame class="tl-frame" tabindex="0" (keydown)="onKeyDown($event)">
+    <div
+      #frame
+      class="tl-frame"
+      [class.tl-no-audio]="timelineService.selectedComposition.syncType === 'none'"
+      tabindex="0"
+      (keydown)="onKeyDown($event)"
+    >
       <div #scroller class="tl-scroller" (scroll)="onScroll()" (wheel)="onWheel($event)" (dragleave)="onSceneDragLeave($event)">
         <div class="tl-content" [style.width.px]="headerWidthPx + laneWidthPx">
           <!-- the ruler: click or drag on it to jump to a point in time -->
@@ -167,6 +173,7 @@
           </div>
 
           <!-- the song, only as a guide to line the scenes up with: nothing is put on it -->
+          @if (timelineService.selectedComposition.syncType !== 'none') {
           <div class="tl-row tl-wave-row">
             <div class="tl-head tl-wave-head">
               <i class="fa fa-music fa-fw tl-dim" aria-hidden="true"></i>
@@ -179,6 +186,31 @@
               <canvas #waveCanvas class="tl-canvas"></canvas>
             </div>
           </div>
+          }
+
+          <!-- the actions Rocket Show fires while it plays the composition, also only a guide to
+               line the scenes up with. Click an action to jump to it. -->
+          @if (actionMarkers.length > 0) {
+          <div class="tl-row tl-actions-row">
+            <div class="tl-head tl-actions-head">
+              <i class="fa fa-bolt fa-fw tl-dim" aria-hidden="true"></i>
+              <span>{{ 'designer.timeline.actions' | translate }}</span>
+            </div>
+            <div class="tl-lane tl-actions" (mousedown)="onSeekStart($event)">
+              @for (marker of actionMarkers; track $index) {
+              <div class="tl-action" [style.left.px]="marker.leftPx" [title]="marker.time" (mousedown)="onActionMouseDown($event, marker)">
+                @if (marker.labelWidthPx >= 24) {
+                <span class="tl-action-label" [style.max-width.px]="marker.labelWidthPx">
+                  @for (type of marker.actionTypes; track $index) {
+                  <span class="tl-action-type">{{ 'designer.timeline.action-type.' + type | translate }}</span>
+                  }
+                </span>
+                }
+              </div>
+              }
+            </div>
+          </div>
+          }
 
           <!-- the tracks, the topmost one on top of the others where their scenes overlap.
                Drag a track by its name to move it. -->
@@ -274,6 +306,11 @@
               }
             </div>
           </div>
+
+          <!-- past the end of a composition without an audio file: a scene put there makes it longer -->
+          @if (endPx !== undefined) {
+          <div class="tl-after-end" [style.left.px]="headerWidthPx + endPx"></div>
+          }
         </div>
       </div>
 

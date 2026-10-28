@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { ToastrModule } from 'ngx-toastr';
@@ -12,6 +12,7 @@ import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { Track } from '../models/track';
 import { ProjectService } from './project.service';
+import { SceneService } from './scene.service';
 import { TimelineService } from './timeline.service';
 
 // An audio file which cannot be read says nothing about the show written over it: the
@@ -200,5 +201,186 @@ describe('TimelineService playing the tracks of a composition', () => {
     service.toggleTrackSolo(service.selectedComposition.tracks[1]);
 
     expect(scenesAt(5000)).toEqual(['first']);
+  });
+});
+
+// Without an audio file, the timeline runs on its own clock, and the composition lasts as
+// long as its scenes: a scene put past the end makes it longer.
+describe('TimelineService without an audio file', () => {
+  let service: TimelineService;
+  let projectService: ProjectService;
+  let sceneService: SceneService;
+  let http: HttpTestingController;
+  let now: number;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    projectService = TestBed.inject(ProjectService);
+    sceneService = TestBed.inject(SceneService);
+    http = TestBed.inject(HttpTestingController);
+
+    now = 1000;
+    spyOn(performance, 'now').and.callFake(() => now);
+
+    projectService.project = new Project();
+
+    const preset = new Preset();
+    preset.uuid = 'preset';
+    projectService.project.presets.push(preset);
+
+    const scene = new Scene();
+    scene.uuid = 'scene';
+    scene.name = 'Scene';
+    scene.presetUuids = [preset.uuid];
+    projectService.project.scenes.push(scene);
+
+    // it still knows the file it played along before, but does not play it anymore
+    const composition = new Composition();
+    composition.uuid = 'composition';
+    composition.name = 'Song One';
+    composition.syncType = 'none';
+    composition.audioFileName = 'Song One.mp3';
+    projectService.project.compositions.push(composition);
+
+    play(0, 10000);
+    service.selectCompositionIndex(0);
+  });
+
+  afterEach(() => {
+    service.destroyWaveSurfer();
+  });
+
+  function play(startMillis: number, endMillis: number) {
+    const region = new ScenePlaybackRegion();
+    region.sceneUuid = 'scene';
+    region.startMillis = startMillis;
+    region.endMillis = endMillis;
+    projectService.project.compositions[0].scenePlaybackRegions.push(region);
+  }
+
+  it('does not play the audio file', () => {
+    expect(service.playsAudioFile()).toBe(false);
+    expect(service.waveSurfer).toBeUndefined();
+  });
+
+  it('lasts until its last scene has ended', () => {
+    expect(service.getEndMillis()).toBe(10000);
+    expect(service.duration).toBe('00:10.000');
+  });
+
+  it('gets longer with a scene put past the end', () => {
+    play(20000, 30000);
+
+    expect(service.getEndMillis()).toBe(30000);
+  });
+
+  it('runs on its own clock while playing', () => {
+    service.play();
+    now += 2500;
+
+    expect(service.playState).toBe('playing');
+    expect(service.getCurrentMillis()).toBe(2500);
+
+    service.pause();
+    now += 1000;
+
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(2500);
+  });
+
+  it('keeps running from where it has been moved to', () => {
+    service.seekToMillis(4000);
+    expect(service.getCurrentMillis()).toBe(4000);
+
+    service.play();
+    now += 1000;
+    service.seekToMillis(8000);
+    now += 500;
+
+    expect(service.getCurrentMillis()).toBe(8500);
+  });
+
+  it('stops at the end of the composition', () => {
+    service.play();
+    now += 10030;
+    (service as any).stopClockAtTheEnd();
+
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(10000);
+  });
+
+  it('plays from the start again, once it has reached the end', () => {
+    service.seekToMillis(10000);
+    service.play();
+
+    expect(service.getCurrentMillis()).toBe(0);
+  });
+
+  it('goes back to the start', () => {
+    service.seekToMillis(4000);
+    service.rewind();
+
+    expect(service.getCurrentMillis()).toBe(0);
+  });
+
+  it('starts another composition at its beginning', () => {
+    service.play();
+    now += 3000;
+
+    service.selectCompositionIndex(0);
+
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(0);
+  });
+
+  it('puts the selected scene at the position, past the end as well', () => {
+    sceneService.selectScenes([projectService.project.scenes[0]]);
+    service.seekToMillis(12000);
+
+    service.addRegion();
+
+    const added = service.selectedComposition.scenePlaybackRegions[1];
+    expect(added.startMillis).toBe(12000);
+    expect(added.endMillis).toBeGreaterThan(12000);
+    expect(service.getEndMillis()).toBe(added.endMillis);
+  });
+
+  describe('in Rocket Show', () => {
+    beforeEach(() => {
+      service.externalCompositionsAvailable = true;
+      service.selectCompositionIndex(0);
+    });
+
+    afterEach(() => {
+      http.verify();
+    });
+
+    it('shows the actions Rocket Show fires', () => {
+      http.expectOne('composition?name=Song%20One').flush({
+        name: 'Song One',
+        durationMillis: 4000,
+        actionTriggerList: [{ positionMillis: 4000, actionList: [{ actionMidi: { type: 'MIDI' } }] }],
+      });
+
+      expect(service.externalComposition.actionTriggers.map((trigger) => trigger.positionMillis)).toEqual([4000]);
+    });
+
+    it('lasts as long as Rocket Show plays the composition, if that is longer', () => {
+      http.expectOne('composition?name=Song%20One').flush({ name: 'Song One', durationMillis: 45000, actionTriggerList: [] });
+
+      expect(service.getEndMillis()).toBe(45000);
+    });
+
+    it('shows nothing, if Rocket Show has no composition of that name', () => {
+      http.expectOne('composition?name=Song%20One').flush(null);
+
+      expect(service.externalComposition).toBeUndefined();
+      expect(service.getEndMillis()).toBe(10000);
+    });
   });
 });

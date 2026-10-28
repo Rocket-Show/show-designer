@@ -5,9 +5,11 @@ import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
+import { ExternalComposition } from '../models/external-composition';
 import { PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
+import { getClipsEndMillis } from '../models/timeline-length';
 import { assignTracks, createTrack, getFreeGap, getPreviewTracks, getTrackRegions } from '../models/timeline-track';
 import { Track } from '../models/track';
 import { computePeaks } from '../models/waveform-peaks';
@@ -33,6 +35,11 @@ export class TimelineService {
   // the tracks and the clips on them itself.
   public waveSurfer: WaveSurfer;
 
+  // Without an audio file the timeline runs on its own clock: the position it stands at,
+  // and when it has been started from there (undefined while it stands still)
+  private clockMillis = 0;
+  private clockStartedAt: number;
+
   // the loudness of the audio file over time, see computePeaks
   public peaks: Float32Array = new Float32Array(0);
 
@@ -46,8 +53,8 @@ export class TimelineService {
   // the track a new clip is put on
   public selectedTrackUuid: string;
 
-  public duration: string;
-  public durationMillis = 0;
+  // the length of the audio file (0 until it has been loaded)
+  private audioDurationMillis = 0;
   public waveSurferReady: Subject<void> = new Subject();
 
   // the timeline has to be drawn again: the clips, the tracks or the grid changed
@@ -59,6 +66,11 @@ export class TimelineService {
   // can we add new compositions based on an external pool and
   // should new compositions not available in this pool be added there?
   public externalCompositionsAvailable = false;
+
+  // the composition of the external pool (Rocket Show) the selected one plays along with,
+  // if there is one: its actions are shown on the timeline
+  public externalComposition: ExternalComposition;
+  private externalCompositionSubscription: Subscription;
 
   public loadingAudioFile = false;
 
@@ -152,19 +164,64 @@ export class TimelineService {
     }
   }
 
-  getCurrentMillis(): number {
-    if (!this.waveSurfer) {
+  // ---- the clock --------------------------------------------------------------
+
+  // Does the timeline run along the audio file of the selected composition? Without one
+  // (the composition is not synchronized to one, none has been picked or it could not be
+  // read), it runs on its own clock.
+  playsAudioFile(): boolean {
+    const composition = this.selectedComposition;
+
+    return !!composition && composition.syncType !== 'none' && !!composition.audioFileName && !this.audioFileError;
+  }
+
+  // Where the selected composition ends: with an audio file, where the song ends. Without
+  // one, where its lights have gone out or where Rocket Show stops playing it (its files
+  // and actions), whichever is later. A scene put past the end makes it longer.
+  getEndMillis(): number {
+    const composition = this.selectedComposition;
+
+    if (!composition) {
       return 0;
     }
 
-    return this.waveSurfer.getCurrentTime() * 1000;
+    if (this.playsAudioFile()) {
+      return this.audioDurationMillis;
+    }
+
+    const external = this.externalComposition;
+    const clipsEndMillis = getClipsEndMillis(
+      composition,
+      (uuid) => this.sceneService.getSceneByUuid(uuid),
+      (scene) => this.sceneService.getScenePresets(scene)
+    );
+
+    return Math.max(clipsEndMillis, external ? Math.max(external.durationMillis, external.lastActionMillis) : 0);
+  }
+
+  // the length of the composition, as shown next to the position (none while the audio
+  // file is still being loaded)
+  get duration(): string {
+    if (!this.selectedComposition || (this.playsAudioFile() && !this.audioDurationMillis)) {
+      return undefined;
+    }
+
+    return this.msToTime(this.getEndMillis());
+  }
+
+  getCurrentMillis(): number {
+    if (this.playsAudioFile()) {
+      return this.waveSurfer ? this.waveSurfer.getCurrentTime() * 1000 : 0;
+    }
+
+    if (this.clockStartedAt === undefined) {
+      return this.clockMillis;
+    }
+
+    return this.clockMillis + performance.now() - this.clockStartedAt;
   }
 
   private updateCurrentTime() {
-    if (!this.waveSurfer) {
-      return;
-    }
-
     const millis = this.getCurrentMillis();
     this.currentTime = this.msToTime(millis);
     this.positionChanged.next(millis);
@@ -178,6 +235,7 @@ export class TimelineService {
       const timeUpdater = timer(0, 40);
       this.timeUpdateSubscription = timeUpdater.subscribe(() => {
         this.updateCurrentTime();
+        this.stopClockAtTheEnd();
       });
     });
   }
@@ -188,16 +246,115 @@ export class TimelineService {
     }
   }
 
-  // jump to a point in time of the song, e.g. when the ruler is clicked
-  seekToMillis(millis: number) {
-    if (!this.isWaveSurferReady() || !this.durationMillis) {
+  // The own clock stops where the composition ends, like an audio file does. It stands
+  // on the end then, unless it has been started (or moved) past it.
+  private stopClockAtTheEnd() {
+    if (this.playsAudioFile() || this.clockStartedAt === undefined) {
       return;
     }
 
-    const progress = Math.min(1, Math.max(0, millis / this.durationMillis));
+    const endMillis = this.getEndMillis();
 
-    this.waveSurfer.seekTo(progress);
-    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(progress * this.durationMillis));
+    if (this.getCurrentMillis() < endMillis) {
+      return;
+    }
+
+    const fromMillis = this.clockMillis;
+
+    this.ngZone.run(() => {
+      this.pause();
+      this.stopClock(Math.max(endMillis, fromMillis));
+    });
+  }
+
+  // let the own clock stand still at the passed position
+  private stopClock(millis: number) {
+    this.clockMillis = millis;
+    this.clockStartedAt = undefined;
+    this.stopTimeUpdater();
+    this.updateCurrentTime();
+  }
+
+  // jump to a point in time of the composition, e.g. when the ruler is clicked
+  seekToMillis(millis: number) {
+    if (!this.selectedComposition) {
+      return;
+    }
+
+    if (this.playsAudioFile()) {
+      if (!this.isWaveSurferReady() || !this.audioDurationMillis) {
+        return;
+      }
+
+      const progress = Math.min(1, Math.max(0, millis / this.audioDurationMillis));
+
+      this.waveSurfer.seekTo(progress);
+      this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(progress * this.audioDurationMillis));
+      return;
+    }
+
+    this.clockMillis = Math.max(0, millis);
+
+    if (this.clockStartedAt !== undefined) {
+      this.clockStartedAt = performance.now();
+    }
+
+    this.updateCurrentTime();
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(this.clockMillis));
+  }
+
+  // ---- playing ----------------------------------------------------------------
+
+  play() {
+    if (!this.selectedComposition || (this.playsAudioFile() && !this.isWaveSurferReady())) {
+      return;
+    }
+
+    // at the end (or past it) -> play the composition from the start again
+    if (!this.playsAudioFile() && this.clockMillis >= this.getEndMillis()) {
+      this.clockMillis = 0;
+    }
+
+    this.playState = 'playing';
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(this.getCurrentMillis()));
+
+    if (this.playsAudioFile()) {
+      this.waveSurfer.play();
+      return;
+    }
+
+    this.clockStartedAt = performance.now();
+    this.startTimeUpdater();
+  }
+
+  pause() {
+    this.playState = 'paused';
+    this.livePreviewService.stopPreviewPlay();
+
+    if (this.playsAudioFile()) {
+      if (this.waveSurfer) {
+        this.waveSurfer.pause();
+      }
+
+      return;
+    }
+
+    this.stopClock(this.getCurrentMillis());
+  }
+
+  // stop and go back to the start
+  rewind() {
+    this.pause();
+
+    if (this.playsAudioFile()) {
+      if (this.isWaveSurferReady()) {
+        this.waveSurfer.seekTo(0);
+      }
+
+      return;
+    }
+
+    this.stopClock(0);
   }
 
   applyZoom(zoom: any) {
@@ -390,7 +547,7 @@ export class TimelineService {
   // Put the selected scene on the selected track, at the position of the playback. If
   // another scene plays there already, or there is no track yet, it goes onto a new one.
   addRegion() {
-    if (!this.isWaveSurferReady() || !this.selectedComposition) {
+    if (!this.selectedComposition || (this.playsAudioFile() && !this.isWaveSurferReady())) {
       return;
     }
 
@@ -403,10 +560,10 @@ export class TimelineService {
 
     const scene = this.sceneService.selectedScenes[0];
     let track = this.getTrack(this.selectedTrackUuid);
-    const startMillis = Math.max(
-      0,
-      Math.min(this.snapMillis(this.getCurrentMillis()), this.durationMillis - TimelineService.minRegionMillis)
-    );
+
+    // within the song, if there is one. Without, the composition gets longer.
+    const limitMillis = this.playsAudioFile() ? this.audioDurationMillis : Infinity;
+    const startMillis = Math.max(0, Math.min(this.snapMillis(this.getCurrentMillis()), limitMillis - TimelineService.minRegionMillis));
     let gap = track ? getFreeGap(composition, track.uuid, startMillis) : undefined;
 
     if (!gap || gap.endMillis - startMillis < TimelineService.minRegionMillis) {
@@ -414,7 +571,7 @@ export class TimelineService {
       gap = { startMillis: 0, endMillis: Infinity };
     }
 
-    const endMillis = Math.min(startMillis + this.getDefaultRegionMillis(), gap.endMillis, this.durationMillis);
+    const endMillis = Math.min(startMillis + this.getDefaultRegionMillis(), gap.endMillis, limitMillis);
 
     this.createRegion(track, scene, startMillis, endMillis);
   }
@@ -493,6 +650,7 @@ export class TimelineService {
     this.projectService.project.compositions.splice(this.selectedCompositionIndex, 1);
     this.selectedComposition = undefined;
     this.selectedCompositionIndex = undefined;
+    this.externalComposition = undefined;
     this.destroyWaveSurfer();
     if (this.projectService.project.compositions.length > 0) {
       this.selectCompositionIndex(0);
@@ -513,9 +671,16 @@ export class TimelineService {
   }
 
   destroyWaveSurfer() {
+    // what played belongs to the composition left: another one starts at its beginning
+    if (this.playState === 'playing') {
+      this.playState = 'paused';
+      this.livePreviewService.stopPreviewPlay();
+    }
+
     this.stopTimeUpdater();
-    this.duration = undefined;
-    this.durationMillis = 0;
+    this.clockMillis = 0;
+    this.clockStartedAt = undefined;
+    this.audioDurationMillis = 0;
     this.peaks = new Float32Array(0);
     this.loadingAudioFile = false;
     this.audioFileError = false;
@@ -529,7 +694,7 @@ export class TimelineService {
   createWaveSurfer() {
     this.destroyWaveSurfer();
 
-    if (!this.selectedComposition.audioFileName) {
+    if (!this.playsAudioFile()) {
       return;
     }
 
@@ -588,8 +753,7 @@ export class TimelineService {
               });
           }
 
-          this.durationMillis = this.waveSurfer.getDuration() * 1000;
-          this.duration = this.msToTime(this.durationMillis);
+          this.audioDurationMillis = this.waveSurfer.getDuration() * 1000;
           this.peaks = computePeaks(this.waveSurfer.backend.buffer, TimelineService.peaksPerSecond);
 
           this.updateCurrentTime();
@@ -615,6 +779,16 @@ export class TimelineService {
         this.stopTimeUpdater();
         this.updateCurrentTime();
       });
+
+      // the song has ended: the playback stops there
+      this.waveSurfer.on('finish', () => {
+        this.ngZone.run(() => {
+          this.playState = 'paused';
+          this.livePreviewService.stopPreviewPlay();
+          this.stopTimeUpdater();
+          this.updateCurrentTime();
+        });
+      });
     }, 0);
   }
 
@@ -633,12 +807,41 @@ export class TimelineService {
     );
   }
 
+  // What Rocket Show plays along with the selected composition, if the designer runs in it:
+  // the actions it fires are shown on the timeline to line the scenes up with, and the
+  // composition lasts at least as long as its files and actions. Nothing is shown, if
+  // there is no composition of that name (or Rocket Show cannot tell).
+  private loadExternalComposition() {
+    if (this.externalCompositionSubscription) {
+      this.externalCompositionSubscription.unsubscribe();
+    }
+
+    this.externalComposition = undefined;
+
+    const composition = this.selectedComposition;
+
+    if (!this.externalCompositionsAvailable || !composition || !composition.name) {
+      return;
+    }
+
+    this.externalCompositionSubscription = this.http.get('composition?name=' + encodeURIComponent(composition.name)).subscribe({
+      next: (response) => {
+        this.externalComposition = response ? new ExternalComposition(response) : undefined;
+        this.detectChanges.next();
+      },
+      error: (error) => {
+        console.error('Could not load the composition from Rocket Show', error);
+      },
+    });
+  }
+
   selectCompositionIndex(index: number) {
     this.selectedComposition = this.projectService.project.compositions[index];
     this.selectedCompositionIndex = index;
     this.projectService.project.selectedCompositionUuid = this.selectedComposition.uuid;
     this.selectedPlaybackRegion = undefined;
     this.ensureTracks(this.selectedComposition);
+    this.loadExternalComposition();
     this.createWaveSurfer();
 
     // required to trigger timeline.component.resize()

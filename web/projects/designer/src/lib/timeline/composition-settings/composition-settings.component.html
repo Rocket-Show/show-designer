@@ -22,14 +22,15 @@
     <label class="col-lg-4 col-form-label">{{ 'designer.timeline.composition-sync-type' | translate }}</label>
     <div class="col-lg-8 d-flex">
       <select class="custom-select" [ngModel]="composition.syncType" (ngModelChange)="composition.syncType = $event">
-        <!-- TODO -->
-        <!-- <option value="none">{{ 'designer.timeline.composition-sync-type-none' | translate }}</option> -->
         <option value="audio">{{ 'designer.timeline.composition-sync-type-audio' | translate }}</option>
+        <option value="none">{{ 'designer.timeline.composition-sync-type-none' | translate }}</option>
       </select>
     </div>
   </div>
 
-  @if (composition.syncType == 'audio') {
+  @if (composition.syncType == 'none') {
+  <p class="text-muted">{{ 'designer.timeline.composition-sync-type-none-hint' | translate }}</p>
+  } @if (composition.syncType == 'audio') {
   <div class="row">
     <div class="px-3 w-100">
       <!-- playing lights in sync with the audio is what the hardware does unattended -->

@@ -6,6 +6,7 @@ import { map } from 'rxjs/operators';
 import { Composition } from '../models/composition';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
+import { getOpenTimelineMillis } from '../models/timeline-length';
 import { getGridSpacing, getRulerTicks } from '../models/timeline-ruler';
 import { getStepMarkers, TimelineStepMarker } from '../models/timeline-step-marker';
 import { getFreeGap, getPreviewTracks, getTrackRegions, isFreeOnTrack, TrackGap } from '../models/timeline-track';
@@ -16,7 +17,6 @@ import { ConfigService } from '../services/config.service';
 import { HotkeyTargetExcludeService } from '../services/hotkey-target-exclude.service';
 import { IntroService } from '../services/intro.service';
 import { LayoutService } from '../services/layout.service';
-import { LivePreviewService } from '../services/live-preview.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
@@ -53,6 +53,17 @@ interface ClipView {
 
   // the steps of the preset being edited, if it is played in the scene
   markers: TimelineStepMarker[];
+}
+
+// an action Rocket Show fires while the composition plays, as it is drawn
+interface ActionMarkerView {
+  millis: number;
+  leftPx: number;
+  time: string;
+  actionTypes: string[];
+
+  // the room up to the next action, which the name of this one may take
+  labelWidthPx: number;
 }
 
 interface TrackView {
@@ -135,8 +146,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   // how far the tracks are scrolled to the right
   scrollLeftPx = 0;
 
-  // the length of the timeline: the song, or the clips if there is no song
+  // the length of the timeline: the song, or the clips and some room after them if there is no song
   timelineMillis = 0;
+
+  // where a composition without an audio file ends (undefined with one): past it, the
+  // timeline is room to make it longer
+  endPx: number;
+
+  actionMarkers: ActionMarkerView[] = [];
 
   trackViews: TrackView[] = [];
   gridStyle: { [key: string]: string } = {};
@@ -175,7 +192,6 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     private http: HttpClient,
     private configService: ConfigService,
     public introService: IntroService,
-    private livePreviewService: LivePreviewService,
     public sceneService: SceneService,
     public presetService: PresetService,
     private colorService: ColorService,
@@ -257,13 +273,16 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // as long as the song (or the composition, if it has none), but no clip is cut off
-    const lastEnd = composition.scenePlaybackRegions.reduce((end, region) => Math.max(end, region.endMillis), 0);
-    this.timelineMillis = Math.max(this.timelineService.durationMillis || composition.durationMillis || 60000, lastEnd);
+    // a clip being dragged leaves the length alone, so that the scale stays put under the pointer
+    if (!this.draggingClip) {
+      this.timelineMillis = this.getTimelineMillis(composition);
+    }
 
     const fitPxPerSecond = this.viewportWidthPx / (this.timelineMillis / 1000);
     this.pxPerSecond = this.timelineService.zoom > 0 ? Math.max(fitPxPerSecond, this.timelineService.zoom) : fitPxPerSecond;
 
+    this.endPx = this.timelineService.playsAudioFile() ? undefined : this.toPx(this.timelineService.getEndMillis());
+    this.actionMarkers = this.getActionMarkers();
     this.gridStyle = this.getGridStyle();
     const played = getPreviewTracks(composition);
     this.trackViews = composition.tracks.map((track) => ({ track, clips: this.getClipViews(track), silent: played.indexOf(track) < 0 }));
@@ -274,6 +293,27 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.selectedBand = selected
       ? { leftPx: this.toPx(selected.startMillis), widthPx: this.toPx(selected.endMillis - selected.startMillis) }
       : undefined;
+  }
+
+  // How long the timeline is. With an audio file, as long as the song, but no clip and no
+  // action is cut off. Without one, it reaches past the end of the composition: a scene
+  // put there makes the composition longer.
+  private getTimelineMillis(composition: Composition): number {
+    if (!this.timelineService.playsAudioFile()) {
+      return getOpenTimelineMillis(this.timelineService.getEndMillis());
+    }
+
+    const external = this.timelineService.externalComposition;
+    const lastEnd = composition.scenePlaybackRegions.reduce(
+      (end, region) => Math.max(end, region.endMillis),
+      external ? external.lastActionMillis : 0
+    );
+
+    return Math.max(this.timelineService.getEndMillis() || 60000, lastEnd);
+  }
+
+  private get draggingClip(): boolean {
+    return !!this.gesture && ['move', 'start', 'end', 'create'].indexOf(this.gesture.kind) >= 0;
   }
 
   toPx(millis: number): number {
@@ -315,6 +355,25 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       'background-size': `${strongPx}px 100%, ${linePx}px 100%`,
       'background-position': `${offsetPx % strongPx}px 0, ${offsetPx % linePx}px 0`,
     };
+  }
+
+  // the actions Rocket Show fires while it plays the composition, if it does
+  private getActionMarkers(): ActionMarkerView[] {
+    const external = this.timelineService.externalComposition;
+    const triggers = external ? external.actionTriggers : [];
+
+    return triggers.map((trigger, index) => {
+      const leftPx = this.toPx(trigger.positionMillis);
+      const nextPx = index + 1 < triggers.length ? this.toPx(triggers[index + 1].positionMillis) : Infinity;
+
+      return {
+        millis: trigger.positionMillis,
+        leftPx,
+        time: this.timelineService.msToTime(trigger.positionMillis),
+        actionTypes: trigger.actionTypes,
+        labelWidthPx: Math.min(160, nextPx - leftPx - 10),
+      };
+    });
   }
 
   private getClipViews(track: Track): ClipView[] {
@@ -442,6 +501,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const endMillis = ((offsetPx + width) / this.pxPerSecond) * 1000;
 
     this.drawSelectedBand(context, offsetPx, height);
+    this.drawAfterEnd(context, offsetPx, width, height);
 
     context.font = '11px ' + getComputedStyle(this.rulerCanvas.nativeElement).fontFamily;
     context.textBaseline = 'top';
@@ -502,6 +562,24 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     context.fillStyle = 'rgba(253, 126, 20, 0.6)';
     context.fillRect(Math.round(left), 0, 1, height);
     context.fillRect(Math.round(left + this.selectedBand.widthPx) - 1, 0, 1, height);
+  }
+
+  // shade the time past the end of a composition without an audio file
+  private drawAfterEnd(context: CanvasRenderingContext2D, offsetPx: number, width: number, height: number) {
+    if (this.endPx === undefined) {
+      return;
+    }
+
+    const x = Math.round(this.endPx - offsetPx);
+
+    if (x >= width) {
+      return;
+    }
+
+    context.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    context.fillRect(Math.max(0, x), 0, width - Math.max(0, x), height);
+    context.fillStyle = '#6b7280';
+    context.fillRect(x, 0, 1, height);
   }
 
   // move the playhead (and the time) to the position of the playback. Called many times
@@ -600,8 +678,25 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     event.preventDefault();
     this.focusTimeline();
     this.gesture = { kind: 'seek', startClientX: event.clientX, moved: false };
-    this.timelineService.seekToMillis(this.millisAt(event.clientX));
+    this.seekTo(this.millisAt(event.clientX));
     this.listen();
+  }
+
+  // an action jumps to the time it is fired at
+  onActionMouseDown(event: MouseEvent, marker: ActionMarkerView) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.focusTimeline();
+    this.seekTo(marker.millis);
+  }
+
+  // not past the end of the timeline, while the pointer is dragged out of it
+  private seekTo(millis: number) {
+    this.timelineService.seekToMillis(Math.min(millis, this.timelineMillis));
   }
 
   onClipMouseDown(event: MouseEvent, clip: ClipView, kind: 'move' | 'start' | 'end') {
@@ -733,7 +828,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
     switch (gesture.kind) {
       case 'seek':
-        this.timelineService.seekToMillis(millis);
+        this.seekTo(millis);
         return;
       case 'move':
         this.moveRegion(gesture, sideways ? millis : undefined, this.trackAt(event.clientY));
@@ -958,24 +1053,15 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   // ---- the toolbar ----------------------------------------------------------
 
   play() {
-    this.timelineService.playState = 'playing';
-    this.livePreviewService.previewLive(
-      this.timelineService.selectedComposition.name,
-      Math.round(this.timelineService.waveSurfer.getCurrentTime() * 1000)
-    );
-    this.timelineService.waveSurfer.play();
+    this.timelineService.play();
   }
 
   pause() {
-    this.timelineService.playState = 'paused';
-    this.livePreviewService.stopPreviewPlay();
-    this.timelineService.waveSurfer.pause();
+    this.timelineService.pause();
   }
 
   rewind() {
-    this.timelineService.playState = 'paused';
-    this.pause();
-    this.timelineService.waveSurfer.seekTo(0);
+    this.timelineService.rewind();
   }
 
   addRegion() {

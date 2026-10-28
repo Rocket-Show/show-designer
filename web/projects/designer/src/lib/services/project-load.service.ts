@@ -513,10 +513,11 @@ export class ProjectLoadService {
     if (
       previousComposition &&
       previousComposition.uuid === composition.uuid &&
+      previousComposition.syncType === composition.syncType &&
       previousComposition.audioFileName === composition.audioFileName
     ) {
-      // the same audio file is still the one to play -> keep it loaded and only point
-      // the timeline at the restored objects
+      // the same audio file (or none) is still the one to play -> keep it loaded and only
+      // point the timeline at the restored objects
       this.timelineService.selectedComposition = composition;
       this.timelineService.selectedCompositionIndex = index;
       this.timelineService.redrawAllRegions();

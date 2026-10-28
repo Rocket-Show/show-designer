@@ -4,6 +4,7 @@
   --tl-head-width: 200px;
   --tl-ruler-height: 24px;
   --tl-wave-height: 56px;
+  --tl-actions-height: 28px;
   --tl-track-height: 36px;
   position: relative;
   flex: 1 1 auto;
@@ -17,6 +18,11 @@
 
 .tl-frame:focus {
   outline: none;
+}
+
+/* a composition without an audio file has no waveform: the actions stick right below the ruler */
+.tl-no-audio {
+  --tl-wave-height: 0px;
 }
 
 .tl-scroller {
@@ -85,7 +91,8 @@
 /* ---- the ruler and the waveform ------------------------------------------ */
 
 .tl-ruler-row,
-.tl-wave-row {
+.tl-wave-row,
+.tl-actions-row {
   position: sticky;
   z-index: 4;
 }
@@ -149,6 +156,76 @@
   position: sticky;
   left: var(--tl-head-width);
   display: block;
+}
+
+/* ---- the actions Rocket Show fires ----------------------------------------- */
+
+.tl-actions-row {
+  top: calc(var(--tl-ruler-height) + var(--tl-wave-height));
+  height: var(--tl-actions-height);
+}
+
+.tl-actions-row .tl-head {
+  border-bottom-color: var(--sd-border-strong);
+}
+
+.tl-actions {
+  background-color: var(--sd-surface-1);
+  border-bottom-color: var(--sd-border-strong);
+  cursor: s-resize;
+}
+
+/* wider than the line it shows, to be easy to click */
+.tl-action {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: pointer;
+}
+
+.tl-action::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background-color: var(--sd-info);
+}
+
+.tl-action::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 1px;
+  width: 7px;
+  height: 7px;
+  background-color: var(--sd-info);
+  transform: rotate(45deg);
+}
+
+.tl-action:hover::before,
+.tl-action:hover::after {
+  background-color: var(--sd-text);
+}
+
+.tl-action-label {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--sd-text-muted);
+  font-size: 0.6875rem;
+  pointer-events: none;
+}
+
+.tl-action-type + .tl-action-type::before {
+  content: ', ';
 }
 
 /* WaveSurfer only plays the song: its own drawing is not shown */
@@ -441,6 +518,19 @@
 .tl-fade-tail line {
   stroke-width: 1px;
   stroke-dasharray: 4 3;
+}
+
+/* past the end of a composition without an audio file: room for a scene, which makes the
+   composition longer */
+.tl-after-end {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+  border-left: 1px dashed var(--sd-text-dim);
+  background-color: rgba(0, 0, 0, 0.22);
+  pointer-events: none;
 }
 
 /* ---- the position of the playback ------------------------------------------ */
