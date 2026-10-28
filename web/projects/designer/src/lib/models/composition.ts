@@ -5,7 +5,8 @@ export class Composition {
   public uuid: string;
   public name: string;
 
-  // none or audio
+  // audio: the timeline runs along the audio file. none: it runs on its own clock, and the
+  // composition lasts until its last scene has ended (see getClipsEndMillis).
   public syncType = 'audio';
 
   public audioFileName: string;
@@ -26,7 +27,7 @@ export class Composition {
   // 1/1, 1/2, 1/4, 1/8, etc.
   public gridResolution = 1;
 
-  // if no sync
+  // not used anymore: without an audio file, the composition lasts as long as its scenes
   public durationMillis = 0;
 
   // the lanes of the timeline, the topmost first. Where the clips of two tracks overlap,
@@ -43,7 +44,8 @@ export class Composition {
 
     this.uuid = data.uuid;
     this.name = data.name;
-    this.syncType = data.syncType;
+    // the compositions saved before there was a choice all played along an audio file
+    this.syncType = data.syncType || 'audio';
     this.audioFileName = data.audioFileName;
     this.audioFileInLibrary = data.audioFileInLibrary;
     this.beatsPerMinute = data.beatsPerMinute;
