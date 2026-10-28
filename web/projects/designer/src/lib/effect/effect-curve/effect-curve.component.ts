@@ -771,9 +771,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // whether the advanced settings hold anything else than their defaults. the button
   // marks it, so settings that are not on this screen are not lost out of sight.
   advancedActive(): boolean {
-    return (
-      this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5) || this.curve.phasingGroupSize !== 1
-    );
+    return this.curve.runMode !== 'infinite' || this.curve.dutyCycle !== 0.5 || this.curve.phasingGroupSize !== 1;
   }
 
   openAdvanced() {

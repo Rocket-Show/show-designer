@@ -198,8 +198,8 @@ describe('EffectCurve', () => {
     expect(sine.getValueAtMillis(750, 0, 1)).toBeCloseTo(0, 9);
 
     const square = curve('square');
-    expect(square.getValueAtMillis(100, 0, 1)).toBeCloseTo(0, 9);
-    expect(square.getValueAtMillis(600, 0, 1)).toBeCloseTo(1, 9);
+    expect(square.getValueAtMillis(100, 0, 1)).toBeCloseTo(1, 9);
+    expect(square.getValueAtMillis(600, 0, 1)).toBeCloseTo(0, 9);
 
     const triangle = curve('triangle');
     expect(triangle.getValueAtMillis(250, 0, 1)).toBeCloseTo(1, 9);
@@ -230,8 +230,75 @@ describe('EffectCurve', () => {
     }
   });
 
-  it('should keep a sine and a triangle on over their width', () => {
-    for (const curveType of ['sine', 'triangle']) {
+  it('should run the square in phase with the sine', () => {
+    for (const dutyCycle of [0.1, 0.5, 0.9]) {
+      const sine = curve('sine');
+      const square = curve('square');
+      sine.dutyCycle = dutyCycle;
+      square.dutyCycle = dutyCycle;
+
+      // on while the sine is above its position
+      for (let millis = 0.5; millis < 1000; millis++) {
+        expect(square.getValueAtMillis(millis, 0, 1)).toBe(sine.getValueAtMillis(millis, 0, 1) > 0.5 ? 1 : 0);
+      }
+    }
+  });
+
+  it('should narrow and widen a square around its middle', () => {
+    const square = curve('square');
+
+    // on from 200 to 300
+    square.dutyCycle = 0.1;
+    expect(square.getValueAtMillis(199, 0, 1)).toBe(0);
+    expect(square.getValueAtMillis(201, 0, 1)).toBe(1);
+    expect(square.getValueAtMillis(299, 0, 1)).toBe(1);
+    expect(square.getValueAtMillis(301, 0, 1)).toBe(0);
+
+    // off from 700 to 800
+    square.dutyCycle = 0.9;
+    expect(square.getValueAtMillis(0, 0, 1)).toBe(1);
+    expect(square.getValueAtMillis(699, 0, 1)).toBe(1);
+    expect(square.getValueAtMillis(701, 0, 1)).toBe(0);
+    expect(square.getValueAtMillis(799, 0, 1)).toBe(0);
+    expect(square.getValueAtMillis(801, 0, 1)).toBe(1);
+  });
+
+  it('should ramp a narrow sawtooth up right before its jump', () => {
+    const sawtooth = curve('sawtooth');
+    sawtooth.dutyCycle = 0.2;
+
+    // at the bottom until the ramp, which takes twice the width
+    expect(sawtooth.getValueAtMillis(300, 0, 1)).toBeCloseTo(0, 9);
+    expect(sawtooth.getValueAtMillis(600, 0, 1)).toBeCloseTo(0, 9);
+    expect(sawtooth.getValueAtMillis(800, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sawtooth.getValueAtMillis(900, 0, 1)).toBeCloseTo(0.75, 9);
+  });
+
+  it('should rest a wide sawtooth at its top before its jump', () => {
+    const sawtooth = curve('sawtooth');
+    sawtooth.dutyCycle = 0.8;
+
+    expect(sawtooth.getValueAtMillis(0, 0, 1)).toBeCloseTo(0, 9);
+    expect(sawtooth.getValueAtMillis(200, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sawtooth.getValueAtMillis(400, 0, 1)).toBeCloseTo(1, 9);
+    expect(sawtooth.getValueAtMillis(900, 0, 1)).toBeCloseTo(1, 9);
+  });
+
+  it('should run a reverse sawtooth as the sawtooth backwards at any width', () => {
+    const reverseSawtooth = curve('reverse-sawtooth');
+
+    reverseSawtooth.dutyCycle = 0.2;
+    expect(reverseSawtooth.getValueAtMillis(0, 0, 1)).toBeCloseTo(1, 9);
+    expect(reverseSawtooth.getValueAtMillis(200, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(reverseSawtooth.getValueAtMillis(500, 0, 1)).toBeCloseTo(0, 9);
+
+    reverseSawtooth.dutyCycle = 0.8;
+    expect(reverseSawtooth.getValueAtMillis(300, 0, 1)).toBeCloseTo(1, 9);
+    expect(reverseSawtooth.getValueAtMillis(800, 0, 1)).toBeCloseTo(0.5, 9);
+  });
+
+  it('should keep every curve on over its width', () => {
+    for (const curveType of ['sine', 'triangle', 'square', 'sawtooth', 'reverse-sawtooth']) {
       for (const dutyCycle of [0.1, 0.25, 0.5, 0.75, 0.9]) {
         const shaped = curve(curveType);
         shaped.dutyCycle = dutyCycle;
@@ -276,16 +343,18 @@ describe('EffectCurve', () => {
     expect(sine.getValueAtMillis(850, 0, 1)).toBeCloseTo(0.5, 9);
   });
 
-  it('should hold a sine flat at the ends of the width', () => {
-    const sine = curve('sine');
+  it('should hold every curve flat at the ends of the width', () => {
+    for (const curveType of ['sine', 'triangle', 'square', 'sawtooth', 'reverse-sawtooth']) {
+      const shaped = curve(curveType);
 
-    sine.dutyCycle = 0;
-    expect(sine.getValueAtMillis(250, 0, 1)).toBe(0);
-    expect(sine.getValueAtMillis(750, 0, 1)).toBe(0);
+      for (let millis = 0; millis < 1000; millis += 50) {
+        shaped.dutyCycle = 0;
+        expect(shaped.getValueAtMillis(millis, 0, 1)).toBeCloseTo(0, 9);
 
-    sine.dutyCycle = 1;
-    expect(sine.getValueAtMillis(250, 0, 1)).toBe(1);
-    expect(sine.getValueAtMillis(750, 0, 1)).toBe(1);
+        shaped.dutyCycle = 1;
+        expect(shaped.getValueAtMillis(millis, 0, 1)).toBeCloseTo(1, 9);
+      }
+    }
   });
 
   it('should rest a curve flat at the bottom or the top beyond the middle', () => {
