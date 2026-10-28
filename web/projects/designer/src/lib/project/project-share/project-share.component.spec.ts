@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ToastrModule } from 'ngx-toastr';
 
 import { Project } from '../../models/project';
@@ -19,7 +20,7 @@ describe('ProjectShareComponent', () => {
   function open(id: number, shareToken: string) {
     TestBed.configureTestingModule({
       declarations: [ProjectShareComponent],
-      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
+      imports: [FormsModule, PopoverModule.forRoot(), TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [
         { provide: BsModalRef, useValue: { hide: () => {} } },
         provideHttpClient(),
@@ -44,6 +45,16 @@ describe('ProjectShareComponent', () => {
     expect(fixture.nativeElement.querySelector('input').classList).toContain('selectable');
   });
 
+  it('offers a small button with an icon to copy the link', () => {
+    open(42, 'abc123');
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button.share-copy');
+    expect(button.classList).toContain('btn-sm');
+    expect(button.textContent.trim()).toBe('');
+    expect(button.querySelector('i.fa-clipboard')).not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('designer.project.share-copy');
+  });
+
   it('asks to save a project without a share token instead of showing its link', () => {
     open(42, undefined);
 
@@ -60,5 +71,6 @@ describe('ProjectShareComponent', () => {
 
     expect(writeText).toHaveBeenCalledWith(fixture.componentInstance.shareLink);
     expect(fixture.componentInstance.copied).toBe(true);
+    expect(fixture.nativeElement.querySelector('button.share-copy i.fa-check')).not.toBeNull();
   });
 });

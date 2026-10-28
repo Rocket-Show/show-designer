@@ -227,6 +227,8 @@
     // a value which is shown to be copied (e.g. a share link) can't be changed, but it is
     // meant to be selected: it doesn't look locked
     &.selectable[readonly] {
+      background-color: $sd-surface-2;
+      border-color: $sd-border-strong;
       color: $sd-text;
       cursor: text;
     }
