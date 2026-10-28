@@ -123,12 +123,12 @@
     </div>
     <div class="my-auto" style="float: left">
       <mv-slider
-        (change)="livePreviewService.previewLive()"
-        [(value)]="curve.position"
+        [value]="positionReach"
+        (valueChange)="setPositionReach($event)"
         style="width: 80px"
         [tooltip]="'hide'"
-        [min]="percentageMin"
-        [max]="percentageMax"
+        [min]="positionReachMin"
+        [max]="positionReachMax"
         [step]="0.01"
       >
       </mv-slider>

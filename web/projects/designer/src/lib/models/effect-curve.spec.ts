@@ -213,4 +213,92 @@ describe('EffectCurve', () => {
     expect(reverseSawtooth.getValueAtMillis(0, 0, 1)).toBeCloseTo(1, 9);
     expect(reverseSawtooth.getValueAtMillis(500, 0, 1)).toBeCloseTo(0.5, 9);
   });
+
+  it('should keep a sine and a triangle symmetric around their peak at any width', () => {
+    for (const curveType of ['sine', 'triangle']) {
+      for (const dutyCycle of [0.1, 0.3, 0.7, 0.9]) {
+        const shaped = curve(curveType);
+        shaped.dutyCycle = dutyCycle;
+
+        // the peak stays where it is
+        expect(shaped.getValueAtMillis(250, 0, 1)).toBeCloseTo(1, 9);
+
+        for (let fromPeak = 10; fromPeak <= 500; fromPeak += 10) {
+          expect(shaped.getValueAtMillis(250 - fromPeak, 0, 1)).toBeCloseTo(shaped.getValueAtMillis(250 + fromPeak, 0, 1), 9);
+        }
+      }
+    }
+  });
+
+  it('should keep a sine and a triangle on over their width', () => {
+    for (const curveType of ['sine', 'triangle']) {
+      for (const dutyCycle of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+        const shaped = curve(curveType);
+        shaped.dutyCycle = dutyCycle;
+
+        let onCount = 0;
+
+        for (let millis = 0.5; millis < 1000; millis++) {
+          if (shaped.getValueAtMillis(millis, 0, 1) > 0.5) {
+            onCount++;
+          }
+        }
+
+        expect(onCount).toBe(Math.round(dutyCycle * 1000));
+      }
+    }
+  });
+
+  it('should rest a narrow sine at its bottom', () => {
+    const sine = curve('sine');
+    sine.dutyCycle = 0.2;
+
+    // a full swing over twice the width around the peak, crossing the middle at the
+    // borders of the width
+    expect(sine.getValueAtMillis(150, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sine.getValueAtMillis(350, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sine.getValueAtMillis(50, 0, 1)).toBeCloseTo(0, 9);
+
+    // and at the bottom over the rest of the period
+    expect(sine.getValueAtMillis(0, 0, 1)).toBeCloseTo(0, 9);
+    expect(sine.getValueAtMillis(500, 0, 1)).toBeCloseTo(0, 9);
+    expect(sine.getValueAtMillis(750, 0, 1)).toBeCloseTo(0, 9);
+  });
+
+  it('should rest a wide sine at its top', () => {
+    const sine = curve('sine');
+    sine.dutyCycle = 0.8;
+
+    expect(sine.getValueAtMillis(0, 0, 1)).toBeCloseTo(1, 9);
+    expect(sine.getValueAtMillis(500, 0, 1)).toBeCloseTo(1, 9);
+    expect(sine.getValueAtMillis(650, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(sine.getValueAtMillis(750, 0, 1)).toBeCloseTo(0, 9);
+    expect(sine.getValueAtMillis(850, 0, 1)).toBeCloseTo(0.5, 9);
+  });
+
+  it('should hold a sine flat at the ends of the width', () => {
+    const sine = curve('sine');
+
+    sine.dutyCycle = 0;
+    expect(sine.getValueAtMillis(250, 0, 1)).toBe(0);
+    expect(sine.getValueAtMillis(750, 0, 1)).toBe(0);
+
+    sine.dutyCycle = 1;
+    expect(sine.getValueAtMillis(250, 0, 1)).toBe(1);
+    expect(sine.getValueAtMillis(750, 0, 1)).toBe(1);
+  });
+
+  it('should rest a curve flat at the bottom or the top beyond the middle', () => {
+    const sine = curve('sine');
+
+    sine.position = -0.5;
+    for (let millis = 0; millis < 1000; millis += 50) {
+      expect(sine.getValueAtMillis(millis, 0, 1)).toBeCloseTo(0, 9);
+    }
+
+    sine.position = 1.5;
+    for (let millis = 0; millis < 1000; millis += 50) {
+      expect(sine.getValueAtMillis(millis, 0, 1)).toBeCloseTo(1, 9);
+    }
+  });
 });
