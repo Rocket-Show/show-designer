@@ -15,6 +15,7 @@ import { Project } from '../models/project';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { FixtureService } from './fixture.service';
+import { PresetService } from './preset.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
 
@@ -291,5 +292,78 @@ describe('PreviewService dimmers and fades', () => {
     expect(values['Dimmer']).toBeCloseTo(127.5, 5);
     expect(values['Red']).toBe(255);
     expect(values['Blue']).toBe(0);
+  });
+});
+
+// The place of each fixture in the chase of its preset. These mirror the chase cases of
+// DesignerDmxTest in Rocket Show.
+describe('PreviewService chases', () => {
+  let presetService: PresetService;
+
+  // two pars and a twin of the first one, patched on its address: the same lamp
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    presetService = TestBed.inject(PresetService);
+
+    TestBed.inject(ProjectService).project = new Project({
+      fixtures: [
+        { uuid: 'par-1', dmxUniverseUuid: 'front', dmxFirstChannel: 0 },
+        { uuid: 'par-1-twin', dmxUniverseUuid: 'front', dmxFirstChannel: 0 },
+        { uuid: 'par-2', dmxUniverseUuid: 'front', dmxFirstChannel: 10 },
+      ],
+      presetFixtures: [{ fixtureUuid: 'par-1' }, { fixtureUuid: 'par-1-twin' }, { fixtureUuid: 'par-2' }],
+    });
+  });
+
+  function preset(fixtureUuids: string[], useGlobalFixtureOrder = true): Preset {
+    const chase = new Preset();
+    chase.useGlobalFixtureOrder = useGlobalFixtureOrder;
+    chase.fixtures = fixtureUuids.map((fixtureUuid) => new PresetFixture({ fixtureUuid }));
+
+    return chase;
+  }
+
+  // the place in the chase of each of the passed fixtures
+  function indices(chase: Preset, fixtureUuids: string[]): number[] {
+    const fixtureIndices = presetService.getPresetFixtureIndices(chase);
+
+    return fixtureUuids.map((fixtureUuid) => fixtureIndices.get(presetService.getPresetFixtureKey(fixtureUuid, undefined)));
+  }
+
+  it('chases in the fixture order of the project', () => {
+    // par 1 comes first in the project, whatever the order of the preset
+    expect(indices(preset(['par-2', 'par-1']), ['par-1', 'par-2'])).toEqual([0, 1]);
+  });
+
+  it('chases in the fixture order of the preset', () => {
+    expect(indices(preset(['par-2', 'par-1'], false), ['par-1', 'par-2'])).toEqual([1, 0]);
+  });
+
+  it('chases fixtures on the same address in one step', () => {
+    const chase = preset(['par-1', 'par-1-twin', 'par-2']);
+
+    // par 2 is the second step of the chase, not the third one
+    expect(indices(chase, ['par-1', 'par-1-twin', 'par-2'])).toEqual([0, 1, 1]);
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+  });
+
+  it('leaves a fixture which is not in the preset out of its chase', () => {
+    expect(indices(preset(['par-2']), ['par-1', 'par-2'])).toEqual([undefined, 0]);
+  });
+
+  it('keeps the pixels of a fixture apart', () => {
+    const pixels = new Preset();
+    pixels.fixtures = ['1', '2'].map((pixelKey) => new PresetFixture({ fixtureUuid: 'par-2', pixelKey }));
+    TestBed.inject(ProjectService).project.presetFixtures.push(...pixels.fixtures.map((fixture) => new PresetFixture(fixture)));
+
+    const fixtureIndices = presetService.getPresetFixtureIndices(pixels);
+
+    expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '1'))).toBe(0);
+    expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '2'))).toBe(1);
+    expect(presetService.getPresetFixtureCount(pixels)).toBe(2);
   });
 });
