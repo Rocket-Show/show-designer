@@ -6,8 +6,11 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ToastrModule } from 'ngx-toastr';
 
 import { Composition } from '../models/composition';
+import { Preset } from '../models/preset';
 import { Project } from '../models/project';
+import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
+import { Track } from '../models/track';
 import { ProjectService } from './project.service';
 import { TimelineService } from './timeline.service';
 
@@ -82,5 +85,120 @@ describe('TimelineService with an audio file which cannot be read', () => {
 
     expect(projectService.project.compositions.length).toBe(1);
     expect(projectService.project.compositions[0].uuid).toBe('composition-2');
+  });
+});
+
+// The tracks are layered like the presets of a scene: the topmost one is on top. The presets
+// are handed out from the bottom up, so the ones handed out later overwrite the earlier ones.
+describe('TimelineService playing the tracks of a composition', () => {
+  let service: TimelineService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    projectService = TestBed.inject(ProjectService);
+
+    projectService.project = new Project();
+
+    for (const name of ['first', 'second', 'third']) {
+      const preset = new Preset();
+      preset.uuid = name + '-preset';
+      projectService.project.presets.push(preset);
+
+      const scene = new Scene();
+      scene.uuid = name;
+      scene.presetUuids = [preset.uuid];
+      projectService.project.scenes.push(scene);
+    }
+
+    const playing = new Composition();
+    playing.tracks = [track('top'), track('bottom')];
+    projectService.project.compositions.push(playing);
+    service.selectedComposition = playing;
+  });
+
+  function track(uuid: string): Track {
+    const named = new Track();
+    named.uuid = uuid;
+    named.name = uuid;
+
+    return named;
+  }
+
+  function play(sceneUuid: string, trackUuid: string, startMillis: number, endMillis: number) {
+    const region = new ScenePlaybackRegion();
+    region.sceneUuid = sceneUuid;
+    region.trackUuid = trackUuid;
+    region.startMillis = startMillis;
+    region.endMillis = endMillis;
+    service.selectedComposition.scenePlaybackRegions.push(region);
+  }
+
+  const scenesAt = (millis: number) => service.getPresetsInTime(millis).map((preset) => preset.scene.uuid);
+
+  it('puts the scenes of the top track on top, whatever the order of the scenes', () => {
+    // the third scene comes last in the project, but plays on the top track
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    expect(scenesAt(5000)).toEqual(['first', 'third']);
+  });
+
+  it('plays only the scenes whose clips run at that time', () => {
+    play('first', 'bottom', 0, 4000);
+    play('second', 'bottom', 4000, 8000);
+    play('third', 'top', 6000, 10000);
+
+    expect(scenesAt(2000)).toEqual(['first']);
+    expect(scenesAt(7000)).toEqual(['second', 'third']);
+  });
+
+  it('follows the tracks when they are moved', () => {
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    service.selectedComposition.tracks.reverse();
+
+    expect(scenesAt(5000)).toEqual(['third', 'first']);
+  });
+
+  it('moves a track in front of another one, or to the end', () => {
+    const [top, bottom] = service.selectedComposition.tracks;
+    const names = () => service.selectedComposition.tracks.map((t) => t.uuid);
+
+    service.moveTrack(top, 2);
+    expect(names()).toEqual(['bottom', 'top']);
+
+    service.moveTrack(top, 0);
+    expect(names()).toEqual(['top', 'bottom']);
+
+    // in front of itself or right behind it, it stays where it is
+    service.moveTrack(bottom, 1);
+    service.moveTrack(bottom, 2);
+    expect(names()).toEqual(['top', 'bottom']);
+  });
+
+  // the designer is a preview: hiding and soloing tracks helps working on the show
+  it('leaves a hidden track out of the preview', () => {
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    service.toggleTrackHidden(service.selectedComposition.tracks[0]);
+
+    expect(scenesAt(5000)).toEqual(['first']);
+  });
+
+  it('plays only the soloed tracks in the preview', () => {
+    play('first', 'bottom', 0, 10000);
+    play('third', 'top', 0, 10000);
+
+    service.toggleTrackSolo(service.selectedComposition.tracks[1]);
+
+    expect(scenesAt(5000)).toEqual(['first']);
   });
 });

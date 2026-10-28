@@ -58,7 +58,8 @@
       "login": "Iniciar sesión",
       "logout": "Cerrar sesión",
       "support": "Soporte",
-      "reset-intro": "Mostrar introducción"
+      "reset-intro": "Mostrar introducción",
+      "view": "Ver"
     },
     "user": {
       "register-title": "Registrarse",
@@ -297,7 +298,16 @@
       "composition-no-file-selected": "Ningún archivo seleccionado",
       "composition-file-upload": "Subir",
       "composition-file-library": "Biblioteca multimedia",
-      "warning-delete-composition": "¿Realmente deseas eliminar esta composición? Esta acción no se puede deshacer."
+      "warning-delete-composition": "¿Realmente deseas eliminar esta composición? Esta acción no se puede deshacer.",
+      "tracks": "Pistas",
+      "add-track": "Añadir pista",
+      "audio": "Audio",
+      "remove-track": "Eliminar la pista",
+      "warning-delete-track": "¿De verdad quieres eliminar esta pista junto con las escenas que se reproducen en ella?",
+      "hide-track": "Ocultar la pista en la vista previa",
+      "show-track": "Volver a mostrar la pista en la vista previa",
+      "solo-track": "Solo: reproducir solo las pistas en solo en la vista previa",
+      "no-tracks": "Arrastra una escena aquí, o dibuja la seleccionada, para reproducirla en una pista"
     },
     "intro": {
       "next": "Continuar",
@@ -394,6 +404,23 @@
       "UV": "UV",
       "Lime": "Lima",
       "Indigo": "Índigo"
+    },
+    "layout": {
+      "layouts": "Diseño",
+      "panels": "Paneles",
+      "layout-default": "Predeterminado",
+      "layout-presets": "Preajustes",
+      "layout-show": "Show",
+      "layout-stage": "Escenario",
+      "panel-scenes": "Escenas",
+      "panel-presets": "Preajustes",
+      "panel-preview": "Vista previa 3D",
+      "panel-editor": "Editor de preajustes",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Atenuador maestro",
+      "panel-timeline": "Línea de tiempo",
+      "fold": "Plegar: {{panels}}",
+      "open": "Abrir: {{panels}}"
     }
   }
 }

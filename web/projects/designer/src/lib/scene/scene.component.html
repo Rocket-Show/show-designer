@@ -58,11 +58,14 @@
   </div>
   <div class="card-body border-secondary p-0 overflow-auto">
     <!-- The scenes, grouped in folders, with their presets ordered as they are layered
-         in the scene -->
+         in the scene. The presets are dragged in here from the preset list, the scenes
+         are dragged out onto the tracks of the timeline. -->
     <lib-tree
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
       [focusedNode]="focusedNode"
+      [publishDrag]="true"
+      [acceptExternalDrag]="true"
       [allowDrop]="allowDrop"
       (selectedNodesChange)="onSelectedNodesChange($event)"
       (nodesChange)="onNodesChange($event)"

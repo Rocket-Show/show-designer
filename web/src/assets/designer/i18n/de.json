@@ -58,7 +58,8 @@
       "login": "Einloggen",
       "logout": "Ausloggen",
       "support": "Support",
-      "reset-intro": "Einführung anzeigen"
+      "reset-intro": "Einführung anzeigen",
+      "view": "Ansicht"
     },
     "user": {
       "register-title": "Registrieren",
@@ -298,7 +299,16 @@
       "composition-no-file-selected": "Keine Datei ausgewählt",
       "composition-file-upload": "Hochladen",
       "composition-file-library": "Mediathek",
-      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "tracks": "Spuren",
+      "add-track": "Spur hinzufügen",
+      "audio": "Audio",
+      "remove-track": "Spur entfernen",
+      "warning-delete-track": "Möchtest du diese Spur zusammen mit den darauf abgespielten Szenen wirklich entfernen?",
+      "hide-track": "Spur in der Vorschau ausblenden",
+      "show-track": "Spur in der Vorschau wieder einblenden",
+      "solo-track": "Solo: in der Vorschau nur die Solo-Spuren abspielen",
+      "no-tracks": "Ziehe eine Szene hierher oder zeichne die ausgewählte, um sie auf einer Spur abzuspielen"
     },
     "intro": {
       "next": "Weiter",
@@ -395,6 +405,23 @@
       "UV": "UV",
       "Lime": "Limette",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Bereiche",
+      "layout-default": "Standard",
+      "layout-presets": "Presets",
+      "layout-show": "Show",
+      "layout-stage": "Bühne",
+      "panel-scenes": "Szenen",
+      "panel-presets": "Presets",
+      "panel-preview": "3D-Vorschau",
+      "panel-editor": "Preset-Editor",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Master-Dimmer",
+      "panel-timeline": "Zeitleiste",
+      "fold": "Einklappen: {{panels}}",
+      "open": "Ausklappen: {{panels}}"
     }
   }
 }

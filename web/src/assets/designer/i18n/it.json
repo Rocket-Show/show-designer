@@ -58,7 +58,8 @@
       "login": "Accedi",
       "logout": "Esci",
       "support": "Supporto",
-      "reset-intro": "Mostra introduzione"
+      "reset-intro": "Mostra introduzione",
+      "view": "Vista"
     },
     "user": {
       "register-title": "Registrati",
@@ -297,7 +298,16 @@
       "composition-no-file-selected": "Nessun file selezionato",
       "composition-file-upload": "Carica",
       "composition-file-library": "Libreria media",
-      "warning-delete-composition": "Vuoi davvero eliminare questa composizione? Questa azione non può essere annullata."
+      "warning-delete-composition": "Vuoi davvero eliminare questa composizione? Questa azione non può essere annullata.",
+      "tracks": "Tracce",
+      "add-track": "Aggiungi traccia",
+      "audio": "Audio",
+      "remove-track": "Rimuovi la traccia",
+      "warning-delete-track": "Vuoi davvero rimuovere questa traccia insieme alle scene riprodotte su di essa?",
+      "hide-track": "Nascondi la traccia nell'anteprima",
+      "show-track": "Mostra di nuovo la traccia nell'anteprima",
+      "solo-track": "Solo: riproduci nell'anteprima solo le tracce in solo",
+      "no-tracks": "Trascina qui una scena, o disegna quella selezionata, per riprodurla su una traccia"
     },
     "intro": {
       "next": "Continua",
@@ -394,6 +404,23 @@
       "UV": "UV",
       "Lime": "Lime",
       "Indigo": "Indaco"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Pannelli",
+      "layout-default": "Predefinito",
+      "layout-presets": "Preset",
+      "layout-show": "Show",
+      "layout-stage": "Palco",
+      "panel-scenes": "Scene",
+      "panel-presets": "Preset",
+      "panel-preview": "Anteprima 3D",
+      "panel-editor": "Editor dei preset",
+      "panel-fixtures": "Fixture",
+      "panel-master": "Dimmer generale",
+      "panel-timeline": "Timeline",
+      "fold": "Chiudi: {{panels}}",
+      "open": "Apri: {{panels}}"
     }
   }
 }

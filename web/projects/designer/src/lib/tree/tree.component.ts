@@ -85,6 +85,10 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // one of them (they insert a copy, this tree keeps its own nodes)
   @Input() publishDrag = false;
 
+  // take in the nodes other trees offer (see publishDrag). The others only let their own
+  // nodes be dropped, whatever is dragged across them.
+  @Input() acceptExternalDrag = false;
+
   // a plain click selects the row it went to. Switch it off where a click means
   // something else (checking a fixture); ctrl and shift still select, so several rows
   // can be dragged together
@@ -154,11 +158,15 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
   // the nodes of the drag currently in progress, no matter whether they are dragged
   // inside this tree or in from the outside
   private get activeNodes(): TreeNode[] {
-    return this.draggingNodes.length ? this.draggingNodes : this.treeDragService.nodes;
+    if (this.draggingNodes.length) {
+      return this.draggingNodes;
+    }
+
+    return this.acceptExternalDrag ? this.treeDragService.nodes : [];
   }
 
   private get externalDrag(): boolean {
-    return !this.draggingNodes.length && this.treeDragService.nodes.length > 0;
+    return !this.draggingNodes.length && this.acceptExternalDrag && this.treeDragService.nodes.length > 0;
   }
 
   indentPx(level: number): string {

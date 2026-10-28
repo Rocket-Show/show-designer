@@ -58,7 +58,8 @@
       "login": "Se connecter",
       "logout": "Se déconnecter",
       "support": "Assistance",
-      "reset-intro": "Afficher l'introduction"
+      "reset-intro": "Afficher l'introduction",
+      "view": "Affichage"
     },
     "user": {
       "register-title": "S'inscrire",
@@ -297,7 +298,16 @@
       "composition-no-file-selected": "Aucun fichier sélectionné",
       "composition-file-upload": "Télécharger",
       "composition-file-library": "Médiathèque",
-      "warning-delete-composition": "Voulez-vous vraiment supprimer cette composition ? Cette action est irréversible."
+      "warning-delete-composition": "Voulez-vous vraiment supprimer cette composition ? Cette action est irréversible.",
+      "tracks": "Pistes",
+      "add-track": "Ajouter une piste",
+      "audio": "Audio",
+      "remove-track": "Supprimer la piste",
+      "warning-delete-track": "Voulez-vous vraiment supprimer cette piste ainsi que les scènes qui y sont jouées ?",
+      "hide-track": "Masquer la piste dans l'aperçu",
+      "show-track": "Afficher de nouveau la piste dans l'aperçu",
+      "solo-track": "Solo : ne jouer que les pistes en solo dans l'aperçu",
+      "no-tracks": "Faites glisser une scène ici, ou dessinez celle qui est sélectionnée, pour la jouer sur une piste"
     },
     "intro": {
       "next": "Continuer",
@@ -394,6 +404,23 @@
       "UV": "UV",
       "Lime": "Citron vert",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Disposition",
+      "panels": "Panneaux",
+      "layout-default": "Par défaut",
+      "layout-presets": "Préréglages",
+      "layout-show": "Show",
+      "layout-stage": "Scène",
+      "panel-scenes": "Scènes",
+      "panel-presets": "Préréglages",
+      "panel-preview": "Aperçu 3D",
+      "panel-editor": "Éditeur de préréglages",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Gradateur général",
+      "panel-timeline": "Frise chronologique",
+      "fold": "Replier : {{panels}}",
+      "open": "Ouvrir : {{panels}}"
     }
   }
 }

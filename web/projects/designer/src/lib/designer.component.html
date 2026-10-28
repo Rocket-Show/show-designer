@@ -54,6 +54,35 @@
           >
         </div>
       </li>
+      <!-- the layouts for the ways of working on a show, and the panels to fold or open -->
+      <li class="nav-item dropdown d-none d-md-block">
+        <a class="nav-link dropdown-toggle" href="#" id="viewDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {{ 'designer.navigation.view' | translate }}
+        </a>
+        <div class="dropdown-menu view-menu" aria-labelledby="viewDropdown">
+          <h6 class="dropdown-header">{{ 'designer.layout.layouts' | translate }}</h6>
+          @for (layout of layoutService.layouts; track layout) {
+          <a class="dropdown-item" href="#" (click)="layoutService.applyLayout(layout); (false)"
+            ><i
+              class="fa fa-fw view-menu-check"
+              [class.fa-dot-circle-o]="layoutService.layout === layout"
+              [class.fa-circle-o]="layoutService.layout !== layout"
+              aria-hidden="true"
+            ></i>
+            {{ 'designer.layout.layout-' + layout | translate }}</a
+          >
+          }
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ 'designer.layout.panels' | translate }}</h6>
+          @for (panel of layoutService.panels; track panel) {
+          <a class="dropdown-item" href="#" (click)="layoutService.toggle(panel); (false)"
+            ><i class="fa fa-fw view-menu-check" [class.fa-check]="!layoutService.isFolded(panel)" aria-hidden="true"></i>
+            <i class="fa-fw view-menu-icon {{ layoutService.icons[panel] }}" aria-hidden="true"></i>
+            {{ 'designer.layout.panel-' + panel | translate }}</a
+          >
+          }
+        </div>
+      </li>
       <li class="nav-item dropdown d-none d-md-block">
         <a
           class="nav-link dropdown-toggle"
@@ -146,8 +175,9 @@
   </nav>
 
   <!-- The main content for larger screens -->
-  <div class="h-100 d-none d-md-block">
-    <div id="row1" class="split split-vertical clearfix pt-3 pl-3">
+  <!-- the rows, split and folded by DesignerLayout -->
+  <div class="h-100 d-none d-md-flex designer-rows">
+    <div id="row1" class="split split-vertical designer-row d-flex pt-3 px-3">
       <!-- Scenes -->
       <div id="scenes" class="split split-horizontal h-100">
         @if (projectService.project) {
@@ -163,7 +193,7 @@
       </div>
 
       <!-- 3D preview -->
-      <div id="preview" class="split split-horizontal h-100 pr-3">
+      <div id="preview" class="split split-horizontal h-100">
         @if (projectService.project) {
         <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('preview')">
           <div class="card-body p-0 h-100">
@@ -174,7 +204,7 @@
       </div>
     </div>
 
-    <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
+    <div id="row2" class="split split-vertical designer-row d-flex px-3">
       <!-- Menu for the capabilities, channels, effects and settings -->
       @if (projectService.project) {
       <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
@@ -319,7 +349,7 @@
     </div>
 
     <!-- Timeline -->
-    <div id="row3" class="split split-vertical clearfix px-3 pb-3">
+    <div id="row3" class="split split-vertical px-3 pb-3">
       @if (projectService.project) {
       <lib-app-timeline></lib-app-timeline>
       }

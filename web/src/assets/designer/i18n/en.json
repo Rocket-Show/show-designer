@@ -58,7 +58,8 @@
       "login": "Sign in",
       "logout": "Log out",
       "support": "Support",
-      "reset-intro": "Show intro"
+      "reset-intro": "Show intro",
+      "view": "View"
     },
     "user": {
       "register-title": "Register",
@@ -297,7 +298,16 @@
       "composition-no-file-selected": "No file selected",
       "composition-file-upload": "Upload",
       "composition-file-library": "Media library",
-      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone."
+      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone.",
+      "tracks": "Tracks",
+      "add-track": "Add track",
+      "audio": "Audio",
+      "remove-track": "Remove the track",
+      "warning-delete-track": "Do you really want to remove this track together with the scenes played on it?",
+      "hide-track": "Hide the track in the preview",
+      "show-track": "Show the track in the preview again",
+      "solo-track": "Solo: play only the soloed tracks in the preview",
+      "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track"
     },
     "intro": {
       "next": "Continue",
@@ -394,6 +404,23 @@
       "UV": "UV",
       "Lime": "Lime",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Panels",
+      "layout-default": "Default",
+      "layout-presets": "Presets",
+      "layout-show": "Show",
+      "layout-stage": "Stage",
+      "panel-scenes": "Scenes",
+      "panel-presets": "Presets",
+      "panel-preview": "3D preview",
+      "panel-editor": "Preset editor",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Master dimmer",
+      "panel-timeline": "Timeline",
+      "fold": "Fold: {{panels}}",
+      "open": "Open: {{panels}}"
     }
   }
 }

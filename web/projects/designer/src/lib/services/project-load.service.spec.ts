@@ -81,7 +81,7 @@ describe('ProjectLoadService migrating the curves of a project to version 8', ()
     service.import(JSON.stringify(project));
 
     const effects = projectService.project.presets[0].effects as EffectCurve[];
-    expect(projectService.project.version).toBe(9);
+    expect(projectService.project.version).toBe(10);
     expect(effects.map((effect) => effect.amplitude)).toEqual([0.5, 0.4, 1]);
   });
 
@@ -151,7 +151,7 @@ describe('ProjectLoadService migrating the pixel keys of a project to version 9'
 
     const project = projectService.project;
     const preset = project.presets[0];
-    expect(project.version).toBe(9);
+    expect(project.version).toBe(10);
     expect(project.presetFixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '1', '12', '(2, 1)', '(1, 2)']);
     expect(preset.fixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '12', '(1, 2)']);
     expect(preset.steps[0].fixtureChannelValues.map((value) => value.channelName)).toEqual(['Red 12', 'Red 1']);
@@ -173,6 +173,79 @@ describe('ProjectLoadService migrating the pixel keys of a project to version 9'
     service.import(JSON.stringify(projectService.project));
 
     expect((projectService.project.presets[0].effects[0] as EffectCurve).channels[0].channels).toEqual(['Red Pixel 2-2-1']);
+  });
+});
+
+// Until version 10, the timeline had one lane: all scenes were played on it, the first scene of
+// the project on top where they overlapped. The migration gives every scene a track of its own,
+// in the order of the scenes, so the show plays the same way.
+describe('ProjectLoadService migrating the timeline of a project to version 10', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  // two scenes played over a song, the second one already when the first one starts
+  function projectWithComposition(version: number): any {
+    const project = projectWithSelectedPreset();
+    project.version = version;
+    project.scenes = [
+      { uuid: 'scene-1', name: 'Chorus', presetUuids: ['preset-1'] },
+      { uuid: 'scene-2', name: 'Background', presetUuids: ['preset-1'] },
+    ];
+    project.compositions = [
+      {
+        uuid: 'composition-1',
+        name: 'Song',
+        scenePlaybackRegions: [
+          { sceneUuid: 'scene-2', startMillis: 0, endMillis: 60000 },
+          { sceneUuid: 'scene-1', startMillis: 20000, endMillis: 40000 },
+        ],
+      },
+    ];
+    return project;
+  }
+
+  it('plays every scene on a track of its own, the first scene on top', () => {
+    service.import(JSON.stringify(projectWithComposition(9)));
+
+    const composition = projectService.project.compositions[0];
+    expect(projectService.project.version).toBe(10);
+    expect(composition.tracks.map((track) => track.name)).toEqual(['Chorus', 'Background']);
+    expect(composition.scenePlaybackRegions.map((region) => region.trackUuid)).toEqual([
+      composition.tracks[1].uuid,
+      composition.tracks[0].uuid,
+    ]);
+  });
+
+  it('keeps the tracks of a project of version 10', () => {
+    const project = projectWithComposition(10);
+    project.compositions[0].tracks = [
+      { uuid: 'track-1', name: 'Background' },
+      { uuid: 'track-2', name: 'Chorus' },
+    ];
+    project.compositions[0].scenePlaybackRegions[0].trackUuid = 'track-1';
+    project.compositions[0].scenePlaybackRegions[1].trackUuid = 'track-2';
+
+    service.import(JSON.stringify(project));
+
+    const composition = projectService.project.compositions[0];
+    expect(composition.tracks.map((track) => track.name)).toEqual(['Background', 'Chorus']);
+    expect(composition.scenePlaybackRegions.map((region) => region.trackUuid)).toEqual(['track-1', 'track-2']);
   });
 });
 
@@ -225,7 +298,7 @@ function curveEffect(curveType: string, amplitude: number): any {
 // a project with one dimmer, which its selected preset turns on
 function projectWithSelectedPreset(): any {
   return {
-    version: 9,
+    version: 10,
     name: 'Imported',
     fixtureProfiles: [
       {

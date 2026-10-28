@@ -21,6 +21,7 @@ import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { Composition } from '../models/composition';
 import { EffectCurve } from '../models/effect-curve';
+import { assignTracks } from '../models/timeline-track';
 
 @Injectable({
   providedIn: 'root',
@@ -229,6 +230,16 @@ export class ProjectLoadService {
     project.version = 9;
   }
 
+  private migrateToVersion10() {
+    // the timeline has tracks now. Before, all scenes played on one lane, layered in the
+    // order of the scenes -> one track per scene, in that order, plays the show the same way
+    for (const composition of this.projectService.project.compositions) {
+      assignTracks(composition, this.projectService.project.scenes, () => this.uuidService.getUuid());
+    }
+
+    this.projectService.project.version = 10;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -281,6 +292,11 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 9) {
       this.migrateToVersion9();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 10) {
+      this.migrateToVersion10();
       migrated = true;
     }
 

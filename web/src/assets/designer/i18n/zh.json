@@ -58,7 +58,8 @@
       "login": "登录",
       "logout": "退出登录",
       "support": "技术支持",
-      "reset-intro": "显示介绍"
+      "reset-intro": "显示介绍",
+      "view": "视图"
     },
     "user": {
       "register-title": "注册",
@@ -297,7 +298,16 @@
       "composition-no-file-selected": "未选择文件",
       "composition-file-upload": "上传",
       "composition-file-library": "媒体库",
-      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。"
+      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。",
+      "tracks": "轨道",
+      "add-track": "添加轨道",
+      "audio": "音频",
+      "remove-track": "删除轨道",
+      "warning-delete-track": "确定要删除此轨道及其上播放的场景吗？",
+      "hide-track": "在预览中隐藏此轨道",
+      "show-track": "在预览中重新显示此轨道",
+      "solo-track": "独奏：预览中只播放独奏的轨道",
+      "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放"
     },
     "intro": {
       "next": "继续",
@@ -394,6 +404,23 @@
       "UV": "紫外线",
       "Lime": "柠檬绿",
       "Indigo": "靛蓝"
+    },
+    "layout": {
+      "layouts": "布局",
+      "panels": "面板",
+      "layout-default": "默认",
+      "layout-presets": "预设",
+      "layout-show": "演出",
+      "layout-stage": "舞台",
+      "panel-scenes": "场景",
+      "panel-presets": "预设",
+      "panel-preview": "3D 预览",
+      "panel-editor": "预设编辑器",
+      "panel-fixtures": "灯具",
+      "panel-master": "总调光",
+      "panel-timeline": "时间轴",
+      "fold": "折叠：{{panels}}",
+      "open": "展开：{{panels}}"
     }
   }
 }
