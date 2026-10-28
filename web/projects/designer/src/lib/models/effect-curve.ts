@@ -3,11 +3,6 @@ import { EffectCurveProfileChannels } from './effect-curve-profile-channel';
 import { FixtureCapability } from './fixture-capability';
 
 export class EffectCurve extends Effect {
-  // curve types the duty cycle applies to. the sawtooths are the limits of the triangle
-  // (rising over the whole cycle and falling over it), so a width would only turn them
-  // into a triangle again.
-  private static readonly dutyCycleTypes = ['sine', 'square', 'triangle'];
-
   // a cycle border is never hit exactly when the curve is sampled, so the value held
   // after a run is taken just before it
   private static readonly cycleEpsilon = 1e-9;
@@ -41,9 +36,12 @@ export class EffectCurve extends Effect {
   amplitude = 1;
   position = 0.5;
 
-  // the part of the period the curve is on (square) or rising (sine, triangle), between
-  // 0 and 1. 0.5 is the symmetric curve. a chase shows it as the part of the fixtures
-  // that are on at the same time: 0.1 lights one fixture out of ten.
+  // the part of the period the curve is on (above its position), between 0 and 1. 0.5 is
+  // the plain curve. every curve keeps its shape: a narrower width runs it faster and
+  // rests it at its bottom for the rest of the period, a wider one rests it at its top. a
+  // sine, a triangle and a square stay centered on their peak, a sawtooth keeps its jump.
+  // a chase shows it as the part of the fixtures that are on at the same time: 0.1 lights
+  // one fixture out of ten.
   dutyCycle = 0.5;
 
   // how long the curve keeps running:
@@ -146,11 +144,6 @@ export class EffectCurve extends Effect {
     }
 
     return this.phaseBeats * EffectCurve.getBeatMillis(beatsPerMinute);
-  }
-
-  // whether the duty cycle changes anything on the current curve type
-  public hasDutyCycle(): boolean {
-    return EffectCurve.dutyCycleTypes.indexOf(this.curveType) >= 0;
   }
 
   // how many fixtures run the same step of the chase
@@ -264,28 +257,69 @@ export class EffectCurve extends Effect {
 
   // the duty cycle, kept inside the range the curves are defined for
   private getClampedDutyCycle(): number {
-    if (!this.hasDutyCycle()) {
-      return 0.5;
-    }
-
     return Math.max(Math.min(this.dutyCycle, 1), 0);
   }
 
-  // remaps the position inside the cycle, so the curve rises over the duty cycle and
-  // falls over the rest of it. the symmetric 50 % leaves it untouched.
+  // remaps the position inside the cycle of a sine or a triangle, so the curve is on over
+  // the duty cycle. it stays symmetric around its peak: below 50 % it runs faster and
+  // rests at its trough for the rest of the cycle, above it rests at its peak and dips
+  // faster. the plain 50 % leaves it untouched.
   private warpCyclePosition(cyclePosition: number): number {
-    // an instant rise or fall would divide by zero, so the curve keeps a trace of both
-    const duty = Math.max(Math.min(this.getClampedDutyCycle(), 0.999), 0.001);
+    const duty = this.getClampedDutyCycle();
 
     if (duty === 0.5) {
       return cyclePosition;
     }
 
-    // measured from the trough of the curve, where it starts to rise
-    const fromTrough = (cyclePosition + 0.25) % 1;
-    const warped = fromTrough < duty ? (fromTrough / duty) * 0.5 : 0.5 + ((fromTrough - duty) / (1 - duty)) * 0.5;
+    // never on or never off: the curve rests at its trough or its peak
+    if (duty <= 0) {
+      return 0.75;
+    }
 
-    return (warped + 0.75) % 1;
+    if (duty >= 1) {
+      return 0.25;
+    }
+
+    // both curves are symmetric around their peak at a quarter of the cycle, so only the
+    // distance from it counts: 0 on the peak, 0.5 on the trough
+    const fromPeak = Math.abs(((cyclePosition + 0.25) % 1) - 0.5);
+
+    // the plain curve falls from its peak to its trough over half the cycle and crosses
+    // its position halfway. warped, it crosses it at half the duty cycle and falls over
+    // the shorter of the on and off parts, so it neither overshoots its peak nor its
+    // trough and rests at them over the rest.
+    const fall = Math.min(duty, 1 - duty);
+    const warpedFromPeak = Math.max(Math.min(0.25 + ((fromPeak - duty / 2) / fall) * 0.5, 0.5), 0);
+
+    return 0.25 + warpedFromPeak;
+  }
+
+  // how far a sawtooth has ramped up at a position inside its cycle, between 0 (its
+  // bottom) and 1 (its top), before it jumps back at the end of the cycle. it keeps the
+  // jump where it is and is on over the duty cycle before it: below 50 % it ramps faster
+  // and rests at its bottom before, above it ramps right after the jump and rests at its
+  // top. the plain 50 % ramps over the whole cycle.
+  private getRamp(cyclePosition: number): number {
+    const duty = this.getClampedDutyCycle();
+
+    if (duty === 0.5) {
+      return cyclePosition;
+    }
+
+    // never on or never off: the curve rests at its bottom or its top
+    if (duty <= 0) {
+      return 0;
+    }
+
+    if (duty >= 1) {
+      return 1;
+    }
+
+    // the ramp crosses its middle where the duty cycle begins and takes twice the shorter
+    // of the on and off parts, so it fits into the cycle on both sides of its middle
+    const rampLength = 2 * Math.min(duty, 1 - duty);
+
+    return Math.max(Math.min(0.5 + (cyclePosition - (1 - duty)) / rampLength, 1), 0);
   }
 
   // the value of the curve at a position inside its cycle, between 0 and 1. every curve swings
@@ -300,15 +334,19 @@ export class EffectCurve extends Effect {
         value = this.position + (this.amplitude / 2) * Math.sin(2 * Math.PI * warped);
         break;
       }
-      case 'square':
-        // the curve is on over the last part of the cycle, which leaves the default of
-        // 50 % the same square as before there was a duty cycle
-        if (cyclePosition >= 1 - this.getClampedDutyCycle()) {
+      case 'square': {
+        // on while the sine is above its position: over the duty cycle, centered on the
+        // peak of the sine at a quarter of the cycle
+        const duty = this.getClampedDutyCycle();
+        const fromOn = (((cyclePosition - 0.25 + duty / 2) % 1) + 1) % 1;
+
+        if (fromOn < duty) {
           value = this.position + this.amplitude / 2;
         } else {
           value = this.position - this.amplitude / 2;
         }
         break;
+      }
       case 'triangle': {
         // rises and falls linearly, in phase with the sine
         const warped = this.warpCyclePosition(cyclePosition);
@@ -316,12 +354,12 @@ export class EffectCurve extends Effect {
         break;
       }
       case 'sawtooth':
-        // ramps up over the whole cycle, then jumps back
-        value = this.position + (this.amplitude / 2) * (2 * cyclePosition - 1);
+        // ramps up, then jumps back at the end of the cycle
+        value = this.position + (this.amplitude / 2) * (2 * this.getRamp(cyclePosition) - 1);
         break;
       case 'reverse-sawtooth':
-        // ramps down over the whole cycle, then jumps back
-        value = this.position + (this.amplitude / 2) * (1 - 2 * cyclePosition);
+        // the sawtooth run backwards: jumps up at the beginning of the cycle, then ramps down
+        value = this.position + (this.amplitude / 2) * (2 * this.getRamp(1 - cyclePosition) - 1);
         break;
     }
 

@@ -52,14 +52,30 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public lengthBeatsMax = 16;
   public amplitudeMin = 0;
   public amplitudeMax = 4;
-  public percentageMin = 0;
-  public percentageMax = 1;
   public phasingMillisMin = -1000;
   public phasingMillisMax = 1000;
   public phasingCyclesMin = -4;
   public phasingCyclesMax = 4;
   public phasingBeatsMin = -4;
   public phasingBeatsMax = 4;
+
+  // the sliders cover the values used most, the input boxes take slower curves and
+  // longer chases as well. a chase longer than the period still counts on a curve that
+  // stops: it starts the fixtures one after the other.
+  public lengthMillisInputMax = 600000;
+  public lengthBeatsInputMax = 256;
+  public phasingMillisInputMax = 60000;
+  public phasingBeatsInputMax = 64;
+
+  // the position moves the curve until it rests flat at the bottom or the top, which
+  // takes half the amplitude beyond either end
+  public positionMin = -this.amplitudeMax / 2;
+  public positionMax = 1 + this.amplitudeMax / 2;
+
+  // the position slider spans the way the curve can be moved at its current amplitude:
+  // 0 rests it flat at the bottom, 1 at the top
+  public positionReachMin = 0;
+  public positionReachMax = 1;
 
   // the phase moves the curve inside its period, so a shift of a full period lands on
   // the same curve again -> the slider spans one period in each direction, whatever the
@@ -560,7 +576,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setLengthMillis(value: any) {
-    if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisMax) {
+    if (!isNaN(value) && value >= this.lengthMillisMin && value <= this.lengthMillisInputMax) {
       this.curve.lengthMillis = +value;
       this.lengthChanged();
     }
@@ -578,7 +594,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setLengthBeats(value: any) {
-    if (!isNaN(value) && value >= this.lengthBeatsMin && value <= this.lengthBeatsMax) {
+    if (!isNaN(value) && value >= this.lengthBeatsMin && value <= this.lengthBeatsInputMax) {
       this.curve.lengthBeats = +value;
       this.lengthChanged();
     }
@@ -606,10 +622,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     if (lengthMode === 'beats') {
       // the beats the current period lasts, snapped to the steps the slider offers
       const beats = this.curve.lengthMillis / EffectCurve.getBeatMillis(this.beatsPerMinute);
-      this.curve.lengthBeats = this.clamp(Math.round(beats * 4) / 4, this.lengthBeatsMin, this.lengthBeatsMax);
+      this.curve.lengthBeats = this.clamp(Math.round(beats * 4) / 4, this.lengthBeatsMin, this.lengthBeatsInputMax);
     } else {
       const millis = this.curve.getLengthMillis(this.beatsPerMinute);
-      this.curve.lengthMillis = this.clamp(Math.round(millis), this.lengthMillisMin, this.lengthMillisMax);
+      this.curve.lengthMillis = this.clamp(Math.round(millis), this.lengthMillisMin, this.lengthMillisInputMax);
     }
 
     this.curve.lengthMode = lengthMode;
@@ -686,10 +702,30 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setPosition(value: any) {
-    if (!isNaN(value) && value >= this.percentageMin && value <= this.percentageMax) {
+    if (!isNaN(value) && value >= this.positionMin && value <= this.positionMax) {
       this.curve.position = +value;
       this.livePreviewService.previewLive();
     }
+  }
+
+  // the position as the part of the way the curve can be moved at its amplitude: from
+  // half the amplitude below the bottom, where it rests flat on it, to half of it above
+  // the top
+  get positionReach(): number {
+    return (this.curve.position + this.curve.amplitude / 2) / (1 + this.curve.amplitude);
+  }
+
+  setPositionReach(value: any) {
+    if (isNaN(value)) {
+      return;
+    }
+
+    const position = +value * (1 + this.curve.amplitude) - this.curve.amplitude / 2;
+
+    // the slider walks the way in small steps, which would leave the position with far
+    // more decimals than its input box can show
+    this.curve.position = Math.round(position * 1000) / 1000;
+    this.livePreviewService.previewLive();
   }
 
   setPhaseMillis(value: any) {
@@ -707,14 +743,14 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setPhasingMillis(value: any) {
-    if (!isNaN(value) && value >= this.phasingMillisMin && value <= this.phasingMillisMax) {
+    if (!isNaN(value) && Math.abs(value) <= this.phasingMillisInputMax) {
       this.curve.phasingMillis = +value;
       this.livePreviewService.previewLive();
     }
   }
 
   setPhasingBeats(value: any) {
-    if (!isNaN(value) && value >= this.phasingBeatsMin && value <= this.phasingBeatsMax) {
+    if (!isNaN(value) && Math.abs(value) <= this.phasingBeatsInputMax) {
       this.curve.phasingBeats = +value;
       this.livePreviewService.previewLive();
     }
@@ -735,9 +771,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // whether the advanced settings hold anything else than their defaults. the button
   // marks it, so settings that are not on this screen are not lost out of sight.
   advancedActive(): boolean {
-    return (
-      this.curve.runMode !== 'infinite' || (this.curve.hasDutyCycle() && this.curve.dutyCycle !== 0.5) || this.curve.phasingGroupSize !== 1
-    );
+    return this.curve.runMode !== 'infinite' || this.curve.dutyCycle !== 0.5 || this.curve.phasingGroupSize !== 1;
   }
 
   openAdvanced() {

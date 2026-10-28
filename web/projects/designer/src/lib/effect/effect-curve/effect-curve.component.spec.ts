@@ -32,6 +32,7 @@ function gridComponent(curve: EffectCurve, fixtureCount: number): { component: E
   const translate: any = { onLangChange: new Subject<void>() };
   const effectService: any = { effectsOpenChanged: new Subject<void>(), effectsOpen: false };
   const timelineService: any = { selectedComposition: undefined };
+  const livePreviewService: any = { previewLive: () => {} };
   const unused: any = undefined;
 
   const component = new EffectCurveComponent(
@@ -41,7 +42,7 @@ function gridComponent(curve: EffectCurve, fixtureCount: number): { component: E
     translate,
     effectService,
     unused,
-    unused,
+    livePreviewService,
     unused,
     timelineService
   );
@@ -108,5 +109,68 @@ describe('EffectCurveComponent grid', () => {
     component.redraw();
 
     expect(context.markCount).toBe(1);
+  });
+});
+
+// the lowest and the highest value the curve puts on its fixtures over a period
+function valueRange(curve: EffectCurve): { min: number; max: number } {
+  let min = 1;
+  let max = 0;
+
+  for (let millis = 0; millis < curve.lengthMillis; millis += 10) {
+    const value = curve.getValueAtMillis(millis, 0, 1);
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+
+  return { min, max };
+}
+
+describe('EffectCurveComponent position', () => {
+  it('should move the curve until it rests flat at the bottom or the top', () => {
+    const curve = new EffectCurve();
+    const { component } = gridComponent(curve, 1);
+
+    component.setPositionReach(0);
+    expect(curve.position).toBe(-0.5);
+    expect(valueRange(curve).max).toBeCloseTo(0, 9);
+
+    component.setPositionReach(1);
+    expect(curve.position).toBe(1.5);
+    expect(valueRange(curve).min).toBeCloseTo(1, 9);
+
+    // halfway is the middle, whatever the amplitude
+    component.setPositionReach(0.5);
+    expect(curve.position).toBe(0.5);
+  });
+
+  it('should span the way a curve of any amplitude can be moved', () => {
+    const curve = new EffectCurve();
+    curve.amplitude = 2;
+    const { component } = gridComponent(curve, 1);
+
+    component.setPositionReach(0);
+    expect(curve.position).toBe(-1);
+    expect(valueRange(curve).max).toBeCloseTo(0, 9);
+
+    // a curve without amplitude is a constant value, which the position sets directly
+    curve.amplitude = 0;
+    curve.position = 0.3;
+    expect(component.positionReach).toBeCloseTo(0.3, 9);
+  });
+
+  it('should take a typed position as far as the widest amplitude needs', () => {
+    const curve = new EffectCurve();
+    const { component } = gridComponent(curve, 1);
+
+    component.setPosition(-2);
+    expect(curve.position).toBe(-2);
+
+    component.setPosition(3);
+    expect(curve.position).toBe(3);
+
+    // beyond, the curve rests flat in any case
+    component.setPosition(3.5);
+    expect(curve.position).toBe(3);
   });
 });

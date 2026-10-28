@@ -24,6 +24,10 @@ export class EffectCurveAdvancedComponent {
   public phasingGroupSizeMin = 1;
   public phasingGroupSizeMax = 16;
 
+  // the slider covers the groups used most, the input box takes larger ones as well, for
+  // the pixels of a long strip
+  public phasingGroupSizeInputMax = 512;
+
   constructor(public bsModalRef: BsModalRef, public livePreviewService: LivePreviewService) {}
 
   // the duty cycle is stored as a part of the period and set as a percentage of it
@@ -69,7 +73,7 @@ export class EffectCurveAdvancedComponent {
   }
 
   setPhasingGroupSize(value: any) {
-    if (isNaN(value) || value < this.phasingGroupSizeMin || value > this.phasingGroupSizeMax) {
+    if (isNaN(value) || value < this.phasingGroupSizeMin || value > this.phasingGroupSizeInputMax) {
       return;
     }
 
