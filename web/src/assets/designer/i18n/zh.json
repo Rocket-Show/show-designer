@@ -58,7 +58,8 @@
       "login": "登录",
       "logout": "退出登录",
       "support": "技术支持",
-      "reset-intro": "显示介绍"
+      "reset-intro": "显示介绍",
+      "view": "视图"
     },
     "user": {
       "register-title": "注册",
@@ -400,6 +401,23 @@
       "UV": "紫外线",
       "Lime": "柠檬绿",
       "Indigo": "靛蓝"
+    },
+    "layout": {
+      "layouts": "布局",
+      "panels": "面板",
+      "layout-default": "默认",
+      "layout-presets": "预设",
+      "layout-show": "演出",
+      "layout-stage": "舞台",
+      "panel-scenes": "场景",
+      "panel-presets": "预设",
+      "panel-preview": "3D 预览",
+      "panel-editor": "预设编辑器",
+      "panel-fixtures": "灯具",
+      "panel-master": "总调光",
+      "panel-timeline": "时间轴",
+      "fold": "折叠：{{panels}}",
+      "open": "展开：{{panels}}"
     }
   }
 }

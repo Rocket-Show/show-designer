@@ -1,8 +1,8 @@
-import { AfterViewInit, Component, HostListener, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { map } from 'rxjs/operators';
-import Split from 'split.js';
+import { DesignerLayout } from './designer-layout';
 import { PreviewComponent } from './preview/preview.component';
 import { ProjectBrowserComponent } from './project/project-browser/project-browser.component';
 import { ProjectImportComponent } from './project/project-import/project-import.component';
@@ -30,6 +30,7 @@ import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
+import { LayoutService } from './services/layout.service';
 
 @Component({
   selector: 'lib-designer',
@@ -123,6 +124,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   public totalMenuHeightPx = 0;
 
+  // the panels, split and folded
+  private layout: DesignerLayout;
+
   currentTab = 'properties';
 
   @ViewChild(PreviewComponent)
@@ -150,11 +154,18 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     public colorService: ColorService,
     private effectService: EffectService,
     private hardwarePromoService: HardwarePromoService,
-    public undoService: UndoService
+    public undoService: UndoService,
+    public layoutService: LayoutService,
+    private elementRef: ElementRef
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
     });
+
+    // the panels are laid out again when they are folded or opened, and in another
+    // language for the titles of the arrows
+    this.layoutService.changed.subscribe(() => this.layout?.build());
+    this.translateService.onLangChange.subscribe(() => this.layout?.build());
   }
 
   private loadError(response: any) {
@@ -241,31 +252,14 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     // Set up the splitter
     setTimeout(() => {
-      Split(['#row1', '#row2', '#row3'], {
-        sizes: [42, 40, 18],
-        direction: 'vertical',
-        cursor: 'row-resize',
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-      });
-
-      Split(['#scenes', '#presets', '#preview'], {
-        sizes: [20, 20, 60],
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-      });
-
-      Split(['#capabilities', '#fixtures', '#masterDimmer'], {
-        sizes: [70, 24, 6],
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-        minSize: 50,
-      });
-
-      this.onResize();
+      this.layout = new DesignerLayout(
+        this.elementRef.nativeElement,
+        this.layoutService,
+        this.translateService,
+        this.splitGutterSizePx,
+        this.onResize.bind(this)
+      );
+      this.layout.build();
     });
   }
 

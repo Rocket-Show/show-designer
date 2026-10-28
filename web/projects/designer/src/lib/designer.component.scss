@@ -1101,6 +1101,116 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     overflow-x: hidden;
   }
 
+  // The rows from top to bottom and the panels of a row from left to right, sized by
+  // DesignerLayout with their flex basis. They shrink together around what keeps its size
+  // (the tab rail of the preset editor, the folded timeline, the fold strips).
+  .designer-rows {
+    flex-direction: column;
+  }
+
+  .designer-rows > .split-vertical {
+    flex: 0 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+
+  .designer-row > .split-horizontal {
+    flex: 0 1 auto;
+    min-width: 0;
+    float: none;
+  }
+
+  .designer-rows > .gutter,
+  .designer-row > .gutter {
+    flex: 0 0 auto;
+    float: none;
+  }
+
+  // a folded panel takes no room at all
+  .fold-hidden,
+  .fold-editor > .tab-rail {
+    display: none !important;
+  }
+
+  // the timeline folded down to its toolbar keeps its height
+  .designer-rows > #row3.fold-toolbar {
+    flex: 0 0 auto;
+  }
+
+  // The arrows folding the panels next to a gutter, or opening the ones folded into it. They
+  // stay faint and grey until the pointer is on the gutter. Their background hides the
+  // hairline of the gutter behind them.
+  .fold-arrows {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 2px;
+    background-color: $sd-bg;
+  }
+
+  .gutter-horizontal .fold-arrows,
+  .fold-edge-horizontal .fold-arrows {
+    flex-direction: column;
+    padding: 2px 0;
+  }
+
+  .gutter-vertical .fold-arrows,
+  .fold-edge-vertical .fold-arrows {
+    padding: 0 2px;
+  }
+
+  .fold-arrows i {
+    display: block;
+    width: 11px;
+    height: 11px;
+    line-height: 11px;
+    text-align: center;
+    font-size: 12px;
+    color: $sd-text-dim;
+    opacity: 0.45;
+    cursor: pointer;
+  }
+
+  .gutter:hover .fold-arrows i,
+  .fold-edge:hover .fold-arrows i {
+    opacity: 1;
+    color: $sd-text-muted;
+  }
+
+  .fold-arrows i:hover {
+    color: $sd-text !important;
+  }
+
+  // where panels are folded away at the edge of a row, or above the folded timeline
+  .fold-edge {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .fold-edge-horizontal {
+    width: 13px;
+  }
+
+  .fold-edge-vertical {
+    height: 13px;
+  }
+
+  // the View menu marks the layout picked and the panels which are open
+  .view-menu .view-menu-check {
+    color: $sd-primary-text;
+  }
+
+  // the same width for every icon, also the dimmer, which is not one of font awesome
+  .view-menu .view-menu-icon {
+    display: inline-block;
+    width: 1.28571429em;
+    text-align: center;
+    color: $sd-text-muted;
+  }
+
   /* The main panels */
   .panel {
     background-color: transparent;

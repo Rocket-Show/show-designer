@@ -1,6 +1,7 @@
 <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('timeline')">
   <div class="card-body h-100 d-flex" style="flex-flow: column; overflow: unset">
-    <div class="d-flex pb-3">
+    <!-- the toolbar is all that is left of a folded timeline: playing and the time still work -->
+    <div class="d-flex" [class.pb-3]="!folded">
       <div class="d-flex mr-3 my-auto" style="float: left">
         <a href="#" class="btn btn-secondary m-0 p-1 mr-3" (click)="addComposition(); (false)"
           ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i
@@ -129,7 +130,7 @@
       }
     </div>
 
-    @if (timelineService.loadingAudioFile) {
+    @if (!folded && timelineService.loadingAudioFile) {
     <div class="w-100 d-flex">
       <i class="fa fa-circle-o-notch fa-spin m-auto" style="margin-top: -30px"></i>
     </div>
@@ -139,7 +140,7 @@
         ><i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.audio-file-error' | translate }}</a
       >
     </div>
-    } @if (timelineService.selectedComposition) {
+    } @if (!folded && timelineService.selectedComposition) {
     <!-- takes the focus when something in it is clicked: the delete key removes the selected
          clip (or the track whose name was clicked) -->
     <div #frame class="tl-frame" tabindex="0" (keydown)="onKeyDown($event)">
@@ -353,7 +354,7 @@
       </div>
     </ng-template>
 
-    @if (projectService.project.compositions.length == 0) {
+    @if (!folded && projectService.project.compositions.length == 0) {
     <div class="w-100 d-flex">
       <a href="#" class="m-auto" (click)="addComposition(); (false)"
         ><i class="fa fa-plus-circle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.no-compositions' | translate }}</a

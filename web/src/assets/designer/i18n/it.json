@@ -58,7 +58,8 @@
       "login": "Accedi",
       "logout": "Esci",
       "support": "Supporto",
-      "reset-intro": "Mostra introduzione"
+      "reset-intro": "Mostra introduzione",
+      "view": "Vista"
     },
     "user": {
       "register-title": "Registrati",
@@ -400,6 +401,23 @@
       "UV": "UV",
       "Lime": "Lime",
       "Indigo": "Indaco"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Pannelli",
+      "layout-default": "Predefinito",
+      "layout-presets": "Preset",
+      "layout-show": "Show",
+      "layout-stage": "Palco",
+      "panel-scenes": "Scene",
+      "panel-presets": "Preset",
+      "panel-preview": "Anteprima 3D",
+      "panel-editor": "Editor dei preset",
+      "panel-fixtures": "Fixture",
+      "panel-master": "Dimmer generale",
+      "panel-timeline": "Timeline",
+      "fold": "Chiudi: {{panels}}",
+      "open": "Apri: {{panels}}"
     }
   }
 }

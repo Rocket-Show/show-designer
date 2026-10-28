@@ -58,7 +58,8 @@
       "login": "Sign in",
       "logout": "Log out",
       "support": "Support",
-      "reset-intro": "Show intro"
+      "reset-intro": "Show intro",
+      "view": "View"
     },
     "user": {
       "register-title": "Register",
@@ -400,6 +401,23 @@
       "UV": "UV",
       "Lime": "Lime",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Panels",
+      "layout-default": "Default",
+      "layout-presets": "Presets",
+      "layout-show": "Show",
+      "layout-stage": "Stage",
+      "panel-scenes": "Scenes",
+      "panel-presets": "Presets",
+      "panel-preview": "3D preview",
+      "panel-editor": "Preset editor",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Master dimmer",
+      "panel-timeline": "Timeline",
+      "fold": "Fold: {{panels}}",
+      "open": "Open: {{panels}}"
     }
   }
 }

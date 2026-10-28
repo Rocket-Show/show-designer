@@ -58,7 +58,8 @@
       "login": "Se connecter",
       "logout": "Se déconnecter",
       "support": "Assistance",
-      "reset-intro": "Afficher l'introduction"
+      "reset-intro": "Afficher l'introduction",
+      "view": "Affichage"
     },
     "user": {
       "register-title": "S'inscrire",
@@ -400,6 +401,23 @@
       "UV": "UV",
       "Lime": "Citron vert",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Disposition",
+      "panels": "Panneaux",
+      "layout-default": "Par défaut",
+      "layout-presets": "Préréglages",
+      "layout-show": "Show",
+      "layout-stage": "Scène",
+      "panel-scenes": "Scènes",
+      "panel-presets": "Préréglages",
+      "panel-preview": "Aperçu 3D",
+      "panel-editor": "Éditeur de préréglages",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Gradateur général",
+      "panel-timeline": "Frise chronologique",
+      "fold": "Replier : {{panels}}",
+      "open": "Ouvrir : {{panels}}"
     }
   }
 }

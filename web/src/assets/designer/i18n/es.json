@@ -58,7 +58,8 @@
       "login": "Iniciar sesión",
       "logout": "Cerrar sesión",
       "support": "Soporte",
-      "reset-intro": "Mostrar introducción"
+      "reset-intro": "Mostrar introducción",
+      "view": "Ver"
     },
     "user": {
       "register-title": "Registrarse",
@@ -400,6 +401,23 @@
       "UV": "UV",
       "Lime": "Lima",
       "Indigo": "Índigo"
+    },
+    "layout": {
+      "layouts": "Diseño",
+      "panels": "Paneles",
+      "layout-default": "Predeterminado",
+      "layout-presets": "Preajustes",
+      "layout-show": "Show",
+      "layout-stage": "Escenario",
+      "panel-scenes": "Escenas",
+      "panel-presets": "Preajustes",
+      "panel-preview": "Vista previa 3D",
+      "panel-editor": "Editor de preajustes",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Atenuador maestro",
+      "panel-timeline": "Línea de tiempo",
+      "fold": "Plegar: {{panels}}",
+      "open": "Abrir: {{panels}}"
     }
   }
 }

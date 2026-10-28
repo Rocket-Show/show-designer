@@ -15,6 +15,7 @@ import { ColorService } from '../services/color.service';
 import { ConfigService } from '../services/config.service';
 import { HotkeyTargetExcludeService } from '../services/hotkey-target-exclude.service';
 import { IntroService } from '../services/intro.service';
+import { LayoutService } from '../services/layout.service';
 import { LivePreviewService } from '../services/live-preview.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
@@ -179,7 +180,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     public presetService: PresetService,
     private colorService: ColorService,
     private treeDragService: TreeDragService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private layoutService: LayoutService
   ) {
     this.subscriptions.push(
       this.timelineService.waveSurferReady.subscribe(() => {
@@ -207,6 +209,11 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
   get composition(): Composition {
     return this.timelineService.selectedComposition;
+  }
+
+  // folded down to its toolbar (see LayoutService)
+  get folded(): boolean {
+    return this.layoutService.isFolded('timeline');
   }
 
   get laneWidthPx(): number {
