@@ -295,6 +295,7 @@
       "composition-sync-type": "Synchronization",
       "composition-sync-type-none": "None",
       "composition-sync-type-audio": "Audio file",
+      "composition-sync-type-none-hint": "The scenes play on their own clock. The composition lasts until its last scene has ended: put a scene past the end to make it longer.",
       "composition-no-file-selected": "No file selected",
       "composition-file-upload": "Upload",
       "composition-file-library": "Media library",
@@ -307,7 +308,17 @@
       "hide-track": "Hide the track in the preview",
       "show-track": "Show the track in the preview again",
       "solo-track": "Solo: play only the soloed tracks in the preview",
-      "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track"
+      "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track",
+      "actions": "Actions",
+      "action-type": {
+        "NULL": "Null",
+        "SYSTEM": "System",
+        "TRANSPORT": "Transport",
+        "MIDI": "MIDI",
+        "LIGHTING": "Lighting",
+        "RASPBERRY_GPIO": "External control",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "Continue",

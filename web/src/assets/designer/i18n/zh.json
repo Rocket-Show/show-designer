@@ -295,6 +295,7 @@
       "composition-sync-type": "同步",
       "composition-sync-type-none": "无",
       "composition-sync-type-audio": "音频文件",
+      "composition-sync-type-none-hint": "场景按自己的时钟播放。作品持续到最后一个场景结束：把场景放到结尾之后即可延长作品。",
       "composition-no-file-selected": "未选择文件",
       "composition-file-upload": "上传",
       "composition-file-library": "媒体库",
@@ -307,7 +308,17 @@
       "hide-track": "在预览中隐藏此轨道",
       "show-track": "在预览中重新显示此轨道",
       "solo-track": "独奏：预览中只播放独奏的轨道",
-      "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放"
+      "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放",
+      "actions": "动作",
+      "action-type": {
+        "NULL": "空",
+        "SYSTEM": "系统",
+        "TRANSPORT": "传输",
+        "MIDI": "MIDI",
+        "LIGHTING": "灯光",
+        "RASPBERRY_GPIO": "外部控制",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "继续",

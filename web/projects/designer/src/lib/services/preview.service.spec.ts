@@ -101,6 +101,31 @@ describe('PreviewService preset intensity', () => {
     expect(intensity(playing, 500)).toBeCloseTo(0.25, 10);
   });
 
+  it('should fade a preset out with its scene, when the scene fades out past its clip', () => {
+    const fading = scene(1);
+    fading.fadeOutMillis = 2000;
+    fading.fadeOutPost = true;
+    const preset = new Preset();
+    preset.fadeOutMillis = 1000;
+    const playing = new PresetRegionScene(preset, region(0, 10000), fading);
+
+    // without times of its own, the preset ends with the scene: both fade out together
+    expect(intensity(playing, 10000)).toBe(1);
+    expect(intensity(playing, 11500)).toBeCloseTo(0.25 * 0.5, 10);
+  });
+
+  it('should fade a preset in with its scene, when the scene fades in before its clip', () => {
+    const fading = scene(1);
+    fading.fadeInMillis = 2000;
+    fading.fadeInPre = true;
+    const preset = new Preset();
+    preset.fadeInMillis = 1000;
+    const playing = new PresetRegionScene(preset, region(5000, 10000), fading);
+
+    expect(intensity(playing, 3500)).toBeCloseTo(0.25 * 0.5, 10);
+    expect(intensity(playing, 5000)).toBe(1);
+  });
+
   it('should shut a scene off at a dimmer of zero', () => {
     const playing = new PresetRegionScene(new Preset(), region(0, 10000), scene(0));
 

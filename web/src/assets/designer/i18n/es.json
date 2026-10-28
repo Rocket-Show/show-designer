@@ -295,6 +295,7 @@
       "composition-sync-type": "Sincronización",
       "composition-sync-type-none": "Ninguna",
       "composition-sync-type-audio": "Archivo de audio",
+      "composition-sync-type-none-hint": "Las escenas siguen su propio reloj. La composición dura hasta que termina su última escena: coloca una escena después del final para alargarla.",
       "composition-no-file-selected": "Ningún archivo seleccionado",
       "composition-file-upload": "Subir",
       "composition-file-library": "Biblioteca multimedia",
@@ -307,7 +308,17 @@
       "hide-track": "Ocultar la pista en la vista previa",
       "show-track": "Volver a mostrar la pista en la vista previa",
       "solo-track": "Solo: reproducir solo las pistas en solo en la vista previa",
-      "no-tracks": "Arrastra una escena aquí, o dibuja la seleccionada, para reproducirla en una pista"
+      "no-tracks": "Arrastra una escena aquí, o dibuja la seleccionada, para reproducirla en una pista",
+      "actions": "Acciones",
+      "action-type": {
+        "NULL": "Nulo",
+        "SYSTEM": "Sistema",
+        "TRANSPORT": "Transporte",
+        "MIDI": "MIDI",
+        "LIGHTING": "Iluminación",
+        "RASPBERRY_GPIO": "Control externo",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "Continuar",

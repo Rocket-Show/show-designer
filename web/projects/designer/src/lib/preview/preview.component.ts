@@ -255,7 +255,7 @@ export class PreviewComponent implements AfterViewInit {
   private animate(timeMillis: number) {
     if (this.timelineService.playState === 'playing') {
       // Overwrite the current time with the playing time, if we're in playback mode
-      timeMillis = this.timelineService.waveSurfer.getCurrentTime() * 1000;
+      timeMillis = this.timelineService.getCurrentMillis();
     }
 
     this.animationService.timeMillis = timeMillis;
