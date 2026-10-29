@@ -14,13 +14,13 @@ if (
     || !isValidCompositionUuid($fileNameParts[0])
     || !in_array(strtolower($fileNameParts[1]), $compositionFileExtensions)
 ) {
-    error('no-file');
+    error('no-file', 404);
 }
 
 $fileLocation = $fileName;
 
 if (!file_exists($fileLocation)) {
-    error('no-file');
+    error('no-file', 404);
 }
 
 header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');

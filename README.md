@@ -65,6 +65,14 @@ which are null, missing or not whole, default values, numbers and colors of the 
 `services/preview.service.spec.ts` check the same cases as `DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A
 change to how a project is played changes both sides, with the same cases.
 
+### The API
+
+The API of the online designer (`api/`) is tested over HTTP on a database of its own, see `api-test/README.md`:
+
+```shell
+node --test 'api-test/*.test.mjs'
+```
+
 ## Build & publish as NPM package
 
 ```shell

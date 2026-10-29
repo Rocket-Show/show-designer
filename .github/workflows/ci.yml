@@ -43,3 +43,36 @@ jobs:
           retention-days: 14
       - name: Build the library like for publishing
         run: npx ng build --configuration production designer
+
+  api:
+    name: API tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: designer_test
+          MARIADB_USER: designer
+          MARIADB_PASSWORD: designer
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mysqli
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the API tests
+        # see api-test/README.md
+        run: node --test --test-reporter=spec 'api-test/*.test.mjs'
