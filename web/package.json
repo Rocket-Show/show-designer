@@ -10,6 +10,7 @@
     "start:device": "ng serve --configuration device",
     "build": "ng build",
     "test": "ng test",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
     "conformance:record": "node projects/designer/conformance/record.mjs",
     "coverage:ratchet": "node projects/designer/coverage-ratchet.mjs",
     "lint": "ng lint",

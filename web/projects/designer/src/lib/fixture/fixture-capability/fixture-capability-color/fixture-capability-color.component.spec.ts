@@ -133,6 +133,26 @@ describe('FixtureCapabilityColorComponent', () => {
     expect(previewLive).toHaveBeenCalled();
   });
 
+  it('colors the fixtures with a color typed in, once it is one', async () => {
+    await render();
+    const input = hexInput();
+
+    for (const typed of ['#f', '#f0', 'red']) {
+      input.value = typed;
+      input.dispatchEvent(new Event('input'));
+    }
+    expect(rgb(preset.steps[0])).toEqual([undefined, undefined, undefined]);
+    expect(checkbox().checked).toBe(false);
+
+    input.value = '#f00';
+    input.dispatchEvent(new Event('input'));
+    await update();
+
+    expect(rgb(preset.steps[0])).toEqual([1, 0, 0]);
+    expect(checkbox().checked).toBe(true);
+    expect(component.colorPicker.color.hexString).toBe('#ff0000');
+  });
+
   it('leaves the fixtures alone while the wheel is only set, not turned', async () => {
     await render();
 

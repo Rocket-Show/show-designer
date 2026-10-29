@@ -385,7 +385,10 @@ export class ProjectLoadService {
     }
   }
 
-  load(id: number, name: string, shareToken?: string): Observable<void> {
+  // open a project of the server. The template is opened as a new project: it has no address of its own (an address
+  // naming the template opened the template itself again after a reload, and saving it was refused or, for an admin,
+  // overwrote the template of everyone) and gets its id and share token once it is saved.
+  load(id: number, name: string, shareToken?: string, asTemplate = false): Observable<void> {
     const ref = this.modalService.show(WaitDialogComponent, { keyboard: false, ignoreBackdropClick: true });
 
     return this.projectService.getProject(id, name, shareToken).pipe(
@@ -397,14 +400,16 @@ export class ProjectLoadService {
               ' is created with a newer version of the designer. Please update your Rocket Show version to open this project.'
           );
         }
+        if (asTemplate) {
+          project.id = undefined;
+          project.shareToken = undefined;
+        }
+
         this.projectService.project = project;
         this.selectScenesPresetComposition();
         this.afterLoad();
 
-        const queryParams: Params = {
-          id,
-          token: project.shareToken,
-        };
+        const queryParams: Params = asTemplate ? { id: '', token: '' } : { id, token: project.shareToken };
         this.router.navigate([], {
           relativeTo: this.activatedRoute,
           queryParams,
@@ -469,9 +474,7 @@ export class ProjectLoadService {
 
   template() {
     // load the template project with id 1
-    this.load(1, null).subscribe(() => {
-      this.projectService.project.id = undefined;
-    });
+    this.load(1, null, undefined, true).subscribe();
   }
 
   import(data: string) {

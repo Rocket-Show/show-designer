@@ -67,6 +67,17 @@ which are null, missing or not whole, default values, numbers and colors of the 
 `services/preview.service.spec.ts` check the same cases as `DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A
 change to how a project is played changes both sides, with the same cases.
 
+### Whole flows in the browser
+
+The end-to-end tests in `web/e2e` (Playwright) go through the designer like a user: adding fixtures, presets, scenes
+and compositions, playing them, saving, opening and sharing projects, undo and the layout. The app runs on the dev
+server, its API is faked in the page (see `web/e2e/README.md`):
+
+```shell
+cd web
+npm run e2e
+```
+
 ### The API
 
 The API of the online designer (`api/`) is tested over HTTP on a database of its own, see `api-test/README.md`:
