@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, discardPeriodicTasks, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -26,6 +26,7 @@ import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
+import { UserService } from '../services/user.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
 import { TreeDragService } from '../tree/tree-drag.service';
 import { CompositionSettingsComponent } from './composition-settings/composition-settings.component';
@@ -1485,6 +1486,7 @@ describe('TimelineComponent', () => {
 
     it('removes the composition with its audio file, once that is confirmed', fakeAsync(() => {
       const warning = spyOn(TestBed.inject(WarningDialogService), 'show').and.returnValue(of(true));
+      spyOn(TestBed.inject(UserService), 'getHeaders').and.returnValue(new HttpHeaders({ Authorization: 'secret' }));
       render();
 
       toolbarButton('fa-trash-o').click();
@@ -1492,6 +1494,8 @@ describe('TimelineComponent', () => {
       expect(warning).toHaveBeenCalledWith('designer.timeline.warning-delete-composition');
       const request = http.expectOne('file/delete?compositionUuid=song');
       expect(request.request.method).toBe('POST');
+      // the file of a saved project is only deleted for a user who may change it
+      expect(request.request.headers.get('Authorization')).toBe('secret');
       expect(project.compositions.length).toBe(2);
 
       request.flush({});

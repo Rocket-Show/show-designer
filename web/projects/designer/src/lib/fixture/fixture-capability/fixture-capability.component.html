@@ -21,13 +21,13 @@
       </div>
       }
       <!-- Color wheels -->
-      @for (entry of colorWheelChannels | keyvalue; track $index; let i = $index) {
+      @for (entry of colorWheelChannels; track $index; let i = $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-color-wheel
-          [profile]="entry.key"
-          [channel]="entry.value"
+          [profile]="entry.profile"
+          [channel]="entry.channel"
           [wheelIndex]="i"
-          [showContainer]="colorWheelChannels.size > 1"
+          [showContainer]="colorWheelChannels.length > 1"
         ></lib-app-fixture-capability-color-wheel>
       </div>
       }
@@ -50,7 +50,7 @@
       <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
     } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length > 0
-    && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
+    && !hasCapabilityDimmer && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
     <div class="m-auto">
       <p class="m-auto text-muted">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
     </div>

@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, 
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrService } from 'ngx-toastr';
-import { Subject } from 'rxjs';
+import { EMPTY, Subject } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
@@ -226,8 +226,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dmxMap.nativeElement.addEventListener('mousemove', this.channelHovered);
       this.dmxMap.nativeElement.addEventListener('mouseleave', this.channelLeft);
 
-      // the map lays its channels out over the width it is given
-      this.mapResized = new ResizeObserver(() => this.drawChannelMap());
+      // The map lays its channels out over the width it is given. Drawing it sets its
+      // height, which must not happen while the browser is still telling about the size
+      // (it reports that as an error of the page).
+      this.mapResized = new ResizeObserver(() => requestAnimationFrame(() => this.drawChannelMap()));
       this.mapResized.observe(this.dmxMap.nativeElement);
     });
   }
@@ -674,9 +676,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // The end of a folder's content. The rows inherit their position from the fixture
   // panel, where a fixture with pixels takes several places, so counting the rows here
-  // would land in the middle of the folder.
-  private nextSortIndex(parentUuid: string): number {
-    const children = this.folderService.getChildren(this.fixtureFolders, this.fixtureItems, parentUuid);
+  // would land in the middle of the folder. The same goes for the panel's own rows, once
+  // a removed fixture left a gap in them.
+  private nextSortIndex(parentUuid: string, folders: Folder[] = this.fixtureFolders, items: FolderItem[] = this.fixtureItems): number {
+    const children = this.folderService.getChildren(folders, items, parentUuid);
 
     return children.reduce((last, child) => Math.max(last, child.sortIndex), -1) + 1;
   }
@@ -762,21 +765,8 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.updateChannelMap();
     this.buildTree();
 
-    // remove unused profiles
-    for (let i = 0; i < this.projectService.project.fixtureProfiles.length; i++) {
-      let profileUsed = false;
-
-      for (const fixtureInPool of this.fixturePool) {
-        if (fixtureInPool.profileUuid === this.projectService.project.fixtureProfiles[i].uuid) {
-          profileUsed = true;
-          break;
-        }
-      }
-
-      if (!profileUsed) {
-        this.projectService.project.fixtureProfiles.splice(i, 1);
-      }
-    }
+    // the profiles no fixture uses anymore are only removed on OK: the project still has
+    // the fixture until then
   }
 
   // What the DMX map draws: the channels every fixture of the universe occupies, where
@@ -792,7 +782,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // fixtures may share their channels while they are the same lamp: same address,
-    // same mode and same universe. Anything else on a channel is a collision.
+    // same profile and mode and same universe. Anything else on a channel is a collision.
     const lampOf: string[] = [];
 
     for (const fixture of this.channelFixtures) {
@@ -831,9 +821,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.drawChannelMap();
   }
 
-  // the same lamp patched twice is not a collision, see updateChannelMap
+  // the same lamp patched twice is not a collision, see updateChannelMap. Two profiles
+  // can name their modes the same, so the profile is part of what makes it the same lamp.
   private lampKey(fixture: Fixture): string {
-    return fixture.dmxFirstChannel + '/' + fixture.modeShortName + '/' + fixture.dmxUniverseUuid;
+    return fixture.dmxFirstChannel + '/' + fixture.profileUuid + '/' + fixture.modeShortName + '/' + fixture.dmxUniverseUuid;
   }
 
   private fixtureChannelCount(fixture: Fixture): number {
@@ -957,7 +948,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     // are removed/added
     for (let projectFixture of this.projectService.project.fixtures) {
       for (let poolFixture of this.fixturePool) {
-        if (poolFixture.profileUuid === projectFixture.profileUuid && poolFixture.modeShortName != projectFixture.modeShortName) {
+        if (poolFixture.uuid === projectFixture.uuid && poolFixture.modeShortName != projectFixture.modeShortName) {
           // the mode has changed -> remove it from the presetfixtures
           for (let i = this.projectService.project.presetFixtures.length - 1; i >= 0; i--) {
             const presetFixture = this.projectService.project.presetFixtures[i];
@@ -1002,6 +993,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.projectService.project.fixtures = this.fixturePool;
 
+    // remove the profiles no fixture uses anymore
+    this.projectService.project.fixtureProfiles = this.projectService.project.fixtureProfiles.filter((profile) =>
+      this.fixturePool.some((fixture) => fixture.profileUuid === profile.uuid)
+    );
+
     // Persist any locally edited universes back to the config when the
     // host application has opted in to free editing.
     if (this.configService.freeUniverseEdit) {
@@ -1024,13 +1020,13 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     const presetFixture = new PresetFixture();
     presetFixture.fixtureUuid = fixtureUuid;
     presetFixture.pixelKey = pixelKey;
-
-    this.folderService.placeLast(
+    presetFixture.folderUuid = folderUuid;
+    presetFixture.sortIndex = this.nextSortIndex(
+      folderUuid,
       this.projectService.project.fixtureFolders,
-      this.projectService.project.presetFixtures,
-      presetFixture,
-      folderUuid
+      this.projectService.project.presetFixtures
     );
+
     this.projectService.project.presetFixtures.push(presetFixture);
   }
 
@@ -1083,6 +1079,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       for (const folder of [undefined, ...this.fixtureFolders.map((candidate) => candidate.uuid)]) {
         this.folderService.renumber(this.fixtureFolders, this.projectService.project.presetFixtures, folder);
       }
+
+      // the rows of the new fixtures were added at the end of the list, the order the
+      // presets chase in has them in their folder
+      this.fixtureOrderService.sortProjectFixtures();
     }
 
     // the flat fixture list of the pool follows the tree as well
@@ -1116,7 +1116,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
             this.toastrService.error(result[msg], result[title]);
           });
 
-          return undefined;
+          return EMPTY;
         })
       )
       .subscribe(() => {
@@ -1170,6 +1170,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   createFixtureFromProfileFile() {
     const bsModalRef = this.modalService.show(FixturePoolCreateFromFileComponent, { keyboard: true, ignoreBackdropClick: false });
     (bsModalRef.content as FixturePoolCreateFromFileComponent).onClose.subscribe((profile: FixtureProfile) => {
+      // closed without a file
+      if (!profile) {
+        return;
+      }
+
       const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
       if (newFixture) {
         newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
@@ -1183,6 +1188,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   handleKeyboardEvent(event: any) {
     // enter confirms the name being typed (a folder, a fixture), not the whole dialog
     if (this.hotkeyTargetExcludeService.exclude(event)) {
+      return;
+    }
+
+    // nor a dialog opened on top of this one (the universes, a profile file)
+    if (this.modalService.getModalsCount() > 1) {
       return;
     }
 

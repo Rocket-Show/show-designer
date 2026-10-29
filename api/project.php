@@ -1,16 +1,6 @@
 <?php
 include_once 'global.php';
 
-// Checks, whether a user has a role for a specific project
-function userHasProjectRole($conn, $userId, $projectId, $roleAlias)
-{
-    $result = mysqli_query($conn, "SELECT 1 FROM project_user_role LEFT JOIN project_role ON project_role.id = project_user_role.role_id WHERE project_user_role.user_id = " . $userId . " AND project_user_role.project_id = " . $projectId . " AND project_role.alias = '" . $roleAlias . "'");
-    if ($result->num_rows > 0) {
-        return true;
-    }
-    return false;
-}
-
 // Checks, whether a project share token is valid
 function projectShareTokenIsValid($conn, $projectId, $shareToken)
 {
@@ -77,8 +67,9 @@ switch ($_SERVER['REQUEST_METHOD']) {
             }
         }
 
+        // the designer asks the user to have the project shared with them
         if (!$authorized) {
-            errorUnauthorized();
+            error('no-permission', 403);
         }
 
         $result = mysqli_query($conn, "SELECT object, share_token FROM project WHERE active = 1 AND id = " . $projectId);

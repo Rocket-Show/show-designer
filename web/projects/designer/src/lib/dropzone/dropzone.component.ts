@@ -3,6 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { DropzoneConfigInterface } from 'ngx-dropzone-wrapper';
 import { map } from 'rxjs/operators';
 import { ConfigService } from '../services/config.service';
+import { UserService } from '../services/user.service';
 
 @Component({
   selector: 'app-dropzone',
@@ -41,7 +42,7 @@ export class DropzoneComponent {
   dropzoneConfig: DropzoneConfigInterface;
   uploadMessage: string;
 
-  constructor(private translateService: TranslateService, private configService: ConfigService) {
+  constructor(private translateService: TranslateService, private configService: ConfigService, private userService: UserService) {
     this.translateService
       .get('designer.misc.dropzone-message')
       .pipe(
@@ -55,6 +56,9 @@ export class DropzoneComponent {
   }
 
   updateConfig() {
+    // the audio file of a saved project is only taken from a user who may change it (see api/file-upload.php)
+    const headers = this.userService.getHeaders();
+
     this.dropzoneConfig = {
       url: this.configService.restUrl + this._url,
       paramName: 'file',
@@ -67,6 +71,7 @@ export class DropzoneComponent {
       parallelUploads: 1,
       maxFiles: this._maxFiles,
       withCredentials: true,
+      headers: headers ? { Authorization: headers.get('Authorization') } : undefined,
       chunkSize: 2 * 1024 * 1024, // 2 MB
       previewTemplate: `
       <div class="dz-preview dz-file-preview">
