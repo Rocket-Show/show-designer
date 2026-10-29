@@ -100,6 +100,88 @@ describe('PresetService pan/tilt mirror', () => {
   });
 });
 
+// What a capability value of a preset puts on a channel, the way the preview and Rocket Show play it.
+describe('PresetService putting a capability value on a channel', () => {
+  let service: PresetService;
+
+  beforeEach(() => {
+    const fixtureService = new FixtureService(undefined, undefined, undefined, undefined, undefined, new FixturePixelGroupResolveService());
+    service = new PresetService(undefined, undefined, undefined, undefined, fixtureService, undefined, undefined, undefined);
+  });
+
+  function capability(type: FixtureCapabilityType, dmxRange?: number[], color?: FixtureCapabilityColor): CachedFixtureCapability {
+    const cachedCapability = new CachedFixtureCapability();
+    cachedCapability.capability = new FixtureCapability({ type, dmxRange, color });
+    return cachedCapability;
+  }
+
+  function channel(...capabilities: CachedFixtureCapability[]): CachedFixtureChannel {
+    const cachedChannel = new CachedFixtureChannel();
+    cachedChannel.name = 'Channel';
+    cachedChannel.maxValue = 255;
+    cachedChannel.capabilities = capabilities;
+    return cachedChannel;
+  }
+
+  function value(type: FixtureCapabilityType, valuePercentage: number, color?: FixtureCapabilityColor): FixtureCapabilityValue {
+    const capabilityValue = new FixtureCapabilityValue();
+    capabilityValue.type = type;
+    capabilityValue.valuePercentage = valuePercentage;
+    capabilityValue.color = color;
+    return capabilityValue;
+  }
+
+  it('sets nothing for a value without a percentage, or one below 0', () => {
+    for (const type of [
+      FixtureCapabilityType.Intensity,
+      FixtureCapabilityType.ColorIntensity,
+      FixtureCapabilityType.Pan,
+      FixtureCapabilityType.Tilt,
+    ]) {
+      const cachedChannel = channel(capability(type));
+
+      for (const valuePercentage of [undefined, -0.5]) {
+        expect(
+          service.getCapabilityChannelValue(value(type, valuePercentage), cachedChannel, cachedChannel.capabilities[0])
+        ).toBeUndefined();
+      }
+      expect(service.getCapabilityChannelValue(value(type, 0), cachedChannel, cachedChannel.capabilities[0])).toBe(0);
+    }
+  });
+
+  it('lights a color through the capability of that color, on a channel shared by two colors', () => {
+    const green = capability(FixtureCapabilityType.ColorIntensity, [0, 127], FixtureCapabilityColor.Green);
+    const red = capability(FixtureCapabilityType.ColorIntensity, [128, 255], FixtureCapabilityColor.Red);
+    const shared = channel(green, red);
+
+    expect(service.getCapabilityChannelValue(value(FixtureCapabilityType.ColorIntensity, 1, FixtureCapabilityColor.Red), shared, red)).toBe(
+      255
+    );
+    expect(
+      service.getCapabilityChannelValue(value(FixtureCapabilityType.ColorIntensity, 1, FixtureCapabilityColor.Red), shared, green)
+    ).toBeUndefined();
+    expect(
+      service.getCapabilityChannelValue(value(FixtureCapabilityType.ColorIntensity, 1, FixtureCapabilityColor.Green), shared, green)
+    ).toBe(127);
+  });
+
+  it('puts a slot of a wheel onto the middle of its range, and no other slot', () => {
+    const slot = (slotNumber: number, dmxRange: number[]) => {
+      const cachedCapability = capability(FixtureCapabilityType.WheelSlot, dmxRange);
+      cachedCapability.capability.slotNumber = slotNumber;
+      cachedCapability.centerValue = Math.floor((dmxRange[0] + dmxRange[1]) / 2);
+      return cachedCapability;
+    };
+    const wheel = channel(slot(1, [0, 9]), slot(2, [10, 19]));
+    const second = new FixtureCapabilityValue();
+    second.type = FixtureCapabilityType.WheelSlot;
+    second.slotNumber = 2;
+
+    expect(service.getCapabilityChannelValue(second, wheel, wheel.capabilities[1])).toBe(14);
+    expect(service.getCapabilityChannelValue(second, wheel, wheel.capabilities[0])).toBeUndefined();
+  });
+});
+
 // Editing presets: which fixtures they light, the values of their steps and channels, their
 // steps and how they are added, copied and removed. The fixtures are the ones of the conformance
 // cases: two pars with a dimmer (the second patched twice), a moving head and a pixel bar.

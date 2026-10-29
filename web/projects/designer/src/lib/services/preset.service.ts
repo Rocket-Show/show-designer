@@ -519,11 +519,6 @@ export class PresetService {
       colorBlue = 255 * capabilityValue.valuePercentage;
     }
 
-    if (!colorRed && !colorGreen && !colorBlue) {
-      // no color found -> search the first color wheel
-      // TODO
-    }
-
     if (colorRed !== undefined && colorGreen !== undefined && colorBlue !== undefined) {
       for (const capability of cachedChannel.capabilities) {
         if (capability.capability.slotNumber !== undefined) {

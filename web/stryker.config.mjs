@@ -21,7 +21,9 @@ export default {
     },
     config: { browsers: ['ChromeHeadlessCI'] },
   },
-  coverageAnalysis: 'perTest',
+  // each mutant against all the specs: picking the specs which cover a mutant left out some which notice it (e.g.
+  // the ones of the pan/tilt mirror), so it counted as surviving. Each mutant ran most of them anyway.
+  coverageAnalysis: 'all',
   concurrency: 2,
   // a run of the specs covering a mutant comes with about 13 s of its own in the browser
   timeoutMS: 60000,
