@@ -69,20 +69,30 @@ export class UserRegisterComponent implements OnInit {
     this.userService.register(this.email, this.username, this.password, this.newsletter).subscribe(
       () => {
         // automatically login after registering
-        this.userService.login(this.email, this.password).subscribe(() => {
-          this.registering = false;
-          this.bsModalRef.hide();
-        });
+        this.userService.login(this.email, this.password).subscribe(
+          () => {
+            this.registering = false;
+            this.bsModalRef.hide();
+
+            // go on with what the login was required for (e.g. saving the project)
+            if (this.subject) {
+              this.subject.next();
+            }
+          },
+          (response) => this.showError(response)
+        );
       },
-      (response) => {
-        if (response.error && response.error.error) {
-          this.error = response.error.error;
-        } else {
-          this.error = 'internal';
-        }
-        this.registering = false;
-      }
+      (response) => this.showError(response)
     );
+  }
+
+  private showError(response: any) {
+    if (response.error && response.error.error) {
+      this.error = response.error.error;
+    } else {
+      this.error = 'internal';
+    }
+    this.registering = false;
   }
 
   @HostListener('document:keydown.enter', ['$event'])

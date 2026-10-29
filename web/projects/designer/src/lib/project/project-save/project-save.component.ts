@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
-import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { Project } from '../../models/project';
 import { ConfigService } from '../../services/config.service';
 import { ProjectService } from '../../services/project.service';
@@ -16,6 +17,10 @@ export class ProjectSaveComponent implements OnInit {
   projects: Project[] = [];
   loading = true;
   projectName: string;
+
+  // a warning is open on top of this dialog: the enter key answers the warning, it doesn't
+  // save the project as well
+  private warningOpen = false;
 
   constructor(
     private bsModalRef: BsModalRef,
@@ -44,8 +49,14 @@ export class ProjectSaveComponent implements OnInit {
     this.bsModalRef.hide();
   }
 
+  // save over a project of the list
   selectProject(project: Project) {
-    this.projectService.project.name = project.name;
+    this.projectName = project.name;
+  }
+
+  private warn(message: string): Observable<boolean> {
+    this.warningOpen = true;
+    return this.warningDialogService.show(message).pipe(tap(() => (this.warningOpen = false)));
   }
 
   private existingProject(uuid: string, name: string) {
@@ -65,8 +76,7 @@ export class ProjectSaveComponent implements OnInit {
 
   saveProject() {
     if (this.existingProject(this.projectService.project.uuid, this.projectName) && this.configService.uniqueProjectNames) {
-      this.warningDialogService
-        .show('designer.project.overwrite-warning')
+      this.warn('designer.project.overwrite-warning')
         .pipe(
           map((result) => {
             if (result) {
@@ -81,8 +91,7 @@ export class ProjectSaveComponent implements OnInit {
   }
 
   deleteProject(project: Project) {
-    this.warningDialogService
-      .show('designer.project.delete-warning')
+    this.warn('designer.project.delete-warning')
       .pipe(
         map((result) => {
           if (result) {
@@ -97,6 +106,8 @@ export class ProjectSaveComponent implements OnInit {
 
   @HostListener('document:keydown.enter', ['$event'])
   handleKeyboardEvent(event: any) {
-    this.saveProject();
+    if (!this.warningOpen) {
+      this.saveProject();
+    }
   }
 }

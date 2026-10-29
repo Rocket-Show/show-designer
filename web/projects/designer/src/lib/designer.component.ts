@@ -24,10 +24,10 @@ import { UserService } from './services/user.service';
 import { WarningDialogService } from './services/warning-dialog.service';
 import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
-import { HttpErrorResponse } from '@angular/common/http';
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
 import { LayoutService } from './services/layout.service';
@@ -170,20 +170,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   private loadError(response: any) {
     console.error(response);
-    let msg = 'designer.project.open-error';
-    let error: string;
-    if (response instanceof HttpErrorResponse) {
-      error = response && response.error ? response.error.error : 'unknown';
-      if (error === 'no-permission') {
-        msg = 'designer.project.open-no-permission-error';
-        error = undefined;
-      } else {
-        msg = 'designer.project.open-error';
-      }
-    } else {
-      error = response && response.message ? response.message : 'unknown';
-    }
-    this.errorDialogService.show(msg, error).subscribe(() => {
+    const error = getProjectLoadError(response);
+    this.errorDialogService.show(error.message, error.details).subscribe(() => {
       this.projectLoadService.new();
     });
   }
