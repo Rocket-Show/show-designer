@@ -136,7 +136,13 @@
           "options": {
             "main": "projects/designer/src/test.ts",
             "tsConfig": "projects/designer/tsconfig.spec.json",
-            "karmaConfig": "projects/designer/karma.conf.js"
+            "karmaConfig": "projects/designer/karma.conf.js",
+            "scripts": [
+              "node_modules/jquery/dist/jquery.js",
+              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
+              "node_modules/bootstrap-slider/dist/bootstrap-slider.min.js",
+              "src/assets/designer/js/iro.js"
+            ]
           }
         }
       }
