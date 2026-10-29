@@ -272,6 +272,10 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // a value typed in arrives as text, which the transitions between the steps cannot
+    // calculate with
+    value = +value;
+
     this.value = value;
     this.calculateTemplateValue();
 

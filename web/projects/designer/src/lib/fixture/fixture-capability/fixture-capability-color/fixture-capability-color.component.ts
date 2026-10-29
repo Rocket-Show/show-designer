@@ -24,6 +24,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
   private updatingColor = false;
 
   private updateSubscription: Subscription;
+  private stepsChangedSubscription: Subscription;
 
   constructor(
     private presetService: PresetService,
@@ -35,6 +36,13 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
       this.update();
       this.changeDetectorRef.detectChanges();
     });
+
+    // the color belongs to the step being edited, so it follows the step being selected
+    this.stepsChangedSubscription = this.presetService.stepsChanged.subscribe(() => {
+      this.update();
+      this.changeDetectorRef.detectChanges();
+    });
+
     this.update();
   }
 
@@ -89,6 +97,7 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.updateSubscription.unsubscribe();
+    this.stepsChangedSubscription.unsubscribe();
   }
 
   ngOnInit() {
