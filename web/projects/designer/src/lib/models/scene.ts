@@ -11,7 +11,8 @@ export class Scene {
 
   // how the scene is marked in the lists and on the timeline. While colorAuto is set,
   // the presets played in the scene decide the color and the picked one is only what
-  // the scene falls back to while none of them sets a color.
+  // the scene falls back to while none of them sets a color. The color it is marked with
+  // is saved as displayColor as well, for Rocket Show (see ProjectService.getSavedJson).
   color: string;
   colorAuto = true;
 
