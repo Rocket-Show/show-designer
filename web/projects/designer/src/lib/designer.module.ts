@@ -63,6 +63,7 @@ import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
 import { ColorService } from './services/color.service';
 import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
+import { keepSliderValues } from './slider-value';
 
 @NgModule({
   declarations: [
@@ -139,4 +140,8 @@ import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
     { provide: SCENE_COLOR_SOURCE, useExisting: ColorService },
   ],
 })
-export class DesignerModule {}
+export class DesignerModule {
+  constructor() {
+    keepSliderValues();
+  }
+}
