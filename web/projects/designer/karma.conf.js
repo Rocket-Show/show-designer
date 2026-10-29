@@ -24,7 +24,7 @@ module.exports = function (config) {
       reporters: [{ type: 'html' }, { type: 'lcovonly' }, { type: 'json-summary' }, { type: 'text-summary' }],
       // the run fails below this coverage of the whole library (raised as the specs cover more of it)
       check: {
-        global: { statements: 66, branches: 63, functions: 60, lines: 66 },
+        global: { statements: 73, branches: 68, functions: 70, lines: 73 },
       },
     },
     reporters: ['progress', 'kjhtml'],
