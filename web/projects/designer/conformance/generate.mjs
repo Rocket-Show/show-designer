@@ -600,8 +600,286 @@ function scenarios() {
   );
 }
 
+// ---- edges: values right on the boundaries the cases above pass by ------------------------------
+
+// times exactly where a fade starts or ends, also where a fade in still runs as the fade out
+// starts, and fades whose position comes out a hair off 1 right on their edge (1333.3 - 1000 is a
+// hair less than 333.3)
+function presetIntensityEdges() {
+  const cases = [
+    {
+      name: 'a fade in still running where the fade out starts',
+      input: {
+        preset: { fadeInMillis: 1500, fadeOutMillis: 1000 },
+        region: { startMillis: 1000, endMillis: 3000 },
+        times: [1000, 2000, 2500, 3000],
+      },
+    },
+    {
+      name: 'right at the end of a fade in of 333.3 ms',
+      input: { preset: { fadeInMillis: 333.3 }, region: { startMillis: 1000, endMillis: 5000 }, times: [1000, 1333.3, 1333.4] },
+    },
+    {
+      name: 'right at the start of a fade out of 100.1 ms',
+      input: { preset: { fadeOutMillis: 100.1 }, region: { startMillis: 0, endMillis: 3000 }, times: [2899.8, 2899.9, 3000] },
+    },
+    {
+      name: 'the fades of a preset with times of its own, on their edges',
+      input: {
+        preset: {
+          startMillis: 500,
+          endMillis: 2500,
+          fadeInMillis: 1000,
+          fadeOutMillis: 1000,
+          fadeInCurve: 'ease-in',
+          fadeOutCurve: 'ease-out',
+        },
+        region: { startMillis: 1000, endMillis: 5000 },
+        times: [1500, 2500, 3500],
+      },
+    },
+    {
+      name: 'the fades of a scene on their edges, the scene fading in before its clip',
+      input: {
+        preset: {},
+        scene: { fadeInMillis: 333.3, fadeOutMillis: 100.1, fadeInPre: true },
+        region: { startMillis: 1333.3, endMillis: 3000 },
+        times: [1000, 1333.3, 2899.9, 3000],
+      },
+    },
+  ];
+
+  return write(
+    'preset-intensity-edges.json',
+    'presetIntensity',
+    'How much of a preset reaches the stage right on the edges of its fades',
+    cases
+  );
+}
+
+function step(uuid, startMillis, values, extra = {}) {
+  return { uuid, startMillis, fixtureChannelValues: [], fixtureCapabilityValues: [], effectAmounts: [], ...values, ...extra };
+}
+
+function presetStepsEdges() {
+  const dimmer = (value) => ({ fixtureChannelValues: [{ profileUuid: 'p1', channelName: 'Dimmer', value }] });
+  const rotation = (valuePercentage) => ({ fixtureCapabilityValues: [{ type: 'WheelRotation', wheel: 'Gobo Wheel', valuePercentage }] });
+  const samples = (times) => times.map((timeMillis) => ({ timeMillis, fixtureIndex: 0 }));
+
+  const cases = [
+    {
+      // a pass through such steps lasts no time at all: there is nothing to start over
+      name: 'a looping preset with all of its steps at the same time',
+      input: {
+        preset: { uuid: 'same-time', stepsLoop: true, steps: [step('a', 0, dimmer(10)), step('b', 0, dimmer(200))] },
+        samples: samples([-100, 0, 500]),
+      },
+    },
+    {
+      name: 'a wheel turning faster from one step to the next keeps its wheel',
+      input: {
+        preset: {
+          uuid: 'rotation',
+          steps: [step('slow', 0, rotation(0.2)), step('fast', 1000, rotation(0.8), { transitionMillis: 1000 })],
+        },
+        samples: samples([999, 1000, 1500, 2000]),
+      },
+    },
+  ];
+
+  return write('preset-steps-edges.json', 'presetSteps', 'The state of a preset right on the edges of its steps', cases);
+}
+
+function edgeFixture(uuid, profileUuid, modeShortName, index) {
+  return { uuid, profileUuid, modeShortName, dmxUniverseUuid: 'u', dmxFirstChannel: index * 16 };
+}
+
+function edgeProject(profiles, fixtures, presets, scenes) {
+  const presetFixturesOfProject = fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid)));
+
+  return {
+    version: 10,
+    fixtureProfiles: profiles.map((name) => ({ $profile: name })),
+    fixtures,
+    presetFixtures: presetFixturesOfProject,
+    presets,
+    scenes,
+    compositions: [],
+  };
+}
+
+function edgePreset(uuid, fixtures, values) {
+  return { uuid, name: uuid, fixtures, steps: [step(uuid + '-step', 0, values)], effects: [] };
+}
+
+function previewScenes(sceneUuids) {
+  return [{ preview: { mode: 'scenes', scenes: sceneUuids }, times: [0] }];
+}
+
+const rgb = (red, green, blue) => [
+  capability('ColorIntensity', red, { color: 'Red' }),
+  capability('ColorIntensity', green, { color: 'Green' }),
+  capability('ColorIntensity', blue, { color: 'Blue' }),
+];
+
+// The test profiles test/shared-dimmer, test/wheels and test/pixel-bar: values right on the edges of
+// the ranges of a channel, several ranges giving the same brightness, ties on a color wheel, wheels
+// named in all the ways the fixture library names them and the channels of pixels
+function channelValuesEdges() {
+  const cases = [];
+  const sharedDimmer = 'test/shared-dimmer';
+
+  // The dimmer of each par is set to a value right on an edge of one of its ranges (off, dark to
+  // bright, 20 % to 60 %, bright to off, a strobe), its color to blue. A red preset fading in above
+  // blends its color with the blue, weighted by how bright the dimmer lights at that value.
+  const dimmerValues = [9, 10, 50, 99, 100, 125, 149, 150, 199, 200, 255];
+  const pars = dimmerValues.map((value, index) => edgeFixture('at-' + value, sharedDimmer, '10ch', index));
+  const dimmerPresets = pars.map((par, index) =>
+    edgePreset('dimmer-' + dimmerValues[index], [{ fixtureUuid: par.uuid }], {
+      fixtureChannelValues: [
+        { profileUuid: sharedDimmer, channelName: 'Dimmer', value: dimmerValues[index] },
+        { profileUuid: sharedDimmer, channelName: 'Blue', value: 255 },
+      ],
+    })
+  );
+  const red = edgePreset(
+    'red',
+    pars.map((par) => ({ fixtureUuid: par.uuid })),
+    { fixtureCapabilityValues: [capability('Intensity', 0.8), ...rgb(1, 0, 0)] }
+  );
+
+  cases.push({
+    name: 'a dimmer sharing its channel, at values right on the edges of its ranges, below a fading preset',
+    input: {
+      project: edgeProject(
+        [sharedDimmer],
+        pars,
+        [red, ...dimmerPresets],
+        [
+          { uuid: 'top', name: 'Top', presetUuids: ['red'], dimmer: 0.5 },
+          { uuid: 'below', name: 'Below', presetUuids: dimmerPresets.map((preset) => preset.uuid) },
+        ]
+      ),
+      runs: previewScenes(['top', 'below']),
+    },
+  });
+
+  // Each par lit to another brightness: the channels with several ranges take the one giving it (a
+  // range rather than a single brightness), or else the closest one, the brighter one of two as
+  // close. A range given in lumens all at 0, a single capability of one brightness and a capability
+  // without a range among others.
+  const brightnesses = [0, 0.3, 0.5, 0.8, 1];
+  const lit = brightnesses.map((brightness, index) => edgeFixture('lit-' + brightness, sharedDimmer, '10ch', index));
+  const brightnessPresets = lit.map((par, index) =>
+    edgePreset('brightness-' + brightnesses[index], [{ fixtureUuid: par.uuid }], {
+      fixtureCapabilityValues: [capability('Intensity', brightnesses[index])],
+    })
+  );
+
+  cases.push({
+    name: 'channels with several ranges of brightness, lit on and between the ranges',
+    input: {
+      project: edgeProject([sharedDimmer], lit, brightnessPresets, [
+        { uuid: 'lit', name: 'Lit', presetUuids: brightnessPresets.map((preset) => preset.uuid) },
+      ]),
+      runs: previewScenes(['lit']),
+    },
+  });
+
+  // A spot with a gobo wheel before its color wheel, which a channel named differently than the
+  // wheel sets and another one shakes (naming its wheels in a list). Each spot is given a gobo and
+  // a color, which the color wheel approximates: yellow lies as close to red, green, white and the
+  // split between red and green.
+  const wheels = 'test/wheels';
+  const colors = { yellow: [1, 1, 0], cyan: [0, 1, 1], blue: [0, 0, 1], magenta: [1, 0, 1] };
+  const spots = Object.keys(colors).map((color, index) => edgeFixture(color, wheels, '4ch', index));
+  const colorPresets = spots.map((spot) =>
+    edgePreset(spot.uuid, [{ fixtureUuid: spot.uuid }], {
+      fixtureCapabilityValues: [
+        { type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: 2 },
+        capability('Intensity', 1),
+        ...rgb(...colors[spot.uuid]),
+      ],
+    })
+  );
+  const slotSpot = edgeFixture('slot', wheels, '4ch', spots.length);
+  const slotPreset = edgePreset('slot', [{ fixtureUuid: 'slot' }], {
+    fixtureCapabilityValues: [{ type: 'WheelSlot', wheel: 'Color Wheel', slotNumber: 4 }, ...rgb(1, 0, 0)],
+  });
+
+  cases.push({
+    name: 'a spot approximating colors on its color wheel after setting its gobo',
+    input: {
+      project: edgeProject(
+        [wheels],
+        [...spots, slotSpot],
+        [...colorPresets, slotPreset],
+        [{ uuid: 'colors', name: 'Colors', presetUuids: [...colorPresets, slotPreset].map((preset) => preset.uuid) }]
+      ),
+      runs: previewScenes(['colors']),
+    },
+  });
+
+  // A bar of pixels with its channels per channel (all reds, then all greens and all blues), one with
+  // a dimmer of its own and pixels without one, and one naming the channels of a pixel directly
+  const pixelBar = 'test/pixel-bar';
+  const bars = [
+    edgeFixture('per-channel', pixelBar, '9ch', 0),
+    edgeFixture('with-dimmer', pixelBar, '10ch', 1),
+    edgeFixture('named', pixelBar, '4ch', 2),
+  ];
+  const allParts = bars.flatMap((bar) => presetFixtures(bar.uuid, libraryProfile(pixelBar)));
+  const fading = edgePreset('fading', allParts, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.5, 0)] });
+
+  cases.push({
+    name: 'the pixels of bars fading in, their channels per channel, without a dimmer and named directly',
+    input: {
+      project: edgeProject([pixelBar], bars, [fading], [{ uuid: 'fading', name: 'Fading', presetUuids: ['fading'], dimmer: 0.5 }]),
+      runs: previewScenes(['fading']),
+    },
+  });
+
+  // A preset of a current project without steps, which keeps its values itself like one of an older
+  // project, previewed on its own and in its scene
+  const par = edgeFixture('par', 'test/rgb-par', '6ch', 0);
+  const withoutSteps = {
+    uuid: 'without-steps',
+    name: 'Without steps',
+    fixtures: [{ fixtureUuid: 'par' }],
+    steps: [],
+    effects: [],
+    fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0, 0.5)],
+    fixtureChannelValues: [{ profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 20 }],
+  };
+
+  cases.push({
+    name: 'a preset without steps keeping its values itself',
+    input: {
+      project: edgeProject(['test/rgb-par'], [par], [withoutSteps], [{ uuid: 'scene', name: 'Scene', presetUuids: ['without-steps'] }]),
+      runs: [{ preview: { mode: 'preset', preset: 'without-steps' }, times: [0] }, ...previewScenes(['scene'])],
+    },
+  });
+
+  return write(
+    'channel-values-edges.json',
+    'channelValues',
+    'Test fixtures with values right on the edges of their ranges, ties on their wheels and the channels of pixels',
+    cases
+  );
+}
+
 export function generate() {
-  return [transitionCurves(), effectCurves(), presetSteps(), presetIntensity(), libraryModes(), scenarios()];
+  return [
+    transitionCurves(),
+    effectCurves(),
+    presetSteps(),
+    presetIntensity(),
+    libraryModes(),
+    scenarios(),
+    presetIntensityEdges(),
+    presetStepsEdges(),
+    channelValuesEdges(),
+  ];
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
