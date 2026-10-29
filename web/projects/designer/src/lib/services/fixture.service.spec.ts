@@ -522,6 +522,12 @@ describe('FixtureService with the fixture library and the pool', () => {
     expect(loaded.manufacturerShortName).toBe('stairville');
   });
 
+  it('writes a color as hex, also one which is no whole step out of 255', () => {
+    expect(service.rgbToHex(255, 128, 0)).toBe('#ff8000');
+    expect(service.rgbToHex(255, 127.5, 0.4)).toBe('#ff8000');
+    expect(service.rgbToHex(300, -5, 15)).toBe('#ff000f');
+  });
+
   it('reads the rotation angles of the library', () => {
     expect(service.getRotationAngleDeg('90deg')).toBe(90);
     expect(service.getRotationAngleDeg('25%')).toBe(90);

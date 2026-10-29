@@ -218,7 +218,8 @@ export class FixtureService {
   }
 
   private componentToHex(c: number): any {
-    const hex = c.toString(16);
+    // a color which is no whole step out of 255 (e.g. of an imported project) still is a color
+    const hex = Math.max(0, Math.min(255, Math.round(c))).toString(16);
     return hex.length === 1 ? '0' + hex : hex;
   }
 

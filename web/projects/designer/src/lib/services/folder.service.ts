@@ -44,8 +44,11 @@ export class FolderService {
   // the user placing them (a fixture added to the pool), so they do not all pile up at
   // the top with a sortIndex of 0. Call it before adding the item to the list.
   placeLast(folders: Folder[], items: FolderItem[], item: FolderItem, parentUuid?: string) {
+    // behind the last one, also where a removed one left a gap in the numbers
+    const others = this.getChildren(folders, items, parentUuid).filter((child) => child.item !== item);
+
     item.folderUuid = parentUuid;
-    item.sortIndex = this.getChildren(folders, items, parentUuid).length;
+    item.sortIndex = others.reduce((next, child) => Math.max(next, child.sortIndex + 1), 0);
   }
 
   // the folders and items of one parent, in the order they are shown in
