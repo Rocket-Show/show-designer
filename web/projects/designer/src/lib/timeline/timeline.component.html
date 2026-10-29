@@ -155,7 +155,7 @@
     >
       <div #scroller class="tl-scroller" (scroll)="onScroll()" (wheel)="onWheel($event)" (dragleave)="onSceneDragLeave($event)">
         <div class="tl-content" [style.width.px]="headerWidthPx + laneWidthPx">
-          <!-- the ruler: click or drag on it to jump to a point in time -->
+          <!-- the ruler: click or drag on it to jump to a point in time, or drag the playhead -->
           <div class="tl-row tl-ruler-row">
             <div class="tl-head tl-corner">
               <span class="tl-corner-label">{{ 'designer.timeline.tracks' | translate }}</span>
@@ -318,6 +318,9 @@
       </div>
 
       <div #playhead class="tl-playhead"></div>
+
+      <!-- where a click on the ruler, the waveform or the actions would jump to -->
+      <div #hoverLine class="tl-hover-line"><span #hoverTime class="tl-hover-time"></span></div>
     </div>
     }
 

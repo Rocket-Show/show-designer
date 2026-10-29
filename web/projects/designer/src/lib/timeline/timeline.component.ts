@@ -120,8 +120,35 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   // the pointer has to travel that far before a click becomes a drag
   private static readonly dragThresholdPx = 4;
 
-  @ViewChild('frame')
+  // that close to the playhead, the playhead is taken and dragged, instead of jumping to the pointer
+  private static readonly playheadGrabPx = 5;
+
+  // the cursor of each drag, wherever the pointer goes while it lasts
+  private static readonly dragCursors: { [kind in PointerGesture['kind']]: string } = {
+    seek: 'ew-resize',
+    move: 'grabbing',
+    track: 'grabbing',
+    start: 'col-resize',
+    end: 'col-resize',
+    create: 'col-resize',
+  };
+
   frame: ElementRef<HTMLElement>;
+
+  // the pointer is followed over the timeline whenever it is shown, outside of Angular: it
+  // only moves the line showing where a click would jump to
+  @ViewChild('frame')
+  set frameElement(frame: ElementRef<HTMLElement>) {
+    this.frame = frame;
+    this.hoverClientX = undefined;
+
+    if (frame) {
+      this.ngZone.runOutsideAngular(() => {
+        frame.nativeElement.addEventListener('mousemove', this.hoverListener);
+        frame.nativeElement.addEventListener('mouseleave', this.leaveListener);
+      });
+    }
+  }
 
   @ViewChild('scroller')
   scroller: ElementRef<HTMLElement>;
@@ -134,6 +161,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('playhead')
   playhead: ElementRef<HTMLElement>;
+
+  @ViewChild('hoverLine')
+  hoverLine: ElementRef<HTMLElement>;
+
+  @ViewChild('hoverTime')
+  hoverTime: ElementRef<HTMLElement>;
 
   @ViewChild('timeLabel')
   timeLabel: ElementRef<HTMLElement>;
@@ -178,8 +211,16 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   private drawFrame: number;
   private subscriptions: Subscription[] = [];
 
+  // where the pointer is over the ruler, the waveform or the actions (undefined anywhere else)
+  private hoverClientX: number;
+
+  // the layer over the whole page, which shows the cursor of a drag (see startDragging)
+  private dragCursorLayer: HTMLElement;
+
   private moveListener = (event: MouseEvent) => this.ngZone.run(() => this.onPointerMove(event));
   private upListener = (event: MouseEvent) => this.ngZone.run(() => this.onPointerUp(event));
+  private hoverListener = (event: MouseEvent) => this.hoverAt(event.clientX, event.target as Element);
+  private leaveListener = () => this.hoverAt(undefined, undefined);
 
   constructor(
     public timelineService: TimelineService,
@@ -221,6 +262,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.subscriptions.forEach((subscription) => subscription.unsubscribe());
     this.stopListening();
+    this.stopDragCursor();
   }
 
   get composition(): Composition {
@@ -439,6 +481,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   onScroll() {
     this.scrollLeftPx = this.scroller.nativeElement.scrollLeft;
     this.scheduleDraw();
+    this.showHover();
   }
 
   // the name of a clip which starts left of the visible tracks moves along, so that it
@@ -608,6 +651,60 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const style = this.playhead.nativeElement.style;
     style.transform = `translateX(${this.headerWidthPx + visibleX}px)`;
     style.visibility = visibleX < 0 || visibleX > this.viewportWidthPx ? 'hidden' : 'visible';
+
+    // the playhead may just have come to the pointer, or left it
+    if (this.hoverClientX !== undefined || this.gesture?.kind === 'seek') {
+      this.showHover();
+    }
+  }
+
+  // ---- the pointer over the ruler, the waveform and the actions --------------
+
+  // Over them, a click jumps to the time under the pointer, which a faint line shows. Close
+  // to the playhead, the playhead itself is taken and dragged. Runs outside of Angular, for
+  // every move of the pointer over the timeline.
+  private hoverAt(clientX: number, target: Element) {
+    const overSeekLane = !!target && !!target.closest('.tl-ruler, .tl-wave, .tl-actions') && !target.closest('.tl-action');
+
+    this.hoverClientX = overSeekLane && !this.gesture ? clientX : undefined;
+    this.showHover();
+  }
+
+  private showHover() {
+    if (!this.frame || !this.scroller || !this.hoverLine) {
+      return;
+    }
+
+    const clientX = this.hoverClientX;
+    const onPlayhead = clientX !== undefined && this.isOnPlayhead(clientX);
+
+    // the playhead lights up (and the cursor shows it is dragged sideways) when it can be
+    // taken, and while it is dragged
+    this.frame.nativeElement.classList.toggle('tl-playhead-hover', onPlayhead || this.gesture?.kind === 'seek');
+
+    const line = this.hoverLine.nativeElement;
+
+    if (clientX === undefined || onPlayhead) {
+      line.style.visibility = 'hidden';
+      return;
+    }
+
+    const millis = Math.max(0, Math.min(this.millisAt(clientX), this.timelineMillis));
+    const visibleX = this.toPx(millis) - this.scroller.nativeElement.scrollLeft;
+
+    line.style.transform = `translateX(${this.headerWidthPx + visibleX}px)`;
+    line.style.visibility = 'visible';
+    // at the right edge, the time goes left of the line, not to be cut off
+    line.classList.toggle('tl-hover-flip', visibleX > this.viewportWidthPx - 72);
+    this.hoverTime.nativeElement.textContent = this.timelineService.msToTime(millis);
+  }
+
+  private isOnPlayhead(clientX: number): boolean {
+    const scroller = this.scroller.nativeElement;
+    const playheadX = this.toPx(this.timelineService.getCurrentMillis()) - scroller.scrollLeft;
+    const pointerX = clientX - scroller.getBoundingClientRect().left - this.headerWidthPx;
+
+    return playheadX >= 0 && playheadX <= this.viewportWidthPx && Math.abs(pointerX - playheadX) <= TimelineComponent.playheadGrabPx;
   }
 
   // zoom in or out with the wheel while ctrl is pressed, keeping the time under the pointer
@@ -669,7 +766,31 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     document.removeEventListener('mouseup', this.upListener);
   }
 
-  // the ruler and the waveform jump to the time clicked, and follow the pointer from there
+  // The pointer has moved far enough: what has been clicked is dragged now. While the drag
+  // lasts, the pointer keeps its cursor wherever it goes (over the names of the tracks, a
+  // clip or out of the timeline), shown by a layer over the whole page. It only comes up now,
+  // so that a click (or a double click on the name of a track) still reaches what was clicked.
+  private startDragging(gesture: PointerGesture) {
+    gesture.moved = true;
+
+    if (!this.dragCursorLayer) {
+      this.dragCursorLayer = document.createElement('div');
+      this.dragCursorLayer.style.cssText = 'position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100000;';
+      document.body.appendChild(this.dragCursorLayer);
+    }
+
+    this.dragCursorLayer.style.cursor = TimelineComponent.dragCursors[gesture.kind];
+  }
+
+  private stopDragCursor() {
+    if (this.dragCursorLayer) {
+      this.dragCursorLayer.remove();
+      this.dragCursorLayer = undefined;
+    }
+  }
+
+  // The ruler, the waveform and the actions jump to the time clicked, and follow the pointer
+  // from there. The playhead itself is taken where it is, without jumping.
   onSeekStart(event: MouseEvent) {
     if (event.button !== 0) {
       return;
@@ -677,8 +798,23 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
     event.preventDefault();
     this.focusTimeline();
-    this.gesture = { kind: 'seek', startClientX: event.clientX, moved: false };
-    this.seekTo(this.millisAt(event.clientX));
+
+    const millis = this.millisAt(event.clientX);
+    const onPlayhead = this.isOnPlayhead(event.clientX);
+
+    this.gesture = {
+      kind: 'seek',
+      startClientX: event.clientX,
+      moved: false,
+      grabMillis: onPlayhead ? millis - this.timelineService.getCurrentMillis() : 0,
+    };
+    this.hoverClientX = undefined;
+
+    if (!onPlayhead) {
+      this.seekTo(millis);
+    }
+
+    this.showHover();
     this.listen();
   }
 
@@ -802,11 +938,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     if (gesture.kind === 'track') {
-      if (!gesture.moved && Math.abs(event.clientY - gesture.startClientY) < TimelineComponent.dragThresholdPx) {
-        return;
+      if (!gesture.moved) {
+        if (Math.abs(event.clientY - gesture.startClientY) < TimelineComponent.dragThresholdPx) {
+          return;
+        }
+
+        this.startDragging(gesture);
       }
 
-      gesture.moved = true;
       this.trackInsertIndex = this.trackInsertIndexAt(event.clientY);
       return;
     }
@@ -821,14 +960,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      gesture.moved = true;
+      this.startDragging(gesture);
     }
 
     const millis = this.millisAt(event.clientX);
 
     switch (gesture.kind) {
       case 'seek':
-        this.seekTo(millis);
+        this.seekTo(millis - gesture.grabMillis);
         return;
       case 'move':
         this.moveRegion(gesture, sideways ? millis : undefined, this.trackAt(event.clientY));
@@ -908,6 +1047,10 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const gesture = this.gesture;
     this.gesture = undefined;
     this.stopListening();
+    this.stopDragCursor();
+
+    // the cursor (and the line) of what is under the pointer now
+    this.hoverAt(event.clientX, document.elementFromPoint(event.clientX, event.clientY));
 
     if (gesture && gesture.kind === 'track') {
       const insertIndex = this.trackInsertIndex;

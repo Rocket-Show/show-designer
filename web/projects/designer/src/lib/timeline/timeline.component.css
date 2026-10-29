@@ -119,15 +119,28 @@
   color: var(--sd-text-dim);
 }
 
+/* a click on the ruler, the waveform or the actions jumps to the time under the pointer: a
+   plain arrow, the line following the pointer shows where. Only the playhead is dragged
+   sideways, so only on it the cursor says so. */
+.tl-ruler,
+.tl-wave,
+.tl-actions {
+  cursor: default;
+}
+
+.tl-playhead-hover .tl-ruler,
+.tl-playhead-hover .tl-wave,
+.tl-playhead-hover .tl-actions {
+  cursor: ew-resize;
+}
+
 .tl-ruler {
   background-color: var(--sd-surface-1);
-  cursor: ew-resize;
 }
 
 .tl-wave {
   background-color: var(--sd-surface-1);
   border-bottom-color: var(--sd-border-strong);
-  cursor: ew-resize;
 }
 
 .tl-wave-row .tl-head {
@@ -172,7 +185,6 @@
 .tl-actions {
   background-color: var(--sd-surface-1);
   border-bottom-color: var(--sd-border-strong);
-  cursor: ew-resize;
 }
 
 /* wider than the line it shows, to be easy to click */
@@ -555,4 +567,47 @@
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 10px solid var(--sd-primary);
+}
+
+/* the pointer is on the playhead (which it then takes), or drags it */
+.tl-playhead-hover .tl-playhead {
+  background-color: var(--sd-primary-hover);
+  box-shadow: 0 0 0 1px rgba(253, 126, 20, 0.25);
+}
+
+.tl-playhead-hover .tl-playhead::before {
+  border-top-color: var(--sd-primary-hover);
+}
+
+/* where a click on the ruler, the waveform or the actions would jump to */
+.tl-hover-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  z-index: 5;
+  background-color: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* the time, in the ruler next to the line */
+.tl-hover-time {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  padding: 0 4px;
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-3);
+  box-shadow: var(--sd-shadow-1);
+  color: var(--sd-text);
+  font-size: 0.6875rem;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.tl-hover-flip .tl-hover-time {
+  left: auto;
+  right: 5px;
 }
