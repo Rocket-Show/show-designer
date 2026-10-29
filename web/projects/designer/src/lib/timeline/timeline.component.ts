@@ -649,7 +649,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     // the playhead lies over the scrolling tracks, it is only shown over their visible part
     const visibleX = x - scroller.scrollLeft;
     const style = this.playhead.nativeElement.style;
-    style.transform = `translateX(${this.headerWidthPx + visibleX}px)`;
+    style.transform = `translateX(${this.snapPx(this.headerWidthPx + visibleX)}px)`;
     style.visibility = visibleX < 0 || visibleX > this.viewportWidthPx ? 'hidden' : 'visible';
 
     // the playhead may just have come to the pointer, or left it
@@ -692,11 +692,20 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const millis = Math.max(0, Math.min(this.millisAt(clientX), this.timelineMillis));
     const visibleX = this.toPx(millis) - this.scroller.nativeElement.scrollLeft;
 
-    line.style.transform = `translateX(${this.headerWidthPx + visibleX}px)`;
+    line.style.transform = `translateX(${this.snapPx(this.headerWidthPx + visibleX)}px)`;
     line.style.visibility = 'visible';
     // at the right edge, the time goes left of the line, not to be cut off
     line.classList.toggle('tl-hover-flip', visibleX > this.viewportWidthPx - 72);
     this.hoverTime.nativeElement.textContent = this.timelineService.msToTime(millis);
+  }
+
+  // A line over the timeline goes onto whole pixels of the screen, which keeps it sharp: in
+  // between two of them, it would be smeared over both (and next to the middle of the arrow
+  // of the playhead).
+  private snapPx(px: number): number {
+    const ratio = window.devicePixelRatio || 1;
+
+    return Math.round(px * ratio) / ratio;
   }
 
   private isOnPlayhead(clientX: number): boolean {

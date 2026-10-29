@@ -559,14 +559,16 @@
   visibility: hidden;
 }
 
+/* the arrow on top: as wide as an odd number of pixels, so that the line runs down its middle */
 .tl-playhead::before {
   content: '';
   position: absolute;
   top: 0;
   left: -6px;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 10px solid var(--sd-primary);
+  width: 13px;
+  height: 10px;
+  background-color: var(--sd-primary);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 /* the pointer is on the playhead (which it then takes), or drags it */
@@ -576,7 +578,7 @@
 }
 
 .tl-playhead-hover .tl-playhead::before {
-  border-top-color: var(--sd-primary-hover);
+  background-color: var(--sd-primary-hover);
 }
 
 /* where a click on the ruler, the waveform or the actions would jump to */
