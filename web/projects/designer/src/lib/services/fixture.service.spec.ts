@@ -1,13 +1,25 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
+
+import { CachedFixture } from '../models/cached-fixture';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
-import { FixtureCapabilityType } from '../models/fixture-capability';
+import { Fixture } from '../models/fixture';
+import { FixtureCapability, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureMatrixPixelGroup } from '../models/fixture-matrix-pixel-group';
 import { FixtureProfile } from '../models/fixture-profile';
 import { FixtureWheel } from '../models/fixture-wheel';
+import { Project } from '../models/project';
 import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
+import { ProjectService } from './project.service';
+import { UuidService } from './uuid.service';
 
 // The pixels of a fixture matrix and its pixel groups, like the Open Fixture Library defines
 // them: the pixel keys are given by Z, Y and X, the positions count from 1. These mirror
@@ -407,5 +419,223 @@ describe('FixtureService brightness and wheel slots', () => {
     expect(service.getWheelSlotColors(wheel, 0)).toEqual(['#0000ff']);
     // half blue and half open
     expect(service.getWheelSlotColors(wheel, 3.5)).toEqual(['#0000ff']);
+  });
+});
+
+// The profiles of the fixture library and the fixtures of the pool.
+describe('FixtureService with the fixture library and the pool', () => {
+  let service: FixtureService;
+  let http: HttpTestingController;
+  let project: Project;
+  let uuids: number;
+
+  const par = {
+    uuid: 'par',
+    name: 'Par',
+    categories: ['Color Changer'],
+    availableChannels: { Red: { capability: { type: 'ColorIntensity', color: 'Red' } }, Green: {}, Blue: {} },
+    modes: [{ name: '3-channel', shortName: '3ch', channels: ['Red', 'Green', 'Blue'] }],
+  };
+  const head = {
+    uuid: 'head',
+    name: 'Head',
+    categories: ['Moving Head'],
+    availableChannels: { Pan: {}, Tilt: {}, Dimmer: {}, Color: {}, Gobo: {} },
+    modes: [
+      { name: 'Basic', channels: ['Pan', 'Tilt'] },
+      { name: 'Full', channels: ['Pan', 'Tilt', 'Dimmer', 'Color', 'Gobo'] },
+    ],
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    project = new Project({ fixtureProfiles: [par, head] });
+    TestBed.inject(ProjectService).project = project;
+    uuids = 0;
+    spyOn(TestBed.inject(UuidService), 'getUuid').and.callFake(() => 'fixture-' + ++uuids);
+    service = TestBed.inject(FixtureService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+  });
+
+  function fixture(profileUuid: string, modeShortName: string, dmxFirstChannel: number): Fixture {
+    return new Fixture({ uuid: 'placed-' + dmxFirstChannel, profileUuid, modeShortName, dmxFirstChannel });
+  }
+
+  it('finds a fixture by its uuid, also once the fixtures changed', () => {
+    const first = new Fixture({ uuid: 'a', name: 'First' });
+    project.fixtures = [first, new Fixture({ uuid: 'a', name: 'Twin' })];
+    expect(service.getFixtureByUuid('a')).toBe(first);
+
+    const added = new Fixture({ uuid: 'b' });
+    project.fixtures.push(added);
+    expect(service.getFixtureByUuid('b')).toBe(added);
+
+    project.fixtures = [];
+    expect(service.getFixtureByUuid('a')).toBeUndefined();
+  });
+
+  it('finds the cached fixture of a pixel, or the one for the channels of the whole fixture', () => {
+    const whole = new CachedFixture();
+    whole.fixture = new Fixture({ uuid: 'a' });
+    const pixel = new CachedFixture();
+    pixel.fixture = whole.fixture;
+    pixel.pixel = new CachedFixturePixel();
+    pixel.pixel.key = 'A1';
+    service.cachedFixtures = [pixel, whole];
+
+    expect(service.getCachedFixtureByUuid('a', 'A1')).toBe(pixel);
+    expect(service.getCachedFixtureByUuid('a', undefined)).toBe(whole);
+    expect(service.getCachedFixtureByUuid('a', '')).toBe(whole);
+    expect(service.getCachedFixtureByUuid('a', 'B1')).toBeUndefined();
+    expect(service.getCachedFixtureByUuid('b', undefined)).toBeUndefined();
+  });
+
+  it('lists the profiles of the library to search them', () => {
+    let profiles: FixtureProfile[];
+
+    service.getSearchProfiles().subscribe((result) => (profiles = result));
+    http.expectOne('fixtures').flush([{ uuid: 'one', name: 'One' }, { uuid: 'two' }]);
+
+    expect(profiles.map((profile) => profile instanceof FixtureProfile && profile.uuid)).toEqual(['one', 'two']);
+  });
+
+  it('loads a profile of the library once, with its metadata', () => {
+    let done = false;
+
+    service.loadProfileByUuid('par').subscribe(() => (done = true));
+    expect(done).toBe(true);
+
+    service.loadProfileByUuid('stairville/mh-100').subscribe();
+    http.expectOne('fixtures?uuid=stairville/mh-100').flush([{ uuid: 'stairville/mh-100', manufacturerShortName: 'stairville' }]);
+    http.expectOne('fixture?uuid=stairville/mh-100').flush({ name: 'MH-100', modes: [{ name: 'Basic', channels: [] }] });
+
+    const loaded = service.getProfileByUuid('stairville/mh-100');
+    expect(loaded.name).toBe('MH-100');
+    expect(loaded.manufacturerShortName).toBe('stairville');
+  });
+
+  it('reads the rotation angles of the library', () => {
+    expect(service.getRotationAngleDeg('90deg')).toBe(90);
+    expect(service.getRotationAngleDeg('25%')).toBe(90);
+    expect(service.getRotationAngleDeg('fast')).toBeUndefined();
+  });
+
+  it('finds the wheel of a capability by its own name, the first one it names, or the name of its channel', () => {
+    const wheelProfile = new FixtureProfile({
+      wheels: {
+        'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#ff0000'] }] },
+        Gobos: { slots: [{ type: 'Gobo' }] },
+      },
+    });
+    const wheelOf = (wheel: any) =>
+      (service as any).getFixtureCapability(
+        new FixtureCapability({ type: 'WheelSlot', slotNumber: 2, wheel }),
+        'Color Wheel',
+        wheelProfile
+      );
+
+    expect(wheelOf('Gobos').wheelName).toBe('Gobos');
+    expect(wheelOf(['Gobos', 'Color Wheel']).wheelName).toBe('Gobos');
+
+    const byChannel = wheelOf(undefined);
+    expect(byChannel.wheelName).toBe('Color Wheel');
+    expect(byChannel.wheelIsColor).toBe(true);
+    expect(byChannel.wheelSlots.map((slot: any) => slot.type)).toEqual(['Color']);
+  });
+
+  it('counts the channels of a mode once', () => {
+    const profile = service.getProfileByUuid('par');
+    const mode = profile.modes[0];
+
+    expect(service.getModeChannelCount(profile, mode)).toBe(3);
+
+    mode.channels.pop();
+    expect(service.getModeChannelCount(profile, mode)).toBe(3);
+  });
+
+  it('has no channels without a mode', () => {
+    expect(service.getCachedChannels(service.getProfileByUuid('par'), undefined, undefined)).toEqual([]);
+  });
+
+  it('shows a profile with the icon of its first category', () => {
+    expect(service.getFixtureIconClass(service.getProfileByUuid('head'))).toBe('moving-head');
+    expect(service.getFixtureIconClass(undefined)).toBe('');
+    expect(service.getFixtureIconClass(new FixtureProfile({ categories: [] }))).toBe('');
+    expect(service.getFixtureIconClass(new FixtureProfile({ categories: [''] }))).toBe('');
+  });
+
+  it('selects the fixtures to edit the settings of', () => {
+    const one = new Fixture({ uuid: 'one' });
+    const two = new Fixture({ uuid: 'two' });
+
+    service.switchSettingsFixtureSelection(one);
+    service.switchSettingsFixtureSelection(two);
+    service.switchSettingsFixtureSelection(one);
+
+    expect(service.settingsFixtureIsSelected(one)).toBe(false);
+    expect(service.settingsFixtureIsSelected(two)).toBe(true);
+  });
+
+  it('asks the server to update the profiles of the library', () => {
+    service.updateProfiles().subscribe();
+
+    expect(http.expectOne('update-profiles').request.method).toBe('POST');
+  });
+
+  it('finds the first free channels for a fixture', () => {
+    // 0-2 and 5-6 are taken
+    const pool = [fixture('par', '3ch', 0), fixture('head', 'Basic', 5)];
+
+    expect(service.getNextFreeDmxChannel([], 3)).toBe(0);
+    expect(service.getNextFreeDmxChannel(pool, 2)).toBe(3);
+    expect(service.getNextFreeDmxChannel(pool, 3)).toBe(7);
+    expect(service.getNextFreeDmxChannel(pool, 506)).toBe(-1);
+    expect(service.getNextFreeDmxChannel(pool, 505)).toBe(7);
+  });
+
+  it('adds a fixture in the mode of the ones of its profile, on the next free channels', () => {
+    const pool = [fixture('head', 'Full', 0)];
+
+    const added = service.addFixture(service.getProfileByUuid('head'), pool);
+
+    expect([added.uuid, added.name, added.profileUuid, added.modeShortName, added.dmxFirstChannel]).toEqual([
+      'fixture-1',
+      'Head',
+      'head',
+      'Full',
+      5,
+    ]);
+    expect(pool[1]).toBe(added);
+
+    // the first mode, named by its short name or its name
+    expect(service.addFixture(service.getProfileByUuid('par'), pool).modeShortName).toBe('3ch');
+    expect(service.addFixture(service.getProfileByUuid('head'), []).modeShortName).toBe('Basic');
+  });
+
+  it('takes the channels of another pool, the fixtures of the universe', () => {
+    const universe = [fixture('par', '3ch', 0)];
+
+    const added = service.addFixture(service.getProfileByUuid('par'), [], universe);
+
+    expect(added.dmxFirstChannel).toBe(3);
+  });
+
+  it('tells, once there is no room for another fixture', () => {
+    const toastr = TestBed.inject(ToastrService);
+    spyOn(toastr, 'error');
+    // pars on the channels 0 to 509, two channels are left
+    const pool = Array.from({ length: 170 }, (_, index) => fixture('par', '3ch', index * 3));
+
+    expect(service.addFixture(service.getProfileByUuid('par'), pool)).toBeUndefined();
+    expect(pool.length).toBe(170);
+    expect(toastr.error).toHaveBeenCalled();
   });
 });

@@ -367,11 +367,12 @@ export abstract class Fixture3d {
     this.spotLightBeam.rotation.x = Math.PI / 2;
   }
 
+  // the materials are only there once the objects have been created (a mesh may still be loading)
   destroy() {
-    if (this.hasSpotLight) {
+    if (this.spotlightMaterial) {
       this.spotlightMaterial.dispose();
     }
-    if (this.hasBulb) {
+    if (this.bulbMaterial) {
       this.bulbMaterial.dispose();
     }
   }

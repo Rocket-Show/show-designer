@@ -73,18 +73,19 @@ export class Project {
     this.name = data.name;
     this.shareToken = data.shareToken;
 
-    this.stageWidthCm = data.stageWidthCm;
-    this.stageHeightCm = data.stageHeightCm;
-    this.stageDepthCm = data.stageDepthCm;
+    // the stage of a project which does not describe it is the default one, not one without a size
+    this.stageWidthCm = data.stageWidthCm ?? this.stageWidthCm;
+    this.stageHeightCm = data.stageHeightCm ?? this.stageHeightCm;
+    this.stageDepthCm = data.stageDepthCm ?? this.stageDepthCm;
 
-    this.stageFloorHeightCm = data.stageFloorHeightCm;
-    this.stageCeilingHeightCm = data.stageCeilingHeightCm;
-    this.stagePillarWidthCm = data.stagePillarWidthCm;
+    this.stageFloorHeightCm = data.stageFloorHeightCm ?? this.stageFloorHeightCm;
+    this.stageCeilingHeightCm = data.stageCeilingHeightCm ?? this.stageCeilingHeightCm;
+    this.stagePillarWidthCm = data.stagePillarWidthCm ?? this.stagePillarWidthCm;
 
     this.masterDimmerValue = data.masterDimmerValue ?? 1;
 
     this.selectedPresetUuid = data.selectedPresetUuid;
-    this.selectedSceneUuids = data.selectedSceneUuids;
+    this.selectedSceneUuids = data.selectedSceneUuids ?? [];
     this.selectedStepUuid = data.selectedStepUuid;
 
     // never open a project watching the steps run (see stepPreviewRunning)

@@ -91,7 +91,8 @@ export class ColorChanger3d extends Fixture3d {
     }
   }
 
-  destroy() {
+  override destroy() {
+    super.destroy();
     this.destroyed = true;
 
     if (this.objectGroup.parent) {

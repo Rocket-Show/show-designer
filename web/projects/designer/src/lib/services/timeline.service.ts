@@ -152,10 +152,13 @@ export class TimelineService {
     return padded;
   }
 
+  // minutes past the hour as well, a show may be played as one long composition
   msToTime(millis: number, includeMillis: boolean = true): string {
-    const ms: number = Math.round(millis % 1000);
-    const seconds: number = Math.floor(((millis % 360000) % 60000) / 1000);
-    const minutes: number = Math.floor((millis % 3600000) / 60000);
+    // cut off, not rounded: 999.6 ms are no second yet
+    const wholeMillis = Math.floor(millis);
+    const ms: number = wholeMillis % 1000;
+    const seconds: number = Math.floor(wholeMillis / 1000) % 60;
+    const minutes: number = Math.floor(wholeMillis / 60000);
 
     if (includeMillis) {
       return this.pad(minutes, 2) + ':' + this.pad(seconds, 2) + '.' + this.pad(ms, 3);
@@ -712,7 +715,7 @@ export class TimelineService {
 
       if (this.configService.enableMediaLibrary) {
         // the file name is also used for the real file name
-        audioFileName = 'file/get?name=' + this.selectedComposition.audioFileName + '&type=AUDIO';
+        audioFileName = 'file/get?name=' + encodeURIComponent(this.selectedComposition.audioFileName) + '&type=AUDIO';
       } else {
         // the composition uuid and extension is used as the file name
         audioFileName =
