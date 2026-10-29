@@ -324,7 +324,10 @@ export class SceneComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const sceneNode = this.findNode(this.treeNodes, (node) => node.scene === this.targetScene && node.isFolder);
+    // nothing clicked yet: no row has the ring (a folder carries no scene either)
+    const sceneNode = this.targetScene
+      ? this.findNode(this.treeNodes, (node) => node.scene === this.targetScene && node.isFolder)
+      : undefined;
 
     this.focusedNode = this.targetPreset
       ? (sceneNode?.children ?? []).find((node: TreeNode) => node.preset === this.targetPreset) || sceneNode
