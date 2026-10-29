@@ -15,6 +15,7 @@ import { FixtureMode } from '../models/fixture-mode';
 import { FixtureProfile } from '../models/fixture-profile';
 import { FixtureWheel } from '../models/fixture-wheel';
 import { FixtureWheelSlot, FixtureWheelSlotType } from '../models/fixture-wheel-slot';
+import { parseProfileNumber } from '../models/profile-number';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
@@ -206,11 +207,14 @@ export class FixtureService {
   }
 
   private mixHexColors(colors: string[]): Color {
-    if (colors.length === 0) {
+    // a color which can't be read is left out, like in Rocket Show
+    const rgbColors = colors.map((color) => this.hexToRgb(color)).filter((color) => color);
+
+    if (rgbColors.length === 0) {
       return undefined;
     }
 
-    return this.mixColors(colors.map((color) => this.hexToRgb(color)));
+    return this.mixColors(rgbColors);
   }
 
   private componentToHex(c: number): any {
@@ -253,6 +257,11 @@ export class FixtureService {
   }
 
   wheelHasSlotType(wheel: FixtureWheel, slotType: FixtureWheelSlotType): boolean {
+    if (!wheel || !wheel.slots) {
+      // a slot of a wheel the profile doesn't have (e.g. a channel named differently than its wheel)
+      return false;
+    }
+
     for (const slot of wheel.slots) {
       if (slot.type === slotType) {
         return true;
@@ -357,20 +366,26 @@ export class FixtureService {
     return Math.pow(256, 1 + fixtureChannel.fineChannelAliases.length) - 1;
   }
 
-  private getDefaultValueByChannel(fixtureChannel: FixtureChannel): number {
-    if (!fixtureChannel.defaultValue) {
+  // The value a channel starts out with, or undefined for none: a DMX value or a percentage of
+  // the channel (the fixture library also has fractions, e.g. 33.3%). A default of 0 is one, one
+  // which can't be read is none, like in Rocket Show.
+  getDefaultValueByChannel(fixtureChannel: FixtureChannel): number {
+    const defaultValue = fixtureChannel.defaultValue;
+
+    if (defaultValue === undefined || defaultValue === null) {
       return undefined;
     }
 
-    if (isNaN(fixtureChannel.defaultValue as any) && (fixtureChannel.defaultValue as string).endsWith('%')) {
+    const text = String(defaultValue);
+
+    if (text.endsWith('%')) {
       // percentage value
-      const percentage = Number.parseInt((fixtureChannel.defaultValue as string).replace('%', ''), 10);
-      const maxValue = this.getMaxValueByChannel(fixtureChannel);
-      return (maxValue / 100) * percentage;
-    } else {
-      // DMX value
-      return Number.parseInt(fixtureChannel.defaultValue as any, 10);
+      const percentage = parseProfileNumber(text.substring(0, text.length - 1));
+      return percentage === undefined ? undefined : (this.getMaxValueByChannel(fixtureChannel) / 100) * percentage;
     }
+
+    // DMX value
+    return parseProfileNumber(text);
   }
 
   private getColorWheelByChannel(channel: CachedFixtureChannel, profile: FixtureProfile): FixtureWheel {
@@ -396,8 +411,14 @@ export class FixtureService {
     return undefined;
   }
 
+  // the name of a template channel for a pixel: every $pixelKey replaced with the key (a channel
+  // without a pixel keeps its name), like in Rocket Show
   private getChannelNameWithPixelKey(templateChannelName: string, pixelKey: string) {
-    return templateChannelName.replace('$pixelKey', pixelKey);
+    if (!pixelKey) {
+      return templateChannelName;
+    }
+
+    return templateChannelName.split('$pixelKey').join(pixelKey);
   }
 
   private addCachedChannel(
@@ -414,7 +435,7 @@ export class FixtureService {
     cachedFixtureChannel.name = channelName;
     cachedFixtureChannel.capabilities = this.getCapabilitiesByChannel(cachedFixtureChannel.channel, channelName, profile);
     const defaultValue = this.getDefaultValueByChannel(cachedFixtureChannel.channel);
-    if (defaultValue) {
+    if (defaultValue !== undefined) {
       cachedFixtureChannel.defaultValue = defaultValue;
     }
     cachedFixtureChannel.maxValue = this.getMaxValueByChannel(cachedFixtureChannel.channel);
@@ -854,9 +875,7 @@ export class FixtureService {
   }
 
   private parseBrightnessNumber(brightness: string, unit: string): number {
-    const text = brightness.substring(0, brightness.length - unit.length).trim();
-    const number = Number(text);
-    return text === '' || isNaN(number) ? undefined : number;
+    return parseProfileNumber(brightness.substring(0, brightness.length - unit.length));
   }
 
   // how bright a capability lights, from 0 to 1, like the fixture library gives it: "off", "dark",
@@ -994,10 +1013,10 @@ export class FixtureService {
   // the capability of a channel the passed value is in
   getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
     for (const capability of channel.capabilities) {
-      if (
-        capability.capability.dmxRange.length === 0 ||
-        (value >= capability.capability.dmxRange[0] && value <= capability.capability.dmxRange[1])
-      ) {
+      const dmxRange = capability.capability.dmxRange;
+
+      // a capability without a range of its own covers the whole channel
+      if (!dmxRange || dmxRange.length < 2 || (value >= dmxRange[0] && value <= dmxRange[1])) {
         return capability;
       }
     }

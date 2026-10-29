@@ -282,10 +282,10 @@ export class PresetStepService {
       }
 
       if (
-        toValue.slotNumber !== undefined ||
-        fromValue.slotNumber !== undefined ||
-        toValue.valuePercentage === undefined ||
-        fromValue.valuePercentage === undefined
+        toValue.slotNumber != null ||
+        fromValue.slotNumber != null ||
+        toValue.valuePercentage == null ||
+        fromValue.valuePercentage == null
       ) {
         // a wheel cannot stand between two of its slots: it turns as soon as the
         // transition starts, which a snap curve holds back to the end of it

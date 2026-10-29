@@ -89,29 +89,30 @@ export class EffectCurve extends Effect {
       }
     }
 
-    this.lengthMillis = data.lengthMillis;
-    this.phaseMillis = data.phaseMillis;
-    this.amplitude = data.amplitude;
-    this.position = data.position;
-    this.phasingMillis = data.phasingMillis;
-    this.curveType = data.curveType;
+    // a value missing or null keeps the default, like in Rocket Show
+    this.lengthMillis = data.lengthMillis ?? 2500;
+    this.phaseMillis = data.phaseMillis ?? 0;
+    this.amplitude = data.amplitude ?? 1;
+    this.position = data.position ?? 0.5;
+    this.phasingMillis = data.phasingMillis ?? 0;
+    this.curveType = data.curveType ?? 'sine';
 
     // curves used to run on a fixed time only, without a tempo to follow
     this.lengthMode = data.lengthMode || 'millis';
-    this.lengthBeats = data.lengthBeats === undefined ? 4 : data.lengthBeats;
-    this.phaseBeats = data.phaseBeats === undefined ? 0 : data.phaseBeats;
-    this.phasingBeats = data.phasingBeats === undefined ? 0 : data.phasingBeats;
+    this.lengthBeats = data.lengthBeats ?? 4;
+    this.phaseBeats = data.phaseBeats ?? 0;
+    this.phasingBeats = data.phasingBeats ?? 0;
 
     // projects before version 4 only knew a fixed phasing time
     this.phasingMode = data.phasingMode || 'millis';
-    this.phasingCycles = data.phasingCycles === undefined ? 1 : data.phasingCycles;
-    this.phasingGroupSize = data.phasingGroupSize === undefined ? 1 : data.phasingGroupSize;
+    this.phasingCycles = data.phasingCycles ?? 1;
+    this.phasingGroupSize = data.phasingGroupSize ?? 1;
 
     // curves used to be symmetric and to run forever
-    this.dutyCycle = data.dutyCycle === undefined ? 0.5 : data.dutyCycle;
+    this.dutyCycle = data.dutyCycle ?? 0.5;
     this.runMode = data.runMode || 'infinite';
-    this.runCycles = data.runCycles === undefined ? 1 : data.runCycles;
-    this.runDurationMillis = data.runDurationMillis === undefined ? 5000 : data.runDurationMillis;
+    this.runCycles = data.runCycles ?? 1;
+    this.runDurationMillis = data.runDurationMillis ?? 5000;
     this.endMode = data.endMode || 'hold';
   }
 

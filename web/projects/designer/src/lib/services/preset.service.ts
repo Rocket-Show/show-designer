@@ -526,7 +526,7 @@ export class PresetService {
 
     if (colorRed !== undefined && colorGreen !== undefined && colorBlue !== undefined) {
       for (const capability of cachedChannel.capabilities) {
-        if (capability.capability.slotNumber) {
+        if (capability.capability.slotNumber !== undefined) {
           const mixedColor = this.fixtureService.getMixedWheelSlotColor(capability.wheel, capability.capability.slotNumber);
           if (mixedColor) {
             const diff =

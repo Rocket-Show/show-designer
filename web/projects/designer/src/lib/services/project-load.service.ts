@@ -45,41 +45,40 @@ export class ProjectLoadService {
     private effectService: EffectService
   ) {}
 
-  private migrateToVersion2() {
-    for (let fixture of this.projectService.project.fixtures) {
-      if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-        const projectFixture = new PresetFixture();
-        projectFixture.fixtureUuid = fixture.uuid;
-        this.projectService.project.presetFixtures.push(projectFixture);
-      }
+  // the fixture itself (if it has a channel of its own) and its pixels, as a project of version 1
+  // meant them. A fixture without its profile or mode is left out, like in Rocket Show.
+  private getPresetFixturesOfVersion1(fixtureUuid: string): PresetFixture[] {
+    const presetFixtures: PresetFixture[] = [];
+    const fixture = this.fixtureService.getFixtureByUuid(fixtureUuid);
+    const profile = fixture ? this.fixtureService.getProfileByUuid(fixture.profileUuid) : undefined;
 
-      const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
-
-      for (let pixelKey of pixels) {
-        const projectFixture = new PresetFixture();
-        projectFixture.fixtureUuid = fixture.uuid;
-        projectFixture.pixelKey = pixelKey.key;
-        this.projectService.project.presetFixtures.push(projectFixture);
-      }
+    if (!profile || !this.fixtureService.getModeByFixture(profile, fixture)) {
+      return presetFixtures;
     }
-    for (let preset of this.projectService.project.presets) {
-      for (let fixtureUuid of preset.fixtureUuids) {
-        const fixture = this.fixtureService.getFixtureByUuid(fixtureUuid);
 
-        if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixtureUuid;
-          preset.fixtures.push(presetFixture);
-        }
+    if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
+      const presetFixture = new PresetFixture();
+      presetFixture.fixtureUuid = fixtureUuid;
+      presetFixtures.push(presetFixture);
+    }
 
-        const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
+    for (const pixel of this.fixtureService.fixtureGetUniquePixels(fixture)) {
+      const presetFixture = new PresetFixture();
+      presetFixture.fixtureUuid = fixtureUuid;
+      presetFixture.pixelKey = pixel.key;
+      presetFixtures.push(presetFixture);
+    }
 
-        for (let pixel of pixels) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixtureUuid;
-          presetFixture.pixelKey = pixel.key;
-          preset.fixtures.push(presetFixture);
-        }
+    return presetFixtures;
+  }
+
+  private migrateToVersion2() {
+    for (const fixture of this.projectService.project.fixtures) {
+      this.projectService.project.presetFixtures.push(...this.getPresetFixturesOfVersion1(fixture.uuid));
+    }
+    for (const preset of this.projectService.project.presets) {
+      for (const fixtureUuid of preset.fixtureUuids || []) {
+        preset.fixtures.push(...this.getPresetFixturesOfVersion1(fixtureUuid));
       }
       preset.fixtureUuids = undefined;
     }
