@@ -20,6 +20,7 @@ import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
+import { SceneService } from './scene.service';
 
 // how much of what a preset puts out reaches the stage. These mirror the cases of
 // PresetIntensityTest in Rocket Show: a show has to look the same on stage as it
@@ -569,6 +570,114 @@ describe('PreviewService like Rocket Show plays it', () => {
 });
 
 // The stage of the 3D preview, built from the sizes of the project.
+// What the preview plays while nothing runs on the timeline: the selected preset on its own (soloed,
+// or while no scene is selected), or else the presets of the selected scenes. And which step of the
+// preset being edited it is on, for its list to mark and fill.
+describe('PreviewService picking what to play', () => {
+  let previewService: PreviewService;
+  let presetService: PresetService;
+  let sceneService: SceneService;
+  let project: Project;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    previewService = TestBed.inject(PreviewService);
+    presetService = TestBed.inject(PresetService);
+    sceneService = TestBed.inject(SceneService);
+
+    project = new Project({
+      presets: [
+        {
+          uuid: 'a',
+          steps: [
+            { uuid: 'dark', startMillis: 0 },
+            { uuid: 'bright', startMillis: 1000 },
+          ],
+        },
+        { uuid: 'b', steps: [{ uuid: 'b-step' }] },
+        { uuid: 'c', steps: [{ uuid: 'c-step' }] },
+      ],
+      scenes: [
+        { uuid: 'first', presetUuids: ['a', 'b'] },
+        { uuid: 'second', presetUuids: ['c'] },
+      ],
+    });
+    TestBed.inject(ProjectService).project = project;
+    presetService.selectedPreset = project.presets[2];
+  });
+
+  function played(): string[] {
+    return previewService.getPresets(0).map((playing) => playing.preset.uuid + (playing.scene ? ' in ' + playing.scene.uuid : ''));
+  }
+
+  it('plays the selected preset on its own while it is soloed', () => {
+    project.previewPreset = true;
+    sceneService.selectedScenes = [project.scenes[0]];
+
+    expect(played()).toEqual(['c']);
+  });
+
+  it('plays the selected preset on its own while no scene is selected', () => {
+    project.previewPreset = false;
+    sceneService.selectedScenes = [];
+
+    expect(played()).toEqual(['c']);
+  });
+
+  it('plays nothing while neither a preset nor a scene is selected', () => {
+    presetService.selectedPreset = undefined;
+    sceneService.selectedScenes = [];
+
+    expect(played()).toEqual([]);
+  });
+
+  it('plays the presets of the selected scenes, the first ones on top', () => {
+    project.previewPreset = false;
+    sceneService.selectedScenes = [project.scenes[1], project.scenes[0]];
+
+    // from the bottom to the top
+    expect(played()).toEqual(['c in second', 'b in first', 'a in first']);
+  });
+
+  function marked(playing: PresetRegionScene, timeMillis: number): [string, number] {
+    previewService.getChannelValues(timeMillis, [playing]);
+
+    return [presetService.activeStep?.uuid, presetService.activeStepProgress];
+  }
+
+  it('marks the step the selected preset is on while its steps run', () => {
+    presetService.selectedPreset = project.presets[0];
+    project.stepPreviewRunning = true;
+    project.stepPreviewStartMillis = 500;
+
+    expect(marked(new PresetRegionScene(project.presets[0], undefined, undefined), 2000)).toEqual(['bright', 0.5]);
+  });
+
+  it('marks the step the selected preset is on while it plays on the timeline', () => {
+    presetService.selectedPreset = project.presets[0];
+    const region = new ScenePlaybackRegion({ startMillis: 1000, endMillis: 10000 });
+
+    expect(marked(new PresetRegionScene(project.presets[0], region, project.scenes[0]), 1500)).toEqual(['dark', 0.5]);
+  });
+
+  it('marks no step while the selected preset holds the step being edited', () => {
+    presetService.selectedPreset = project.presets[0];
+
+    expect(marked(new PresetRegionScene(project.presets[0], undefined, undefined), 1500)).toEqual([undefined, 0]);
+  });
+
+  it('marks no step of a preset which is not the selected one', () => {
+    project.stepPreviewRunning = true;
+    const region = new ScenePlaybackRegion({ startMillis: 0, endMillis: 10000 });
+
+    expect(marked(new PresetRegionScene(project.presets[0], region, project.scenes[0]), 1500)).toEqual([undefined, 0]);
+  });
+});
+
 describe('PreviewService building the stage', () => {
   let service: PreviewService;
   let project: Project;

@@ -38,6 +38,21 @@ describe('EffectCurve', () => {
 
     expect(EffectCurve.getBeatMillis(undefined)).toBe(fallback);
     expect(EffectCurve.getBeatMillis(0)).toBe(fallback);
+    expect(EffectCurve.getBeatMillis(-60)).toBe(fallback);
+  });
+
+  it('should start a new curve as a sine on a fixed period, running forever and chased by time', () => {
+    const fresh = new EffectCurve();
+
+    expect(fresh.type).toBe('curve');
+    expect(fresh.visible).toBe(true);
+    expect(fresh.curveType).toBe('sine');
+    expect(fresh.capabilities).toEqual([]);
+    expect(fresh.channels).toEqual([]);
+    expect(fresh.lengthMode).toBe('millis');
+    expect(fresh.runMode).toBe('infinite');
+    expect(fresh.endMode).toBe('hold');
+    expect(fresh.phasingMode).toBe('millis');
   });
 
   it('should hold the period of a curve that does not follow the tempo', () => {
@@ -185,6 +200,9 @@ describe('EffectCurve', () => {
 
     expect(curve.lengthMode).toBe('millis');
     expect(curve.isBeatSynced()).toBe(false);
+    expect(curve.phasingMode).toBe('millis');
+    expect(curve.runMode).toBe('infinite');
+    expect(curve.endMode).toBe('hold');
     expect(curve.phaseBeats).toBe(0);
     expect(curve.phasingBeats).toBe(0);
     expect(curve.getLengthMillis(60)).toBe(1000);

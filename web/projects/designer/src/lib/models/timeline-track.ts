@@ -90,7 +90,9 @@ export function assignTracks(composition: Composition, scenes: Scene[], newUuid:
       let track = sceneTracks.find((candidate) => isFreeOnTrack(composition, candidate.uuid, region.startMillis, region.endMillis, region));
 
       if (!track) {
-        track = createTrack(composition, newUuid(), sceneTracks.length === 0 ? scene.name : scene.name + ' ' + (sceneTracks.length + 1));
+        // the tracks of a scene without a name are named like new ones (e.g. "Track 3")
+        const name = !scene.name ? undefined : sceneTracks.length === 0 ? scene.name : scene.name + ' ' + (sceneTracks.length + 1);
+        track = createTrack(composition, newUuid(), name);
         sceneTracks.push(track);
         composition.tracks.push(track);
       }

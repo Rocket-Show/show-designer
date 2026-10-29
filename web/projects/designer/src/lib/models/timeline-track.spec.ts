@@ -89,6 +89,16 @@ describe('timeline tracks', () => {
       expect(getFreeGap(clips(), 'track-1', 1000)).toBeUndefined();
       expect(getFreeGap(clips(), 'track-1', 1999)).toBeUndefined();
     });
+
+    it('finds the gap right where a clip ends', () => {
+      expect(getFreeGap(clips(), 'track-1', 2000)).toEqual({ startMillis: 2000, endMillis: 4000 });
+    });
+
+    it('does not keep a clip being moved out of its own gap', () => {
+      const withClips = clips();
+
+      expect(getFreeGap(withClips, 'track-1', 1500, withClips.scenePlaybackRegions[0])).toEqual({ startMillis: 0, endMillis: 4000 });
+    });
   });
 
   describe('a project from before the tracks', () => {
@@ -110,6 +120,16 @@ describe('timeline tracks', () => {
 
       expect(withoutTracks.tracks.map((t) => t.name)).toEqual(['first', 'first 2', 'second']);
       expect(withoutTracks.scenePlaybackRegions.map((r) => r.trackUuid)).toEqual(['uuid-1', 'uuid-2', 'uuid-3']);
+    });
+
+    it('names the tracks of a scene without a name like new ones', () => {
+      const unnamed = scene('unnamed');
+      unnamed.name = '';
+      const withoutTracks = composition(region('unnamed', 0, 4000), region('unnamed', 2000, 6000), region('first', 0, 1000));
+
+      assignTracks(withoutTracks, [unnamed, scene('first')], newUuid);
+
+      expect(withoutTracks.tracks.map((t) => t.name)).toEqual(['Track 1', 'Track 2', 'first']);
     });
 
     it('leaves a composition without clips without tracks, e.g. one which only plays actions', () => {

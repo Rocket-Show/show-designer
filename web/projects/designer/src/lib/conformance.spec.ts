@@ -3,15 +3,19 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrModule } from 'ngx-toastr';
+import { of } from 'rxjs';
 
 import { caseFiles, profiles } from '../../conformance/index';
 import { CachedFixturePixel } from './models/cached-fixture-pixel';
 import { EffectCurve } from './models/effect-curve';
+import { FixtureCapabilityValue } from './models/fixture-capability-value';
 import { FixtureChannel } from './models/fixture-channel';
 import { FixtureMatrixPixelGroup } from './models/fixture-matrix-pixel-group';
 import { FixtureProfile } from './models/fixture-profile';
 import { Preset } from './models/preset';
+import { PresetFixture } from './models/preset-fixture';
 import { PresetRegionScene } from './models/preset-region-scene';
 import { PresetStepState } from './models/preset-step-state';
 import { parseProfileNumber } from './models/profile-number';
@@ -24,9 +28,11 @@ import { FixtureService } from './services/fixture.service';
 import { PresetStepService } from './services/preset-step.service';
 import { PresetService } from './services/preset.service';
 import { PreviewService } from './services/preview.service';
+import { ProjectLoadService } from './services/project-load.service';
 import { ProjectService } from './services/project.service';
 import { SceneService } from './services/scene.service';
 import { TimelineService } from './services/timeline.service';
+import { WarningDialogService } from './services/warning-dialog.service';
 
 // The cases of web/projects/designer/conformance (see its README): Rocket Show plays a project with
 // an engine of its own, which has to come to the very same values as the designer. Both run these
@@ -80,6 +86,19 @@ function resolveProfiles(project: any): any {
   return resolved;
 }
 
+// a capability value as the designer writes it, without the properties missing
+function capabilityOf(value: FixtureCapabilityValue): any {
+  const capability = {};
+
+  for (const property of ['type', 'color', 'wheel', 'profileUuid', 'valuePercentage', 'slotNumber']) {
+    if (value[property] !== undefined && value[property] !== null) {
+      capability[property] = value[property];
+    }
+  }
+
+  return capability;
+}
+
 function stateOf(state: PresetStepState): any {
   const effects = {};
 
@@ -90,17 +109,7 @@ function stateOf(state: PresetStepState): any {
   return {
     step: normalize(state.currentStep?.uuid),
     channels: state.fixtureChannelValues.map((value) => [normalize(value.profileUuid), value.channelName, normalize(value.value)]),
-    capabilities: state.fixtureCapabilityValues.map((value) => {
-      const capability = {};
-
-      for (const property of ['type', 'color', 'wheel', 'profileUuid', 'valuePercentage', 'slotNumber']) {
-        if (value[property] !== undefined && value[property] !== null) {
-          capability[property] = value[property];
-        }
-      }
-
-      return capability;
-    }),
+    capabilities: state.fixtureCapabilityValues.map(capabilityOf),
     effects,
   };
 }
@@ -178,6 +187,82 @@ function channelValues(projectData: any, preview: any, times: number[]): any[] {
 
     return frame;
   });
+}
+
+// A project of an older version migrated to the current one, like the designer does when it opens
+// it (ProjectLoadService.migrateFromOldProject)
+function migrate(projectData: any): Project {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      BsModalService,
+      // the dialog telling that the project has been migrated
+      { provide: WarningDialogService, useValue: { show: () => of(true) } },
+    ],
+  });
+
+  const projectService = TestBed.inject(ProjectService);
+  projectService.project = new Project(resolveProfiles(projectData));
+  TestBed.inject(ProjectLoadService)['migrateFromOldProject']();
+
+  return projectService.project;
+}
+
+// a fixture of the project or of a preset: its uuid and its pixel (null for the fixture itself)
+function presetFixtureOf(presetFixture: PresetFixture): any[] {
+  return [presetFixture.fixtureUuid, normalize(presetFixture.pixelKey)];
+}
+
+// What both engines keep of a migrated project and play it with (see the README): the fixtures and
+// pixels of the presets, the steps, the curves, the layers of the scenes and the tracks of the
+// compositions. A clip names its track by its place in the composition: the uuid of a new track
+// is a random one.
+function migratedProjectOf(project: Project): any {
+  return {
+    version: project.version,
+    presetFixtures: project.presetFixtures.map(presetFixtureOf),
+    presets: project.presets.map((preset) => ({
+      uuid: preset.uuid,
+      fixtures: preset.fixtures.map(presetFixtureOf),
+      useGlobalFixtureOrder: preset.useGlobalFixtureOrder,
+      steps: preset.steps.map((step) => ({
+        startMillis: step.startMillis,
+        transitionMillis: normalize(step.transitionMillis),
+        transitionCurve: step.transitionCurve,
+        channels: step.fixtureChannelValues.map((value) => [
+          normalize(value.profileUuid),
+          normalize(value.channelName),
+          normalize(value.value),
+        ]),
+        capabilities: step.fixtureCapabilityValues.map(capabilityOf),
+        effects: step.effectAmounts.map((effectAmount) => [effectAmount.effectUuid, effectAmount.amount]),
+      })),
+      effects: preset.effects.map((effect) =>
+        effect instanceof EffectCurve
+          ? {
+              uuid: effect.uuid,
+              type: effect.type,
+              curveType: effect.curveType,
+              amplitude: effect.amplitude,
+              channels: effect.channels.map((profileChannels) => [normalize(profileChannels.profileUuid), profileChannels.channels]),
+            }
+          : { uuid: effect.uuid, type: effect.type }
+      ),
+    })),
+    scenes: project.scenes.map((scene) => [scene.uuid, scene.presetUuids]),
+    compositions: project.compositions.map((composition) => ({
+      uuid: composition.uuid,
+      tracks: composition.tracks.map((track) => normalize(track.name)),
+      clips: composition.scenePlaybackRegions.map((region) => [
+        region.sceneUuid,
+        composition.tracks.findIndex((track) => track.uuid === region.trackUuid),
+      ]),
+    })),
+  };
 }
 
 const fixtureService = new FixtureService(undefined, undefined, undefined, undefined, undefined, new FixturePixelGroupResolveService());
@@ -278,6 +363,8 @@ const kinds: { [kind: string]: (input: any) => any } = {
   },
 
   channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times)),
+
+  migration: (input) => migratedProjectOf(migrate(input.project)),
 };
 
 // the first difference between what was expected and what came out, undefined for none
