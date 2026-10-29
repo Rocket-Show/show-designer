@@ -1,96 +1,168 @@
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { InlineEditComponent } from './inline-edit.component';
 
+// A name shown as text, edited right where it is (the project name in the menu bar, the
+// name of a track): the field stores what has been typed as soon as it is left.
 describe('InlineEditComponent', () => {
   let component: InlineEditComponent;
   let fixture: ComponentFixture<InlineEditComponent>;
+  let emitted: string[];
 
-  beforeEach(waitForAsync(() => {
+  beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [FormsModule, TranslateModule.forRoot()],
       declarations: [InlineEditComponent],
-    }).compileComponents();
-  }));
+    });
 
-  beforeEach(() => {
     fixture = TestBed.createComponent(InlineEditComponent);
     component = fixture.componentInstance;
+    emitted = [];
+    component.valueChange.subscribe((value) => emitted.push(value));
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+  function shown(): HTMLElement {
+    return fixture.nativeElement.querySelector('.inline-edit-value');
+  }
 
-  it('should start editing on a click', () => {
-    component.value = 'name';
+  function input(): HTMLInputElement {
+    return fixture.nativeElement.querySelector('input.inline-edit-input');
+  }
+
+  // the field, after the value has been clicked
+  function edit(value: string): HTMLInputElement {
+    component.value = value;
+    fixture.detectChanges();
+    shown().click();
+    fixture.detectChanges();
+    return input();
+  }
+
+  function type(field: HTMLInputElement, value: string) {
+    field.value = value;
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  it('shows the value, or the placeholder while there is none', () => {
+    component.placeholder = 'Project name';
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('.inline-edit-value').click();
+    expect(shown().textContent).toBe('Project name');
+    expect(shown().classList).toContain('inline-edit-placeholder');
+
+    component.value = 'My show';
+    fixture.detectChanges();
+
+    expect(shown().textContent).toBe('My show');
+    expect(shown().classList).not.toContain('inline-edit-placeholder');
+  });
+
+  it('starts editing on a click, with the whole value selected', fakeAsync(() => {
+    const field = edit('My show');
+    tick();
+
+    expect(component.editing).toBe(true);
+    expect(shown()).toBeNull();
+    expect(document.activeElement).toBe(field);
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe('My show'.length);
+  }));
+
+  it('starts editing with the enter key', () => {
+    component.value = 'My show';
+    fixture.detectChanges();
+
+    shown().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     expect(component.editing).toBe(true);
   });
 
   // the name of a track is clicked to select the track and dragged to move it
-  it('should only start editing on a double click, where a click means something else', () => {
+  it('only starts editing on a double click, where a click means something else', () => {
     component.value = 'name';
     component.editOn = 'dblclick';
     fixture.detectChanges();
 
-    const value = fixture.nativeElement.querySelector('.inline-edit-value');
-    value.click();
+    shown().click();
 
     expect(component.editing).toBe(false);
 
-    value.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    shown().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
 
     expect(component.editing).toBe(true);
   });
 
-  it('should emit the new value when the field is left', () => {
-    component.value = 'old';
-    let emitted: string;
-    component.valueChange.subscribe((value) => (emitted = value));
+  it('keeps the field about as wide as its content', () => {
+    const field = edit('A show with a long name');
 
-    component.startEdit();
-    component.editValue = 'new';
-    component.save();
+    expect(field.size).toBe('A show with a long name'.length);
 
-    expect(component.editing).toBeFalsy();
+    type(field, 'Show');
+
+    expect(field.size).toBe(10);
+
+    component.placeholder = 'The name of the project';
+    type(field, '');
+
+    expect(field.size).toBe('The name of the project'.length);
+  });
+
+  it('stores the new value when the field is left', () => {
+    const field = edit('old');
+
+    type(field, 'new');
+    field.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    expect(component.editing).toBe(false);
+    expect(shown().textContent).toBe('new');
+    expect(emitted).toEqual(['new']);
+  });
+
+  it('stores the new value with the enter key', () => {
+    const field = edit('old');
+
+    type(field, 'new');
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
     expect(component.value).toBe('new');
-    expect(emitted).toBe('new');
+    expect(emitted).toEqual(['new']);
   });
 
-  it('should not emit when the value did not change', () => {
-    component.value = 'old';
-    let emitted: string;
-    component.valueChange.subscribe((value) => (emitted = value));
+  it("doesn't report a value which didn't change", () => {
+    const field = edit('old');
 
-    component.startEdit();
-    component.save();
+    field.dispatchEvent(new Event('blur'));
 
-    expect(component.editing).toBeFalsy();
-    expect(component.value).toBe('old');
-    expect(emitted).toBeUndefined();
+    expect(component.editing).toBe(false);
+    expect(emitted).toEqual([]);
   });
 
-  it('should keep the original value on cancel', () => {
-    component.value = 'old';
-    let emitted: string;
-    component.valueChange.subscribe((value) => (emitted = value));
+  it('keeps the original value on escape', () => {
+    const field = edit('old');
 
-    component.startEdit();
-    component.editValue = 'new';
-    component.cancel();
+    type(field, 'new');
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
     // leaving the field afterwards must not store the discarded value anymore
     component.save();
+    fixture.detectChanges();
 
-    expect(component.editing).toBeFalsy();
-    expect(component.value).toBe('old');
-    expect(emitted).toBeUndefined();
+    expect(component.editing).toBe(false);
+    expect(shown().textContent).toBe('old');
+    expect(emitted).toEqual([]);
+  });
+
+  it('keeps what is being typed when editing is started again', () => {
+    const field = edit('old');
+    type(field, 'new');
+
+    component.startEdit();
+
+    expect(component.editValue).toBe('new');
   });
 });

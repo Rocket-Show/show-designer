@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, ElementRef, HostListener, NgZone, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
@@ -25,7 +26,7 @@ const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
   styleUrls: ['./preview.component.css'],
   standalone: false,
 })
-export class PreviewComponent implements AfterViewInit {
+export class PreviewComponent implements AfterViewInit, OnDestroy {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
@@ -45,6 +46,10 @@ export class PreviewComponent implements AfterViewInit {
 
   public promoLink: string;
 
+  // the frame rendered next, and the rebuilding of the fixtures: both stop with the preview
+  private animationFrame: number;
+  private fixtureSetupSubscription: Subscription;
+
   constructor(
     private fixtureService: FixtureService,
     private previewMeshService: PreviewMeshService,
@@ -59,7 +64,7 @@ export class PreviewComponent implements AfterViewInit {
   ) {
     this.promoLink = this.hardwarePromoService.link('preview-badge');
 
-    this.previewService.doUpdateFixtureSetup.subscribe(() => {
+    this.fixtureSetupSubscription = this.previewService.doUpdateFixtureSetup.subscribe(() => {
       this.syncFixtures();
     });
     this.syncFixtures();
@@ -277,7 +282,7 @@ export class PreviewComponent implements AfterViewInit {
       this.previewService.stageAndPositionsDirty = false;
     }
 
-    requestAnimationFrame(this.animate.bind(this));
+    this.animationFrame = requestAnimationFrame(this.animate.bind(this));
   }
 
   private getAspectRatio(): number {
@@ -410,5 +415,16 @@ export class PreviewComponent implements AfterViewInit {
     this.ngZone.runOutsideAngular(() => {
       this.animate(null);
     });
+  }
+
+  // The designer has been left (e.g. for another page of Rocket Show): stop rendering, and
+  // give back the WebGL context, of which a browser only hands out a few
+  ngOnDestroy() {
+    cancelAnimationFrame(this.animationFrame);
+    this.fixtureSetupSubscription.unsubscribe();
+
+    this.controls?.dispose();
+    this.renderer?.dispose();
+    this.renderer?.forceContextLoss();
   }
 }
