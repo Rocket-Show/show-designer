@@ -9,6 +9,11 @@ import { of } from 'rxjs';
 
 import { EffectCurve } from '../models/effect-curve';
 
+import { Router } from '@angular/router';
+import { Project } from '../models/project';
+import { ConfigService } from './config.service';
+import { EffectService } from './effect.service';
+import { SceneService } from './scene.service';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { ProjectLoadService } from './project-load.service';
@@ -246,6 +251,243 @@ describe('ProjectLoadService migrating the timeline of a project to version 10',
     const composition = projectService.project.compositions[0];
     expect(composition.tracks.map((track) => track.name)).toEqual(['Background', 'Chorus']);
     expect(composition.scenePlaybackRegions.map((region) => region.trackUuid)).toEqual(['track-1', 'track-2']);
+  });
+});
+
+// A project of version 1 named the fixtures of a preset only, ordered its presets and fixtures by
+// the global lists, didn't know folders or steps: the migrations up to version 7 bring it to how a
+// project is kept now, so it plays like it always did
+describe('ProjectLoadService migrating a project of version 1', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+  let warning: jasmine.Spy;
+
+  beforeEach(() => {
+    warning = jasmine.createSpy('show').and.returnValue(of(true));
+
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: warning } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  function projectOfVersion1(): any {
+    const project = projectWithSelectedPreset();
+    delete project.version;
+    delete project.presetFixtures;
+    project.previewPreset = true;
+    project.fixtureProfiles.push(pixelProfile('test/bar', [3, 1, 1]));
+    project.fixtures.push(pixelFixture('bar-1', 'test/bar'));
+    project.presets = [
+      {
+        uuid: 'b',
+        name: 'B',
+        folderUuid: 'old',
+        fixtureUuids: ['bar-1', 'fixture-1', 'missing'],
+        fixtureCapabilityValues: [{ type: 'Intensity', valuePercentage: 1 }],
+      },
+      { uuid: 'a', name: 'A', fixtureUuids: ['fixture-1'] },
+    ];
+    project.scenes = [{ uuid: 'scene', name: 'Scene', folderUuid: 'old', presetUuids: ['a', 'b'] }];
+    project.compositions = [];
+    project.selectedPresetUuid = 'b';
+
+    return project;
+  }
+
+  function fixtureNames(presetFixtures: any[]): string[] {
+    return presetFixtures.map((presetFixture) => presetFixture.fixtureUuid + (presetFixture.pixelKey ? '/' + presetFixture.pixelKey : ''));
+  }
+
+  it('lists the fixtures of the project and of its presets with their pixels', () => {
+    service.import(JSON.stringify(projectOfVersion1()));
+    const project = projectService.project;
+
+    expect(project.version).toBe(projectService.currentProjectVersion);
+    expect(fixtureNames(project.presetFixtures)).toEqual(['fixture-1', 'bar-1/1', 'bar-1/2', 'bar-1/3']);
+    // in the order of the project (version 3), a fixture which is gone left out
+    expect(fixtureNames(project.presets[0].fixtures)).toEqual(['fixture-1', 'bar-1/1', 'bar-1/2', 'bar-1/3']);
+    expect(project.presets[0].useGlobalFixtureOrder).toBe(true);
+    expect(project.presets[0].fixtureUuids).toBeUndefined();
+  });
+
+  it('layers the presets of a scene in the order of the project', () => {
+    service.import(JSON.stringify(projectOfVersion1()));
+
+    expect(projectService.project.scenes[0].presetUuids).toEqual(['b', 'a']);
+  });
+
+  it('opens it with the scenes, the presets and the fixtures at the top level, unsoloed', () => {
+    service.import(JSON.stringify(projectOfVersion1()));
+    const project = projectService.project;
+
+    expect(project.previewPreset).toBe(false);
+    expect(project.presets.map((preset) => [preset.folderUuid, preset.sortIndex])).toEqual([
+      [undefined, 0],
+      [undefined, 1],
+    ]);
+    expect(project.scenes[0].folderUuid).toBeUndefined();
+    expect(project.presetFixtures.map((presetFixture) => presetFixture.sortIndex)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('turns the values of a preset into its first step', () => {
+    service.import(JSON.stringify(projectOfVersion1()));
+    const preset = projectService.project.presets[0];
+
+    expect(preset.steps.length).toBe(1);
+    expect(preset.steps[0].fixtureCapabilityValues.map((value) => [value.type as string, value.valuePercentage])).toEqual([
+      ['Intensity', 1],
+    ]);
+    expect(projectService.project.presets[1].steps.length).toBe(1);
+  });
+
+  it('tells that the project has been migrated', () => {
+    service.import(JSON.stringify(projectOfVersion1()));
+    expect(warning).toHaveBeenCalledWith('designer.project.migrated');
+
+    warning.calls.reset();
+    service.import(JSON.stringify(projectWithSelectedPreset()));
+    expect(warning).not.toHaveBeenCalled();
+  });
+});
+
+// Opening a project from the server, a new one, the template or an imported one, and putting a state
+// of the project back after an undo
+describe('ProjectLoadService opening projects', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+  let presetService: PresetService;
+  let navigate: jasmine.Spy;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+    presetService = TestBed.inject(PresetService);
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.returnValue(Promise.resolve(true));
+    spyOn(TestBed.inject(BsModalService), 'show').and.returnValue({ hide: () => {} } as any);
+  });
+
+  it('opens a project of the server and names it in the address', () => {
+    const saved = new Project({ ...projectWithSelectedPreset(), id: 7, shareToken: 'token' });
+    spyOn(projectService, 'getProject').and.returnValue(of(saved));
+
+    service.load(7, 'Imported').subscribe();
+
+    expect(projectService.project).toBe(saved);
+    expect(presetService.selectedPreset.uuid).toBe('preset-1');
+    expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { id: 7, token: 'token' } }));
+  });
+
+  it('refuses a project of a newer designer', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), version: 99 })));
+    const failed = jasmine.createSpy('error');
+
+    service.load(7, 'Newer').subscribe({ error: failed });
+
+    expect(failed).toHaveBeenCalled();
+    expect(failed.calls.mostRecent().args[0].message).toContain('newer version of the designer');
+  });
+
+  it('opens the template as a project of its own', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), id: 1 })));
+
+    service.template();
+
+    expect(projectService.getProject).toHaveBeenCalledWith(1, null, undefined);
+    expect(projectService.project.id).toBeUndefined();
+  });
+
+  it('starts a new project with a preset played by a scene', () => {
+    service.new();
+    const project = projectService.project;
+
+    expect(project.version).toBe(projectService.currentProjectVersion);
+    expect(project.uuid).toBeTruthy();
+    expect(project.shareToken).toBeTruthy();
+    expect(project.presets.map((preset) => preset.name)).toEqual(['New Preset']);
+    expect(project.scenes[0].presetUuids).toEqual([project.presets[0].uuid]);
+    expect(presetService.selectedPreset).toBe(project.presets[0]);
+    expect(TestBed.inject(SceneService).selectedScenes).toEqual([project.scenes[0]]);
+    expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { id: '', token: '' } }));
+  });
+
+  it('imports a project as a new one', () => {
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), id: 5 }));
+
+    expect(projectService.project.id).toBeUndefined();
+    expect(projectService.project.name).toBe('Imported');
+  });
+
+  it('puts the fixtures without a universe into the first one', () => {
+    const configService = TestBed.inject(ConfigService);
+    configService.universes = [{ uuid: 'first', name: 'First' } as any, { uuid: 'second', name: 'Second' } as any];
+    const project = projectWithSelectedPreset();
+    delete project.fixtures[0].dmxUniverseUuid;
+
+    service.import(JSON.stringify(project));
+
+    expect(projectService.project.fixtures[0].dmxUniverseUuid).toBe('first');
+  });
+
+  it('gives a project which keeps its own universes one, if it has none', () => {
+    const configService = TestBed.inject(ConfigService);
+    configService.freeUniverseEdit = true;
+    const project = projectWithSelectedPreset();
+    project.universes = [];
+
+    service.import(JSON.stringify(project));
+
+    expect(configService.universes.map((universe) => universe.name)).toEqual(['Universe 1']);
+    expect(configService.universes).toBe(projectService.project.universes);
+  });
+
+  it('picks up what was being edited after a state of the project has been put back', () => {
+    const data = projectWithSelectedPreset();
+    data.presets[0].effects = [curveEffect('sine', 1)];
+    service.import(JSON.stringify(data));
+
+    const effectService = TestBed.inject(EffectService);
+    const fixtureService = TestBed.inject(FixtureService);
+    effectService.selectedEffect = presetService.selectedPreset.effects[0];
+    fixtureService.selectedSettingsFixtures = [fixtureService.getFixtureByUuid('fixture-1')];
+
+    const restored = new Project(JSON.parse(JSON.stringify(data)));
+    service.restoreProject(restored);
+
+    expect(projectService.project).toBe(restored);
+    expect(presetService.selectedPreset).toBe(restored.presets[0]);
+    expect(effectService.selectedEffect).toBe(restored.presets[0].effects[0]);
+    expect(fixtureService.selectedSettingsFixtures).toEqual([restored.fixtures[0]]);
+  });
+
+  it('plays the first scene after an undo took the selected ones away', () => {
+    const scenes = [{ uuid: 'scene', name: 'Scene', presetUuids: ['preset-1'] }];
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), scenes, selectedSceneUuids: ['scene'] }));
+    const restored = new Project({ ...projectWithSelectedPreset(), scenes, selectedSceneUuids: ['gone'] });
+
+    service.restoreProject(restored);
+
+    expect(TestBed.inject(SceneService).selectedScenes).toEqual([restored.scenes[0]]);
   });
 });
 
