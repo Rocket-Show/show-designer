@@ -35,6 +35,9 @@ jobs:
             const line = (name) => `| ${name} | ${total[name].pct} % | ${total[name].covered} of ${total[name].total} |`;
             console.log(["| Coverage of the unit tests | | |", "| --- | --- | --- |", ...["lines", "statements", "branches", "functions"].map(line)].join("\n"));
           ' >> "$GITHUB_STEP_SUMMARY"
+      - name: Check that the minimum coverage keeps up
+        # a warning only: raise it with npm run coverage:ratchet
+        run: node projects/designer/coverage-ratchet.mjs --check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
