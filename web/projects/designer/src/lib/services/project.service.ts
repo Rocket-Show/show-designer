@@ -131,11 +131,16 @@ export class ProjectService {
   }
 
   deleteProject(project: Project): Observable<any> {
-    return this.http.delete('project?id=' + project.id + '&name=' + project.name, { headers: this.userService.getHeaders() });
+    // a project may be named with characters which mean something in an address (e.g. "Rock & Roll")
+    return this.http.delete('project?id=' + project.id + '&name=' + encodeURIComponent(project.name), {
+      headers: this.userService.getHeaders(),
+    });
   }
 
   getProject(id: number, name: string, shareToken?: string): Observable<Project> {
-    return this.http.get('project?id=' + id + '&name=' + name + '&token=' + shareToken, { headers: this.userService.getHeaders() }).pipe(
+    const query = 'project?id=' + id + '&name=' + encodeURIComponent(name) + '&token=' + encodeURIComponent(shareToken);
+
+    return this.http.get(query, { headers: this.userService.getHeaders() }).pipe(
       map((response: any) => {
         const project = new Project(response);
         project.id = id;

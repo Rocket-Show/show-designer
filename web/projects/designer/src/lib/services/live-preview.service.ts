@@ -77,8 +77,12 @@ export class LivePreviewService {
   }
 
   private postPreview(positionMillis: number, compositionName: string) {
+    // a composition may be named with characters which mean something in an address (e.g. "Rock & Roll")
     this.http
-      .post('preview?positionMillis=' + positionMillis + '&compositionName=' + compositionName, JSON.stringify(this.projectService.project))
+      .post(
+        'preview?positionMillis=' + positionMillis + '&compositionName=' + encodeURIComponent(compositionName),
+        JSON.stringify(this.projectService.project)
+      )
       .subscribe();
   }
 
