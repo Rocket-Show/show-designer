@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, shareReplay } from 'rxjs/operators';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -43,6 +43,7 @@ export class PreviewMeshService {
   }
 
   private loadMesh(name: string): Observable<THREE.Mesh> {
+    // shared: the fixtures asking for the mesh while it loads wait for the same load (a failed one is tried again)
     const observable = this.loadScene(name).pipe(
       map((scene: any) => {
         const model = scene.children[0];
@@ -52,8 +53,9 @@ export class PreviewMeshService {
         this.cachedMeshes.set(name, model);
         this.cachedObservables.delete(name);
 
-        return model.clone();
-      })
+        return model;
+      }),
+      shareReplay(1)
     );
 
     this.cachedObservables.set(name, observable);
@@ -61,11 +63,12 @@ export class PreviewMeshService {
     return observable;
   }
 
+  // a mesh of its own for each fixture
   getMesh(name: string): Observable<THREE.Mesh> {
     if (this.cachedMeshes.get(name)) {
       return of(this.cachedMeshes.get(name).clone());
     }
 
-    return this.cachedObservables.get(name) || this.loadMesh(name);
+    return (this.cachedObservables.get(name) || this.loadMesh(name)).pipe(map((model) => model.clone()));
   }
 }
