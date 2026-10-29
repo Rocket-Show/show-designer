@@ -196,6 +196,12 @@ export class PreviewService implements OnDestroy {
       return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.presetService.stepPreviewStartMillis);
     }
 
+    if (preset.preset.steps.length === 0) {
+      // an old project keeps its values on the preset itself (until it is given its first step),
+      // like on the timeline and in Rocket Show
+      return this.presetStepService.getStateAtMillis(preset.preset, 0);
+    }
+
     return this.presetStepService.getStepState(this.presetService.getEditStep(preset.preset));
   }
 

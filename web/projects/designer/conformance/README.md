@@ -33,8 +33,10 @@ A project of a `channelValues` case names the profiles of `profiles` like the fi
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of
 `profiles/test`.
 
-The files with `generated` in their header are written by `generate.mjs` from a seeded random source (curves, step
-sequences, fades, whole projects with tracks, clips, steps and effects). The others are written by hand.
+The files with `generated` in their header are written by `generate.mjs`: most of them from a seeded random source
+(curves, step sequences, fades, whole projects with tracks, clips, steps and effects), the ones ending in `-edges` from
+values right on the edges the random ones pass by (where a fade starts or ends, a value on the edge of a range of a
+channel, ties on a color wheel). The others are written by hand.
 
 ## Changing the cases
 
