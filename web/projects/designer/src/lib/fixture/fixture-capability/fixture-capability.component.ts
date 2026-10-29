@@ -21,7 +21,7 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   private stepsChangedSubscription: Subscription;
 
   // the channels holding a color wheel, once for each profile (a profile may have several)
-  colorWheelChannels: { profile: FixtureProfile; channel: CachedFixtureChannel }[] = [];
+  colorWheelChannels: { profile: FixtureProfile; channel: CachedFixtureChannel; fixtureChannels: CachedFixtureChannel[] }[] = [];
   hasCapabilityDimmer: boolean = false;
   hasCapabilityColorOrColorWheel: boolean = false;
   hasCapabilityPanTilt: boolean = false;
@@ -80,7 +80,7 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
             if (this.fixtureService.wheelHasSlotType(capability.wheel, FixtureWheelSlotType.Color)) {
               // color wheel
               if (!this.wheelInList(fixture.profile, channel)) {
-                this.colorWheelChannels.push({ profile: fixture.profile, channel });
+                this.colorWheelChannels.push({ profile: fixture.profile, channel, fixtureChannels: fixture.channels });
               }
             } else if (this.fixtureService.wheelHasSlotType(capability.wheel, FixtureWheelSlotType.Gobo)) {
               // gobo wheel

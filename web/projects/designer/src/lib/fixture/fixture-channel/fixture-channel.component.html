@@ -33,7 +33,12 @@
       @for (entry of channelCapabilities | keyvalue; track entry; let i = $index) { @for (capability of entry.value; track capability; let j
       = $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
-        <lib-app-fixture-capability-channel [profile]="entry.key" [channel]="capability" [capabilityIndex]="i * 10000 + j">
+        <lib-app-fixture-capability-channel
+          [profile]="entry.key"
+          [fixtureChannels]="entry.value"
+          [channel]="capability"
+          [capabilityIndex]="i * 10000 + j"
+        >
         </lib-app-fixture-capability-channel>
       </div>
       } }

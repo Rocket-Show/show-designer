@@ -12,6 +12,7 @@ import { EffectCurve } from '../models/effect-curve';
 import { Fixture } from '../models/fixture';
 import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
+import { FixtureProfile } from '../models/fixture-profile';
 import { FolderPosition } from '../models/folder-position';
 import { Preset } from '../models/preset';
 import { PresetFixture } from '../models/preset-fixture';
@@ -395,6 +396,78 @@ describe('PresetService editing presets', () => {
       new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Blue', valuePercentage: 1 }),
     ];
     expect(service.getChannelValueFromCapabilities(blue, cachedChannel('head', 'Color Wheel'), 'test/moving-head')).toBe(34);
+  });
+
+  // A profile with color channels of its own and a color wheel, like the one of the conformance cases
+  const colorsAndWheel = {
+    uuid: 'rgb-wheel',
+    name: 'RGB and color wheel',
+    availableChannels: {
+      Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+      Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+      Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+      'Color Wheel': {
+        capabilities: [
+          { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+          { dmxRange: [10, 19], type: 'WheelSlot', slotNumber: 2 },
+          { dmxRange: [20, 29], type: 'WheelSlot', slotNumber: 3 },
+        ],
+      },
+    },
+    wheels: {
+      'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#ff0000'] }, { type: 'Color', colors: ['#0000ff'] }] },
+    },
+    modes: [{ name: '4-channel', shortName: '4ch', channels: ['Red', 'Green', 'Blue', 'Color Wheel'] }],
+  };
+
+  function addColorsAndWheel(): CachedFixtureChannel[] {
+    project.fixtureProfiles.push(new FixtureProfile(colorsAndWheel));
+    project.fixtures.push(new Fixture({ uuid: 'rgb-wheel', profileUuid: 'rgb-wheel', modeShortName: '4ch', dmxUniverseUuid: 'x' }));
+    fixtureService.updateCachedFixtures();
+    return fixtureService.getCachedFixtureByUuid('rgb-wheel', undefined).channels;
+  }
+
+  it('knows whether a fixture lights a color of its own', () => {
+    const rgbWheel = addColorsAndWheel();
+    const head = fixtureService.getCachedFixtureByUuid('head', undefined).channels;
+    const red = [new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 1 })];
+    const black = [new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 0 })];
+    const slot = [new FixtureCapabilityValue({ type: 'WheelSlot', wheel: 'Color Wheel', slotNumber: 2 })];
+    const dimmer = [new FixtureCapabilityValue({ type: 'Intensity', valuePercentage: 1 })];
+
+    // with its color channels, even dark ones
+    expect(service.lightsColorOfItsOwn(red, rgbWheel, 'rgb-wheel')).toBe(true);
+    expect(service.lightsColorOfItsOwn(black, rgbWheel, 'rgb-wheel')).toBe(true);
+    // with a slot of its color wheel
+    expect(service.lightsColorOfItsOwn(slot, head, 'test/moving-head')).toBe(true);
+    // a color, a dimmer or a slot it has no channel for doesn't count
+    expect(service.lightsColorOfItsOwn(red, head, 'test/moving-head')).toBe(false);
+    expect(service.lightsColorOfItsOwn(dimmer, rgbWheel, 'rgb-wheel')).toBe(false);
+    expect(service.lightsColorOfItsOwn(slot, fixtureService.getCachedFixtureByUuid('par-1', undefined).channels, 'test/rgb-par')).toBe(
+      false
+    );
+    // nor a color for another profile
+    const otherRed = [new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 1, profileUuid: 'other' })];
+    expect(service.lightsColorOfItsOwn(otherRed, rgbWheel, 'rgb-wheel')).toBe(false);
+    expect(service.lightsColorOfItsOwn(red, [], 'rgb-wheel')).toBe(false);
+  });
+
+  it('leaves the color wheel of a fixture lighting a color of its own alone', () => {
+    const rgbWheel = addColorsAndWheel();
+    const wheel = rgbWheel.find((channel) => channel.name === 'Color Wheel');
+    const values = [
+      new FixtureCapabilityValue({ type: 'Intensity', valuePercentage: 1 }),
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 1 }),
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Green', valuePercentage: 0 }),
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Blue', valuePercentage: 0 }),
+    ];
+
+    // its channels light the red
+    expect(service.getChannelValueFromCapabilities(values, wheel, 'rgb-wheel', undefined, rgbWheel)).toBeUndefined();
+    // whichever order the values come in
+    expect(service.getChannelValueFromCapabilities(values.reverse(), wheel, 'rgb-wheel', undefined, rgbWheel)).toBeUndefined();
+    // without its channels, the wheel shows the red slot, in its middle
+    expect(service.getChannelValueFromCapabilities(values, wheel, 'rgb-wheel')).toBe(14);
   });
 
   it('knows the channels an effect of a preset drives', () => {

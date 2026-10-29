@@ -593,13 +593,48 @@ export class PresetService {
     return undefined;
   }
 
+  // Do the capability values light a color through the passed channels of a fixture, with its color channels or a
+  // slot of its color wheel? Such a fixture shows no color approximated on its color wheel, like on the stage (see
+  // PreviewService.mixCapabilityValues).
+  lightsColorOfItsOwn(
+    capabilityValues: FixtureCapabilityValue[],
+    channels: CachedFixtureChannel[],
+    profileUuid: string,
+    preset?: Preset
+  ): boolean {
+    return capabilityValues.some((capabilityValue) =>
+      channels.some(
+        (channel) =>
+          channel.channel &&
+          channel.capabilities.some(
+            (channelCapability) =>
+              (capabilityValue.type === FixtureCapabilityType.ColorIntensity ||
+                (capabilityValue.type === FixtureCapabilityType.WheelSlot && channelCapability.wheelIsColor)) &&
+              this.fixtureService.capabilitiesMatch(
+                capabilityValue.type,
+                channelCapability.capability.type,
+                capabilityValue.color,
+                channelCapability.capability.color,
+                capabilityValue.wheel,
+                channelCapability.wheelName,
+                capabilityValue.profileUuid,
+                profileUuid
+              ) &&
+              this.getCapabilityChannelValue(capabilityValue, channel, channelCapability, preset) !== undefined
+          )
+      )
+    );
+  }
+
   // the value a channel is driven to by the capability values of a preset, or undefined, if no
-  // capability touches it. A channel value set on the channel itself wins over this one.
+  // capability touches it. A channel value set on the channel itself wins over this one. The
+  // passed channels of the fixture tell whether it lights a color of its own (see lightsColorOfItsOwn).
   getChannelValueFromCapabilities(
     capabilityValues: FixtureCapabilityValue[],
     channel: CachedFixtureChannel,
     profileUuid: string,
-    preset?: Preset
+    preset?: Preset,
+    fixtureChannels: CachedFixtureChannel[] = []
   ): number {
     let value: number;
 
@@ -627,7 +662,7 @@ export class PresetService {
       }
     }
 
-    if (value === undefined && channel.colorWheel) {
+    if (value === undefined && channel.colorWheel && !this.lightsColorOfItsOwn(capabilityValues, fixtureChannels, profileUuid, preset)) {
       // no slot has been picked on this wheel -> it shows the color approximated from a color
       // or from a slot on a different wheel
       const approximatedCapability = this.getApproximatedColorWheelCapability(capabilityValues, channel);

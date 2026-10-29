@@ -1059,9 +1059,9 @@ function channelValuesMixingEdges() {
     },
   });
 
-  // A fixture lighting a color with its own colors leaves its color wheel alone from the moment one
-  // of its colors is set (a value set before the colors still lets the wheel show the color), one
-  // with a color wheel only shows the color on its wheel
+  // A fixture lighting a color with its own colors leaves its color wheel alone, whichever order the
+  // values come in (also a dimmer set before the colors), one with a color wheel only shows the color
+  // on its wheel
   cases.push({
     name: 'a color on a fixture with colors and a color wheel',
     input: {

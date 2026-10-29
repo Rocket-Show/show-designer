@@ -249,6 +249,23 @@ describe('FixtureCapabilityChannelComponent', () => {
     expect(channelValue(par, 'Dimmer')).toBe(128);
   });
 
+  it('tells which channels its fixture has, so that a color wheel shows no color the fixture lights itself', async () => {
+    const fromCapabilities = spyOn(presetService, 'getChannelValueFromCapabilities').and.callThrough();
+    fixture = TestBed.createComponent(FixtureCapabilityChannelComponent);
+    fixture.componentRef.setInput('profile', head.profile);
+    fixture.componentRef.setInput('fixtureChannels', head.channels);
+    fixture.componentRef.setInput('channel', channelOf(head, 'Color Wheel'));
+    await update();
+
+    expect(fromCapabilities).toHaveBeenCalledWith(
+      preset.steps[0].fixtureCapabilityValues,
+      channelOf(head, 'Color Wheel'),
+      'test/moving-head',
+      preset,
+      head.channels
+    );
+  });
+
   it('follows the capabilities and the step being changed elsewhere', async () => {
     await render(par, 'Dimmer');
 

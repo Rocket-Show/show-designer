@@ -416,19 +416,27 @@ export class PreviewService implements OnDestroy {
             }
           }
         }
+      }
+    }
 
-        // approximate the color from a color or a different color wheel, if necessary
-        if (!hasColor && cachedChannel.colorWheel) {
-          const capability = this.presetService.getApproximatedColorWheelCapability(state.fixtureCapabilityValues, cachedChannel);
+    // A fixture which lights no color of its own (with its color channels or a slot of its color wheel) shows the
+    // color on its color wheel, approximated from the colors set or from a slot of a different wheel. Only once all
+    // the values are mixed, so that the order they come in doesn't decide whether the wheel turns as well.
+    if (hasColor) {
+      return;
+    }
 
-          if (capability) {
-            // we found an approximated color in the available wheel channel
-            const fixtureChannelValue = new FixtureChannelValue();
-            fixtureChannelValue.channelName = cachedChannel.name;
-            fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-            fixtureChannelValue.value = capability.centerValue;
-            this.mixChannelValue(values, fixtureChannelValue, 1);
-          }
+    for (const cachedChannel of cachedFixture.channels) {
+      if (cachedChannel.colorWheel) {
+        const capability = this.presetService.getApproximatedColorWheelCapability(state.fixtureCapabilityValues, cachedChannel);
+
+        if (capability) {
+          // we found an approximated color in the available wheel channel
+          const fixtureChannelValue = new FixtureChannelValue();
+          fixtureChannelValue.channelName = cachedChannel.name;
+          fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+          fixtureChannelValue.value = capability.centerValue;
+          this.mixChannelValue(values, fixtureChannelValue, 1);
         }
       }
     }

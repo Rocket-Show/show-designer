@@ -55,6 +55,11 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   @Input()
   capabilityIndex: number;
 
+  // the channels of the fixture the channel belongs to: a fixture lighting a color of its own shows no color
+  // approximated on its color wheel. Bound before the channel, which updates the channel right away.
+  @Input()
+  fixtureChannels: CachedFixtureChannel[] = [];
+
   constructor(
     private presetService: PresetService,
     private effectService: EffectService,
@@ -103,7 +108,8 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
       this.presetService.selectedStep.fixtureCapabilityValues,
       this._channel,
       this.profile.uuid,
-      this.presetService.selectedPreset
+      this.presetService.selectedPreset,
+      this.fixtureChannels
     );
     // the capabilities calculate in percentages, the channels show dmx values
     this.capabilityValue = capabilityValue === undefined ? undefined : Math.round(capabilityValue);
