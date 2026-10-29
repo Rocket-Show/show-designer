@@ -1,7 +1,7 @@
 <?php
 include_once 'global.php';
 
-$userId = getUserId($conn, $conn);
+$userId = getUserId($conn);
 
 if (!isset($userId)) {
     errorUnauthorized();

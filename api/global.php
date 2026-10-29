@@ -95,11 +95,7 @@ function getUserId($conn)
 function userHasRole($conn, $userId, $roleAlias)
 {
     $result = mysqli_query($conn, "SELECT 1 FROM user_role LEFT JOIN role ON role.id = user_role.role_id WHERE user_role.user_id = " . $userId . " AND role.alias = '" . $roleAlias . "'");
-    if ($result->num_rows > 0) {
-        $row = mysqli_fetch_assoc($result);
-        return $row['user_id'];
-    }
-    return null;
+    return $result->num_rows > 0;
 }
 
 // Whether the passed composition uuid can name a file: the designer builds them from

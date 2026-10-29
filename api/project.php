@@ -49,6 +49,10 @@ if (isset($_GET['id'])) {
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         // Get a project
+        if ($projectId === '') {
+            error('missing-parameters', 400);
+        }
+
         $authorized = false;
 
         if ($projectId == 1) {
@@ -90,7 +94,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         // the share token saved within the project may be missing or another one than the
         // server holds for it (see the POST) -> hand out the project with the right one, so
         // its share link works without saving it first
-        $storedProject = json_decode($row['object']);
+        $storedProject = json_decode($row['object'] ?? '');
         if (is_object($storedProject) && strlen($row['share_token']) > 0) {
             $storedProject->{'shareToken'} = $row['share_token'];
             echo json_encode($storedProject, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
@@ -119,7 +123,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
         $projectString = file_get_contents('php://input');
         $projectObject = json_decode($projectString);
-        $name = mysqli_real_escape_string($conn, $projectObject->{'name'});
+        if (!is_object($projectObject)) {
+            error('wrong-parameters', 400);
+        }
+        // a project without compositions (e.g. one written by hand) has no files to keep
+        $compositions = isset($projectObject->{'compositions'}) && is_array($projectObject->{'compositions'}) ? $projectObject->{'compositions'} : array();
+        $name = mysqli_real_escape_string($conn, $projectObject->{'name'} ?? '');
         // the server hands out the share tokens, the one the designer sends is not taken over:
         // it is the token of the template every new project starts from (which anyone can
         // read), the one of the project a file was exported from, or none at all (an empty
@@ -177,7 +186,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         while ($row = $result->fetch_assoc()) {
             $fileFound = false;
 
-            foreach ($projectObject->{'compositions'} as $composition) {
+            foreach ($compositions as $composition) {
                 if ($composition->{'uuid'} == $row['composition_uuid']) {
                     $fileFound = true;
                     break;
@@ -190,7 +199,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
 
         // connect all required files to the project, which are not already connected
-        foreach ($projectObject->{'compositions'} as $composition) {
+        foreach ($compositions as $composition) {
             $result = mysqli_query($conn, "UPDATE composition_file SET project_id = " . $projectId . " WHERE project_id IS NULL and composition_uuid = '" . mysqli_real_escape_string($conn, $composition->{'uuid'}) . "'");
             if (!$result) {
                 error();
@@ -217,7 +226,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
             errorUnauthorized();
         }
 
-        if (!isset($projectId)) {
+        if ($projectId === '') {
             error('missing-parameters', 400);
         }
 

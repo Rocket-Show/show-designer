@@ -21,9 +21,12 @@ function findUser($conn, $email, $password)
     return password_verify($password, $row['password']) ? $row : null;
 }
 
-$row = findUser($conn, $_GET['email'], $_GET['password']);
+$email = $_GET['email'] ?? '';
+$password = $_GET['password'] ?? '';
+
+$row = findUser($conn, $email, $password);
 if (!$row) {
-    $row = findUser($conn, asSentUnencoded($_GET['email']), asSentUnencoded($_GET['password']));
+    $row = findUser($conn, asSentUnencoded($email), asSentUnencoded($password));
 }
 if (!$row) {
     error('wrong-credentials', 400);

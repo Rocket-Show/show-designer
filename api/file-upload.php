@@ -25,6 +25,10 @@ if ($result->num_rows > 0) {
     deleteCompositionFile($conn, $compositionFileDirectory, $row['id']);
 }
 
+if (!isset($_FILES['file'])) {
+    error('missing-parameters', 400);
+}
+
 $file = $_FILES['file'];
 $fileTmpName = $_FILES['file']['tmp_name'];
 $fileName = mysqli_real_escape_string($conn, $_FILES['file']['name']);
@@ -45,13 +49,13 @@ if (in_array($fileExtension, $compositionFileExtensions)) {
                 error();
             }
         } else {
-            error('file-too-large');
+            error('file-too-large', 400);
         }
     } else {
-        error('upload-error');
+        error('upload-error', 400);
     }
 } else {
-    error('format-not-allowed');
+    error('format-not-allowed', 400);
 }
 
 mysqli_close($conn);
