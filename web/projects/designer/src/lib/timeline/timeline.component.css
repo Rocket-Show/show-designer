@@ -121,13 +121,13 @@
 
 .tl-ruler {
   background-color: var(--sd-surface-1);
-  cursor: s-resize;
+  cursor: ew-resize;
 }
 
 .tl-wave {
   background-color: var(--sd-surface-1);
   border-bottom-color: var(--sd-border-strong);
-  cursor: s-resize;
+  cursor: ew-resize;
 }
 
 .tl-wave-row .tl-head {
@@ -172,7 +172,7 @@
 .tl-actions {
   background-color: var(--sd-surface-1);
   border-bottom-color: var(--sd-border-strong);
-  cursor: s-resize;
+  cursor: ew-resize;
 }
 
 /* wider than the line it shows, to be easy to click */
