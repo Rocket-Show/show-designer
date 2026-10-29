@@ -126,14 +126,14 @@ export class MovingHead3d extends Fixture3d {
       if (capability) {
         switch (capability.capability.type) {
           case FixtureCapabilityType.Pan: {
-            panStart = this.fixtureService.getRotationAngleDeg(capability.capability.angleStart) || 0;
-            panEnd = this.fixtureService.getRotationAngleDeg(capability.capability.angleEnd) || 540;
+            panStart = this.getAngleDeg(capability.capability.angleStart, 0);
+            panEnd = this.getAngleDeg(capability.capability.angleEnd, 540);
             this.pan = channelValue.value / channel.maxValue;
             break;
           }
           case FixtureCapabilityType.Tilt: {
-            tiltStart = this.fixtureService.getRotationAngleDeg(capability.capability.angleStart) || 0;
-            tiltEnd = this.fixtureService.getRotationAngleDeg(capability.capability.angleEnd) || 2700;
+            tiltStart = this.getAngleDeg(capability.capability.angleStart, 0);
+            tiltEnd = this.getAngleDeg(capability.capability.angleEnd, 270);
             this.tilt = channelValue.value / channel.maxValue;
             break;
           }
@@ -141,9 +141,10 @@ export class MovingHead3d extends Fixture3d {
       }
     }
 
-    // calculate the y/x rotation in radiants based on pan/tilt (0-1) respecting the max pan/tilt
-    this.armGroup.rotation.y = THREE.MathUtils.degToRad(panEnd * this.pan + panStart) - THREE.MathUtils.degToRad(panEnd / 2);
-    this.headGroup.rotation.x = THREE.MathUtils.degToRad(tiltEnd * this.tilt + tiltStart) - THREE.MathUtils.degToRad(tiltEnd / 2);
+    // calculate the y/x rotation in radiants based on pan/tilt (0-1) within the range of the
+    // fixture, its middle being the position the model is drawn in
+    this.armGroup.rotation.y = THREE.MathUtils.degToRad((panEnd - panStart) * (this.pan - 0.5));
+    this.headGroup.rotation.x = THREE.MathUtils.degToRad((tiltEnd - tiltStart) * (this.tilt - 0.5));
 
     // Update the angle only on change, because it's expensive
     // TODO update the correct angle from the profile
@@ -169,7 +170,16 @@ export class MovingHead3d extends Fixture3d {
     }
   }
 
-  destroy() {
+  // the angle a capability names, or the passed one where it names none (e.g. a capability
+  // with a fixed angle only) or none which can be read
+  private getAngleDeg(angle: string, defaultDeg: number): number {
+    const degrees = angle ? this.fixtureService.getRotationAngleDeg(angle) : undefined;
+
+    return Number.isFinite(degrees) ? degrees : defaultDeg;
+  }
+
+  override destroy() {
+    super.destroy();
     this.destroyed = true;
 
     if (this.objectGroup.parent) {

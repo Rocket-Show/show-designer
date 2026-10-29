@@ -37,12 +37,13 @@ export class Fixture {
     this.dmxUniverseUuid = data.dmxUniverseUuid;
     this.dmxFirstChannel = data.dmxFirstChannel;
     this.modeShortName = data.modeShortName;
-    this.positioning = data.positioning;
-    this.positionX = data.positionX;
-    this.positionY = data.positionY;
-    this.positionZ = data.positionZ;
-    this.rotationX = data.rotationX;
-    this.rotationY = data.rotationY;
-    this.rotationZ = data.rotationZ;
+    // a fixture saved without a place hangs where a new one does
+    this.positioning = data.positioning ?? this.positioning;
+    this.positionX = data.positionX ?? this.positionX;
+    this.positionY = data.positionY ?? this.positionY;
+    this.positionZ = data.positionZ ?? this.positionZ;
+    this.rotationX = data.rotationX ?? this.rotationX;
+    this.rotationY = data.rotationY ?? this.rotationY;
+    this.rotationZ = data.rotationZ ?? this.rotationZ;
   }
 }

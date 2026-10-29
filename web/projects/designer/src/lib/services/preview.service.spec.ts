@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { ToastrModule } from 'ngx-toastr';
+import * as THREE from 'three';
 
 import { CachedFixture } from '../models/cached-fixture';
 import { Composition } from '../models/composition';
@@ -564,5 +565,132 @@ describe('PreviewService like Rocket Show plays it', () => {
 
     service['timelineService'].selectedComposition = new Composition({ beatsPerMinute: 60 });
     expect(service['getBeatsPerMinute']()).toBe(60);
+  });
+});
+
+// The stage of the 3D preview, built from the sizes of the project.
+describe('PreviewService building the stage', () => {
+  let service: PreviewService;
+  let project: Project;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    project = new Project({
+      stageWidthCm: 800,
+      stageHeightCm: 400,
+      stageDepthCm: 500,
+      stageFloorHeightCm: 50,
+      stageCeilingHeightCm: 10,
+      stagePillarWidthCm: 20,
+    });
+    TestBed.inject(ProjectService).project = project;
+    service = TestBed.inject(PreviewService);
+  });
+
+  function boxes(): number[][] {
+    return service.scene.children
+      .filter((child) => child instanceof THREE.Mesh && (child as THREE.Mesh).geometry instanceof THREE.BoxGeometry)
+      .map((child) => {
+        const parameters = ((child as THREE.Mesh).geometry as THREE.BoxGeometry).parameters;
+        return [parameters.width, parameters.height, parameters.depth, ...child.position.toArray()];
+      });
+  }
+
+  it('builds nothing without a scene to show it in', () => {
+    service.updateStage();
+
+    expect(service.scene).toBeUndefined();
+  });
+
+  it('puts the floor, four pillars and the ceiling onto the ground', () => {
+    service.scene = new THREE.Scene();
+
+    service.updateStage();
+
+    expect(service.scene.children.length).toBe(7);
+    expect(boxes()).toEqual([
+      [800, 50, 500, 0, 25, 0],
+      [20, 400, 20, -390, 250, 240],
+      [20, 400, 20, 390, 250, 240],
+      [20, 400, 20, -390, 250, -240],
+      [20, 400, 20, 390, 250, -240],
+      [800, 10, 500, 0, 455, 0],
+    ]);
+    expect(service.scene.children.every((child) => !child.castShadow && !child.receiveShadow)).toBe(true);
+  });
+
+  it('builds the stage again with its new sizes', () => {
+    service.scene = new THREE.Scene();
+    service.updateStage();
+    const old = service.scene.children[1] as THREE.Mesh;
+    spyOn(old.geometry, 'dispose');
+
+    project.stageWidthCm = 1000;
+    service.updateStage();
+
+    expect(service.scene.children.length).toBe(7);
+    expect(service.scene.children).not.toContain(old);
+    expect(old.geometry.dispose).toHaveBeenCalled();
+    expect(boxes()[0][0]).toBe(1000);
+  });
+
+  it('builds a project without a stage of its own on the default stage', () => {
+    const defaults = new Project();
+    const loaded = new Project({ name: 'Old' });
+
+    expect([
+      loaded.stageWidthCm,
+      loaded.stageHeightCm,
+      loaded.stageDepthCm,
+      loaded.stageFloorHeightCm,
+      loaded.stageCeilingHeightCm,
+      loaded.stagePillarWidthCm,
+    ]).toEqual([
+      defaults.stageWidthCm,
+      defaults.stageHeightCm,
+      defaults.stageDepthCm,
+      defaults.stageFloorHeightCm,
+      defaults.stageCeilingHeightCm,
+      defaults.stagePillarWidthCm,
+    ]);
+    expect(loaded.selectedSceneUuids).toEqual([]);
+  });
+
+  it('marks the stage and the positions to be updated', () => {
+    const fixtureSetup = jasmine.createSpy('fixtureSetup');
+    service.doUpdateFixtureSetup.subscribe(fixtureSetup);
+
+    service.stageAndPositionsDirty = false;
+    service.doUpdateStageAndPositions.next();
+    expect(service.stageAndPositionsDirty).toBe(true);
+
+    service.stageAndPositionsDirty = false;
+    service.updateFixtureSetup();
+    expect(service.stageAndPositionsDirty).toBe(true);
+    expect(fixtureSetup).toHaveBeenCalled();
+  });
+
+  it('highlights the fixtures of the presets edited', () => {
+    const preset = new Preset({ uuid: 'p', fixtures: [{ fixtureUuid: 'f' }, { fixtureUuid: 'm', pixelKey: 'A1' }] });
+    const presets = [new PresetRegionScene(preset, undefined, undefined)];
+
+    expect(service.fixtureIsSelected('f', undefined, presets)).toBe(true);
+    expect(service.fixtureIsSelected('m', 'A1', presets)).toBe(true);
+    expect(service.fixtureIsSelected('m', 'A2', presets)).toBe(false);
+    expect(service.fixtureIsSelected('other', undefined, presets)).toBe(false);
+    expect(service.fixtureIsSelected('f', undefined, [])).toBe(false);
+  });
+
+  it('frees its materials', () => {
+    const materials = [(service as any).fixtureMaterial, (service as any).fixtureSelectedMaterial];
+    materials.forEach((material) => spyOn(material, 'dispose'));
+
+    service.ngOnDestroy();
+
+    expect(materials.map((material) => material.dispose.calls.count())).toEqual([1, 1]);
   });
 });

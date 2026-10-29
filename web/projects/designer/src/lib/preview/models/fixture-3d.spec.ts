@@ -7,6 +7,8 @@ import { ToastrModule } from 'ngx-toastr';
 import * as THREE from 'three';
 
 import { CachedFixture } from '../../models/cached-fixture';
+import { CachedFixturePixel } from '../../models/cached-fixture-pixel';
+import { Positioning } from '../../models/fixture';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { Project } from '../../models/project';
 import { FixtureService } from '../../services/fixture.service';
@@ -276,5 +278,138 @@ describe('Fixture3d virtual dimmer', () => {
     fixture3d.updatePreview(values({ Red: 255 }), 0.5);
 
     expect(fixture3d.beamOpacity).toBeCloseTo(0.5, 5);
+  });
+});
+
+// Where a fixture hangs: from the truss above the stage, standing on the floor, or anywhere.
+describe('Fixture3d placed on the stage', () => {
+  let fixture3d: Beam3d;
+  let fixture: CachedFixture;
+
+  beforeEach(() => {
+    configureTestingModule();
+    fixture = rgbFixture(['Red', 'Green', 'Blue']);
+    Object.assign(fixture.fixture, { positionX: 100, positionY: 300, positionZ: -50, rotationX: 90, rotationY: 45, rotationZ: 180 });
+    fixture3d = new Beam3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), fixture);
+  });
+
+  function placed(positioning: string): number[] {
+    fixture.fixture.positioning = positioning as Positioning;
+    fixture3d.updatePosition();
+
+    const group: THREE.Group = (fixture3d as any).fixtureGroup;
+    return [
+      ...group.position.toArray(),
+      ...[group.rotation.x, group.rotation.y, group.rotation.z].map((angle) => Math.round(THREE.MathUtils.radToDeg(angle))),
+    ];
+  }
+
+  it('hangs a fixture below its position, pointing down', () => {
+    expect(placed('topFront')).toEqual([100, 287, -50, 0, 0, 0]);
+    expect(placed('topBack')).toEqual([100, 287, -50, 0, 0, 0]);
+  });
+
+  it('stands a fixture on its position, pointing up', () => {
+    expect(placed('bottomFront')).toEqual([100, 313, -50, 180, 0, 0]);
+    expect(placed('bottomBack')).toEqual([100, 313, -50, 180, 0, 0]);
+  });
+
+  it('turns a fixture placed by hand as it is told', () => {
+    expect(placed('manual')).toEqual([100, 300, -50, 90, 45, 180]);
+  });
+
+  it('places the beam of a pixel where the pixel is in the fixture', () => {
+    const beam = new THREE.Object3D();
+    fixture.pixel = Object.assign(new CachedFixturePixel(), { key: 'A1', positionX: 4, positionY: 5, positionZ: 6 });
+
+    fixture3d.updatePosition(beam);
+    expect(beam.position.toArray()).toEqual([4, 5, 6]);
+
+    fixture.pixel = undefined;
+    fixture3d.updatePosition(beam);
+    expect(beam.position.toArray()).toEqual([0, 0, 0]);
+  });
+
+  it('places the bulb of a pixel at the pixel, on the bottom of the fixture', () => {
+    fixture.pixel = Object.assign(new CachedFixturePixel(), { key: 'A1', positionX: 4, positionY: 5, positionZ: 6 });
+    const bulb = new Bulb3d(TestBed.inject(FixtureService), TestBed.inject(PreviewService), fixture);
+
+    bulb.updatePosition();
+
+    expect((bulb as any).bulbSphere.position.toArray()).toEqual([4, 5 - 15 + 1.5, 6]);
+  });
+
+  it('frees its materials', () => {
+    const material: THREE.ShaderMaterial = (fixture3d as any).spotlightMaterial;
+    spyOn(material, 'dispose');
+
+    fixture3d.destroy();
+
+    expect(material.dispose).toHaveBeenCalled();
+  });
+});
+
+// A fixture colored by a color wheel shines white, until a slot of its wheel is selected.
+describe('Fixture3d color wheel', () => {
+  let fixture3d: Beam3d;
+
+  beforeEach(() => {
+    configureTestingModule();
+
+    TestBed.inject(ProjectService).project = new Project({
+      fixtureProfiles: [
+        {
+          uuid: 'test/wheel',
+          name: 'Wheel',
+          availableChannels: {
+            Dimmer: { capability: { type: 'Intensity' } },
+            'Color Wheel': {
+              capabilities: [
+                { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+                { dmxRange: [10, 19], type: 'WheelSlot', slotNumber: 2 },
+                { dmxRange: [20, 29], type: 'WheelSlot', slotNumber: 2.5 },
+              ],
+            },
+          },
+          wheels: {
+            'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#0000ff'] }, { type: 'Color', colors: ['#ff0000'] }] },
+          },
+          modes: [{ name: 'mode', shortName: 'mode', channels: ['Dimmer', 'Color Wheel'] }],
+        },
+      ],
+      fixtures: [{ uuid: 'fixture-1', profileUuid: 'test/wheel', modeShortName: 'mode', dmxFirstChannel: 0, positioning: 'topFront' }],
+    });
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.updateCachedFixtures();
+    fixture3d = new Beam3d(fixtureService, TestBed.inject(PreviewService), fixtureService.cachedFixtures[0]);
+  });
+
+  function show(wheel: number) {
+    const dimmer = new FixtureChannelValue();
+    dimmer.channelName = 'Dimmer';
+    dimmer.value = 255;
+    const slot = new FixtureChannelValue();
+    slot.channelName = 'Color Wheel';
+    slot.value = wheel;
+
+    fixture3d.updatePreview([dimmer, slot], 1);
+  }
+
+  it('shines white through the open slot', () => {
+    show(0);
+
+    expect(fixture3d.beamColor.getHexString()).toBe('ffffff');
+  });
+
+  it('shines in the color of the slot selected', () => {
+    show(15);
+
+    expect(fixture3d.beamColor.getHexString()).toBe('0000ff');
+  });
+
+  it('mixes the colors of two slots shown half each', () => {
+    show(25);
+
+    expect(fixture3d.beamColor.getHexString()).toBe('ff00ff');
   });
 });

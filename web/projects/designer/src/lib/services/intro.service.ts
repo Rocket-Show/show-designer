@@ -2,6 +2,19 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ConfigService } from './config.service';
 
+// the steps of the intro in their order, and where the intro is shown on each of them (in
+// percent of the designer, next to the panel the step is about)
+const steps: { name: string; topPercentage: number; leftPercentage: number }[] = [
+  { name: 'start', topPercentage: 50, leftPercentage: 50 },
+  { name: 'preview', topPercentage: 60, leftPercentage: 40 },
+  { name: 'fixtures', topPercentage: 40, leftPercentage: 30 },
+  { name: 'presets', topPercentage: 30, leftPercentage: 50 },
+  { name: 'capabilities', topPercentage: 50, leftPercentage: 60 },
+  { name: 'scenes', topPercentage: 50, leftPercentage: 40 },
+  { name: 'timeline', topPercentage: 40, leftPercentage: 50 },
+  { name: 'finish', topPercentage: 50, leftPercentage: 50 },
+];
+
 @Injectable({
   providedIn: 'root',
 })
@@ -10,7 +23,6 @@ export class IntroService {
   activeStep = 'start';
   positionTopPercentage = 50;
   positionLeftPercentage = 50;
-  stylePosition = 'top: calc(50% - 150px); left: calc(50% - 200px);';
   stepChanged: Subject<void> = new Subject<void>();
 
   constructor(private configService: ConfigService) {}
@@ -37,9 +49,8 @@ export class IntroService {
   }
 
   reset() {
-    this.activeStep = 'start';
+    this.goTo(0);
     this.setShowIntro(true);
-    this.stepChanged.next();
   }
 
   showStep(step: string): boolean {
@@ -55,86 +66,23 @@ export class IntroService {
   }
 
   next() {
-    switch (this.activeStep) {
-      case 'start':
-        this.activeStep = 'preview';
-        this.positionTopPercentage = 60;
-        this.positionLeftPercentage = 40;
-        break;
-      case 'preview':
-        this.activeStep = 'fixtures';
-        this.positionTopPercentage = 40;
-        this.positionLeftPercentage = 30;
-        break;
-      case 'fixtures':
-        this.activeStep = 'presets';
-        this.positionTopPercentage = 30;
-        this.positionLeftPercentage = 50;
-        break;
-      case 'presets':
-        this.activeStep = 'capabilities';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 60;
-        break;
-      case 'capabilities':
-        this.activeStep = 'scenes';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 40;
-        break;
-      case 'scenes':
-        this.activeStep = 'timeline';
-        this.positionTopPercentage = 40;
-        this.positionLeftPercentage = 50;
-        break;
-      case 'timeline':
-        this.activeStep = 'finish';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 50;
-        break;
-    }
-
-    this.stepChanged.next();
+    this.goTo(Math.min(this.getStepIndex() + 1, steps.length - 1));
   }
 
   back() {
-    switch (this.activeStep) {
-      case 'preview':
-        this.activeStep = 'start';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 50;
-        break;
-      case 'fixtures':
-        this.activeStep = 'preview';
-        this.positionTopPercentage = 60;
-        this.positionLeftPercentage = 40;
-        break;
-      case 'presets':
-        this.activeStep = 'fixtures';
-        this.positionTopPercentage = 30;
-        this.positionLeftPercentage = 50;
-        break;
-      case 'capabilities':
-        this.activeStep = 'presets';
-        this.positionTopPercentage = 40;
-        this.positionLeftPercentage = 30;
-        break;
-      case 'scenes':
-        this.activeStep = 'capabilities';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 60;
-        break;
-      case 'timeline':
-        this.activeStep = 'scenes';
-        this.positionTopPercentage = 50;
-        this.positionLeftPercentage = 40;
-        break;
-      case 'finish':
-        this.activeStep = 'timeline';
-        this.positionTopPercentage = 40;
-        this.positionLeftPercentage = 50;
-        break;
-    }
+    this.goTo(Math.max(this.getStepIndex() - 1, 0));
+  }
 
+  private getStepIndex(): number {
+    return steps.findIndex((step) => step.name === this.activeStep);
+  }
+
+  private goTo(index: number) {
+    const step = steps[index];
+
+    this.activeStep = step.name;
+    this.positionTopPercentage = step.topPercentage;
+    this.positionLeftPercentage = step.leftPercentage;
     this.stepChanged.next();
   }
 }
