@@ -42,6 +42,27 @@ npm ci --legacy-peer-deps
 npx ng test designer --watch=false --browsers=ChromeHeadlessCI
 ```
 
+### Coverage
+
+CI runs the specs with `--code-coverage`, shows the coverage in the summary of the run and keeps the report as an
+artifact (`coverage-report`). The coverage is measured against every file of the library: a spec builds the
+`DesignerModule`, which loads all of its components, also the ones no other spec touches. The run fails below a
+minimum (`check` in `projects/designer/karma.conf.js`), which is raised as the specs cover more. Locally, the report
+is written to `web/coverage/designer` (`index.html`):
+
+```shell
+npx ng test designer --watch=false --browsers=ChromeHeadlessCI --code-coverage
+```
+
+### Parity with Rocket Show
+
+Rocket Show plays a project with an engine of its own (Java), which has to light the stage exactly like the preview of
+the designer. Where the two could read or work out a project differently (values which are null, missing or not whole,
+default values, numbers and colors of the fixture library, pixel groups), `services/parity.spec.ts` and the cases of
+`PreviewService like Rocket Show plays it` in `services/preview.service.spec.ts` check the same cases as
+`DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A change to how a project is played changes both sides,
+with the same cases.
+
 ## Build & publish as NPM package
 
 ```shell

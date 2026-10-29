@@ -25,6 +25,21 @@ jobs:
         # The builder of the library (@angular-devkit/build-ng-packagr) still asks for an old ng-packagr
         run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Run the unit tests
-        run: npx ng test designer --watch=false --browsers=ChromeHeadlessCI
+        # fails below the minimum coverage of the library (check in projects/designer/karma.conf.js)
+        run: npx ng test designer --watch=false --browsers=ChromeHeadlessCI --code-coverage
+      - name: Summarize the coverage
+        if: always()
+        run: |
+          node -e '
+            const total = require("./coverage/designer/coverage-summary.json").total;
+            const line = (name) => `| ${name} | ${total[name].pct} % | ${total[name].covered} of ${total[name].total} |`;
+            console.log(["| Coverage of the unit tests | | |", "| --- | --- | --- |", ...["lines", "statements", "branches", "functions"].map(line)].join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: web/coverage/designer
+          retention-days: 14
       - name: Build the library like for publishing
         run: npx ng build --configuration production designer
