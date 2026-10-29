@@ -13,6 +13,7 @@
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "conformance:record": "node projects/designer/conformance/record.mjs",
     "coverage:ratchet": "node projects/designer/coverage-ratchet.mjs",
+    "mutation": "stryker run",
     "lint": "ng lint",
     "pretty-quick": "pretty-quick --staged",
     "precommit": "npm run pretty-quick && npm run lint",
