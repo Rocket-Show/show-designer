@@ -11,6 +11,7 @@
     "build": "ng build",
     "test": "ng test",
     "conformance:record": "node projects/designer/conformance/record.mjs",
+    "coverage:ratchet": "node projects/designer/coverage-ratchet.mjs",
     "lint": "ng lint",
     "pretty-quick": "pretty-quick --staged",
     "precommit": "npm run pretty-quick && npm run lint",

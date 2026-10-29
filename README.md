@@ -47,11 +47,13 @@ npx ng test designer --watch=false --browsers=ChromeHeadlessCI
 CI runs the specs with `--code-coverage`, shows the coverage in the summary of the run and keeps the report as an
 artifact (`coverage-report`). The coverage is measured against every file of the library: a spec builds the
 `DesignerModule`, which loads all of its components, also the ones no other spec touches. The run fails below a
-minimum (`check` in `projects/designer/karma.conf.js`), which is raised as the specs cover more. Locally, the report
-is written to `web/coverage/designer` (`index.html`):
+minimum (`check` in `projects/designer/karma.conf.js`), which only goes up: after a run with coverage,
+`npm run coverage:ratchet` raises it to what the specs reach, and CI warns when it is behind by more than a percent.
+Locally, the report is written to `web/coverage/designer` (`index.html`):
 
 ```shell
 npx ng test designer --watch=false --browsers=ChromeHeadlessCI --code-coverage
+npm run coverage:ratchet
 ```
 
 ### Parity with Rocket Show
