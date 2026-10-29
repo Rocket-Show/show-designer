@@ -253,8 +253,8 @@ export class ProjectLoadService {
   private migrateFromOldProject() {
     let migrated = false;
 
-    if (!this.projectService.project.version) {
-      // Migrate from version 1
+    if (!(this.projectService.project.version >= 2)) {
+      // Migrate from version 1, which a project of version 1 mostly doesn't say (like in Rocket Show)
       this.migrateToVersion2();
       migrated = true;
     }

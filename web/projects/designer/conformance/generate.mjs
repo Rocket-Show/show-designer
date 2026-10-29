@@ -125,6 +125,37 @@ function effectCurves() {
   return write('effect-curve.json', 'effectCurve', 'Effect curves: their period, phase, run and chase, sampled over time', cases);
 }
 
+// A sawtooth of an even duty cycle ramps exactly with the time (a little off it, were it worked out
+// like the other duty cycles), and a curve synced to the beat at no tempo or one below zero runs on
+// the default tempo
+function effectCurveEdges() {
+  const samples = (times) => times.map((timeMillis) => ({ timeMillis, fixtureIndex: 0 }));
+  const cases = [];
+
+  for (const curveType of ['sawtooth', 'reverse-sawtooth']) {
+    cases.push({
+      name: `a ${curveType} of an even duty cycle`,
+      input: {
+        curve: { type: 'curve', uuid: curveType, curveType, lengthMillis: 1000, dutyCycle: 0.5, capabilities: [], channels: [] },
+        samples: samples([30, 100, 123.456789, 210.5, 700]),
+      },
+    });
+  }
+
+  for (const beatsPerMinute of [-60, 0]) {
+    cases.push({
+      name: `a curve synced to the beat at a tempo of ${beatsPerMinute}`,
+      input: {
+        curve: { type: 'curve', uuid: 'beats', curveType: 'sine', lengthMode: 'beats', lengthBeats: 1, capabilities: [], channels: [] },
+        beatsPerMinute,
+        samples: samples([0, 125, 250, 400]),
+      },
+    });
+  }
+
+  return write('effect-curve-edges.json', 'effectCurve', 'Effect curves right on the edges of their duty cycle and their tempo', cases);
+}
+
 // ---- the steps of presets ---------------------------------------------------------------------
 
 const channelIdentities = [
@@ -685,6 +716,64 @@ function presetStepsEdges() {
         samples: samples([999, 1000, 1500, 2000]),
       },
     },
+    {
+      // a value travels from the one of the step before driving the same: the dimmer of another
+      // profile and another wheel are held, each by the step carrying it
+      name: 'values of another profile and of another wheel are held, not travelled from',
+      input: {
+        preset: {
+          uuid: 'others',
+          steps: [
+            step('from', 0, {
+              fixtureChannelValues: [{ profileUuid: 'p1', channelName: 'Dimmer', value: 0 }],
+              fixtureCapabilityValues: [{ type: 'WheelRotation', wheel: 'Gobo Wheel', valuePercentage: 0.2 }],
+            }),
+            step(
+              'to',
+              1000,
+              {
+                fixtureChannelValues: [{ profileUuid: 'p2', channelName: 'Dimmer', value: 200 }],
+                fixtureCapabilityValues: [{ type: 'WheelRotation', wheel: 'Color Wheel', valuePercentage: 0.8 }],
+              },
+              { transitionMillis: 1000 }
+            ),
+          ],
+        },
+        samples: samples([1000, 1500, 2000]),
+      },
+    },
+    {
+      // a wheel never stands between two of its slots, also when the values carry a percentage, and
+      // also when only one of the two steps names a slot
+      name: 'wheel slots carrying a percentage as well turn at once',
+      input: {
+        preset: {
+          uuid: 'slots',
+          steps: [
+            step('a', 0, {
+              fixtureCapabilityValues: [
+                { type: 'WheelSlot', wheel: 'Color Wheel', slotNumber: 2, valuePercentage: 0.2 },
+                { type: 'WheelSlot', wheel: 'Gobo Wheel', valuePercentage: 0.2 },
+                { type: 'WheelSlot', wheel: 'Prism', slotNumber: 1, valuePercentage: 0.2 },
+              ],
+            }),
+            step(
+              'b',
+              1000,
+              {
+                fixtureCapabilityValues: [
+                  { type: 'WheelSlot', wheel: 'Color Wheel', slotNumber: 3, valuePercentage: 0.8 },
+                  { type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: 4, valuePercentage: 0.8 },
+                  { type: 'WheelSlot', wheel: 'Prism', valuePercentage: 0.8 },
+                ],
+              },
+              { transitionMillis: 1000 }
+            ),
+          ],
+        },
+        samples: samples([1000, 1500, 2000]),
+      },
+    },
   ];
 
   return write('preset-steps-edges.json', 'presetSteps', 'The state of a preset right on the edges of its steps', cases);
@@ -868,10 +957,798 @@ function channelValuesEdges() {
   );
 }
 
+// How the values of the presets are mixed: fixtures sharing an address, profiles sharing the name
+// of a channel, curves on the channels of a profile, an effect which is no curve and colors fading
+// over the dimmer below them
+function channelValuesMixingEdges() {
+  const cases = [];
+  const dimmer = {
+    uuid: 'dimmer',
+    name: 'Dimmer',
+    availableChannels: { Dimmer: { capability: { type: 'Intensity' } } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Dimmer'] }],
+  };
+  // RGB and a color wheel
+  const colorWheel = {
+    uuid: 'rgb-wheel',
+    name: 'RGB and color wheel',
+    availableChannels: {
+      Dimmer: { capability: { type: 'Intensity' } },
+      Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+      Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+      Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+      'Color Wheel': {
+        capabilities: [
+          { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+          { dmxRange: [10, 19], type: 'WheelSlot', slotNumber: 2 },
+          { dmxRange: [20, 29], type: 'WheelSlot', slotNumber: 3 },
+        ],
+      },
+    },
+    wheels: {
+      'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#ff0000'] }, { type: 'Color', colors: ['#0000ff'] }] },
+    },
+    modes: [{ name: '5-channel', shortName: '5ch', channels: ['Dimmer', 'Red', 'Green', 'Blue', 'Color Wheel'] }],
+  };
+  const inlineProfiles = [dimmer, colorWheel];
+  const project = (fixtures, presets, scenes, extra = {}) => ({
+    version: 10,
+    fixtureProfiles: [...inlineProfiles, { $profile: 'test/pixel-bar' }, { $profile: 'test/rgb-par' }],
+    fixtures,
+    presetFixtures: fixtures.flatMap((fixture) =>
+      inlineProfiles.some((profile) => profile.uuid === fixture.profileUuid)
+        ? [{ fixtureUuid: fixture.uuid }]
+        : presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid))
+    ),
+    presets,
+    scenes,
+    compositions: [],
+    ...extra,
+  });
+
+  // A fixture on the address of one before it is the same lamp: it takes its values, also its
+  // pixels, while a fixture on the address of pixels only is one of its own. Fixtures sharing an
+  // address and lit by nothing stay without values.
+  cases.push({
+    name: 'fixtures sharing an address, with pixels and without',
+    input: {
+      project: project(
+        [
+          edgeFixture('bar', 'test/pixel-bar', '9ch', 0),
+          edgeFixture('same-bar', 'test/pixel-bar', '9ch', 0),
+          edgeFixture('par-on-bar', 'test/rgb-par', '6ch', 0),
+          edgeFixture('dimmer', 'dimmer', '1ch', 2),
+          edgeFixture('same-dimmer', 'dimmer', '1ch', 2),
+        ],
+        [edgePreset('red', presetFixtures('bar', libraryProfile('test/pixel-bar')).slice(1), { fixtureCapabilityValues: rgb(1, 0, 0) })],
+        [{ uuid: 'scene', name: 'Scene', presetUuids: ['red'] }]
+      ),
+      runs: previewScenes(['scene']),
+    },
+  });
+
+  // A channel value is for the channel of its profile only, a curve on channels runs on the ones of
+  // its profile, over their whole range
+  const curve = {
+    type: 'curve',
+    uuid: 'curve',
+    lengthMillis: 1000,
+    capabilities: [],
+    channels: [
+      { profileUuid: 'test/rgb-par', channels: ['Red', 'Strobe', 'Missing'] },
+      { profileUuid: 'dimmer', channels: ['Dimmer'] },
+    ],
+  };
+
+  cases.push({
+    name: 'channel values and curves of profiles sharing the name of a channel',
+    input: {
+      project: project(
+        [edgeFixture('par', 'test/rgb-par', '6ch', 0), edgeFixture('dimmer', 'dimmer', '1ch', 1)],
+        [
+          {
+            ...edgePreset('dimmer-only', [{ fixtureUuid: 'par' }, { fixtureUuid: 'dimmer' }], {
+              fixtureChannelValues: [{ profileUuid: 'dimmer', channelName: 'Dimmer', value: 77 }],
+            }),
+            effects: [curve],
+          },
+        ],
+        []
+      ),
+      runs: [{ preview: { mode: 'preset', preset: 'dimmer-only' }, times: [0, 125, 250, 600] }],
+    },
+  });
+
+  // A fixture lighting a color with its own colors leaves its color wheel alone from the moment one
+  // of its colors is set (a value set before the colors still lets the wheel show the color), one
+  // with a color wheel only shows the color on its wheel
+  cases.push({
+    name: 'a color on a fixture with colors and a color wheel',
+    input: {
+      project: project(
+        [
+          edgeFixture('rgb-wheel', 'rgb-wheel', '5ch', 0),
+          edgeFixture('dimmed-first', 'rgb-wheel', '5ch', 1),
+          edgeFixture('moving-head', 'test/moving-head', '6ch', 2),
+        ],
+        [
+          edgePreset('red', [{ fixtureUuid: 'rgb-wheel' }, { fixtureUuid: 'moving-head' }], {
+            fixtureCapabilityValues: [...rgb(1, 0, 0), capability('Intensity', 1)],
+          }),
+          edgePreset('dimmed-first', [{ fixtureUuid: 'dimmed-first' }], {
+            fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0, 0)],
+          }),
+        ],
+        [{ uuid: 'scene', name: 'Scene', presetUuids: ['red', 'dimmed-first'] }],
+        { fixtureProfiles: [...inlineProfiles, { $profile: 'test/moving-head' }] }
+      ),
+      runs: previewScenes(['scene']),
+    },
+  });
+
+  // Colors fading in over a par lit blue at half below them: each fading preset lets its par light
+  // as bright as its own dimmer (one for its profile, a dimmer without a value doesn't count), a
+  // curve on the dimmer or else the dimmer below, while it blends its color with the blue. A curve
+  // only on a color or on channels, or an effect which is no curve, leaves the dimmer below alone.
+  const pars = ['own-dimmer', 'dimmer-without-value', 'curve-on-dimmer', 'curve-on-color', 'curve-on-channels', 'pan-tilt'];
+  const fading = {
+    'own-dimmer': { values: [capability('Intensity', 1, { profileUuid: 'test/rgb-par' })], effects: [] },
+    'dimmer-without-value': { values: [capability('Intensity', 0.8), { type: 'Intensity', profileUuid: 'test/rgb-par' }], effects: [] },
+    'curve-on-dimmer': {
+      values: [],
+      effects: [
+        {
+          type: 'curve',
+          uuid: 'dimmer-curve',
+          lengthMillis: 4000,
+          capabilities: [{ type: 'Intensity' }, { type: 'ColorIntensity', color: 'Green' }],
+          channels: [],
+        },
+      ],
+    },
+    'curve-on-color': {
+      values: [],
+      effects: [
+        {
+          type: 'curve',
+          uuid: 'color-curve',
+          lengthMillis: 4000,
+          capabilities: [{ type: 'ColorIntensity', color: 'Green' }],
+          channels: [],
+        },
+      ],
+    },
+    'curve-on-channels': {
+      values: [],
+      effects: [
+        {
+          type: 'curve',
+          uuid: 'channel-curve',
+          lengthMillis: 4000,
+          capabilities: [],
+          channels: [{ profileUuid: 'test/rgb-par', channels: ['Strobe'] }],
+        },
+      ],
+    },
+    'pan-tilt': { values: [], effects: [{ type: 'pan-tilt', uuid: 'pan-tilt' }] },
+  };
+  const fadingPresets = pars.map((par) => ({
+    ...edgePreset(par, [{ fixtureUuid: par }], {
+      fixtureCapabilityValues: [...fading[par].values, capability('ColorIntensity', 1, { color: 'Red' })],
+    }),
+    effects: fading[par].effects,
+    fadeInMillis: 1000,
+  }));
+  const below = edgePreset(
+    'below',
+    pars.map((par) => ({ fixtureUuid: par })),
+    { fixtureCapabilityValues: [capability('Intensity', 0.5), capability('ColorIntensity', 1, { color: 'Blue' })] }
+  );
+
+  cases.push({
+    name: 'colors fading in over a dimmer below them',
+    input: {
+      project: project(
+        pars.map((par, index) => edgeFixture(par, 'test/rgb-par', '6ch', index)),
+        [...fadingPresets, below],
+        [
+          { uuid: 'fading', name: 'Fading', presetUuids: pars },
+          { uuid: 'below', name: 'Below', presetUuids: ['below'] },
+        ],
+        {
+          compositions: [
+            {
+              uuid: 'song',
+              name: 'Song',
+              tracks: [
+                { uuid: 'top', name: 'Top' },
+                { uuid: 'bottom', name: 'Bottom' },
+              ],
+              scenePlaybackRegions: [
+                { sceneUuid: 'fading', startMillis: 0, endMillis: 10000, trackUuid: 'top' },
+                { sceneUuid: 'below', startMillis: 0, endMillis: 10000, trackUuid: 'bottom' },
+              ],
+            },
+          ],
+        }
+      ),
+      runs: [{ preview: { mode: 'timeline', composition: 'Song' }, times: [0, 250, 500, 999, 1000, 3000] }],
+    },
+  });
+
+  return write(
+    'channel-values-mixing-edges.json',
+    'channelValues',
+    'Fixtures sharing an address, profiles sharing the name of a channel, curves on channels and colors fading over a dimmer',
+    cases
+  );
+}
+
+// ---- projects of older versions, migrated ----------------------------------------------------
+
+// A profile of a matrix given by its pixel count (or by its pixel keys), with a red channel for each
+// pixel and, in the mode "dimmer", a dimmer of its own
+function matrixProfile(uuid, matrix) {
+  const pixels = { insert: 'matrixChannels', repeatFor: 'eachPixelXYZ', channelOrder: 'perPixel', templateChannels: ['Red $pixelKey'] };
+
+  return {
+    uuid,
+    name: uuid,
+    matrix,
+    availableChannels: { Dimmer: { capability: { type: 'Intensity' } } },
+    templateChannels: { 'Red $pixelKey': { capability: { type: 'ColorIntensity', color: 'Red' } } },
+    modes: [
+      { name: 'Pixels', shortName: 'pixels', channels: [pixels] },
+      { name: 'Dimmer', shortName: 'dimmer', channels: ['Dimmer', pixels] },
+    ],
+  };
+}
+
+const dimmerProfile = {
+  uuid: 'dimmer',
+  name: 'Dimmer',
+  availableChannels: { Dimmer: { capability: { type: 'Intensity' } } },
+  modes: [{ name: '1-channel', shortName: '1ch', channels: ['Dimmer'] }],
+};
+
+function migrationFixture(uuid, profileUuid, modeShortName) {
+  return { uuid, name: uuid, profileUuid, modeShortName, dmxUniverseUuid: 'u', dmxFirstChannel: 0 };
+}
+
+function curve(uuid, curveType, amplitude, channels = []) {
+  return { type: 'curve', uuid, curveType, amplitude, lengthMillis: 1000, capabilities: [], channels };
+}
+
+const panTilt = { type: 'pan-tilt', uuid: 'circle', panStart: 0, panEnd: 1, tiltStart: 0, tiltEnd: 1 };
+
+// Every step from version 1 to the current one, each on a project of the version before it, and a
+// project which is already of that version, which keeps what it has
+function migrations() {
+  const intensity = { fixtureCapabilityValues: [capability('Intensity', 0.8), capability('ColorIntensity', 1, { color: 'Red' })] };
+  const strobe = { fixtureChannelValues: [{ profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 20 }] };
+  const scenes = [
+    { uuid: 'verse', name: 'Verse', presetUuids: ['b', 'missing', 'a'] },
+    { uuid: 'chorus', name: 'Chorus', presetUuids: ['a', 'c', 'b'] },
+  ];
+  const cases = [];
+
+  // A project of version 1 names the fixtures of a preset only: they are listed with their pixels
+  // (also the pixel groups their channels are repeated for), in the order of the project, the values
+  // of a preset become its step, the curves swing over half of their amplitude and the scenes are on
+  // one lane. A fixture without its profile or its mode is left out.
+  const version1 = {
+    name: 'Version 1',
+    fixtureProfiles: [
+      dimmerProfile,
+      { $profile: 'test/pixel-bar' },
+      { $profile: 'chauvet-dj/colorband-pix' },
+      { $profile: 'adb/alc4' },
+      { $profile: 'etc/source-four-led-series-2-daylight-hd' },
+      { $profile: 'test/rgb-par' },
+    ],
+    fixtures: [
+      migrationFixture('dimmer', 'dimmer', '1ch'),
+      migrationFixture('bar', 'test/pixel-bar', '9ch'),
+      migrationFixture('bar-with-dimmer', 'test/pixel-bar', '10ch'),
+      migrationFixture('band', 'chauvet-dj/colorband-pix', '6ch'),
+      migrationFixture('ring', 'adb/alc4', 'ext-lin'),
+      // a mode without a short name, which a fixture names by its name
+      migrationFixture('source-four', 'etc/source-four-led-series-2-daylight-hd', 'Studio'),
+      migrationFixture('par', 'test/rgb-par', '6ch'),
+      migrationFixture('without-profile', 'gone', '1ch'),
+      migrationFixture('without-mode', 'test/pixel-bar', 'gone'),
+    ],
+    presets: [
+      {
+        uuid: 'a',
+        name: 'A',
+        fixtureUuids: ['par', 'band', 'without-profile', 'dimmer', 'missing', 'bar-with-dimmer'],
+        ...intensity,
+        ...strobe,
+        effects: [curve('sine', 'sine', 1, [{ profileUuid: 'test/pixel-bar', channels: ['Red 1'] }]), curve('square', 'square', 0.6)],
+      },
+      { uuid: 'b', name: 'B', fixtureUuids: ['ring', 'source-four', 'bar', 'without-mode'], effects: [panTilt] },
+      { uuid: 'c', name: 'C' },
+    ],
+    scenes,
+    compositions: [
+      {
+        uuid: 'song',
+        name: 'Song',
+        scenePlaybackRegions: [
+          { sceneUuid: 'chorus', startMillis: 1000, endMillis: 3000 },
+          { sceneUuid: 'verse', startMillis: 0, endMillis: 2000 },
+        ],
+      },
+    ],
+  };
+
+  cases.push({ name: 'a project of version 1', input: { project: version1 } });
+  cases.push({ name: 'a project of version 1 with nothing in it', input: { project: { name: 'Empty' } } });
+
+  // A project of version 2 keeps the order of the scenes and the fixtures in the lists of the
+  // project: the presets of a scene and the fixtures of a preset are sorted like them. A fixture the
+  // project doesn't list comes first, an empty pixel key is none.
+  const version2 = (version) => ({
+    version,
+    name: 'Version ' + version,
+    fixtureProfiles: [dimmerProfile, { $profile: 'test/pixel-bar' }],
+    fixtures: [migrationFixture('dimmer', 'dimmer', '1ch'), migrationFixture('bar', 'test/pixel-bar', '10ch')],
+    presetFixtures: [
+      { fixtureUuid: 'bar' },
+      { fixtureUuid: 'bar', pixelKey: '1' },
+      { fixtureUuid: 'bar', pixelKey: '2' },
+      { fixtureUuid: 'dimmer' },
+      { fixtureUuid: 'bar', pixelKey: '3' },
+    ],
+    presets: [
+      {
+        uuid: 'a',
+        name: 'A',
+        useGlobalFixtureOrder: false,
+        fixtures: [
+          { fixtureUuid: 'dimmer' },
+          { fixtureUuid: 'bar', pixelKey: '3' },
+          { fixtureUuid: 'gone' },
+          { fixtureUuid: 'bar', pixelKey: '' },
+          { fixtureUuid: 'bar', pixelKey: '1' },
+        ],
+        ...intensity,
+      },
+      { uuid: 'b', name: 'B', fixtures: [], useGlobalFixtureOrder: false },
+      { uuid: 'c', name: 'C', fixtures: [{ fixtureUuid: 'bar', pixelKey: '2' }] },
+    ],
+    scenes,
+    compositions: [],
+  });
+
+  cases.push({ name: 'a project of version 2', input: { project: version2(2) } });
+  cases.push({ name: 'a project of version 3 keeps its orders', input: { project: version2(3) } });
+
+  // Since version 7 a preset runs through steps: the values of a preset of an older project become its
+  // first step. One of version 7 keeps its steps.
+  const version6 = (version) => ({
+    version,
+    name: 'Version ' + version,
+    fixtureProfiles: [{ $profile: 'test/rgb-par' }],
+    fixtures: [migrationFixture('par', 'test/rgb-par', '6ch')],
+    presetFixtures: [{ fixtureUuid: 'par' }],
+    presets: [
+      { uuid: 'values', name: 'Values', fixtures: [{ fixtureUuid: 'par' }], ...intensity, ...strobe },
+      { uuid: 'nothing', name: 'Nothing', fixtures: [{ fixtureUuid: 'par' }] },
+      {
+        uuid: 'steps',
+        name: 'Steps',
+        fixtures: [{ fixtureUuid: 'par' }],
+        ...strobe,
+        steps: [
+          step(
+            'dark',
+            0,
+            { fixtureCapabilityValues: [capability('Intensity', 0)] },
+            { effectAmounts: [{ effectUuid: 'sine', amount: 0 }] }
+          ),
+          step('bright', 1000, intensity, { transitionMillis: 250, transitionCurve: 'ease-in' }),
+        ],
+      },
+    ],
+    scenes: [],
+    compositions: [],
+  });
+
+  cases.push({ name: 'a project of version 6', input: { project: version6(6) } });
+  cases.push({ name: 'a project of version 7 keeps its steps', input: { project: version6(7) } });
+
+  // Since version 8 every curve swings over its whole amplitude: the ones but the square swung over
+  // half of it before
+  const version7 = (version) => ({
+    version,
+    name: 'Version ' + version,
+    fixtureProfiles: [],
+    fixtures: [],
+    presetFixtures: [],
+    presets: [
+      {
+        uuid: 'curves',
+        name: 'Curves',
+        fixtures: [],
+        steps: [step('step', 0, {})],
+        effects: [
+          curve('sine', 'sine', 1),
+          curve('square', 'square', 1),
+          curve('triangle', 'triangle', 0.3),
+          curve('sawtooth', 'sawtooth', 2),
+          curve('reverse-sawtooth', 'reverse-sawtooth', 0.7),
+          curve('newer', 'from-a-newer-designer', 0.1),
+          { type: 'curve', uuid: 'default', capabilities: [], channels: [] },
+          panTilt,
+        ],
+      },
+    ],
+    scenes: [],
+    compositions: [],
+  });
+
+  cases.push({ name: 'a project of version 7', input: { project: version7(7) } });
+  cases.push({ name: 'a project of version 8 keeps its curves', input: { project: version7(8) } });
+
+  // Since version 9 the pixels of a matrix given by its pixel count are named like in the fixture
+  // library ("12" instead of "Pixel 12-1-1"): in the fixtures of the project and of the presets, the
+  // channel values and the channels of the curves (see migration-edges.json)
+  const version8 = (version) => ({
+    version,
+    name: 'Version ' + version,
+    fixtureProfiles: [matrixProfile('bar', { pixelCount: [12, 1, 1] })],
+    fixtures: [migrationFixture('bar', 'bar', 'dimmer')],
+    presetFixtures: [
+      { fixtureUuid: 'bar' },
+      { fixtureUuid: 'bar', pixelKey: 'Pixel 1-1-1' },
+      { fixtureUuid: 'bar', pixelKey: 'Pixel 12-1-1' },
+    ],
+    presets: [
+      {
+        uuid: 'pixels',
+        name: 'Pixels',
+        fixtures: [{ fixtureUuid: 'bar', pixelKey: 'Pixel 12-1-1' }],
+        steps: [step('step', 0, { fixtureChannelValues: [{ profileUuid: 'bar', channelName: 'Red Pixel 12-1-1', value: 255 }] })],
+        effects: [curve('sine', 'sine', 1, [{ profileUuid: 'bar', channels: ['Red Pixel 1-1-1', 'Dimmer'] }])],
+      },
+    ],
+    scenes: [],
+    compositions: [],
+  });
+
+  cases.push({ name: 'a project of version 8', input: { project: version8(8) } });
+  cases.push({ name: 'a project of version 9 keeps its pixel keys', input: { project: version8(9) } });
+
+  // Since version 10 the timeline has tracks: the scenes played on one lane before, the first scene
+  // of the project on top, so every scene gets a track of its own in that order (see
+  // migration-edges.json)
+  const version9 = (version) => ({
+    version,
+    name: 'Version ' + version,
+    fixtureProfiles: [],
+    fixtures: [],
+    presetFixtures: [],
+    presets: [],
+    scenes: [
+      { uuid: 'chorus', name: 'Chorus', presetUuids: [] },
+      { uuid: 'verse', name: 'Verse', presetUuids: [] },
+    ],
+    compositions: [
+      {
+        uuid: 'song',
+        name: 'Song',
+        scenePlaybackRegions: [
+          { sceneUuid: 'verse', startMillis: 0, endMillis: 60000 },
+          { sceneUuid: 'chorus', startMillis: 20000, endMillis: 40000 },
+        ],
+      },
+    ],
+  });
+
+  cases.push({ name: 'a project of version 9', input: { project: version9(9) } });
+  cases.push({ name: 'a project of version 10 keeps its clips off the tracks', input: { project: version9(10) } });
+
+  return write('migration.json', 'migration', 'Projects of every older version, migrated to the current one', cases);
+}
+
+// The edges of the migrations: the pixel keys a project of version 8 names its pixels with, and the
+// clips of a project of version 9 on the timeline
+function migrationEdges() {
+  const project = (version, extra) => ({
+    version,
+    name: 'Edges',
+    fixtureProfiles: [],
+    fixtures: [],
+    presetFixtures: [],
+    presets: [],
+    scenes: [],
+    compositions: [],
+    ...extra,
+  });
+  const cases = [];
+
+  // A matrix of each shape: a row, a column, a stack, the planes and a cube, each with a fixture of
+  // its own, the pixels named like before version 9
+  const shapes = {
+    row: [12, 1, 1],
+    column: [1, 12, 1],
+    stack: [1, 1, 12],
+    plane: [2, 3, 1],
+    'side-plane': [1, 2, 3],
+    'floor-plane': [2, 1, 3],
+    cube: [2, 3, 4],
+    single: [1, 1, 1],
+  };
+  const pixelNames = {
+    row: ['Pixel 1-1-1', 'Pixel 9-1-1', 'Pixel 10-1-1', 'Pixel 12-1-1', 'Pixel 012-1-1'],
+    column: ['Pixel 1-1-1', 'Pixel 1-10-1', 'Pixel 1-12-1'],
+    stack: ['Pixel 1-1-1', 'Pixel 1-1-11', 'Pixel 1-1-12'],
+    plane: ['Pixel 1-1-1', 'Pixel 2-3-1', 'Pixel 2-1-1'],
+    'side-plane': ['Pixel 1-1-1', 'Pixel 1-2-3', 'Pixel 1-1-2'],
+    'floor-plane': ['Pixel 1-1-1', 'Pixel 2-1-3', 'Pixel 1-1-2'],
+    cube: ['Pixel 1-1-1', 'Pixel 2-3-4', 'Pixel 1-2-3'],
+    single: ['Pixel 1-1-1'],
+  };
+  const shapeNames = Object.keys(shapes);
+  const presetFixturesOf = (names) => shapeNames.flatMap((shape) => names(shape).map((pixelKey) => ({ fixtureUuid: shape, pixelKey })));
+  const shapeProject = (presetFixtures, channelValues, curveChannels) =>
+    project(8, {
+      fixtureProfiles: shapeNames.map((shape) => matrixProfile(shape, { pixelCount: shapes[shape] })),
+      fixtures: shapeNames.map((shape) => migrationFixture(shape, shape, 'pixels')),
+      presetFixtures,
+      presets: [
+        {
+          uuid: 'preset',
+          name: 'Preset',
+          fixtures: presetFixtures,
+          steps: [step('step', 0, { fixtureChannelValues: channelValues })],
+          effects: [curve('sine', 'sine', 1, curveChannels)],
+        },
+      ],
+    });
+  const channelValuesOf = (names) =>
+    shapeNames.flatMap((shape) => names(shape).map((channelName, index) => ({ profileUuid: shape, channelName, value: index })));
+  const curveChannelsOf = (names) => shapeNames.map((shape) => ({ profileUuid: shape, channels: names(shape) }));
+
+  cases.push({
+    name: 'the pixels of a row, a column, a stack, the planes and a cube',
+    input: {
+      project: shapeProject(
+        presetFixturesOf((shape) => pixelNames[shape]),
+        channelValuesOf((shape) => pixelNames[shape].map((name) => 'Red ' + name)),
+        curveChannelsOf((shape) => pixelNames[shape].map((name) => 'Red ' + name))
+      ),
+    },
+  });
+
+  // Each number one beside the matrix on either side, on each axis, a number too long for any
+  // integer and a pixel of a matrix which has a single one: a name of a pixel beside the matrix
+  // stays as it is
+  const outside = (shape) => {
+    const [x, y, z] = shapes[shape];
+    return [
+      `Pixel 0-1-1`,
+      `Pixel ${x + 1}-1-1`,
+      `Pixel 1-0-1`,
+      `Pixel 1-${y + 1}-1`,
+      `Pixel 1-1-0`,
+      `Pixel 1-1-${z + 1}`,
+      'Pixel 99999999999999999999-1-1',
+    ];
+  };
+
+  cases.push({
+    name: 'the pixels beside the matrix',
+    input: {
+      project: shapeProject(
+        presetFixturesOf(outside),
+        channelValuesOf((shape) => outside(shape).map((name) => 'Red ' + name)),
+        curveChannelsOf((shape) => outside(shape).map((name) => 'Red ' + name))
+      ),
+    },
+  });
+
+  // A pixel key is renamed only as a whole, a channel wherever it names a pixel: names starting
+  // with a pixel key, ending with one, holding two of them or one in the middle of a word
+  const around = [
+    'Pixel 1-1-1 left',
+    'Ring Pixel 1-1-1',
+    'Pixel 2-1-1 Pixel 3-1-1',
+    'Pixel 1-1-1-1',
+    'XPixel 2-1-1Y',
+    'pixel 1-1-1',
+    'Pixel 1-1',
+  ];
+
+  cases.push({
+    name: 'names which start with, end with or hold a pixel key',
+    input: {
+      project: project(8, {
+        fixtureProfiles: [matrixProfile('row', { pixelCount: [12, 1, 1] })],
+        fixtures: [migrationFixture('row', 'row', 'pixels')],
+        presetFixtures: around.map((pixelKey) => ({ fixtureUuid: 'row', pixelKey })),
+        presets: [
+          {
+            uuid: 'preset',
+            name: 'Preset',
+            fixtures: around.map((pixelKey) => ({ fixtureUuid: 'row', pixelKey })),
+            steps: [
+              step('step', 0, { fixtureChannelValues: around.map((channelName) => ({ profileUuid: 'row', channelName, value: 1 })) }),
+            ],
+            effects: [curve('sine', 'sine', 1, [{ profileUuid: 'row', channels: around }])],
+          },
+        ],
+      }),
+    },
+  });
+
+  // Only the pixels of a matrix given by its pixel count are renamed: not the ones of a profile
+  // naming its pixels itself (even "Pixel 1-1-1"), of a profile with a pixel count which doesn't name
+  // three axes, of a profile without a matrix or of a profile the project doesn't have. A fixture
+  // without a pixel key is the fixture itself, a channel value without a name keeps having none, and
+  // an effect which is no curve has no channels to rename.
+  const named = ['Pixel 1-1-1', 'Pixel 2-1-1'];
+  const others = ['named', 'named-and-counted', 'counted-twice', 'counted-four-times', 'dimmer', 'gone'];
+
+  cases.push({
+    name: 'the pixels and channels of other profiles, fixtures without a pixel key and effects which are no curves',
+    input: {
+      project: project(8, {
+        fixtureProfiles: [
+          matrixProfile('row', { pixelCount: [12, 1, 1] }),
+          matrixProfile('named', { pixelKeys: [[named]] }),
+          matrixProfile('named-and-counted', { pixelKeys: [[named]], pixelCount: [2, 1, 1] }),
+          matrixProfile('counted-twice', { pixelCount: [2, 1] }),
+          matrixProfile('counted-four-times', { pixelCount: [2, 1, 1, 1] }),
+          dimmerProfile,
+        ],
+        fixtures: [
+          migrationFixture('row', 'row', 'dimmer'),
+          migrationFixture('named', 'named', 'pixels'),
+          migrationFixture('named-and-counted', 'named-and-counted', 'pixels'),
+          migrationFixture('counted-twice', 'counted-twice', 'pixels'),
+          migrationFixture('counted-four-times', 'counted-four-times', 'pixels'),
+          migrationFixture('dimmer', 'dimmer', '1ch'),
+          migrationFixture('gone', 'gone', '1ch'),
+        ],
+        presetFixtures: [
+          { fixtureUuid: 'row' },
+          { fixtureUuid: 'row', pixelKey: 'Pixel 1-1-1' },
+          ...others.map((fixtureUuid) => ({ fixtureUuid, pixelKey: 'Pixel 1-1-1' })),
+          { fixtureUuid: 'missing', pixelKey: 'Pixel 1-1-1' },
+        ],
+        presets: [
+          {
+            uuid: 'preset',
+            name: 'Preset',
+            fixtures: [
+              { fixtureUuid: 'row' },
+              { fixtureUuid: 'named', pixelKey: 'Pixel 2-1-1' },
+              { fixtureUuid: 'gone', pixelKey: 'Pixel 1-1-1' },
+            ],
+            steps: [
+              step('step', 0, {
+                fixtureChannelValues: [
+                  { profileUuid: 'row', value: 7 },
+                  { profileUuid: 'row', channelName: 'Red Pixel 2-1-1', value: 8 },
+                  ...others.map((profileUuid) => ({ profileUuid, channelName: 'Red Pixel 1-1-1', value: 9 })),
+                  { channelName: 'Red Pixel 1-1-1', value: 10 },
+                ],
+              }),
+            ],
+            effects: [
+              panTilt,
+              curve('sine', 'sine', 1, [
+                { profileUuid: 'row', channels: ['Red Pixel 2-1-1'] },
+                ...others.map((profileUuid) => ({ profileUuid, channels: ['Red Pixel 1-1-1'] })),
+              ]),
+            ],
+          },
+        ],
+      }),
+    },
+  });
+
+  // The clips of the scenes onto tracks of their own: in the order of the scenes, the clips of a scene
+  // overlapping each other on further tracks of it (also ones given out of order), clips touching
+  // each other on the same track. A clip of a scene which is gone stays off the tracks, a composition
+  // without clips doesn't get a track, and one which has a track already keeps it and the clips on it.
+  cases.push({
+    name: 'the clips of a project of version 9 onto tracks',
+    input: {
+      project: project(9, {
+        scenes: [
+          { uuid: 'intro', name: 'Intro', presetUuids: [] },
+          { uuid: 'verse', name: 'Verse', presetUuids: [] },
+          { uuid: 'chorus', name: 'Chorus', presetUuids: [] },
+          { uuid: 'unplayed', name: 'Unplayed', presetUuids: [] },
+        ],
+        compositions: [
+          {
+            uuid: 'song',
+            name: 'Song',
+            scenePlaybackRegions: [
+              { sceneUuid: 'chorus', startMillis: 30000, endMillis: 40000 },
+              { sceneUuid: 'verse', startMillis: 10000, endMillis: 20000 },
+              { sceneUuid: 'verse', startMillis: 20000, endMillis: 30000 },
+              { sceneUuid: 'chorus', startMillis: 15000, endMillis: 35000 },
+              { sceneUuid: 'chorus', startMillis: 32000, endMillis: 33000 },
+              { sceneUuid: 'gone', startMillis: 0, endMillis: 5000 },
+              { sceneUuid: 'intro', startMillis: 0, endMillis: 10000 },
+              { sceneUuid: 'chorus', startMillis: 41000, endMillis: 42000 },
+            ],
+          },
+          { uuid: 'silence', name: 'Silence', scenePlaybackRegions: [] },
+          {
+            uuid: 'with-track',
+            name: 'With a track',
+            tracks: [{ uuid: 'kept', name: 'Kept' }],
+            scenePlaybackRegions: [
+              { sceneUuid: 'verse', startMillis: 0, endMillis: 1000, trackUuid: 'kept' },
+              { sceneUuid: 'verse', startMillis: 500, endMillis: 1500 },
+              { sceneUuid: 'intro', startMillis: 0, endMillis: 1000, trackUuid: 'not-there' },
+            ],
+          },
+        ],
+      }),
+    },
+  });
+
+  // The tracks of a scene without a name (or with an empty one) are named like new ones: after the
+  // first number no track of the composition carries yet
+  cases.push({
+    name: 'the clips of scenes without a name onto tracks',
+    input: {
+      project: project(9, {
+        scenes: [
+          { uuid: 'unnamed', presetUuids: [] },
+          { uuid: 'empty', name: '', presetUuids: [] },
+        ],
+        compositions: [
+          {
+            uuid: 'song',
+            name: 'Song',
+            tracks: [{ uuid: 'kept', name: 'Track 2' }],
+            scenePlaybackRegions: [
+              { sceneUuid: 'unnamed', startMillis: 0, endMillis: 2000 },
+              { sceneUuid: 'unnamed', startMillis: 1000, endMillis: 3000 },
+              { sceneUuid: 'empty', startMillis: 0, endMillis: 2000 },
+              { sceneUuid: 'empty', startMillis: 1000, endMillis: 3000 },
+            ],
+          },
+        ],
+      }),
+    },
+  });
+
+  // A project saying it is of version 1 is migrated like one which doesn't say its version
+  cases.push({
+    name: 'a project saying it is of version 1',
+    input: {
+      project: project(1, {
+        fixtureProfiles: [dimmerProfile],
+        fixtures: [migrationFixture('dimmer', 'dimmer', '1ch')],
+        presetFixtures: undefined,
+        presets: [{ uuid: 'preset', name: 'Preset', fixtureUuids: ['dimmer'], fixtureCapabilityValues: [capability('Intensity', 1)] }],
+      }),
+    },
+  });
+
+  return write(
+    'migration-edges.json',
+    'migration',
+    'The pixel keys and the clips of older projects right on the edges of the migrations',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
     effectCurves(),
+    effectCurveEdges(),
     presetSteps(),
     presetIntensity(),
     libraryModes(),
@@ -879,6 +1756,9 @@ export function generate() {
     presetIntensityEdges(),
     presetStepsEdges(),
     channelValuesEdges(),
+    channelValuesMixingEdges(),
+    migrations(),
+    migrationEdges(),
   ];
 }
 

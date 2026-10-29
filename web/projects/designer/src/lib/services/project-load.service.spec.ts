@@ -350,6 +350,18 @@ describe('ProjectLoadService migrating a project of version 1', () => {
     expect(projectService.project.presets[1].steps.length).toBe(1);
   });
 
+  it('migrates a project saying it is of version 1 like one which does not say its version', () => {
+    const data = projectOfVersion1();
+    data.version = 1;
+
+    service.import(JSON.stringify(data));
+    const project = projectService.project;
+
+    expect(fixtureNames(project.presetFixtures)).toEqual(['fixture-1', 'bar-1/1', 'bar-1/2', 'bar-1/3']);
+    expect(fixtureNames(project.presets[0].fixtures)).toEqual(['fixture-1', 'bar-1/1', 'bar-1/2', 'bar-1/3']);
+    expect(project.presets[0].fixtureUuids).toBeUndefined();
+  });
+
   it('tells that the project has been migrated', () => {
     service.import(JSON.stringify(projectOfVersion1()));
     expect(warning).toHaveBeenCalledWith('designer.project.migrated');
@@ -357,6 +369,85 @@ describe('ProjectLoadService migrating a project of version 1', () => {
     warning.calls.reset();
     service.import(JSON.stringify(projectWithSelectedPreset()));
     expect(warning).not.toHaveBeenCalled();
+  });
+});
+
+// The migrations to the versions 4, 5 and 6 are about how the designer shows a project (the solo
+// switch, the folders): a project of such a version keeps what it already knows of them
+describe('ProjectLoadService opening a project which knows the solo switch or the folders', () => {
+  let service: ProjectLoadService;
+  let projectService: ProjectService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        BsModalService,
+        { provide: WarningDialogService, useValue: { show: () => of(true) } },
+      ],
+    });
+
+    service = TestBed.inject(ProjectLoadService);
+    projectService = TestBed.inject(ProjectService);
+  });
+
+  // the preset soloed, a preset, a scene and a fixture in a folder, each one placed behind others
+  function projectInFolders(version: number): any {
+    const project = projectWithSelectedPreset();
+    project.version = version;
+    project.previewPreset = true;
+    project.presetFolders = [{ uuid: 'preset-folder', name: 'Presets' }];
+    project.sceneFolders = [{ uuid: 'scene-folder', name: 'Scenes' }];
+    project.fixtureFolders = [{ uuid: 'fixture-folder', name: 'Fixtures' }];
+    Object.assign(project.presets[0], { folderUuid: 'preset-folder', sortIndex: 3 });
+    project.scenes = [{ uuid: 'scene', name: 'Scene', presetUuids: ['preset-1'], folderUuid: 'scene-folder', sortIndex: 2 }];
+    Object.assign(project.presetFixtures[0], { folderUuid: 'fixture-folder', sortIndex: 4 });
+
+    return project;
+  }
+
+  function folders(): any[] {
+    const project = projectService.project;
+
+    return [
+      [project.presets[0].folderUuid, project.presets[0].sortIndex],
+      [project.scenes[0].folderUuid, project.scenes[0].sortIndex],
+      [project.presetFixtures[0].folderUuid, project.presetFixtures[0].sortIndex],
+    ];
+  }
+
+  it('keeps a project of version 4 soloed', () => {
+    service.import(JSON.stringify(projectInFolders(4)));
+
+    expect(projectService.project.previewPreset).toBe(true);
+    expect(folders()).toEqual([
+      [undefined, 0],
+      [undefined, 0],
+      [undefined, 0],
+    ]);
+  });
+
+  it('keeps the folders of the presets of a project of version 5', () => {
+    service.import(JSON.stringify(projectInFolders(5)));
+
+    expect(folders()).toEqual([
+      ['preset-folder', 3],
+      [undefined, 0],
+      [undefined, 0],
+    ]);
+  });
+
+  it('keeps the folders of the scenes and the fixtures of a project of version 6', () => {
+    service.import(JSON.stringify(projectInFolders(6)));
+
+    expect(folders()).toEqual([
+      ['preset-folder', 3],
+      ['scene-folder', 2],
+      ['fixture-folder', 4],
+    ]);
   });
 });
 
@@ -465,6 +556,24 @@ describe('ProjectLoadService opening projects', () => {
     expect(configService.universes).toBe(projectService.project.universes);
   });
 
+  it('keeps the universes a project which keeps its own universes brings along', () => {
+    const configService = TestBed.inject(ConfigService);
+    configService.freeUniverseEdit = true;
+
+    service.import(JSON.stringify(projectWithSelectedPreset()));
+
+    expect(configService.universes.map((universe) => universe.uuid)).toEqual(['universe-1']);
+  });
+
+  it('keeps the universe of a fixture which has one', () => {
+    const configService = TestBed.inject(ConfigService);
+    configService.universes = [{ uuid: 'first', name: 'First' } as any, { uuid: 'universe-1', name: 'Universe 1' } as any];
+
+    service.import(JSON.stringify(projectWithSelectedPreset()));
+
+    expect(projectService.project.fixtures[0].dmxUniverseUuid).toBe('universe-1');
+  });
+
   it('picks up what was being edited after a state of the project has been put back', () => {
     const data = projectWithSelectedPreset();
     data.presets[0].effects = [curveEffect('sine', 1)];
@@ -482,6 +591,38 @@ describe('ProjectLoadService opening projects', () => {
     expect(presetService.selectedPreset).toBe(restored.presets[0]);
     expect(effectService.selectedEffect).toBe(restored.presets[0].effects[0]);
     expect(fixtureService.selectedSettingsFixtures).toEqual([restored.fixtures[0]]);
+  });
+
+  it('keeps the scenes, the effect and the fixtures being edited which are still there after an undo', () => {
+    const scenes = [
+      { uuid: 'first', name: 'First', presetUuids: ['preset-1'] },
+      { uuid: 'second', name: 'Second', presetUuids: ['preset-1'] },
+    ];
+    const data = { ...projectWithSelectedPreset(), scenes, selectedSceneUuids: ['second'] };
+    data.presets[0].effects = [curveEffect('sine', 1), curveEffect('square', 1)];
+    service.import(JSON.stringify(data));
+
+    const effectService = TestBed.inject(EffectService);
+    const fixtureService = TestBed.inject(FixtureService);
+    effectService.selectedEffect = presetService.selectedPreset.effects[1];
+    fixtureService.selectedSettingsFixtures = [fixtureService.getFixtureByUuid('fixture-1')];
+
+    const restored = new Project({ ...JSON.parse(JSON.stringify(data)), selectedSceneUuids: ['gone', 'second'] });
+    service.restoreProject(restored);
+
+    expect(TestBed.inject(SceneService).selectedScenes).toEqual([restored.scenes[1]]);
+    expect(effectService.selectedEffect).toBe(restored.presets[0].effects[1]);
+    expect(fixtureService.selectedSettingsFixtures).toEqual([restored.fixtures[0]]);
+  });
+
+  it('forgets the fixtures being edited which an undo took away', () => {
+    service.import(JSON.stringify(projectWithSelectedPreset()));
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.selectedSettingsFixtures = [fixtureService.getFixtureByUuid('fixture-1')];
+
+    service.restoreProject(new Project({ ...projectWithSelectedPreset(), fixtures: [] }));
+
+    expect(fixtureService.selectedSettingsFixtures).toEqual([]);
   });
 
   it('plays the first scene after an undo took the selected ones away', () => {

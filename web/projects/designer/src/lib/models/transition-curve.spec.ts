@@ -1,4 +1,4 @@
-import { applyTransitionCurve } from './transition-curve';
+import { applyTransitionCurve, transitionCurveTypes } from './transition-curve';
 
 describe('applyTransitionCurve', () => {
   it('should pass a linear transition through unchanged', () => {
@@ -48,5 +48,11 @@ describe('applyTransitionCurve', () => {
 
   it('should fall back to linear for a curve it does not know', () => {
     expect(applyTransitionCurve('from-a-newer-designer', 0.4)).toBe(0.4);
+  });
+});
+
+describe('transitionCurveTypes', () => {
+  it('should offer every curve, the plain one first', () => {
+    expect(transitionCurveTypes).toEqual(['linear', 'ease-in', 'ease-out', 'ease-in-out', 'snap']);
   });
 });

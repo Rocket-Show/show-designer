@@ -2,19 +2,23 @@
 
 import case0 from './cases/channel-values-edges.json';
 import case1 from './cases/channel-values-library.json';
-import case2 from './cases/channel-values-scenarios.json';
-import case3 from './cases/default-value.json';
-import case4 from './cases/effect-curve.json';
-import case5 from './cases/hex-color.json';
-import case6 from './cases/mix-colors.json';
-import case7 from './cases/pixel-group.json';
-import case8 from './cases/pixels.json';
-import case9 from './cases/preset-intensity-edges.json';
-import case10 from './cases/preset-intensity.json';
-import case11 from './cases/preset-steps-edges.json';
-import case12 from './cases/preset-steps.json';
-import case13 from './cases/profile-number.json';
-import case14 from './cases/transition-curve.json';
+import case2 from './cases/channel-values-mixing-edges.json';
+import case3 from './cases/channel-values-scenarios.json';
+import case4 from './cases/default-value.json';
+import case5 from './cases/effect-curve-edges.json';
+import case6 from './cases/effect-curve.json';
+import case7 from './cases/hex-color.json';
+import case8 from './cases/migration-edges.json';
+import case9 from './cases/migration.json';
+import case10 from './cases/mix-colors.json';
+import case11 from './cases/pixel-group.json';
+import case12 from './cases/pixels.json';
+import case13 from './cases/preset-intensity-edges.json';
+import case14 from './cases/preset-intensity.json';
+import case15 from './cases/preset-steps-edges.json';
+import case16 from './cases/preset-steps.json';
+import case17 from './cases/profile-number.json';
+import case18 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -35,19 +39,23 @@ import profile15 from './profiles/varytec/easy-move-xs-hp-wash-7x8w-rgbw.json';
 export const caseFiles: { [fileName: string]: any } = {
   'channel-values-edges.json': case0,
   'channel-values-library.json': case1,
-  'channel-values-scenarios.json': case2,
-  'default-value.json': case3,
-  'effect-curve.json': case4,
-  'hex-color.json': case5,
-  'mix-colors.json': case6,
-  'pixel-group.json': case7,
-  'pixels.json': case8,
-  'preset-intensity-edges.json': case9,
-  'preset-intensity.json': case10,
-  'preset-steps-edges.json': case11,
-  'preset-steps.json': case12,
-  'profile-number.json': case13,
-  'transition-curve.json': case14,
+  'channel-values-mixing-edges.json': case2,
+  'channel-values-scenarios.json': case3,
+  'default-value.json': case4,
+  'effect-curve-edges.json': case5,
+  'effect-curve.json': case6,
+  'hex-color.json': case7,
+  'migration-edges.json': case8,
+  'migration.json': case9,
+  'mix-colors.json': case10,
+  'pixel-group.json': case11,
+  'pixels.json': case12,
+  'preset-intensity-edges.json': case13,
+  'preset-intensity.json': case14,
+  'preset-steps-edges.json': case15,
+  'preset-steps.json': case16,
+  'profile-number.json': case17,
+  'transition-curve.json': case18,
 };
 
 export const profiles: { [name: string]: any } = {

@@ -28,10 +28,20 @@ made of it (`expected`).
 | `pixels`                | a fixture matrix                                                                                                               | its pixels, its groups and the order a channel is repeated for them in                      |
 | `pixelGroup`            | a group and pixels                                                                                                             | the pixels it covers, or `error` for a rule which can't be read                             |
 | `channelValues`         | a project and how it is previewed (the timeline of a composition, the selected preset, its steps running, the selected scenes) | the value of every channel of every fixture and pixel at each time                          |
+| `migration`             | a project of an older version                                                                                                  | what both keep of it migrated to the current version and play it with (see below)           |
 
 A project of a `channelValues` case names the profiles of `profiles` like the fixture library does (`"$profile":
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of
 `profiles/test`.
+
+A `migration` case compares the version, the fixtures and pixels of the project and of each preset (in their order,
+with `useGlobalFixtureOrder`), the steps of each preset (times, transition, values and effect amounts), its curves
+(type, amplitude and the channels of each profile) and its other effects, the presets of each scene in their order and
+the tracks of each composition (their names) with the track of each clip, named by its place in the composition: the
+uuid of a new track is a random one, like the uuid the designer gives the first step of an old preset (Rocket Show gives
+it none), so neither is compared. Left out are the parts only the designer shows: the solo switch (`previewPreset`, version 4), the
+folders and the positions in the lists (versions 5 and 6), which Rocket Show doesn't read, and the values an old
+preset keeps besides its steps, which no migration touches.
 
 The files with `generated` in their header are written by `generate.mjs`: most of them from a seeded random source
 (curves, step sequences, fades, whole projects with tracks, clips, steps and effects), the ones ending in `-edges` from

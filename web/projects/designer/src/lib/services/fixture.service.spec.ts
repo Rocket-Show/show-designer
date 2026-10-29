@@ -178,6 +178,22 @@ describe('FixtureService pixels and pixel groups', () => {
     expect(group('No such group')).toEqual([]);
   });
 
+  it('resolves no pixels without a group or without pixels', () => {
+    const allPixels = service.getAllPixelKeys(fixtureProfile);
+
+    expect(resolveService.resolveGroupPixels(undefined, allPixels)).toEqual([]);
+    expect(resolveService.resolveGroupPixels(new FixtureMatrixPixelGroup('all'), undefined)).toEqual([]);
+    expect(resolveService.getPixelsForKeyOrGroup(undefined, allPixels, 'A1')).toEqual([]);
+    expect(resolveService.getPixelsForKeyOrGroup(fixtureProfile.matrix, undefined, 'All')).toEqual([]);
+  });
+
+  it('finds no group in a matrix without groups', () => {
+    const withoutGroups = profile({ pixelKeys: matrix.pixelKeys });
+    withoutGroups.matrix.pixelGroups = undefined;
+
+    expect(resolveService.getPixelsForKeyOrGroup(withoutGroups.matrix, service.getAllPixelKeys(withoutGroups), 'All')).toEqual([]);
+  });
+
   it('rejects unknown rules', () => {
     const unknownRule = new FixtureMatrixPixelGroup({ x: ['every third'] });
 
