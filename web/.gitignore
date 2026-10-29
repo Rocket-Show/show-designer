@@ -19,3 +19,6 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+# mutation testing (see stryker.config.mjs)
+/.stryker-tmp
+/reports
