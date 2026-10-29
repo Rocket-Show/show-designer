@@ -421,7 +421,12 @@ describe('DesignerComponent', () => {
       });
 
       it('downloads the project as a file named after it', () => {
+        const saved = spyOn(TestBed.inject(ProjectService), 'getSavedJson').and.callThrough();
+
         click('designer.navigation.project-export');
+
+        // like it is saved, with the colors of the scenes
+        expect(saved).toHaveBeenCalledWith(project, 2);
 
         expect(exported.download).toBe('Rock.rsd');
         const json = decodeURIComponent(exported.href.replace('data:text/json;charset=UTF-8,', ''));

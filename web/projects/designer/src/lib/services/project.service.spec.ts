@@ -90,6 +90,18 @@ describe('ProjectService saving the colors of the scenes', () => {
     expect(saved.scenes[0].colorAuto).toBe(true);
   });
 
+  it('writes the colors into an exported file as well, indented', () => {
+    const project = new Project();
+    project.presets = [preset('red', 1, 0, 0)];
+    project.scenes = [scene('by-presets', ['red'])];
+    service.project = project;
+
+    const exported = service.getSavedJson(project, 2);
+
+    expect(JSON.parse(exported).scenes[0].displayColor).toBe('#ff0000');
+    expect(exported).toContain('\n  "');
+  });
+
   it('leaves the project itself as it is', () => {
     const project = new Project();
     project.presets = [preset('red', 1, 0, 0)];

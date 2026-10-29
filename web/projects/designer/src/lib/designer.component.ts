@@ -354,7 +354,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   projectExport() {
     this.projectService.writeCompatibilityValues(this.projectService.project);
 
-    const json = JSON.stringify(this.projectService.project, null, 2);
+    // like it is saved, with the colors of the scenes, which Rocket Show shows them in on its Play screen
+    const json = this.projectService.getSavedJson(this.projectService.project, 2);
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=UTF-8,' + encodeURIComponent(json));
     element.setAttribute('download', this.projectService.project.name + '.rsd');

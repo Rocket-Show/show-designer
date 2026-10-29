@@ -39,12 +39,16 @@ export class ProjectService {
   // Rocket Show shows it with on its Play screen: a color decided by the presets of a scene can
   // only be read with the presets and the fixtures, which the Play screen does not load. Only
   // written into what is saved, the project itself stays as it is (and nothing is left to undo).
-  getSavedJson(project: Project): string {
+  // Indented by the passed number of spaces, for a file to be read by people as well.
+  getSavedJson(project: Project, indent?: number): string {
     // taken when it is needed: the colors are read through the presets, which need this service
     const sceneColorSource = this.injector.get(SCENE_COLOR_SOURCE, null);
 
-    return JSON.stringify(project, (key, value) =>
-      value instanceof Scene && sceneColorSource ? { ...value, displayColor: sceneColorSource.getSceneColor(value) } : value
+    return JSON.stringify(
+      project,
+      (key, value) =>
+        value instanceof Scene && sceneColorSource ? { ...value, displayColor: sceneColorSource.getSceneColor(value) } : value,
+      indent
     );
   }
 
