@@ -24,7 +24,7 @@
           <mv-slider
             style="width: 80px"
             [tooltip]="'hide'"
-            [value]="positionX ? positionX : (positionXMax + positionXMin) / 2"
+            [value]="positionX ?? (positionXMax + positionXMin) / 2"
             [min]="positionXMin"
             [max]="positionXMax"
             [step]="1"
@@ -41,7 +41,7 @@
           <mv-slider
             style="width: 80px"
             [tooltip]="'hide'"
-            [value]="positionZ ? positionZ : (positionZMax + positionZMin) / 2"
+            [value]="positionZ ?? (positionZMax + positionZMin) / 2"
             [min]="positionZMin"
             [max]="positionZMax"
             [step]="1"
@@ -58,7 +58,7 @@
           <mv-slider
             style="width: 80px"
             [tooltip]="'hide'"
-            [value]="positionY ? positionY : (positionYMax + positionYMin) / 2"
+            [value]="positionY ?? (positionYMax + positionYMin) / 2"
             [min]="positionYMin"
             [max]="positionYMax"
             [step]="1"
