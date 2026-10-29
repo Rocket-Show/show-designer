@@ -14,6 +14,8 @@ module.exports = function (config) {
     ],
     client: {
       clearContext: false, // leave Jasmine Spec Runner output visible in browser
+      // npm run conformance:record (see conformance/record.mjs) collects what the designer makes of the cases
+      args: process.env.CONFORMANCE_RECORD_URL ? ['conformance-record', process.env.CONFORMANCE_RECORD_URL] : [],
     },
     // the coverage of ng test --code-coverage (karma-coverage, which the Angular CLI uses for it)
     coverageReporter: {
@@ -22,7 +24,7 @@ module.exports = function (config) {
       reporters: [{ type: 'html' }, { type: 'lcovonly' }, { type: 'json-summary' }, { type: 'text-summary' }],
       // the run fails below this coverage of the whole library (raised as the specs cover more of it)
       check: {
-        global: { statements: 35, branches: 31, functions: 28, lines: 35 },
+        global: { statements: 37, branches: 34, functions: 28, lines: 37 },
       },
     },
     reporters: ['progress', 'kjhtml'],

@@ -1,0 +1,4 @@
+# the cases and profiles of the conformance with Rocket Show: written by its scripts, one case per line,
+# and the profiles as the fixture library has them (Rocket Show keeps a copy of both)
+web/projects/designer/conformance/cases/
+web/projects/designer/conformance/profiles/

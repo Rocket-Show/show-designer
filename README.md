@@ -57,11 +57,13 @@ npx ng test designer --watch=false --browsers=ChromeHeadlessCI --code-coverage
 ### Parity with Rocket Show
 
 Rocket Show plays a project with an engine of its own (Java), which has to light the stage exactly like the preview of
-the designer. Where the two could read or work out a project differently (values which are null, missing or not whole,
-default values, numbers and colors of the fixture library, pixel groups), `services/parity.spec.ts` and the cases of
-`PreviewService like Rocket Show plays it` in `services/preview.service.spec.ts` check the same cases as
-`DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A change to how a project is played changes both sides,
-with the same cases.
+the designer. Both run the conformance cases of `web/projects/designer/conformance` (see its README): curves, steps,
+fades, the fixture library and whole projects played on the timeline, as a preset and as scenes, recorded from the
+designer (`npm run conformance:record`) and compared exactly. Where the two could read a project differently (values
+which are null, missing or not whole, default values, numbers and colors of the fixture library, pixel groups),
+`services/parity.spec.ts` and the cases of `PreviewService like Rocket Show plays it` in
+`services/preview.service.spec.ts` check the same cases as `DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A
+change to how a project is played changes both sides, with the same cases.
 
 ## Build & publish as NPM package
 
