@@ -1,13 +1,15 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
+import { Scene } from '../models/scene';
 import { UserService } from './user.service';
 import { ConfigService } from './config.service';
+import { SCENE_COLOR_SOURCE } from './scene-color-source';
 
 @Injectable({
   providedIn: 'root',
@@ -29,11 +31,25 @@ export class ProjectService {
     private activatedRoute: ActivatedRoute,
     private translateService: TranslateService,
     private toastrService: ToastrService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private injector: Injector
   ) {}
 
+  // The project as it is saved. Each scene carries the color it is marked with as well, which
+  // Rocket Show shows it with on its Play screen: a color decided by the presets of a scene can
+  // only be read with the presets and the fixtures, which the Play screen does not load. Only
+  // written into what is saved, the project itself stays as it is (and nothing is left to undo).
+  getSavedJson(project: Project): string {
+    // taken when it is needed: the colors are read through the presets, which need this service
+    const sceneColorSource = this.injector.get(SCENE_COLOR_SOURCE, null);
+
+    return JSON.stringify(project, (key, value) =>
+      value instanceof Scene && sceneColorSource ? { ...value, displayColor: sceneColorSource.getSceneColor(value) } : value
+    );
+  }
+
   private saveApi(project: Project): Observable<object> {
-    return this.http.post('project', JSON.stringify(project), { headers: this.userService.getHeaders() }).pipe(
+    return this.http.post('project', this.getSavedJson(project), { headers: this.userService.getHeaders() }).pipe(
       map((response: any) => {
         if (response) {
           project.id = response.id;

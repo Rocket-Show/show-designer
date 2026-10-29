@@ -61,6 +61,8 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
+import { ColorService } from './services/color.service';
+import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
 
 @NgModule({
   declarations: [
@@ -131,6 +133,10 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
       newestOnTop: true,
     }),
   ],
-  providers: [provideHttpClient(withInterceptorsFromDi())],
+  providers: [
+    provideHttpClient(withInterceptorsFromDi()),
+    // the colors of the scenes, saved with the project (see ProjectService.getSavedJson)
+    { provide: SCENE_COLOR_SOURCE, useExisting: ColorService },
+  ],
 })
 export class DesignerModule {}
