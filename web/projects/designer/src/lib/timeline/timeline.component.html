@@ -79,21 +79,24 @@
           ></mv-slider>
           <i (click)="timelineService.applyZoom(timelineService.zoom + 20)" class="fa fa-search-plus ml-3" aria-hidden="true"></i>
         </div>
+        <!-- the exact start and end of the selected scene -->
+        @if (timelineService.selectedPlaybackRegion) {
         <div class="my-auto mr-3">
           <input
             type="text"
             class="sd-value-input sd-value-input-time"
-            [ngModel]="timelineService.selectedPlaybackRegion?.startMillis"
+            [ngModel]="timelineService.selectedPlaybackRegion.startMillis"
             (ngModelChange)="setRegionStartMillis($event)"
           />
           -
           <input
             type="text"
             class="sd-value-input sd-value-input-time"
-            [ngModel]="timelineService.selectedPlaybackRegion?.endMillis"
+            [ngModel]="timelineService.selectedPlaybackRegion.endMillis"
             (ngModelChange)="setRegionEndMillis($event)"
           />
         </div>
+        }
         <div class="btn-group mr-3" role="group">
           <a
             href="#"
