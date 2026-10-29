@@ -101,6 +101,9 @@ export class CompositionSettingsComponent implements OnInit {
             }
           }
 
+          // listed by name
+          this.existingFiles.sort((file1, file2) => file1.localeCompare(file2));
+
           this.filterExistingFiles();
         })
       )
@@ -173,7 +176,7 @@ export class CompositionSettingsComponent implements OnInit {
         map((result) => {
           if (result) {
             this.http
-              .post('file/delete?name=' + existingFile + '&type=AUDIO', undefined)
+              .post('file/delete?name=' + encodeURIComponent(existingFile) + '&type=AUDIO', undefined)
               .pipe(
                 map((response: Response) => {
                   this.loadFiles();

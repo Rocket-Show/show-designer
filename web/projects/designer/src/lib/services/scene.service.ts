@@ -261,11 +261,8 @@ export class SceneService {
     this.folderService.renumber(this.projectService.project.sceneFolders, this.projectService.project.scenes, scene.folderUuid);
     this.scenesChanged.next();
 
-    if (this.projectService.project.scenes.length > 0) {
-      this.selectScene(0);
-    } else {
-      this.selectedScenes = [];
-    }
+    // the first scene left, or none: also what is saved with the project and the preview forget it
+    this.selectScene(0);
 
     this.sceneDeleted.next();
   }

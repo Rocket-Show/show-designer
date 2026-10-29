@@ -212,8 +212,10 @@ describe('SceneService', () => {
     expect(service.selectedScenes).toEqual([scene('chorus')]);
     expect(deleted).toHaveBeenCalled();
 
+    // the last one: nothing is selected anymore, also in what is saved
     service.removeScene(scene('chorus'));
     expect(service.selectedScenes).toEqual([]);
+    expect(project.selectedSceneUuids).toEqual([]);
 
     // a scene which isn't in the project changes nothing
     service.removeScene(new Scene({ uuid: 'other' }));

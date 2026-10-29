@@ -15,6 +15,9 @@ export class DropzoneComponent {
   @Output() success = new EventEmitter();
   @Output() addedFile = new EventEmitter();
 
+  // all files dropped in have been uploaded (or failed)
+  @Output() queueComplete = new EventEmitter();
+
   private _url: string;
   private _acceptedFiles: string;
   private _maxFiles: number = undefined;

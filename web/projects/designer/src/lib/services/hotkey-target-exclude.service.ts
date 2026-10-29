@@ -23,17 +23,17 @@ export class HotkeyTargetExcludeService {
 
   constructor() {}
 
+  // the fields which handle the keys of the designer themselves: the space bar opens a list,
+  // the backspace deletes a character
+  private static readonly fieldNames = ['INPUT', 'SELECT', 'TEXTAREA'];
+
   exclude(event: any): boolean {
     // don't react on certain targets (e.g. the user is inside an input field)
     if (!event.target) {
       return false;
     }
 
-    if (event.target.nodeName === 'INPUT') {
-      return true;
-    }
-
-    return false;
+    return !!event.target.isContentEditable || HotkeyTargetExcludeService.fieldNames.indexOf(event.target.nodeName) >= 0;
   }
 
   // is the user typing into a field? Those bring their own way of reacting to the
