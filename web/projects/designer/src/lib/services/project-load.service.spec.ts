@@ -415,6 +415,10 @@ describe('ProjectLoadService opening projects', () => {
 
     expect(projectService.getProject).toHaveBeenCalledWith(1, null, undefined);
     expect(projectService.project.id).toBeUndefined();
+    // the server gives it a token of its own once it is saved
+    expect(projectService.project.shareToken).toBeUndefined();
+    // a reload opens a new project from the template again, not the template itself
+    expect(navigate.calls.mostRecent().args[1].queryParams).toEqual({ id: '', token: '' });
   });
 
   it('starts a new project with a preset played by a scene', () => {

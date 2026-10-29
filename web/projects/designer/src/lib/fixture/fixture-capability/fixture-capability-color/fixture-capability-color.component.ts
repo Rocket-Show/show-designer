@@ -179,6 +179,21 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // a color typed in as hex (e.g. "#ff0000" or "#f00") colors the fixtures, once it is one
+  typeColor(text: string) {
+    this.color = text;
+
+    const rgb = text ? this.fixtureService.hexToRgb(text.trim()) : undefined;
+
+    if (!rgb) {
+      return;
+    }
+
+    this.active = true;
+    this.setPickerColor(rgb.red, rgb.green, rgb.blue);
+    this.updateFixtureColor({ rgb: { r: rgb.red, g: rgb.green, b: rgb.blue } });
+  }
+
   changeColor(color: any) {
     if (!this.colorPickerMounted || this.updatingColor) {
       return;
