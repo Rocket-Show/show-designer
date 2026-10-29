@@ -59,6 +59,14 @@
               "sourceMap": false,
               "namedChunks": false,
               "extractLicenses": true
+            },
+            "device": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.device.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": ""
@@ -71,6 +79,10 @@
           "configurations": {
             "production": {
               "buildTarget": "show-designer:build:production"
+            },
+            "device": {
+              "buildTarget": "show-designer:build:device",
+              "proxyConfig": "proxy.device.mjs"
             }
           }
         },
