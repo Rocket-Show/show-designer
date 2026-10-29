@@ -726,8 +726,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
   // ---- the keyboard ---------------------------------------------------------
 
-  // the timeline takes the focus when something in it is clicked, which is what the
-  // delete key goes by
+  // the timeline takes the focus when something in it is clicked, or a scene is put onto
+  // it, which is what the delete key goes by
   private focusTimeline() {
     if (this.frame) {
       this.frame.nativeElement.focus({ preventScroll: true });
@@ -1137,6 +1137,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     this.timelineService.createRegion(track, drop.scene, drop.startMillis, drop.endMillis);
+    this.focusTimeline();
+    this.trackFocused = false;
   }
 
   onSceneDragLeave(event: DragEvent) {
@@ -1209,6 +1211,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
   addRegion() {
     this.timelineService.addRegion();
+    this.focusTimeline();
+    this.trackFocused = false;
   }
 
   removeRegion() {

@@ -108,6 +108,7 @@
             triggers="mouseenter:mouseleave"
             ><i class="fa fa-file-o" aria-hidden="true"></i
           ></a>
+          @if (timelineService.selectedPlaybackRegion) {
           <a
             href="#"
             class="btn btn-secondary m-0 py-1"
@@ -118,6 +119,7 @@
             triggers="mouseenter:mouseleave"
             ><i class="fa fa-trash" aria-hidden="true"></i
           ></a>
+          }
         </div>
         <a
           href="#"
