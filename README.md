@@ -21,6 +21,7 @@ https://github.com/moritzvieli/show-designer-ofl-import
 - Start the designer with `cd web && npm install && ng serve`
 - Access the app in your browser with `localhost:4200`
 - Some functionality requires a server (e.g. loading/saving projects, handling audio files). You can start a rocket show server (see https://github.com/moritzvieli/rocketshow) and point environment.ts's localBackend to `http://localhost:8080`
+- To test against a real Rocket Show device, start the designer with `cd web && ROCKETSHOW_PASSWORD=<admin password> npm run start:device`. The dev server forwards `/api` to `http://rocketshow.local` and logs in with the admin password of the device, because the designer has no login of its own (see `web/proxy.device.mjs`). Set `ROCKETSHOW_DEVICE` for another device, e.g. `ROCKETSHOW_DEVICE=http://192.168.1.64`
 - Prettier and precommit hook according to: https://medium.com/@victormejia/setting-up-prettier-in-an-angular-cli-project-2f50c3b9a537
 
 If the linter fails, you can check and try to automatically fix it with `ng lint --fix`.
