@@ -10,6 +10,7 @@
     "start:device": "ng serve --configuration device",
     "build": "ng build",
     "test": "ng test",
+    "conformance:record": "node projects/designer/conformance/record.mjs",
     "lint": "ng lint",
     "pretty-quick": "pretty-quick --staged",
     "precommit": "npm run pretty-quick && npm run lint",

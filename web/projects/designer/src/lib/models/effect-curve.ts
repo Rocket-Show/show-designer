@@ -1,3 +1,4 @@
+import { cycleSine } from './cycle-sine';
 import { Effect } from './effect';
 import { EffectCurveProfileChannels } from './effect-curve-profile-channel';
 import { FixtureCapability } from './fixture-capability';
@@ -332,7 +333,7 @@ export class EffectCurve extends Effect {
     switch (this.curveType) {
       case 'sine': {
         const warped = this.warpCyclePosition(cyclePosition);
-        value = this.position + (this.amplitude / 2) * Math.sin(2 * Math.PI * warped);
+        value = this.position + (this.amplitude / 2) * cycleSine(warped);
         break;
       }
       case 'square': {
