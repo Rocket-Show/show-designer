@@ -9,16 +9,21 @@ module.exports = function (config) {
       require('karma-jasmine'),
       require('karma-chrome-launcher'),
       require('karma-jasmine-html-reporter'),
-      require('karma-coverage-istanbul-reporter'),
+      require('karma-coverage'),
       require('@angular-devkit/build-angular/plugins/karma'),
     ],
     client: {
       clearContext: false, // leave Jasmine Spec Runner output visible in browser
     },
-    coverageIstanbulReporter: {
+    // the coverage of ng test --code-coverage (karma-coverage, which the Angular CLI uses for it)
+    coverageReporter: {
       dir: require('path').join(__dirname, '../../coverage'),
-      reports: ['html', 'lcovonly'],
-      fixWebpackSourcePaths: true,
+      subdir: 'designer',
+      reporters: [{ type: 'html' }, { type: 'lcovonly' }, { type: 'json-summary' }, { type: 'text-summary' }],
+      // the run fails below this coverage of the whole library (raised as the specs cover more of it)
+      check: {
+        global: { statements: 35, branches: 31, functions: 28, lines: 35 },
+      },
     },
     reporters: ['progress', 'kjhtml'],
     port: 9876,
