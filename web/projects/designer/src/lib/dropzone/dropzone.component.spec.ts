@@ -1,9 +1,12 @@
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { DropzoneDirective, DropzoneModule } from 'ngx-dropzone-wrapper';
 
 import { ConfigService } from '../services/config.service';
+import { UserService } from '../services/user.service';
 import { DropzoneComponent } from './dropzone.component';
 
 // The dropzone uploads the files dropped onto it (e.g. the audio file of a composition) to
@@ -16,6 +19,7 @@ describe('DropzoneComponent', () => {
     TestBed.configureTestingModule({
       declarations: [DropzoneComponent],
       imports: [DropzoneModule, TranslateModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
 
     configService = TestBed.inject(ConfigService);
@@ -48,6 +52,20 @@ describe('DropzoneComponent', () => {
     expect(options.maxFiles).toBe(1);
     expect(options.withCredentials).toBe(true);
     expect(options.parallelUploads).toBe(1);
+  });
+
+  it('uploads with the login of the user, who may change the files of a saved project', () => {
+    spyOn(TestBed.inject(UserService), 'getHeaders').and.returnValue(new HttpHeaders({ Authorization: 'secret' }));
+
+    open({ url: 'file/upload?compositionUuid=song' });
+
+    expect(dropzone().options.headers).toEqual({ Authorization: 'secret' });
+  });
+
+  it('uploads without a login, where nobody is logged in', () => {
+    open({ url: 'file/upload?compositionUuid=song' });
+
+    expect(dropzone().options.headers).toBeFalsy();
   });
 
   it('follows the address it is given later', () => {

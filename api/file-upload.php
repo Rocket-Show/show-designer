@@ -18,6 +18,10 @@ if (!isValidCompositionUuid($_GET['compositionUuid'])) {
 
 $compositionUuid = mysqli_real_escape_string($conn, $_GET['compositionUuid']);
 
+if (!mayChangeCompositionFile($conn, getUserId($conn), $_GET['compositionUuid'], $projectId === 'NULL' ? null : $projectId)) {
+    errorUnauthorized();
+}
+
 // delete an existing file, if available
 $result = mysqli_query($conn, "SELECT id FROM composition_file WHERE composition_uuid = '" . $compositionUuid . "'");
 if ($result->num_rows > 0) {

@@ -21,6 +21,7 @@ import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
+import { UserService } from '../services/user.service';
 import { UuidService } from '../services/uuid.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
 import { TreeDragService } from '../tree/tree-drag.service';
@@ -238,7 +239,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     private colorService: ColorService,
     private treeDragService: TreeDragService,
     private ngZone: NgZone,
-    private layoutService: LayoutService
+    private layoutService: LayoutService,
+    private userService: UserService
   ) {
     this.subscriptions.push(
       this.timelineService.waveSurferReady.subscribe(() => {
@@ -1248,7 +1250,10 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
             } else {
               // the composition uuid and extension is used as the file name
               this.http
-                .post('file/delete?compositionUuid=' + this.timelineService.selectedComposition.uuid, undefined)
+                // the file of a saved project is only deleted for a user who may change it
+                .post('file/delete?compositionUuid=' + this.timelineService.selectedComposition.uuid, undefined, {
+                  headers: this.userService.getHeaders(),
+                })
                 .pipe(
                   map((response: Response) => {
                     this.afterDeleteFile();
