@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ToastrModule } from 'ngx-toastr';
 
 import { CachedFixture } from '../models/cached-fixture';
+import { Composition } from '../models/composition';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
 import { PresetFixture } from '../models/preset-fixture';
@@ -365,5 +366,203 @@ describe('PreviewService chases', () => {
     expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '1'))).toBe(0);
     expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '2'))).toBe(1);
     expect(presetService.getPresetFixtureCount(pixels)).toBe(2);
+  });
+});
+
+// What the preview shows where Rocket Show used to play it differently. These mirror the cases of
+// DesignerDmxTest in Rocket Show ("read and played like the designer previews it"), on the same
+// fixtures: an RGB par with a strobe opened by its default value and a moving head with 16 bit
+// pan and tilt and a color wheel.
+describe('PreviewService like Rocket Show plays it', () => {
+  let fixtureService: FixtureService;
+  let previewService: PreviewService;
+  let projectService: ProjectService;
+
+  function profiles(): any[] {
+    return [
+      {
+        uuid: 'test/rgb-par',
+        name: 'RGB par',
+        categories: ['Color Changer'],
+        availableChannels: {
+          Dimmer: { capability: { type: 'Intensity' } },
+          Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+          Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+          Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+          Strobe: {
+            defaultValue: 5,
+            capabilities: [
+              { dmxRange: [0, 9], type: 'ShutterStrobe', shutterEffect: 'Open' },
+              { dmxRange: [10, 255], type: 'ShutterStrobe', shutterEffect: 'Strobe' },
+            ],
+          },
+        },
+        modes: [{ name: '6-channel', shortName: '6ch', channels: ['Dimmer', 'Red', 'Green', 'Blue', null, 'Strobe'] }],
+      },
+      {
+        uuid: 'test/moving-head',
+        name: 'Moving head',
+        categories: ['Moving Head'],
+        availableChannels: {
+          Pan: {
+            fineChannelAliases: ['Pan fine'],
+            defaultValue: '50%',
+            capability: { type: 'Pan', angleStart: '0deg', angleEnd: '540deg' },
+          },
+          Tilt: {
+            fineChannelAliases: ['Tilt fine'],
+            defaultValue: '12.5%',
+            capability: { type: 'Tilt', angleStart: '0deg', angleEnd: '270deg' },
+          },
+          Dimmer: { capability: { type: 'Intensity' } },
+          'Color Wheel': {
+            capabilities: [
+              { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+              { dmxRange: [10, 19], type: 'WheelSlot', slotNumber: 2 },
+              { dmxRange: [20, 29], type: 'WheelSlot', slotNumber: 3 },
+            ],
+          },
+        },
+        wheels: {
+          'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#ff0000'] }, { type: 'Color', colors: ['#0000ff'] }] },
+        },
+        modes: [{ name: '6-channel', shortName: '6ch', channels: ['Pan', 'Pan fine', 'Tilt', 'Tilt fine', 'Dimmer', 'Color Wheel'] }],
+      },
+    ];
+  }
+
+  function load(fixtureProfiles: any[] = profiles()) {
+    projectService.project = new Project({
+      fixtureProfiles,
+      fixtures: [
+        {
+          uuid: 'par-1',
+          profileUuid: 'test/rgb-par',
+          modeShortName: '6ch',
+          dmxUniverseUuid: 'front',
+          dmxFirstChannel: 0,
+          positioning: 'topFront',
+        },
+        {
+          uuid: 'head',
+          profileUuid: 'test/moving-head',
+          modeShortName: '6ch',
+          dmxUniverseUuid: 'back',
+          dmxFirstChannel: 0,
+          positioning: 'topFront',
+        },
+      ],
+      presetFixtures: [{ fixtureUuid: 'par-1' }, { fixtureUuid: 'head' }],
+    });
+    fixtureService.updateCachedFixtures();
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    fixtureService = TestBed.inject(FixtureService);
+    previewService = TestBed.inject(PreviewService);
+    projectService = TestBed.inject(ProjectService);
+    load();
+  });
+
+  function preset(fixtures: any[], capabilityValues: any[]): Preset {
+    return new Preset({ fixtures, steps: [{ fixtureCapabilityValues: capabilityValues }] });
+  }
+
+  function channelValues(fixtureUuid: string, presets: Preset[]): { [channelName: string]: number } {
+    const cachedFixture: CachedFixture = fixtureService.cachedFixtures.find((fixture) => fixture.fixture.uuid === fixtureUuid);
+    const values = {};
+    const playing = presets.map((playingPreset) => new PresetRegionScene(playingPreset, undefined, undefined));
+
+    for (const value of previewService.getChannelValues(0, playing).get(cachedFixture)) {
+      values[value.channelName] = value.value;
+    }
+
+    return values;
+  }
+
+  const red = { type: 'ColorIntensity', color: 'Red', valuePercentage: 1 };
+  const dimmer = { type: 'Intensity', valuePercentage: 1 };
+
+  it('sends the default values like Rocket Show', () => {
+    // a fraction of a percent of 16 bit, which the designer took 12 % of before
+    const head = channelValues('head', []);
+    expect(head['Pan']).toBe(65535 * 0.5);
+    expect(head['Tilt']).toBe(65535 * 0.125);
+
+    expect(channelValues('par-1', [])['Strobe']).toBe(5);
+  });
+
+  it('starts a channel at a default of 0', () => {
+    const withZero = profiles();
+    withZero[0].availableChannels.Strobe.defaultValue = 0;
+    load(withZero);
+
+    expect(channelValues('par-1', [])['Strobe']).toBe(0);
+  });
+
+  it('fades no scene without fade times', () => {
+    const scene = new Scene({ uuid: 'scene' });
+    const region = new ScenePlaybackRegion({ startMillis: 4900, endMillis: 60000 });
+
+    // 100 ms into its clip, it's at full already (Rocket Show faded it in over two seconds)
+    expect(previewService['getPresetIntensity'](new PresetRegionScene(new Preset(), region, scene), 5000)).toBe(1);
+  });
+
+  it('plays a project with a capability of a newer fixture library', () => {
+    const newer = profiles();
+    newer[0].availableChannels.Laser = { capability: { type: 'SomethingNew', color: 'Ultraviolet' } };
+    load(newer);
+
+    const values = channelValues('par-1', [preset([{ fixtureUuid: 'par-1' }], [dimmer, red])]);
+
+    expect(values['Dimmer']).toBe(255);
+    expect(values['Red']).toBe(255);
+  });
+
+  it('lights a fixture named with an empty pixel key', () => {
+    const values = channelValues('par-1', [preset([{ fixtureUuid: 'par-1', pixelKey: '' }], [dimmer, red])]);
+
+    expect(values['Red']).toBe(255);
+  });
+
+  it('leaves the wheel alone for a color without value', () => {
+    const values = channelValues('head', [
+      preset(
+        [{ fixtureUuid: 'head' }],
+        [
+          dimmer,
+          { type: 'ColorIntensity', color: 'Red' },
+          { type: 'ColorIntensity', color: 'Green', valuePercentage: 0 },
+          { type: 'ColorIntensity', color: 'Blue', valuePercentage: 1 },
+        ]
+      ),
+    ]);
+
+    expect(values['Dimmer']).toBe(255);
+    expect(values['Color Wheel']).toBeUndefined();
+  });
+
+  it('plays a profile with a slot of a wheel it does not have', () => {
+    // e.g. dts/xr4-spot in the fixture library: the channel is named differently than its wheel
+    const renamed = profiles();
+    renamed[1].availableChannels['Color Wheel Simple'] = renamed[1].availableChannels['Color Wheel'];
+    delete renamed[1].availableChannels['Color Wheel'];
+    renamed[1].modes[0].channels[5] = 'Color Wheel Simple';
+    load(renamed);
+
+    expect(channelValues('head', [preset([{ fixtureUuid: 'head' }], [dimmer])])['Dimmer']).toBe(255);
+  });
+
+  it('runs the curves on the tempo of the composition open in the designer', () => {
+    const service = new PreviewService(undefined, undefined, undefined, undefined, { selectedComposition: undefined } as any, undefined);
+    expect(service['getBeatsPerMinute']()).toBe(120);
+
+    service['timelineService'].selectedComposition = new Composition({ beatsPerMinute: 60 });
+    expect(service['getBeatsPerMinute']()).toBe(60);
   });
 });

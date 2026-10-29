@@ -61,16 +61,17 @@ export class Scene {
     if (data.presetUuids) {
       this.presetUuids = data.presetUuids;
     }
-    // a scene of a project written before the scenes had a dimmer plays at full
-    this.dimmer = data.dimmer === undefined ? 1 : data.dimmer;
+    // a scene of a project written before the scenes had a dimmer plays at full. A value
+    // missing or null keeps the default, like in Rocket Show.
+    this.dimmer = data.dimmer ?? 1;
 
-    this.fadeInMillis = data.fadeInMillis;
-    this.fadeOutMillis = data.fadeOutMillis;
+    this.fadeInMillis = data.fadeInMillis ?? 0;
+    this.fadeOutMillis = data.fadeOutMillis ?? 0;
 
     // projects before version 7 only knew linear fades
     this.fadeInCurve = data.fadeInCurve || 'linear';
     this.fadeOutCurve = data.fadeOutCurve || 'linear';
-    this.fadeInPre = data.fadeInPre;
-    this.fadeOutPost = data.fadeOutPost;
+    this.fadeInPre = data.fadeInPre === true;
+    this.fadeOutPost = data.fadeOutPost === true;
   }
 }

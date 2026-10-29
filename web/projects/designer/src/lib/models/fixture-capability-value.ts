@@ -18,9 +18,10 @@ export class FixtureCapabilityValue {
     this.type = FixtureCapabilityType[data.type as string];
     this.profileUuid = data.profileUuid;
 
-    this.valuePercentage = data.valuePercentage;
+    // null is no value, like a missing one (and like in Rocket Show)
+    this.valuePercentage = data.valuePercentage ?? undefined;
     this.color = FixtureCapabilityColor[data.color as string];
     this.wheel = data.wheel;
-    this.slotNumber = data.slotNumber;
+    this.slotNumber = data.slotNumber ?? undefined;
   }
 }

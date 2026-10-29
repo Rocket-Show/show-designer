@@ -629,7 +629,7 @@ export class PreviewService implements OnDestroy {
         // apply the default values
         for (const cachedChannel of cachedFixture.channels) {
           if (cachedChannel.channel) {
-            if (cachedChannel.channel.defaultValue) {
+            if (cachedChannel.defaultValue !== undefined) {
               const fixtureChannelValue = new FixtureChannelValue();
               fixtureChannelValue.channelName = cachedChannel.name;
               fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;

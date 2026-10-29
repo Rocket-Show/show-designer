@@ -81,7 +81,7 @@ export class Project {
     this.stageCeilingHeightCm = data.stageCeilingHeightCm;
     this.stagePillarWidthCm = data.stagePillarWidthCm;
 
-    this.masterDimmerValue = data.masterDimmerValue;
+    this.masterDimmerValue = data.masterDimmerValue ?? 1;
 
     this.selectedPresetUuid = data.selectedPresetUuid;
     this.selectedSceneUuids = data.selectedSceneUuids;

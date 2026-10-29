@@ -12,8 +12,8 @@ export class ScenePlaybackRegion {
     }
 
     this.sceneUuid = data.sceneUuid;
-    this.startMillis = data.startMillis;
-    this.endMillis = data.endMillis;
+    this.startMillis = data.startMillis ?? 0;
+    this.endMillis = data.endMillis ?? 0;
     this.trackUuid = data.trackUuid;
   }
 }

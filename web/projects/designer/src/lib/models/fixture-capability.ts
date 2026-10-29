@@ -130,7 +130,7 @@ export class FixtureCapability {
       this.dmxRange = data.dmxRange;
     }
     this.wheel = data.wheel;
-    this.slotNumber = data.slotNumber;
+    this.slotNumber = data.slotNumber ?? undefined;
     this.comment = data.comment;
     this.soundControlled = data.soundControlled;
     this.shutterEffect = data.shutterEffect;
