@@ -230,6 +230,12 @@ describe('ProjectService with the designer API', () => {
     expect(project.name).toBe('Rock & Roll #1');
   });
 
+  it('opens the template without a name or a token', () => {
+    service.getProject(1, null).subscribe();
+
+    http.expectOne('project?id=1&name=&token=').flush({});
+  });
+
   it('deletes a project, named for an address', () => {
     service.deleteProject(new Project({ id: 5, name: 'Rock & Roll' })).subscribe();
 

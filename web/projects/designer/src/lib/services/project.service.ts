@@ -138,7 +138,8 @@ export class ProjectService {
   }
 
   getProject(id: number, name: string, shareToken?: string): Observable<Project> {
-    const query = 'project?id=' + id + '&name=' + encodeURIComponent(name) + '&token=' + encodeURIComponent(shareToken);
+    // the template is asked for without a name, a project which is not shared without a token
+    const query = 'project?id=' + id + '&name=' + encodeURIComponent(name ?? '') + '&token=' + encodeURIComponent(shareToken ?? '');
 
     return this.http.get(query, { headers: this.userService.getHeaders() }).pipe(
       map((response: any) => {
