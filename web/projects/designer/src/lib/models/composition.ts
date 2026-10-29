@@ -1,3 +1,4 @@
+import { readProjectNumber } from './project-number';
 import { ScenePlaybackRegion } from './scene-playback-region';
 import { Track } from './track';
 
@@ -48,18 +49,18 @@ export class Composition {
     this.syncType = data.syncType || 'audio';
     this.audioFileName = data.audioFileName;
     this.audioFileInLibrary = data.audioFileInLibrary;
-    this.beatsPerMinute = data.beatsPerMinute;
-    this.timeSignatureUpper = data.timeSignatureUpper;
-    this.timeSignatureLower = data.timeSignatureLower;
+    this.beatsPerMinute = readProjectNumber(data.beatsPerMinute);
+    this.timeSignatureUpper = readProjectNumber(data.timeSignatureUpper);
+    this.timeSignatureLower = readProjectNumber(data.timeSignatureLower);
     this.snapToGrid = data.snapToGrid;
 
     // never guess again (and overwrite), when a composition is loaded
     this.tempoGuessed = true;
 
     this.gridType = data.gridType;
-    this.gridOffsetMillis = data.gridOffsetMillis;
-    this.gridResolution = data.gridResolution;
-    this.durationMillis = data.durationMillis;
+    this.gridOffsetMillis = readProjectNumber(data.gridOffsetMillis);
+    this.gridResolution = readProjectNumber(data.gridResolution);
+    this.durationMillis = readProjectNumber(data.durationMillis);
 
     if (data.tracks) {
       for (const track of data.tracks) {

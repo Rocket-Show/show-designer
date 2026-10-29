@@ -49,6 +49,17 @@ describe('FolderService', () => {
     expect(added.sortIndex).toBe(1);
   });
 
+  it('places an item behind the last one, also where a removed one left a gap', () => {
+    const items = [item('a', 'f', 0), item('c', 'f', 4)];
+    const added = item('added');
+    items.push(added);
+
+    service.placeLast([], items, added, 'f');
+
+    expect(added.sortIndex).toBe(5);
+    expect(names(service.getChildren([], items, 'f'))).toEqual(['a', 'c', 'added']);
+  });
+
   it('orders the folders and items of a parent together', () => {
     const folders = [
       new Folder({ uuid: 'f', name: 'F', sortIndex: 1 }),

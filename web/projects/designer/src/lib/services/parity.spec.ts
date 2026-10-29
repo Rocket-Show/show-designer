@@ -1,7 +1,9 @@
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
+import { Composition } from '../models/composition';
 import { EffectCurve } from '../models/effect-curve';
 import { FixtureCapability } from '../models/fixture-capability';
 import { FixtureChannel } from '../models/fixture-channel';
+import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureMatrix } from '../models/fixture-matrix';
 import { FixtureMatrixPixelGroup } from '../models/fixture-matrix-pixel-group';
 import { Preset } from '../models/preset';
@@ -203,5 +205,15 @@ describe('Parity with Rocket Show', () => {
     // only the digits 0 to 9 are numbers
     expect(FixturePixelGroupResolveService.compareKeys('2', '10')).toBeLessThan(0);
     expect(FixturePixelGroupResolveService.compareKeys('٢', '10')).toBeGreaterThan(0);
+  });
+
+  // earlier designers saved a few of the values typed in as text
+  it('reads a number saved as text as the number it is', () => {
+    const values = ['200', ' 12 ', '1e2', ''].map((text) => new FixtureChannelValue({ channelName: 'Dimmer', value: text }).value);
+    expect(values).toEqual([200, 12, 100, undefined]);
+    expect(new FixtureChannelValue({ value: 127.5 }).value).toBe(127.5);
+
+    const composition = new Composition({ beatsPerMinute: '128', gridOffsetMillis: '250', timeSignatureUpper: '3' });
+    expect([composition.beatsPerMinute, composition.gridOffsetMillis, composition.timeSignatureUpper]).toEqual([128, 250, 3]);
   });
 });
