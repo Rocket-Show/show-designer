@@ -246,7 +246,7 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
       }
 
       // Update the fixture properties
-      fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue);
+      fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue, timeMillis);
 
       // Select the fixture, if required
       if (this.fixtureService.settingsSelection) {

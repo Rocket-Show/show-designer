@@ -6,6 +6,7 @@ import { Color } from '../../models/color';
 import { Positioning } from '../../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
+import { getShutterOpening, ShutterSettings } from '../../models/shutter';
 import { FixtureService } from '../../services/fixture.service';
 import { mixesSubtractively } from '../../models/subtractive-color';
 
@@ -268,7 +269,8 @@ export abstract class Fixture3d {
   }
 
   // Apply the properties of the base fixture to the preview
-  updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number) {
+  // the time (of the preview) lets the shutter flash while it strobes
+  updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number, timeMillis = 0) {
     // Apply default settings
     if (this.fixtureHasDimmer) {
       this.dimmer = this.dimmerDefaultBrightness * masterDimmerValue;
@@ -295,11 +297,22 @@ export abstract class Fixture3d {
     const emitters: [number[], number][] = [];
     const filters: [number, number][] = [];
 
+    // the shutter, how fast it strobes and how long a flash takes (see shutter)
+    const shutter: ShutterSettings = {};
+
     for (const channelValue of channelValues) {
       const channel = this.fixtureService.getChannelByName(this.fixture, channelValue.channelName);
       const capability = this.getCapabilityInValue(channel, channelValue.value);
 
       if (capability) {
+        // another function sharing the channel of the dimmer (e.g. a strobe) lights the fixture, like on the stage
+        if (
+          capability.capability.type !== FixtureCapabilityType.Intensity &&
+          channel.capabilities.some((channelCapability) => channelCapability.capability.type === FixtureCapabilityType.Intensity)
+        ) {
+          this.dimmer = this.fixtureService.getDimmerBrightnessOfValue(channel, channelValue.value) * masterDimmerValue;
+        }
+
         switch (capability.capability.type) {
           case FixtureCapabilityType.Intensity: {
             // as bright as the capability lights at this value (also from bright to off)
@@ -343,6 +356,15 @@ export abstract class Fixture3d {
             presetColor = this.fixtureService.getColorPresetColor(capability.capability) || presetColor;
             break;
           }
+          case FixtureCapabilityType.ShutterStrobe:
+            shutter.shutter = { channel, capability, value: channelValue.value };
+            break;
+          case FixtureCapabilityType.StrobeSpeed:
+            shutter.speed = { channel, capability, value: channelValue.value };
+            break;
+          case FixtureCapabilityType.StrobeDuration:
+            shutter.duration = { channel, capability, value: channelValue.value };
+            break;
         }
       }
     }
@@ -371,6 +393,9 @@ export abstract class Fixture3d {
       this.colorGreen = Math.round(presetColor.green);
       this.colorBlue = Math.round(presetColor.blue);
     }
+
+    // the shutter lets through all of the light, none of it, or flashes
+    this.dimmer *= getShutterOpening(shutter, timeMillis);
 
     // Apply the colors and intensities
     // Apply the dimmer value

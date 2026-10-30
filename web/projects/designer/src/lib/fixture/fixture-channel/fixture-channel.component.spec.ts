@@ -122,8 +122,12 @@ describe('FixtureChannelComponent', () => {
     expect(message()).toBeUndefined();
   });
 
-  it('says that what the channels are set to only plays on their model of fixture', async () => {
+  it('says that what the channels are set to only plays on their model of fixture, while there are several models', async () => {
+    // the fixtures of a single model
     await render();
+    expect(element.querySelector('.model-specific-hint')).toBeNull();
+
+    await light('par', 'head');
     expect(element.querySelector('.model-specific-hint .card-body').textContent.trim()).toBe('designer.fixture.model-specific-hint');
 
     await light();

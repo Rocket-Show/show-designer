@@ -68,12 +68,12 @@ export class ColorChanger3d extends Fixture3d {
     super.updatePosition(this.objectGroup);
   }
 
-  override updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number): void {
+  override updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number, timeMillis = 0): void {
     if (!this.isLoaded) {
       return;
     }
 
-    super.updatePreview(channelValues, masterDimmerValue);
+    super.updatePreview(channelValues, masterDimmerValue, timeMillis);
 
     // Update the material
     if (this.lastSelected !== this.isSelected) {

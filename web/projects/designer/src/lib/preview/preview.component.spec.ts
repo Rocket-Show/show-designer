@@ -266,7 +266,7 @@ describe('PreviewComponent', () => {
     expect(previewService.stageAndPositionsDirty).toBe(false);
   });
 
-  it('shows the fixtures in the light of what is playing, dimmed by the master dimmer', () => {
+  it('shows the fixtures in the light of what is playing, dimmed by the master dimmer, at the time it plays', () => {
     project.masterDimmerValue = 0.5;
     open();
     const par = fixture3dOf('par')[0];
@@ -281,8 +281,8 @@ describe('PreviewComponent', () => {
     frame(1000);
 
     expect(previewService.getChannelValues).toHaveBeenCalledWith(1000, jasmine.any(Array));
-    expect(par.updatePreview).toHaveBeenCalledWith([value], 0.5);
-    expect(head.updatePreview).toHaveBeenCalledWith([], 0.5);
+    expect(par.updatePreview).toHaveBeenCalledWith([value], 0.5, 1000);
+    expect(head.updatePreview).toHaveBeenCalledWith([], 0.5, 1000);
   });
 
   it('plays the time of the timeline while it plays, and of the clock otherwise', () => {

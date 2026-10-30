@@ -5,8 +5,9 @@
     anymore afterwards. -->
     @if (presetService.selectedPreset) {
     <div class="row m-0 pl-3" [class.h-100]="isChrome()">
-      <!-- a value set on a channel only plays on the model of fixture of the channel -->
-      @if (channelCapabilities.size > 0) {
+      <!-- a value set on a channel only plays on the model of fixture of the channel, which only matters while the
+           preset lights fixtures of several models -->
+      @if (channelCapabilities.size > 0 && profiles.length > 1) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <div class="card border-secondary h-100 model-specific-hint">
           <div class="card-header">

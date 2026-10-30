@@ -66,6 +66,19 @@ function rgbFixture(channels: string[]): CachedFixture {
               { dmxRange: [128, 255], type: 'ColorPreset', comment: 'Red/Blue', colors: ['#ff0000', '#0000ff'] },
             ],
           },
+          'Dimmer/Strobe': {
+            capabilities: [
+              { dmxRange: [0, 127], type: 'Intensity' },
+              { dmxRange: [128, 255], type: 'ShutterStrobe', shutterEffect: 'Strobe', speed: '1Hz' },
+            ],
+          },
+          Shutter: {
+            capabilities: [
+              { dmxRange: [0, 9], type: 'ShutterStrobe', shutterEffect: 'Closed' },
+              { dmxRange: [10, 19], type: 'ShutterStrobe', shutterEffect: 'Open' },
+              { dmxRange: [20, 255], type: 'ShutterStrobe', shutterEffect: 'Strobe', speedStart: '1Hz', speedEnd: '20Hz' },
+            ],
+          },
         },
         modes: [{ name: 'mode', shortName: 'mode', channels }],
       },
@@ -120,6 +133,31 @@ describe('Fixture3d bulb', () => {
 
     fixture3d.updatePreview(values({ Red: 0, Green: 0, Blue: 0 }), 1);
 
+    expect(fixture3d.glow.getHex()).toBe(0x000000);
+  });
+
+  it('lets the light through an open shutter, none through a closed one and flashes through a strobing one', () => {
+    const fixture3d = bulb(['Red', 'Shutter']);
+
+    fixture3d.updatePreview(values({ Red: 255, Shutter: 5 }), 1, 0);
+    expect(fixture3d.glow.getHex()).toBe(0x000000);
+
+    fixture3d.updatePreview(values({ Red: 255, Shutter: 15 }), 1, 0);
+    expect(fixture3d.glow.r).toBeCloseTo(1, 5);
+
+    // once a second, lit for the first part of it
+    fixture3d.updatePreview(values({ Red: 255, Shutter: 20 }), 1, 100);
+    expect(fixture3d.glow.r).toBeCloseTo(1, 5);
+    fixture3d.updatePreview(values({ Red: 255, Shutter: 20 }), 1, 600);
+    expect(fixture3d.glow.getHex()).toBe(0x000000);
+  });
+
+  it('flashes at full through a strobe sharing the channel of the dimmer', () => {
+    const fixture3d = bulb(['Dimmer/Strobe', 'Red']);
+
+    fixture3d.updatePreview(values({ 'Dimmer/Strobe': 200, Red: 255 }), 1, 100);
+    expect(fixture3d.glow.r).toBeCloseTo(1, 5);
+    fixture3d.updatePreview(values({ 'Dimmer/Strobe': 200, Red: 255 }), 1, 600);
     expect(fixture3d.glow.getHex()).toBe(0x000000);
   });
 
