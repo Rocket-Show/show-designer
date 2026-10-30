@@ -369,9 +369,7 @@
       "pan-tilt-shape-line": "Linie",
       "pan-tilt-shape-wave": "Welle",
       "pan-tilt-size": "Grösse",
-      "pan-tilt-beats": "Beats",
-      "pan-tilt-chase-hint": "Wie viele ganze Bewegungen über alle Köpfe verteilt werden: 0 bewegt sie gemeinsam, 1 lässt eine Welle durch sie laufen.",
-      "pan-tilt-run-hint": "Wie oft die Bewegung läuft, 0 solange das Preset spielt."
+      "pan-tilt-applies": "Bewegt Pan und Tilt der Moving Heads des Presets um die Position, auf die es sie richtet, gleich bei jedem Modell."
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

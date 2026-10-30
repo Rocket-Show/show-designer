@@ -26,18 +26,37 @@ import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect-curve.component';
+import { EffectPanTilt } from '../../models/effect-pan-tilt';
 
 // a canvas context that only counts what the grid draws on it: every mark of the chase
 // is a filled circle
 class CountingContext {
   public markCount = 0;
 
+  // the dashed lines of the grid behind the curve
+  public gridLines = 0;
+  private dashed = false;
+
   clearRect() {}
   beginPath() {}
   moveTo() {}
   lineTo() {}
-  stroke() {}
   fill() {}
+  save() {}
+
+  restore() {
+    this.dashed = false;
+  }
+
+  setLineDash(dash: number[]) {
+    this.dashed = dash.length > 0;
+  }
+
+  stroke() {
+    if (this.dashed) {
+      this.gridLines++;
+    }
+  }
 
   arc() {
     this.markCount++;
@@ -92,6 +111,48 @@ function chasingCurve(): EffectCurve {
 }
 
 describe('EffectCurveComponent grid', () => {
+  it('should draw the middle of the curve and the borders of its cycles behind it', () => {
+    // a period of 2.5 s, shown twice: the middle and the border between the two cycles
+    const { component, context } = gridComponent(new EffectCurve(), 1);
+
+    component.redraw();
+
+    expect(context.gridLines).toBe(2);
+
+    // a short period running for seconds, hundreds of cycles on the grid: the middle alone
+    const short = new EffectCurve();
+    short.lengthMillis = 20;
+    short.runMode = 'duration';
+    short.runDurationMillis = 5000;
+    const shortGrid = gridComponent(short, 1);
+    shortGrid.component.redraw();
+    expect(shortGrid.context.gridLines).toBe(1);
+  });
+
+  it('should draw a movement of the moving heads on the middle of both axes, each step of its chase marked', () => {
+    const movement = new EffectPanTilt({ uuid: 'move', shape: 'figure8', phasingMode: 'spread', phasingCycles: 1 });
+    const { component, context } = gridComponent(movement, 4);
+
+    component.redraw();
+
+    expect(context.gridLines).toBe(2);
+    expect(context.markCount).toBe(4);
+
+    // moving all heads together: one mark
+    movement.phasingCycles = 0;
+    context.markCount = 0;
+    component.redraw();
+    expect(context.markCount).toBe(1);
+
+    // a movement which has run its cycle, leaving the heads to the preset
+    movement.runMode = 'cycles';
+    movement.endMode = 'base';
+    (component as any).animationService.timeMillis = 2600;
+    context.markCount = 0;
+    component.redraw();
+    expect(context.markCount).toBe(0);
+  });
+
   it('should mark each fixture of a chase', () => {
     const { component, context } = gridComponent(chasingCurve(), 4);
 
@@ -346,6 +407,35 @@ describe('EffectCurveComponent', () => {
 
   const intensity = 'designer.fixtureCapabilityType.Intensity';
   const red = 'designer.fixtureCapabilityType.ColorIntensity, designer.fixtureCapabilityColor.Red';
+
+  it('edits a movement of the moving heads like a curve, with its shape and its size', async () => {
+    const movement = new EffectPanTilt({ uuid: 'move' });
+    curve = movement;
+    await render();
+
+    // the shape in place of the curve, nothing to pick to drive
+    const shape: HTMLSelectElement = element.querySelector('select[name="shape"]');
+    expect(shape.value).toBe('circle');
+    expect(element.querySelectorAll('.tab-pane').length).toBe(0);
+    expect(element.querySelector('.applying-to').textContent.trim()).toBe('designer.effect.pan-tilt-applies');
+
+    await select(shape, 'wave');
+    expect(movement.shape).toBe('wave');
+
+    // the period, the size on the pan and on the tilt, the phase and the chase
+    const [, sizePan, sizeTilt] = inputs();
+    type(sizePan, '120');
+    type(sizeTilt, '45');
+    expect(movement.sizePanDegrees).toBe(120);
+    expect(movement.sizeTiltDegrees).toBe(45);
+    expect(component.getSize('Pan')).toBe(120);
+
+    type(sizePan, '-5');
+    type(sizeTilt, 'wide');
+    expect(movement.sizePanDegrees).toBe(120);
+    expect(movement.sizeTiltDegrees).toBe(45);
+    expect(previewLive).toHaveBeenCalled();
+  });
 
   it('offers the capabilities of the fixtures of the preset', async () => {
     await render();

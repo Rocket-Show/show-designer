@@ -368,9 +368,7 @@
       "pan-tilt-shape-line": "Ligne",
       "pan-tilt-shape-wave": "Vague",
       "pan-tilt-size": "Taille",
-      "pan-tilt-beats": "temps",
-      "pan-tilt-chase-hint": "Combien de mouvements complets sont répartis sur toutes les têtes : 0 les déplace ensemble, 1 fait passer une vague.",
-      "pan-tilt-run-hint": "Combien de fois le mouvement est joué, 0 tant que le preset joue."
+      "pan-tilt-applies": "Déplace le pan et le tilt des lyres du preset autour de l’endroit où il les oriente, de la même façon sur chaque modèle."
     },
     "composition": {
       "new": "Créer une nouvelle composition..."

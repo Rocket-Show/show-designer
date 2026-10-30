@@ -16,7 +16,6 @@ import { ColorPickerComponent } from './color-picker/color-picker.component';
 import { DesignerComponent } from './designer.component';
 import { EffectCurveAdvancedComponent } from './effect/effect-curve/effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect/effect-curve/effect-curve.component';
-import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt.component';
 import { EffectComponent } from './effect/effect.component';
 import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
@@ -74,7 +73,6 @@ import { keepSliderValues } from './slider-value';
     PreviewComponent,
     EffectCurveComponent,
     EffectCurveAdvancedComponent,
-    EffectPanTiltComponent,
     SceneComponent,
     TimelineComponent,
     FixtureCapabilityColorComponent,

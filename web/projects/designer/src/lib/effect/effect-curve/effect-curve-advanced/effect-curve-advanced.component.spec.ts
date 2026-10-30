@@ -11,6 +11,7 @@ import { ToastrModule } from 'ngx-toastr';
 
 import { EffectCurve } from '../../../models/effect-curve';
 import { LivePreviewService } from '../../../services/live-preview.service';
+import { EffectPanTilt } from '../../../models/effect-pan-tilt';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced.component';
 
 // The settings of a curve which do not fit next to its grid: how long it runs, the part of
@@ -66,6 +67,16 @@ describe('EffectCurveAdvancedComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
   }
+
+  it('leaves out the part of the period for a movement of the moving heads, which has none', () => {
+    expect(element.textContent).toContain('designer.effect.curve-duty');
+
+    component.curve = new EffectPanTilt({ uuid: 'move' });
+    fixture.detectChanges();
+
+    expect(element.textContent).not.toContain('designer.effect.curve-duty');
+    expect(element.textContent).toContain('designer.effect.curve-chase-group');
+  });
 
   it('runs forever, without asking what is left behind', () => {
     // the duty cycle and the chase group

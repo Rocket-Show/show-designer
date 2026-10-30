@@ -8,6 +8,7 @@ import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureService } from '../../services/fixture.service';
 import { PresetService } from '../../services/preset.service';
 import { EffectCurve } from './../../models/effect-curve';
+import { EffectPanTilt } from '../../models/effect-pan-tilt';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
@@ -45,6 +46,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   private ctx: any;
   private maxWidth: number;
   private maxHeight: number;
+
+  // how far a movement of the moving heads reaches, in degrees (more can be typed in)
+  public sizeMin = 0;
+  public sizeMax = 360;
+
+  // the shapes a movement of the moving heads moves in
+  public readonly shapes = ['circle', 'figure8', 'line', 'wave'];
 
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
@@ -201,6 +209,42 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  // A movement of the moving heads runs on the timing of a curve and is edited the same way, with its shape and its
+  // size in place of the curve and its amplitude (see EffectPanTilt)
+  get isMovement(): boolean {
+    return this.curve instanceof EffectPanTilt;
+  }
+
+  get movement(): EffectPanTilt {
+    return this.curve as EffectPanTilt;
+  }
+
+  setShape(shape: string) {
+    this.movement.shape = shape;
+    this.livePreviewService.previewLive();
+  }
+
+  // the size of the movement on the pan or the tilt, in degrees
+  getSize(axis: string): number {
+    return axis === 'Pan' ? this.movement.sizePanDegrees : this.movement.sizeTiltDegrees;
+  }
+
+  setSize(axis: string, value: any) {
+    const degrees = Number(value);
+
+    if (value === '' || value === null || isNaN(degrees) || degrees < 0) {
+      return;
+    }
+
+    if (axis === 'Pan') {
+      this.movement.sizePanDegrees = degrees;
+    } else {
+      this.movement.sizeTiltDegrees = degrees;
+    }
+
+    this.livePreviewService.previewLive();
+  }
+
   // the tempo the grid draws a curve synced to the beat at. a preset can be edited without
   // a composition being open, which leaves the curve on its default tempo.
   public get beatsPerMinute(): number {
@@ -262,6 +306,109 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return lengthMillis * Math.max(Math.round(4 - lengthMillis / 1000), 1);
   }
 
+  // a dashed line of the grid behind the curve or the movement
+  private drawGridLine(x1: number, y1: number, x2: number, y2: number) {
+    this.ctx.beginPath();
+    this.ctx.moveTo(x1, y1);
+    this.ctx.lineTo(x2, y2);
+    this.ctx.stroke();
+  }
+
+  private startGrid() {
+    this.ctx.save();
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    this.ctx.setLineDash([4, 4]);
+  }
+
+  // the grid of a curve: its middle, and the borders of its cycles
+  private drawCurveGrid(durationMillis: number, maxHeight: number, width: number) {
+    this.startGrid();
+
+    const middle = Math.round(maxHeight * 0.5 + width) + 0.5;
+    this.drawGridLine(0, middle, this.maxWidth, middle);
+
+    const lengthMillis = this.curve.getLengthMillis(this.beatsPerMinute);
+    const phaseMillis = this.curve.getPhaseMillis(this.beatsPerMinute);
+    const cycles = durationMillis / lengthMillis;
+
+    // not a wall of lines for a period far shorter than the grid
+    if (cycles <= 16) {
+      const firstBorder = (((phaseMillis % lengthMillis) + lengthMillis) % lengthMillis) - lengthMillis;
+
+      for (let millis = firstBorder; millis <= durationMillis; millis += lengthMillis) {
+        const x = (this.maxWidth * millis) / durationMillis;
+
+        // the borders of the grid itself are no borders of a cycle
+        if (x > 0 && x < this.maxWidth) {
+          this.drawGridLine(Math.round(x) + 0.5, 0, Math.round(x) + 0.5, this.maxHeight);
+        }
+      }
+    }
+
+    this.ctx.restore();
+  }
+
+  // the movement of the moving heads: its shape, the middle of both axes behind it and where the heads are on it now
+  private drawMovement() {
+    const movement = this.movement;
+    const margin = 8;
+    const centerX = this.maxWidth / 2;
+    const centerY = this.maxHeight / 2;
+
+    this.startGrid();
+    this.drawGridLine(Math.round(centerX) + 0.5, 0, Math.round(centerX) + 0.5, this.maxHeight);
+    this.drawGridLine(0, Math.round(centerY) + 0.5, this.maxWidth, Math.round(centerY) + 0.5);
+    this.ctx.restore();
+
+    // degrees take the same room either way: the larger size of the two fills the grid
+    const scale = Math.min(
+      (this.maxWidth - 2 * margin) / Math.max(Math.abs(movement.sizePanDegrees), 1),
+      (this.maxHeight - 2 * margin) / Math.max(Math.abs(movement.sizeTiltDegrees), 1)
+    );
+    const point = (offset: { pan: number; tilt: number }) => [centerX + offset.pan * scale, centerY - offset.tilt * scale];
+
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+
+    for (let i = 0; i <= 120; i++) {
+      const shape = movement.getShapePosition((i / 120) % 1);
+      const [x, y] = point({ pan: (movement.sizePanDegrees / 2) * shape.pan, tilt: (movement.sizeTiltDegrees / 2) * shape.tilt });
+
+      if (i === 0) {
+        this.ctx.moveTo(x, y);
+      } else {
+        this.ctx.lineTo(x, y);
+      }
+    }
+
+    this.ctx.stroke();
+
+    // where the heads are now, each step of the chase on its own, the first one bigger
+    const phasingCount = this.getPhasingCount();
+    const loopMillis = movement.getRunLoopMillis(phasingCount, this.beatsPerMinute);
+    const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
+    const chased = movement.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) !== 0;
+    const stepCount = chased ? movement.getPhasingStepCount(phasingCount) : 1;
+    const groupSize = Math.max(Math.round(movement.phasingGroupSize), 1);
+
+    for (let step = stepCount - 1; step >= 0; step--) {
+      const offset = movement.getOffsetAtMillis(timeMillis, step * groupSize, phasingCount, this.beatsPerMinute);
+
+      if (offset) {
+        const [x, y] = point(offset);
+
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, step === 0 ? 5 : 3, 0, 2 * Math.PI, false);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fill();
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = '#000';
+        this.ctx.stroke();
+      }
+    }
+  }
+
   redraw() {
     if (!this.ctx) {
       return;
@@ -271,13 +418,20 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.ctx.fillStyle = '#fff';
     this.ctx.strokeStyle = '#fff';
 
+    if (this.isMovement) {
+      this.drawMovement();
+      return;
+    }
+
     // the width of the lines
     const width = 3;
 
-    this.ctx.lineWidth = width;
-
     const durationMillis = this.getGridDurationMillis();
     const maxHeight = this.maxHeight - width * 2;
+
+    this.drawCurveGrid(durationMillis, maxHeight, width);
+
+    this.ctx.lineWidth = width;
 
     // sample the curve once per pixel of the grid. a finer resolution only produces line
     // segments the canvas cannot resolve anyway.

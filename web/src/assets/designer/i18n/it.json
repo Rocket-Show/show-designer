@@ -368,9 +368,7 @@
       "pan-tilt-shape-line": "Linea",
       "pan-tilt-shape-wave": "Onda",
       "pan-tilt-size": "Ampiezza",
-      "pan-tilt-beats": "battiti",
-      "pan-tilt-chase-hint": "Quanti movimenti completi sono distribuiti su tutte le teste: 0 le muove insieme, 1 fa passare un’onda.",
-      "pan-tilt-run-hint": "Quante volte viene eseguito il movimento, 0 finché il preset è attivo."
+      "pan-tilt-applies": "Muove il pan e il tilt delle teste mobili del preset attorno a dove le punta, allo stesso modo su ogni modello."
     },
     "composition": {
       "new": "Crea nuova composizione..."

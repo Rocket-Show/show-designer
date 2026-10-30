@@ -62,7 +62,8 @@
 
   <hr />
 
-  <!-- the part of the period the curve is on -->
+  <!-- the part of the period the curve is on (a movement of the moving heads has no such part) -->
+  @if (!isMovement) {
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-duty' | translate }}</label>
     <div class="col-lg-8 d-flex align-items-center">
@@ -89,6 +90,7 @@
   </div>
 
   <hr />
+  }
 
   <!-- how many fixtures the chase moves at a time -->
   <div class="form-group row">

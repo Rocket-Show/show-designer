@@ -44,15 +44,10 @@
               </div>
             </div>
           </button>
-          @if (item.type == 'curve') {
+          <!-- a curve, or a movement of the moving heads, which is edited the same way -->
           <div style="min-width: 670px">
             <lib-app-effect-curve [curve]="item" [isSelected]="item == effectService.selectedEffect"></lib-app-effect-curve>
           </div>
-          } @if (item.type == 'pan-tilt') {
-          <div style="min-width: 500px">
-            <lib-app-effect-pan-tilt [effect]="item"></lib-app-effect-pan-tilt>
-          </div>
-          }
         </accordion-group>
         }
       </accordion>

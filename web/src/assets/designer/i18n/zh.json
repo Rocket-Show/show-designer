@@ -368,9 +368,7 @@
       "pan-tilt-shape-line": "直线",
       "pan-tilt-shape-wave": "波浪",
       "pan-tilt-size": "幅度",
-      "pan-tilt-beats": "拍",
-      "pan-tilt-chase-hint": "在所有灯头之间分布多少个完整动作：0 让它们一起移动，1 让一道波浪穿过它们。",
-      "pan-tilt-run-hint": "动作运行多少次，0 表示只要预设在播放就一直运行。"
+      "pan-tilt-applies": "围绕预设所指的位置移动其摇头灯的水平（Pan）和俯仰（Tilt），在每个型号上都一样。"
     },
     "composition": {
       "new": "创建新合成..."
