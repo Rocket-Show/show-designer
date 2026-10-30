@@ -1489,22 +1489,6 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   }
 
   // -------------------------------------------------------------------------
-  // Pan/tilt grid
-  // -------------------------------------------------------------------------
-
-  .pan-tilt-grid path {
-    fill: none;
-    stroke: $sd-text-muted;
-    stroke-width: 10px;
-  }
-
-  .pan-tilt-grid circle {
-    fill: $sd-primary;
-    stroke: $sd-surface-1;
-    stroke-width: 3px;
-  }
-
-  // -------------------------------------------------------------------------
   // Timeline
   // -------------------------------------------------------------------------
 
