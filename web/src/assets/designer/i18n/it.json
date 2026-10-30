@@ -367,8 +367,7 @@
       "pan-tilt-shape-figure8": "Otto",
       "pan-tilt-shape-line": "Linea",
       "pan-tilt-shape-wave": "Onda",
-      "pan-tilt-size": "Ampiezza",
-      "pan-tilt-applies": "Muove il pan e il tilt delle teste mobili del preset attorno a dove le punta, allo stesso modo su ogni modello."
+      "pan-tilt-size": "Ampiezza"
     },
     "composition": {
       "new": "Crea nuova composizione..."

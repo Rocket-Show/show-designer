@@ -279,10 +279,8 @@
   </div>
 </div>
 
-@if (isMovement) {
-<!-- a movement always moves the pan and the tilt -->
-<div class="applying-to text-muted">{{ 'designer.effect.pan-tilt-applies' | translate }}</div>
-} @else {
+<!-- a movement always moves the pan and the tilt: nothing to pick for it to drive -->
+@if (!isMovement) {
 <!-- Menu for the capabilities and channels-->
 <div class="col col-auto p-0 effect-tab-rail">
   <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">

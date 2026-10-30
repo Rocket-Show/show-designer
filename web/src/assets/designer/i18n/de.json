@@ -368,8 +368,7 @@
       "pan-tilt-shape-figure8": "Acht",
       "pan-tilt-shape-line": "Linie",
       "pan-tilt-shape-wave": "Welle",
-      "pan-tilt-size": "Grösse",
-      "pan-tilt-applies": "Bewegt Pan und Tilt der Moving Heads des Presets um die Position, auf die es sie richtet, gleich bei jedem Modell."
+      "pan-tilt-size": "Grösse"
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

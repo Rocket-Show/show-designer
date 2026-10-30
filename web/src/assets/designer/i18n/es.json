@@ -367,8 +367,7 @@
       "pan-tilt-shape-figure8": "Ocho",
       "pan-tilt-shape-line": "Línea",
       "pan-tilt-shape-wave": "Ola",
-      "pan-tilt-size": "Tamaño",
-      "pan-tilt-applies": "Mueve el pan y el tilt de las cabezas móviles del preset alrededor de donde las apunta, igual en cada modelo."
+      "pan-tilt-size": "Tamaño"
     },
     "composition": {
       "new": "Crear nueva composición..."

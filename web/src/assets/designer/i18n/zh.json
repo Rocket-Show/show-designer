@@ -367,8 +367,7 @@
       "pan-tilt-shape-figure8": "8 字形",
       "pan-tilt-shape-line": "直线",
       "pan-tilt-shape-wave": "波浪",
-      "pan-tilt-size": "幅度",
-      "pan-tilt-applies": "围绕预设所指的位置移动其摇头灯的水平（Pan）和俯仰（Tilt），在每个型号上都一样。"
+      "pan-tilt-size": "幅度"
     },
     "composition": {
       "new": "创建新合成..."

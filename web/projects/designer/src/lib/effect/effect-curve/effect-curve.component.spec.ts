@@ -417,7 +417,7 @@ describe('EffectCurveComponent', () => {
     const shape: HTMLSelectElement = element.querySelector('select[name="shape"]');
     expect(shape.value).toBe('circle');
     expect(element.querySelectorAll('.tab-pane').length).toBe(0);
-    expect(element.querySelector('.applying-to').textContent.trim()).toBe('designer.effect.pan-tilt-applies');
+    expect(element.querySelector('.applying-to')).toBeNull();
 
     await select(shape, 'wave');
     expect(movement.shape).toBe('wave');

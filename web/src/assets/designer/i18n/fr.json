@@ -367,8 +367,7 @@
       "pan-tilt-shape-figure8": "Huit",
       "pan-tilt-shape-line": "Ligne",
       "pan-tilt-shape-wave": "Vague",
-      "pan-tilt-size": "Taille",
-      "pan-tilt-applies": "Déplace le pan et le tilt des lyres du preset autour de l’endroit où il les oriente, de la même façon sur chaque modèle."
+      "pan-tilt-size": "Taille"
     },
     "composition": {
       "new": "Créer une nouvelle composition..."
