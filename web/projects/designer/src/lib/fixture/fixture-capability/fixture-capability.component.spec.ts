@@ -104,7 +104,10 @@ describe('FixtureCapabilityComponent', () => {
         twoWheels,
         strobeSpeed,
         fan,
-        ...['test/beam', 'test/strobe-par'].map((name) => ({ ...JSON.parse(JSON.stringify(profiles[name])), uuid: name })),
+        ...['test/beam', 'test/strobe-par', 'test/mover', 'test/hazer', 'test/macro-par'].map((name) => ({
+          ...JSON.parse(JSON.stringify(profiles[name])),
+          uuid: name,
+        })),
       ],
       fixtures: [
         { uuid: 'par', profileUuid: 'test/rgb-par', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 0 },
@@ -119,6 +122,9 @@ describe('FixtureCapabilityComponent', () => {
         { uuid: 'fan', profileUuid: 'fan', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 61 },
         { uuid: 'beam', profileUuid: 'test/beam', modeShortName: '11ch', dmxUniverseUuid: 'u', dmxFirstChannel: 70 },
         { uuid: 'strobe-par', profileUuid: 'test/strobe-par', modeShortName: '8ch', dmxUniverseUuid: 'u', dmxFirstChannel: 90 },
+        { uuid: 'mover', profileUuid: 'test/mover', modeShortName: 'beam', dmxUniverseUuid: 'u', dmxFirstChannel: 100 },
+        { uuid: 'hazer', profileUuid: 'test/hazer', modeShortName: '4ch', dmxUniverseUuid: 'u', dmxFirstChannel: 110 },
+        { uuid: 'macro-par', profileUuid: 'test/macro-par', modeShortName: 'macros', dmxUniverseUuid: 'u', dmxFirstChannel: 120 },
       ],
       presetFixtures: [
         'par',
@@ -133,6 +139,9 @@ describe('FixtureCapabilityComponent', () => {
         'fan',
         'beam',
         'strobe-par',
+        'mover',
+        'hazer',
+        'macro-par',
       ].map((fixtureUuid) => ({ fixtureUuid })),
       presets: [{ uuid: 'look', steps: [{ uuid: 'step' }] }],
     });
@@ -284,6 +293,25 @@ describe('FixtureCapabilityComponent', () => {
     expect(panels()).toEqual(['dimmer', 'color', 'color-wheel', ...Array(10).fill('position')]);
     expect(emitters()).toEqual(['White', 'Amber', 'UV']);
     expect(positions()).toEqual(['ShutterStrobe', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism']);
+  });
+
+  it('sets the movement speed, the flash duration and the zoom of a mover, which has a beam angle', () => {
+    light('mover');
+
+    expect(positions()).toEqual(['ShutterStrobe', 'StrobeDuration', 'Zoom', 'PanTiltSpeed']);
+  });
+
+  it('sets the fog of a hazer, whichever kind of fog its channels name', () => {
+    light('hazer');
+
+    expect(panels()).toEqual(['position']);
+    expect(positions()).toEqual(['FogOutput']);
+  });
+
+  it('sets the color of a par lighting in nothing but its color macros', () => {
+    light('macro-par');
+
+    expect(panels()).toEqual(['dimmer', 'color']);
   });
 
   it('follows the preset and the step being picked', () => {

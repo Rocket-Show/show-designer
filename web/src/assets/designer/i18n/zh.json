@@ -214,7 +214,10 @@
         "Frost": "无",
         "ColorTemperature": "暖",
         "Prism": "出",
-        "ColorIntensity": "关"
+        "ColorIntensity": "关",
+        "StrobeDuration": "短",
+        "PanTiltSpeed": "慢",
+        "FogOutput": "关"
       },
       "capability-position-high": {
         "ShutterStrobe": "快",
@@ -224,7 +227,10 @@
         "Frost": "满",
         "ColorTemperature": "冷",
         "Prism": "入",
-        "ColorIntensity": "满"
+        "ColorIntensity": "满",
+        "StrobeDuration": "长",
+        "PanTiltSpeed": "快",
+        "FogOutput": "满"
       },
       "model-specific-title": "仅此型号",
       "model-specific-hint": "在这些通道上设置的内容只在此灯具型号上播放。功能中的调光器、颜色、频闪、变焦、对焦、光圈和雾化在每个型号上都会播放，因此演出在其他灯具上也能播放。"

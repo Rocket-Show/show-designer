@@ -518,6 +518,74 @@ describe('PresetService editing presets', () => {
     expect(service.lightsColorOfItsOwn(red, channels, 'cmy')).toBe(true);
   });
 
+  // a par lighting in nothing but its color macros: red, white, and one without a color
+  function addMacroPar(): CachedFixtureChannel[] {
+    project.fixtureProfiles.push(
+      new FixtureProfile({
+        uuid: 'macros',
+        name: 'Macros',
+        availableChannels: {
+          Dimmer: { capability: { type: 'Intensity' } },
+          Macro: {
+            capabilities: [
+              { dmxRange: [0, 9], type: 'NoFunction' },
+              { dmxRange: [10, 49], type: 'ColorPreset', colors: ['#ff0000'] },
+              { dmxRange: [50, 89], type: 'ColorPreset', colors: ['#ffffff'] },
+              { dmxRange: [90, 255], type: 'ColorPreset', comment: 'Rainbow' },
+            ],
+          },
+        },
+        modes: [{ name: '2-channel', shortName: '2ch', channels: ['Dimmer', 'Macro'] }],
+      })
+    );
+    project.fixtures.push(new Fixture({ uuid: 'macros', profileUuid: 'macros', modeShortName: '2ch', dmxUniverseUuid: 'x' }));
+    fixtureService.updateCachedFixtures();
+    return fixtureService.getCachedFixtureByUuid('macros', undefined).channels;
+  }
+
+  it('shows the color macro closest to the color on a fixture lighting in nothing else', () => {
+    const channels = addMacroPar();
+    const macro = channels.find((channel) => channel.name === 'Macro');
+    const rgbValues = (red: number, green: number, blue: number) =>
+      [
+        ['Red', red],
+        ['Green', green],
+        ['Blue', blue],
+      ].map(([color, valuePercentage]) => new FixtureCapabilityValue({ type: 'ColorIntensity', color, valuePercentage }));
+
+    expect(service.getApproximatedColorPresetCapability(rgbValues(1, 0.1, 0), macro).capability.dmxRange).toEqual([10, 49]);
+    expect(service.getChannelValueFromCapabilities(rgbValues(1, 1, 0.9), macro, 'macros', undefined, channels)).toBe(69);
+    // a color which names no green and blue
+    expect(service.getChannelValueFromCapabilities(rgbValues(1, 1, 1).slice(0, 1), macro, 'macros', undefined, channels)).toBeUndefined();
+    // a channel without macros showing a color
+    expect(service.getApproximatedColorPresetCapability(rgbValues(1, 0, 0), channels[0])).toBeUndefined();
+  });
+
+  it('leaves the color macros of a fixture with colors or a color wheel of its own alone', () => {
+    const red = [
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 1 }),
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Green', valuePercentage: 0 }),
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Blue', valuePercentage: 0 }),
+    ];
+    const head = fixtureService.getCachedFixtureByUuid('head', undefined).channels;
+    const macro = addMacroPar().find((channel) => channel.name === 'Macro');
+
+    // the macro channel of a fixture with a color wheel
+    expect(service.getChannelValueFromCapabilities(red, macro, 'macros', undefined, head)).toBeUndefined();
+  });
+
+  it('knows which fixtures show colors on their color macros', () => {
+    const channels = addMacroPar();
+
+    expect(service.showsColorPresets(channels)).toBe(true);
+    expect(service.showsColorPresets(fixtureService.getCachedFixtureByUuid('par-1', undefined).channels)).toBe(false);
+    expect(service.showsColorPresets(fixtureService.getCachedFixtureByUuid('head', undefined).channels)).toBe(false);
+
+    // the color panel shows for them
+    service.selectedPreset = new Preset({ fixtures: [{ fixtureUuid: 'macros' }] });
+    expect(service.hasCapabilityColorOrColorWheel()).toBe(true);
+  });
+
   it('knows the capabilities and the colors the fixtures of the preset have', () => {
     service.selectedPreset = preset('red');
 

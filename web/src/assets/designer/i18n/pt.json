@@ -214,7 +214,10 @@
         "Frost": "Nenhum",
         "ColorTemperature": "Quente",
         "Prism": "Fora",
-        "ColorIntensity": "Desligado"
+        "ColorIntensity": "Desligado",
+        "StrobeDuration": "Curto",
+        "PanTiltSpeed": "Lento",
+        "FogOutput": "Desligado"
       },
       "capability-position-high": {
         "ShutterStrobe": "Rápido",
@@ -224,7 +227,10 @@
         "Frost": "Cheio",
         "ColorTemperature": "Frio",
         "Prism": "Dentro",
-        "ColorIntensity": "Cheio"
+        "ColorIntensity": "Cheio",
+        "StrobeDuration": "Longo",
+        "PanTiltSpeed": "Rápido",
+        "FogOutput": "Cheio"
       },
       "model-specific-title": "Só este modelo",
       "model-specific-hint": "O que define nestes canais só funciona neste modelo de fixture. O dimmer, as cores, o strobe, o zoom, o foco, a íris e o frost das capacidades funcionam em todos os modelos, assim o espetáculo funciona também noutros fixtures."

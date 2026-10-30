@@ -214,7 +214,10 @@
         "Frost": "Ninguno",
         "ColorTemperature": "Cálido",
         "Prism": "Fuera",
-        "ColorIntensity": "Apagado"
+        "ColorIntensity": "Apagado",
+        "StrobeDuration": "Corto",
+        "PanTiltSpeed": "Lento",
+        "FogOutput": "Apagado"
       },
       "capability-position-high": {
         "ShutterStrobe": "Rápido",
@@ -224,7 +227,10 @@
         "Frost": "Lleno",
         "ColorTemperature": "Frío",
         "Prism": "Dentro",
-        "ColorIntensity": "Lleno"
+        "ColorIntensity": "Lleno",
+        "StrobeDuration": "Largo",
+        "PanTiltSpeed": "Rápido",
+        "FogOutput": "Lleno"
       },
       "model-specific-title": "Solo este modelo",
       "model-specific-hint": "Lo que ajustas en estos canales solo funciona en este modelo de fixture. El dimmer, los colores, el estrobo, el zoom, el foco, el iris y el frost de las capacidades funcionan en todos los modelos, así el show funciona también en otros fixtures."

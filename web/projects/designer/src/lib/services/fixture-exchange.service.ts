@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
-import { isPositionedCapabilityType, isRangeReversed } from '../models/capability-position';
+import { getPlayingTypes, isPositionedCapabilityType, isRangeReversed } from '../models/capability-position';
 import { Color } from '../models/color';
 import { EffectCurve } from '../models/effect-curve';
 import { EffectCurveProfileChannels } from '../models/effect-curve-profile-channel';
@@ -178,7 +178,7 @@ export class FixtureExchangeService {
 
     position = Math.max(0, Math.min(1, position));
 
-    return isPositionedCapabilityType(channelCapability.capability.type) && isRangeReversed(channelCapability.capability)
+    return isPositionedCapabilityType(this.getKind(channelCapability.capability.type)) && isRangeReversed(channelCapability.capability)
       ? 1 - position
       : position;
   }
@@ -187,7 +187,7 @@ export class FixtureExchangeService {
   private getValueInCapability(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability, position: number): number {
     const dmxRange = channelCapability.capability.dmxRange;
     const along =
-      isPositionedCapabilityType(channelCapability.capability.type) && isRangeReversed(channelCapability.capability)
+      isPositionedCapabilityType(this.getKind(channelCapability.capability.type)) && isRangeReversed(channelCapability.capability)
         ? 1 - position
         : position;
 
@@ -202,13 +202,25 @@ export class FixtureExchangeService {
     return Math.round(dmxRange[0] + (dmxRange[1] - dmxRange[0]) * along);
   }
 
+  // what a capability does, the beam angle being a zoom and a kind of fog (e.g. haze) the fog output, like the
+  // capabilities set as a position play them (see getPlayingTypes)
+  private getKind(type: FixtureCapabilityType): FixtureCapabilityType {
+    for (const kind of [FixtureCapabilityType.Zoom, FixtureCapabilityType.FogOutput]) {
+      if (getPlayingTypes(kind).indexOf(type) >= 0) {
+        return kind;
+      }
+    }
+
+    return type;
+  }
+
   // does a capability of the new model do what the one of the old model does?
   private doesTheSame(from: CachedFixtureCapability, to: CachedFixtureCapability): boolean {
     const fromCapability = from.capability;
     const toCapability = to.capability;
 
     return (
-      fromCapability.type === toCapability.type &&
+      this.getKind(fromCapability.type) === this.getKind(toCapability.type) &&
       (fromCapability.color ?? undefined) === (toCapability.color ?? undefined) &&
       (fromCapability.type !== FixtureCapabilityType.ShutterStrobe || fromCapability.shutterEffect === toCapability.shutterEffect)
     );

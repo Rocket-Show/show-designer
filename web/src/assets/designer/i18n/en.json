@@ -214,7 +214,10 @@
         "Frost": "None",
         "ColorTemperature": "Warm",
         "Prism": "Out",
-        "ColorIntensity": "Off"
+        "ColorIntensity": "Off",
+        "StrobeDuration": "Short",
+        "PanTiltSpeed": "Slow",
+        "FogOutput": "Off"
       },
       "capability-position-high": {
         "ShutterStrobe": "Fast",
@@ -224,7 +227,10 @@
         "Frost": "Full",
         "ColorTemperature": "Cold",
         "Prism": "In",
-        "ColorIntensity": "Full"
+        "ColorIntensity": "Full",
+        "StrobeDuration": "Long",
+        "PanTiltSpeed": "Fast",
+        "FogOutput": "Full"
       },
       "model-specific-title": "This model only",
       "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well."

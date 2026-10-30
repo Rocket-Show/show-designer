@@ -214,7 +214,10 @@
         "Frost": "Nessuno",
         "ColorTemperature": "Caldo",
         "Prism": "Fuori",
-        "ColorIntensity": "Spento"
+        "ColorIntensity": "Spento",
+        "StrobeDuration": "Breve",
+        "PanTiltSpeed": "Lento",
+        "FogOutput": "Spento"
       },
       "capability-position-high": {
         "ShutterStrobe": "Veloce",
@@ -224,7 +227,10 @@
         "Frost": "Pieno",
         "ColorTemperature": "Freddo",
         "Prism": "Dentro",
-        "ColorIntensity": "Pieno"
+        "ColorIntensity": "Pieno",
+        "StrobeDuration": "Lungo",
+        "PanTiltSpeed": "Veloce",
+        "FogOutput": "Pieno"
       },
       "model-specific-title": "Solo questo modello",
       "model-specific-hint": "Ciò che imposti su questi canali funziona solo su questo modello di fixture. Il dimmer, i colori, lo strobo, lo zoom, il fuoco, l'iride e il frost delle capacità funzionano su ogni modello, così lo show funziona anche su altri fixture."

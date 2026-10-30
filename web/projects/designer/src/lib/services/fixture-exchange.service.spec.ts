@@ -181,6 +181,40 @@ describe('FixtureExchangeService', () => {
     expect(report.carried[0].presetName).toBe('Look');
   });
 
+  it('carries a zoom to a channel of the beam angle and a haze to the fog output', () => {
+    project.fixtureProfiles.push(
+      new FixtureProfile({
+        uuid: 'old-spot',
+        name: 'Old spot',
+        availableChannels: {
+          Zoom: { capability: { type: 'Zoom', angleStart: 'narrow', angleEnd: 'wide' } },
+          Haze: { capability: { type: 'Fog', fogType: 'Haze', fogOutputStart: 'off', fogOutputEnd: 'strong' } },
+        },
+        modes: [{ name: '2-channel', shortName: '2ch', channels: ['Zoom', 'Haze'] }],
+      }),
+      new FixtureProfile({
+        uuid: 'new-spot',
+        name: 'New spot',
+        availableChannels: {
+          Beam: { capability: { type: 'BeamAngle', angleStart: '45deg', angleEnd: '5deg' } },
+          Output: { capability: { type: 'FogOutput', fogOutputStart: '0%', fogOutputEnd: '100%' } },
+        },
+        modes: [{ name: '2-channel', shortName: '2ch', channels: ['Beam', 'Output'] }],
+      })
+    );
+    const look = preset({
+      fixtureChannelValues: [
+        { profileUuid: 'old-spot', channelName: 'Zoom', value: 51 },
+        { profileUuid: 'old-spot', channelName: 'Haze', value: 102 },
+      ],
+    });
+
+    exchange([look], 'old-spot', 'new-spot', true);
+
+    // a fifth of the way to wide, two fifths of the fog
+    expect(channelValues(look, 'new-spot')).toEqual({ Beam: 204, Output: 102 });
+  });
+
   it('keeps the values of the old model, for the fixtures of it the project still has', () => {
     const look = preset({ fixtureChannelValues: [{ profileUuid: 'par-a', channelName: 'Strobe', value: 200 }] });
 

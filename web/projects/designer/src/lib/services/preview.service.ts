@@ -461,6 +461,26 @@ export class PreviewService implements OnDestroy {
         }
       }
     }
+
+    // A fixture without a color wheel either shows the color on its color presets (e.g. the color macros of a par
+    // lighting in nothing but them), approximated the same way. This follows the same rules as Rocket Show.
+    if (cachedFixture.channels.some((cachedChannel) => cachedChannel.colorWheel)) {
+      return;
+    }
+
+    for (const cachedChannel of cachedFixture.channels) {
+      if (cachedChannel.channel) {
+        const capability = this.presetService.getApproximatedColorPresetCapability(state.fixtureCapabilityValues, cachedChannel);
+
+        if (capability) {
+          const fixtureChannelValue = new FixtureChannelValue();
+          fixtureChannelValue.channelName = cachedChannel.name;
+          fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+          fixtureChannelValue.value = capability.centerValue;
+          this.mixChannelValue(values, fixtureChannelValue, 1);
+        }
+      }
+    }
   }
 
   private mixChannelValues(

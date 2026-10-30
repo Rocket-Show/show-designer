@@ -4,6 +4,7 @@ import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
+import { getPlayingTypes } from '../../models/capability-position';
 import { FixtureService } from '../../services/fixture.service';
 import { IntroService } from '../../services/intro.service';
 import { PresetService } from '../../services/preset.service';
@@ -37,12 +38,15 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
 
   private static readonly positionedPanels = [
     FixtureCapabilityType.ShutterStrobe,
+    FixtureCapabilityType.StrobeDuration,
     FixtureCapabilityType.Zoom,
     FixtureCapabilityType.Focus,
     FixtureCapabilityType.Iris,
     FixtureCapabilityType.Frost,
     FixtureCapabilityType.ColorTemperature,
     FixtureCapabilityType.Prism,
+    FixtureCapabilityType.PanTiltSpeed,
+    FixtureCapabilityType.FogOutput,
   ];
 
   private static readonly emitters = [
@@ -131,10 +135,11 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
     this.hasCapabilityColorOrColorWheel = this.presetService.hasCapabilityColorOrColorWheel();
     this.hasCapabilityPanTilt = this.presetService.hasCapabilityPanTilt();
 
-    // the strobe drives a channel of its own for its speed as well
+    // the strobe drives a channel of its own for its speed as well, the zoom one of the beam angle and the fog output
+    // one of a kind of fog (see getPlayingTypes)
     this.positionedTypes = FixtureCapabilityComponent.positionedPanels.filter(
       (type) =>
-        this.presetService.hasCapabilityType(type) ||
+        getPlayingTypes(type).some((playingType) => this.presetService.hasCapabilityType(playingType)) ||
         (type === FixtureCapabilityType.ShutterStrobe && this.presetService.hasCapabilityType(FixtureCapabilityType.StrobeSpeed))
     );
     this.emitterColors = FixtureCapabilityComponent.emitters.filter((color) =>

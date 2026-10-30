@@ -1328,10 +1328,84 @@ function channelValuesCapabilities() {
     },
   });
 
+  // Movement speed given as a speed or as the time a movement takes, the duration of a flash in milliseconds and
+  // seconds, a zoom on a channel of the beam angle, and a hazer: off at 0 (with "no function", a range putting out
+  // nothing or the low end of what it puts out), more above it
+  const mover = 'test/mover';
+  const hazer = 'test/hazer';
+  const moverPositions = [0, 0.3, 1];
+  const moving = moverPositions.flatMap((position, index) => [
+    edgeFixture('beam-' + position, mover, 'beam', index * 3),
+    edgeFixture('zoom-' + position, mover, 'zoom', index * 3 + 1),
+    edgeFixture('hazer-' + position, hazer, '4ch', index * 3 + 2),
+  ]);
+  const movingPresets = moverPositions.map((position) =>
+    edgePreset(
+      'moving-' + position,
+      ['beam-', 'zoom-', 'hazer-'].map((name) => ({ fixtureUuid: name + position })),
+      {
+        fixtureCapabilityValues: ['PanTiltSpeed', 'StrobeDuration', 'Zoom', 'FogOutput'].map((type) => capability(type, position)),
+      }
+    )
+  );
+
+  cases.push({
+    name: 'movement speed, flash duration, a zoom on the beam angle and fog, at the low end, in between and at the high end',
+    input: {
+      project: edgeProject([mover, hazer], moving, movingPresets, [
+        { uuid: 'moving', name: 'Moving', presetUuids: movingPresets.map((preset) => preset.uuid) },
+      ]),
+      runs: previewScenes(['moving']),
+    },
+  });
+
+  // A par lighting in nothing but its color macros shows the closest one to the color of a preset: red, orange, white,
+  // purple (the macro mixing red and blue), only red given (which names no color) and none. The par of the same profile
+  // with colors of its own lights them instead and leaves its macros alone, a value set on the macro channel wins, and
+  // an identified par shows its white macro.
+  const macroPar = 'test/macro-par';
+  const macroLooks = {
+    red: rgb(1, 0, 0),
+    orange: rgb(1, 0.5, 0),
+    white: rgb(1, 1, 1),
+    purple: rgb(0.5, 0, 0.5),
+    'red-only': [capability('ColorIntensity', 1, { color: 'Red' })],
+    none: [],
+  };
+  const macroPars = [
+    ...Object.keys(macroLooks).map((look, index) => edgeFixture('macros-' + look, macroPar, 'macros', index)),
+    edgeFixture('rgb', macroPar, 'rgb', 6),
+    edgeFixture('channel', macroPar, 'macros', 7),
+    edgeFixture('identified', macroPar, 'macros', 8),
+  ];
+  const macroPresets = [
+    ...Object.entries(macroLooks).map(([look, values]) =>
+      edgePreset('macros-' + look, [{ fixtureUuid: 'macros-' + look }], {
+        fixtureCapabilityValues: [capability('Intensity', 1), ...values],
+      })
+    ),
+    edgePreset('rgb', [{ fixtureUuid: 'rgb' }], { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0, 0)] }),
+    edgePreset('channel', [{ fixtureUuid: 'channel' }], {
+      fixtureCapabilityValues: rgb(1, 0, 0),
+      fixtureChannelValues: [{ profileUuid: macroPar, channelName: 'Macro', value: 100 }],
+    }),
+    edgePreset('identified', [{ fixtureUuid: 'identified' }], { fixtureCapabilityValues: rgb(0, 0, 1) }),
+  ];
+
+  cases.push({
+    name: 'color macros showing the closest color of a preset, on a par without colors of its own',
+    input: {
+      project: edgeProject([macroPar], macroPars, macroPresets, [
+        { uuid: 'macros', name: 'Macros', presetUuids: macroPresets.map((preset) => preset.uuid) },
+      ]),
+      runs: [{ preview: { mode: 'scenes', scenes: ['macros'], identify: ['identified'] }, times: [0] }],
+    },
+  });
+
   return write(
     'channel-values-capabilities.json',
     'channelValues',
-    'Positioned capabilities (strobe, zoom, focus, iris, frost, color temperature, prism), colors mixed with filters and fixtures identified from the fixture pool',
+    'Positioned capabilities (strobe, zoom, focus, iris, frost, color temperature, prism, movement speed, fog), colors mixed with filters or shown on color macros and fixtures identified from the fixture pool',
     cases
   );
 }

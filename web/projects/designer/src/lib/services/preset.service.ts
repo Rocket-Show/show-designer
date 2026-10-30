@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
+import { Color } from '../models/color';
 import { Fixture } from '../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
@@ -548,50 +549,94 @@ export class PresetService {
     }
   }
 
+  // the color the capability values light (0 to 255 for each of red, green and blue), which a color wheel or the color
+  // presets of a fixture show approximated, or undefined, if they don't name all three
+  private getApproximatedColor(capabilityValues: FixtureCapabilityValue[]): { red: number; green: number; blue: number } {
+    const red = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
+    const green = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
+    const blue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
+
+    if (!red || !green || !blue) {
+      return undefined;
+    }
+
+    return { red: 255 * red.valuePercentage, green: 255 * green.valuePercentage, blue: 255 * blue.valuePercentage };
+  }
+
+  // the capability of the channel closest to the color the capability values light, of the passed colors
+  private getClosestColorCapability(
+    capabilityValues: FixtureCapabilityValue[],
+    cachedChannel: CachedFixtureChannel,
+    colorOf: (capability: CachedFixtureCapability) => Color
+  ): CachedFixtureCapability {
+    const color = this.getApproximatedColor(capabilityValues);
+    let lowestDiff = Number.MAX_VALUE;
+    let lowestDiffCapability: CachedFixtureCapability;
+
+    if (!color) {
+      return undefined;
+    }
+
+    for (const capability of cachedChannel.capabilities) {
+      const mixedColor = colorOf(capability);
+
+      if (mixedColor) {
+        const diff =
+          Math.abs(mixedColor.red - color.red) + Math.abs(mixedColor.green - color.green) + Math.abs(mixedColor.blue - color.blue);
+
+        if (diff < lowestDiff) {
+          lowestDiff = diff;
+          lowestDiffCapability = capability;
+        }
+      }
+    }
+
+    return lowestDiffCapability;
+  }
+
   getApproximatedColorWheelCapability(
     capabilityValues: FixtureCapabilityValue[],
     cachedChannel: CachedFixtureChannel
   ): CachedFixtureCapability {
     // return an approximated wheel slot channel capability, if a color or a slot on a different
     // wheel has been selected
-    let colorRed: number;
-    let colorGreen: number;
-    let colorBlue: number;
-    let lowestDiff = Number.MAX_VALUE;
-    let lowestDiffCapability: CachedFixtureCapability;
-    let capabilityValue: FixtureCapabilityValue;
+    return this.getClosestColorCapability(capabilityValues, cachedChannel, (capability) =>
+      capability.capability.slotNumber !== undefined
+        ? this.fixtureService.getMixedWheelSlotColor(capability.wheel, capability.capability.slotNumber)
+        : undefined
+    );
+  }
 
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
-    if (capabilityValue) {
-      colorRed = 255 * capabilityValue.valuePercentage;
-    }
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
-    if (capabilityValue) {
-      colorGreen = 255 * capabilityValue.valuePercentage;
-    }
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
-    if (capabilityValue) {
-      colorBlue = 255 * capabilityValue.valuePercentage;
-    }
+  // The color preset (e.g. a color macro) of the channel closest to the color the capability values light, which a
+  // fixture without colors and without a color wheel of its own shows (see PreviewService.mixCapabilityValues), or
+  // undefined, if the channel has no preset showing a color
+  getApproximatedColorPresetCapability(
+    capabilityValues: FixtureCapabilityValue[],
+    cachedChannel: CachedFixtureChannel
+  ): CachedFixtureCapability {
+    return this.getClosestColorCapability(capabilityValues, cachedChannel, (capability) =>
+      capability.capability.type === FixtureCapabilityType.ColorPreset && capability.capability.dmxRange?.length === 2
+        ? this.fixtureService.getColorPresetColor(capability.capability)
+        : undefined
+    );
+  }
 
-    if (colorRed !== undefined && colorGreen !== undefined && colorBlue !== undefined) {
-      for (const capability of cachedChannel.capabilities) {
-        if (capability.capability.slotNumber !== undefined) {
-          const mixedColor = this.fixtureService.getMixedWheelSlotColor(capability.wheel, capability.capability.slotNumber);
-          if (mixedColor) {
-            const diff =
-              Math.abs(mixedColor.red - colorRed) + Math.abs(mixedColor.green - colorGreen) + Math.abs(mixedColor.blue - colorBlue);
-
-            if (diff < lowestDiff) {
-              lowestDiff = diff;
-              lowestDiffCapability = capability;
-            }
-          }
-        }
-      }
-    }
-
-    return lowestDiffCapability;
+  // does a fixture of the passed channels show colors on its color presets (e.g. color macros), having no colors and
+  // no color wheel of its own?
+  showsColorPresets(channels: CachedFixtureChannel[]): boolean {
+    return (
+      !channels.some((channel) => channel.colorWheel) &&
+      !channels.some((channel) =>
+        channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
+      ) &&
+      channels.some((channel) =>
+        channel.capabilities.some(
+          (capability) =>
+            capability.capability.type === FixtureCapabilityType.ColorPreset &&
+            this.fixtureService.getColorPresetColor(capability.capability)
+        )
+      )
+    );
   }
 
   // the value a single capability value of a preset produces on a channel capability, or
@@ -749,6 +794,19 @@ export class PresetService {
       }
     }
 
+    if (
+      value === undefined &&
+      !fixtureChannels.some((fixtureChannel) => fixtureChannel.colorWheel) &&
+      !this.lightsColorOfItsOwn(capabilityValues, fixtureChannels, profileUuid, preset)
+    ) {
+      // a fixture without colors and without a color wheel of its own shows the color on its color presets
+      const approximatedCapability = this.getApproximatedColorPresetCapability(capabilityValues, channel);
+
+      if (approximatedCapability) {
+        value = approximatedCapability.centerValue;
+      }
+    }
+
     return value;
   }
 
@@ -845,13 +903,17 @@ export class PresetService {
       return false;
     }
 
-    // a color wheel is involved
+    // a color wheel is involved, or color presets (e.g. color macros) which show the color
     for (const projectFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(projectFixture.fixtureUuid, projectFixture.pixelKey);
       for (const channel of fixture.channels) {
         if (channel.colorWheel) {
           return true;
         }
+      }
+
+      if (this.showsColorPresets(fixture.channels)) {
+        return true;
       }
     }
 

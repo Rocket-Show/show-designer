@@ -31,14 +31,17 @@ import profile7 from './profiles/panasonic/pt-rz120.json';
 import profile8 from './profiles/stairville/mh-100.json';
 import profile9 from './profiles/test/beam.json';
 import profile10 from './profiles/test/cmy-spot.json';
-import profile11 from './profiles/test/moving-head.json';
-import profile12 from './profiles/test/pixel-bar.json';
-import profile13 from './profiles/test/rgb-par.json';
-import profile14 from './profiles/test/rgb.json';
-import profile15 from './profiles/test/shared-dimmer.json';
-import profile16 from './profiles/test/strobe-par.json';
-import profile17 from './profiles/test/wheels.json';
-import profile18 from './profiles/varytec/easy-move-xs-hp-wash-7x8w-rgbw.json';
+import profile11 from './profiles/test/hazer.json';
+import profile12 from './profiles/test/macro-par.json';
+import profile13 from './profiles/test/mover.json';
+import profile14 from './profiles/test/moving-head.json';
+import profile15 from './profiles/test/pixel-bar.json';
+import profile16 from './profiles/test/rgb-par.json';
+import profile17 from './profiles/test/rgb.json';
+import profile18 from './profiles/test/shared-dimmer.json';
+import profile19 from './profiles/test/strobe-par.json';
+import profile20 from './profiles/test/wheels.json';
+import profile21 from './profiles/varytec/easy-move-xs-hp-wash-7x8w-rgbw.json';
 
 export const caseFiles: { [fileName: string]: any } = {
   'channel-values-capabilities.json': case0,
@@ -75,12 +78,15 @@ export const profiles: { [name: string]: any } = {
   'stairville/mh-100': profile8,
   'test/beam': profile9,
   'test/cmy-spot': profile10,
-  'test/moving-head': profile11,
-  'test/pixel-bar': profile12,
-  'test/rgb-par': profile13,
-  'test/rgb': profile14,
-  'test/shared-dimmer': profile15,
-  'test/strobe-par': profile16,
-  'test/wheels': profile17,
-  'varytec/easy-move-xs-hp-wash-7x8w-rgbw': profile18,
+  'test/hazer': profile11,
+  'test/macro-par': profile12,
+  'test/mover': profile13,
+  'test/moving-head': profile14,
+  'test/pixel-bar': profile15,
+  'test/rgb-par': profile16,
+  'test/rgb': profile17,
+  'test/shared-dimmer': profile18,
+  'test/strobe-par': profile19,
+  'test/wheels': profile20,
+  'varytec/easy-move-xs-hp-wash-7x8w-rgbw': profile21,
 };

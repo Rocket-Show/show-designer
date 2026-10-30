@@ -30,7 +30,19 @@ function range(lo: number, hi: number, type: string, extra: any = {}) {
 
 describe('capability-position', () => {
   it('should know the capabilities a preset sets as a position', () => {
-    for (const type of ['ShutterStrobe', 'StrobeSpeed', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism']) {
+    for (const type of [
+      'ShutterStrobe',
+      'StrobeSpeed',
+      'StrobeDuration',
+      'Zoom',
+      'Focus',
+      'Iris',
+      'Frost',
+      'ColorTemperature',
+      'Prism',
+      'PanTiltSpeed',
+      'FogOutput',
+    ]) {
       expect(isPositionedCapabilityType(FixtureCapabilityType[type])).toBe(true, type);
     }
 
@@ -71,6 +83,18 @@ describe('capability-position', () => {
       expect(getPropertyRank('fast')).toBeGreaterThan(getPropertyRank('50Hz'));
     });
 
+    it('should compare times and rounds per minute', () => {
+      expect(getPropertyRank('500ms')).toBe(0.5);
+      expect(getPropertyRank('2s')).toBe(2);
+      expect(getPropertyRank('120rpm')).toBe(2);
+      expect(getPropertyRank('2m^3/min')).toBe(2);
+      expect(getPropertyRank('instant')).toBeLessThan(getPropertyRank('short'));
+      expect(getPropertyRank('short')).toBeLessThan(getPropertyRank('1ms'));
+      expect(getPropertyRank('long')).toBeGreaterThan(getPropertyRank('60s'));
+      expect(getPropertyRank('off')).toBeLessThan(getPropertyRank('weak'));
+      expect(getPropertyRank('weak')).toBeLessThan(getPropertyRank('strong'));
+    });
+
     it('should not read what is no property of the library', () => {
       expect(getPropertyRank(undefined)).toBeUndefined();
       expect(getPropertyRank(null)).toBeUndefined();
@@ -93,6 +117,25 @@ describe('capability-position', () => {
       ).toBe(true);
       expect(isRangeReversed(new FixtureCapability({ type: 'StrobeSpeed', speedStart: '20Hz', speedEnd: '60bpm' }))).toBe(true);
       expect(isRangeReversed(new FixtureCapability({ type: 'ShutterStrobe', speedStart: 'slow', speedEnd: 'fast' }))).toBe(false);
+    });
+
+    it('should tell a movement given by the time it takes the other way round, slow when it takes long', () => {
+      expect(isRangeReversed(new FixtureCapability({ type: 'PanTiltSpeed', durationStart: '0.1s', durationEnd: '20s' }))).toBe(true);
+      expect(isRangeReversed(new FixtureCapability({ type: 'PanTiltSpeed', durationStart: 'long', durationEnd: 'short' }))).toBe(false);
+      expect(isRangeReversed(new FixtureCapability({ type: 'PanTiltSpeed', speedStart: 'fast', speedEnd: 'slow' }))).toBe(true);
+      // a speed says it rather than a time
+      expect(
+        isRangeReversed(
+          new FixtureCapability({ type: 'PanTiltSpeed', speedStart: 'slow', speedEnd: 'fast', durationStart: '0.1s', durationEnd: '20s' })
+        )
+      ).toBe(false);
+    });
+
+    it('should tell the ranges of the flash duration, the beam angle and the fog', () => {
+      expect(isRangeReversed(new FixtureCapability({ type: 'StrobeDuration', durationStart: '5ms', durationEnd: '0.5s' }))).toBe(false);
+      expect(isRangeReversed(new FixtureCapability({ type: 'BeamAngle', angleStart: '45deg', angleEnd: '4deg' }))).toBe(true);
+      expect(isRangeReversed(new FixtureCapability({ type: 'Fog', fogOutputStart: 'strong', fogOutputEnd: 'weak' }))).toBe(true);
+      expect(isRangeReversed(new FixtureCapability({ type: 'FogOutput', fogOutputStart: '100%', fogOutputEnd: '1%' }))).toBe(true);
     });
 
     it('should run a range which does not say from low to high', () => {
@@ -203,6 +246,51 @@ describe('capability-position', () => {
         const open = channelOf({ capability: { type: 'ShutterStrobe', shutterEffect: 'Open' } });
 
         expect(getPositionedChannelValue(open, FixtureCapabilityType.ShutterStrobe, 0)).toBeUndefined();
+      });
+    });
+
+    describe('a zoom on a channel of the beam angle', () => {
+      it('should zoom from narrow to wide', () => {
+        const beam = channelOf({
+          capabilities: [range(0, 9, 'NoFunction'), range(10, 255, 'BeamAngle', { angleStart: '45deg', angleEnd: '4deg' })],
+        });
+
+        expect(getPositionedChannelValue(beam, FixtureCapabilityType.Zoom, 0)).toBe(255);
+        expect(getPositionedChannelValue(beam, FixtureCapabilityType.Zoom, 1)).toBe(10);
+        // the beam angle is no capability of its own, the zoom sets it
+        expect(isPositionedCapabilityType(FixtureCapabilityType.BeamAngle)).toBe(false);
+      });
+    });
+
+    describe('fog', () => {
+      it('should switch it off with a range putting out nothing', () => {
+        const output = channelOf({
+          capabilities: [
+            range(0, 4, 'FogOutput', { fogOutput: 'off' }),
+            range(5, 255, 'FogOutput', { fogOutputStart: '1%', fogOutputEnd: '100%' }),
+          ],
+        });
+
+        expect(getPositionedChannelValue(output, FixtureCapabilityType.FogOutput, 0)).toBe(2);
+        expect(getPositionedChannelValue(output, FixtureCapabilityType.FogOutput, 0.5)).toBe(130);
+      });
+
+      it('should switch the fog of a kind (e.g. haze) off with no function', () => {
+        const haze = channelOf({
+          capabilities: [range(0, 9, 'NoFunction'), range(10, 255, 'Fog', { fogType: 'Haze', fogOutputStart: 'weak' })],
+        });
+
+        expect(getPositionedChannelValue(haze, FixtureCapabilityType.FogOutput, 0)).toBe(4);
+        expect(getPositionedChannelValue(haze, FixtureCapabilityType.FogOutput, 1)).toBe(255);
+      });
+
+      it('should switch it off at the low end of what it puts out, without anything else', () => {
+        const pump = channelOf({ capability: { type: 'FogOutput', fogOutputStart: '0m^3/min', fogOutputEnd: '2m^3/min' } });
+        const weak = channelOf({ capabilities: [range(0, 255, 'FogOutput', { fogOutputStart: 'weak', fogOutputEnd: 'strong' })] });
+
+        expect(getPositionedChannelValue(pump, FixtureCapabilityType.FogOutput, 0)).toBe(0);
+        // a single range is played over the whole channel, from where it starts
+        expect(getPositionedChannelValue(weak, FixtureCapabilityType.FogOutput, 0)).toBe(0);
       });
     });
 

@@ -214,7 +214,10 @@
         "Frost": "Aucun",
         "ColorTemperature": "Chaud",
         "Prism": "Sorti",
-        "ColorIntensity": "Éteint"
+        "ColorIntensity": "Éteint",
+        "StrobeDuration": "Court",
+        "PanTiltSpeed": "Lent",
+        "FogOutput": "Éteint"
       },
       "capability-position-high": {
         "ShutterStrobe": "Rapide",
@@ -224,7 +227,10 @@
         "Frost": "Plein",
         "ColorTemperature": "Froid",
         "Prism": "Entré",
-        "ColorIntensity": "Plein"
+        "ColorIntensity": "Plein",
+        "StrobeDuration": "Long",
+        "PanTiltSpeed": "Rapide",
+        "FogOutput": "Plein"
       },
       "model-specific-title": "Ce modèle seulement",
       "model-specific-hint": "Ce que vous réglez sur ces canaux ne fonctionne que sur ce modèle de fixture. Le gradateur, les couleurs, le strobe, le zoom, le focus, l'iris et le frost des capacités fonctionnent sur tous les modèles, ainsi le spectacle fonctionne aussi sur d'autres fixtures."
