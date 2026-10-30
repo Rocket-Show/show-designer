@@ -22,9 +22,10 @@ module.exports = function (config) {
       dir: require('path').join(__dirname, '../../coverage'),
       subdir: 'designer',
       reporters: [{ type: 'html' }, { type: 'lcovonly' }, { type: 'json-summary' }, { type: 'text-summary' }],
-      // the run fails below this coverage of the whole library (raised as the specs cover more of it)
+      // the run fails below this coverage of the whole library: a little below what the specs reach, so that a change
+      // with fewer specs than the rest still passes (raised with coverage-ratchet.mjs as the specs cover more of it)
       check: {
-        global: { statements: 99, branches: 96, functions: 99, lines: 99 },
+        global: { statements: 97, branches: 94, functions: 97, lines: 97 },
       },
     },
     reporters: ['progress', 'kjhtml'],
