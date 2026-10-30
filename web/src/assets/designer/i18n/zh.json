@@ -251,6 +251,7 @@
       "model-specific-hint": "在这些通道上设置的内容只在此灯具型号上播放。功能中的调光器、颜色、频闪、变焦、对焦、光圈和雾化在每个型号上都会播放，因此演出在其他灯具上也能播放。",
       "capability-pan-tilt-pad": "位置",
       "capability-pan-tilt-pad-hint": "拖动来调整摇头灯的方向：左右为水平（Pan），上下为俯仰（Tilt）。方向键移动一度（按住 Shift 移动十度），双击回到中心。",
+      "capability-pan-tilt-mirror": "镜像",
       "capability-pan-tilt-mirror-pan": "镜像水平",
       "capability-pan-tilt-mirror-tilt": "镜像俯仰",
       "capability-pan-tilt-spread": "扇形展开",

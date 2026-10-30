@@ -251,6 +251,7 @@
       "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well.",
       "capability-pan-tilt-pad": "Position",
       "capability-pan-tilt-pad-hint": "Drag to point the moving heads: across for the pan, up and down for the tilt. The arrow keys move a degree (ten with Shift), a double click centres them.",
+      "capability-pan-tilt-mirror": "Mirror",
       "capability-pan-tilt-mirror-pan": "Mirror pan",
       "capability-pan-tilt-mirror-tilt": "Mirror tilt",
       "capability-pan-tilt-spread": "Fan out",

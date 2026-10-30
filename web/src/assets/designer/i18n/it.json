@@ -251,6 +251,7 @@
       "model-specific-hint": "Ciò che imposti su questi canali funziona solo su questo modello di fixture. Il dimmer, i colori, lo strobo, lo zoom, il fuoco, l'iride e il frost delle capacità funzionano su ogni modello, così lo show funziona anche su altri fixture.",
       "capability-pan-tilt-pad": "Posizione",
       "capability-pan-tilt-pad-hint": "Trascina per puntare le teste mobili: in orizzontale per il pan, in verticale per il tilt. Le frecce spostano di un grado (dieci con Maiusc), un doppio clic centra.",
+      "capability-pan-tilt-mirror": "Specchia",
       "capability-pan-tilt-mirror-pan": "Specchia pan",
       "capability-pan-tilt-mirror-tilt": "Specchia tilt",
       "capability-pan-tilt-spread": "A ventaglio",

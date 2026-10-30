@@ -251,6 +251,7 @@
       "model-specific-hint": "Lo que ajustas en estos canales solo funciona en este modelo de fixture. El dimmer, los colores, el estrobo, el zoom, el foco, el iris y el frost de las capacidades funcionan en todos los modelos, así el show funciona también en otros fixtures.",
       "capability-pan-tilt-pad": "Posición",
       "capability-pan-tilt-pad-hint": "Arrastra para orientar las cabezas móviles: en horizontal para el pan, en vertical para el tilt. Las flechas mueven un grado (diez con Mayús), un doble clic centra.",
+      "capability-pan-tilt-mirror": "Reflejar",
       "capability-pan-tilt-mirror-pan": "Reflejar pan",
       "capability-pan-tilt-mirror-tilt": "Reflejar tilt",
       "capability-pan-tilt-spread": "En abanico",

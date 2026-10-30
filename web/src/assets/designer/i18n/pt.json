@@ -251,6 +251,7 @@
       "model-specific-hint": "O que define nestes canais só funciona neste modelo de fixture. O dimmer, as cores, o strobe, o zoom, o foco, a íris e o frost das capacidades funcionam em todos os modelos, assim o espetáculo funciona também noutros fixtures.",
       "capability-pan-tilt-pad": "Posição",
       "capability-pan-tilt-pad-hint": "Arraste para apontar as cabeças móveis: na horizontal para o pan, na vertical para o tilt. As setas movem um grau (dez com Shift), um duplo clique centra.",
+      "capability-pan-tilt-mirror": "Espelhar",
       "capability-pan-tilt-mirror-pan": "Espelhar pan",
       "capability-pan-tilt-mirror-tilt": "Espelhar tilt",
       "capability-pan-tilt-spread": "Em leque",

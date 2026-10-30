@@ -1,21 +1,25 @@
 .pan-tilt-body {
+  display: flex;
   flex-direction: row;
-  gap: var(--sd-space-3, 1rem);
+  align-items: flex-start;
+  gap: var(--sd-space-4, 1.5rem);
   overflow-x: auto;
 }
 
-.pan-tilt-column {
+.pan-tilt-pad-column {
+  display: flex;
   flex-direction: column;
-  gap: var(--sd-space-2, 0.5rem);
+  align-items: center;
+  gap: var(--sd-space-1, 0.25rem);
 }
 
 /* the square the position is dragged in */
 .pan-tilt-pad {
-  width: 160px;
-  height: 160px;
+  width: 168px;
+  height: 168px;
   flex: none;
   border: 1px solid var(--sd-border, #6c757d);
-  border-radius: 4px;
+  border-radius: var(--sd-radius, 4px);
   background: var(--sd-surface-2, rgba(255, 255, 255, 0.04));
   cursor: crosshair;
   touch-action: none;
@@ -44,22 +48,70 @@
 
 .pan-tilt-reach {
   font-size: 0.75rem;
+}
+
+.pan-tilt-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3, 1rem);
+  min-width: 15rem;
+}
+
+/* a row per setting, the pan and the tilt in a column each */
+.pan-tilt-table {
+  display: grid;
+  grid-template-columns: auto 64px 64px;
+  align-items: center;
+  column-gap: var(--sd-space-3, 1rem);
+  row-gap: var(--sd-space-2, 0.5rem);
+}
+
+.pan-tilt-head {
+  font-size: 0.75rem;
   text-align: center;
+  color: var(--sd-text-muted, #99a1ac);
 }
 
-.pan-tilt-fields {
-  min-width: 9rem;
+.pan-tilt-label {
+  white-space: nowrap;
 }
 
-.pan-tilt-field {
+.pan-tilt-check {
+  display: flex;
+  justify-content: center;
+}
+
+/* the spot, set apart from the position written in degrees */
+.pan-tilt-spot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-2, 0.5rem);
+  padding-top: var(--sd-space-3, 1rem);
+  border-top: 1px solid var(--sd-border, #6c757d);
+}
+
+.pan-tilt-spot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sd-space-2, 0.5rem);
+}
+
+/* the coordinates of the spot in three equal columns, as wide as the table above */
+.pan-tilt-spot-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  column-gap: var(--sd-space-2, 0.5rem);
+}
+
+.pan-tilt-spot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0;
 }
 
-.pan-tilt-title {
-  font-weight: 600;
-  margin-top: var(--sd-space-2, 0.5rem);
+.pan-tilt-spot-field .sd-value-input {
+  width: 100%;
 }

@@ -251,6 +251,7 @@
       "model-specific-hint": "Ce que vous réglez sur ces canaux ne fonctionne que sur ce modèle de fixture. Le gradateur, les couleurs, le strobe, le zoom, le focus, l'iris et le frost des capacités fonctionnent sur tous les modèles, ainsi le spectacle fonctionne aussi sur d'autres fixtures.",
       "capability-pan-tilt-pad": "Position",
       "capability-pan-tilt-pad-hint": "Faites glisser pour orienter les lyres : horizontalement pour le pan, verticalement pour le tilt. Les flèches déplacent d’un degré (dix avec Maj), un double clic recentre.",
+      "capability-pan-tilt-mirror": "Inverser",
       "capability-pan-tilt-mirror-pan": "Inverser le pan",
       "capability-pan-tilt-mirror-tilt": "Inverser le tilt",
       "capability-pan-tilt-spread": "Éventail",
