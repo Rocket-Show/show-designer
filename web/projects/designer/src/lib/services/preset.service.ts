@@ -20,7 +20,13 @@ import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from './live-preview.service';
 import { AnimationService } from './animation.service';
-import { getPositionedChannelValue, isPositionedCapabilityType } from '../models/capability-position';
+import {
+  getPositionedChannelValue,
+  getShakeChannelValue,
+  isOverridingCapabilityType,
+  isPositionedCapabilityType,
+} from '../models/capability-position';
+import { getPanTiltChannelValue, isPanTilt, PanTiltContext } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { countModelSpecificValues } from '../models/model-specific';
 
@@ -407,9 +413,25 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
-    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
+    this.capabilityValuesChanged.next();
+  }
+
+  // put a capability value on the step as it is, in place of the one it had of the same kind (e.g. a position of a
+  // moving head with all it says: its degrees, its fan and the spot it aims at)
+  putCapabilityValue(step: PresetStep, capabilityValue: FixtureCapabilityValue) {
+    this.removeCapabilityValue(
+      step,
+      capabilityValue.type,
+      capabilityValue.color,
+      capabilityValue.wheel,
+      capabilityValue.profileUuid,
+      capabilityValue.blade
+    );
+    step.fixtureCapabilityValues.push(capabilityValue);
     this.capabilityValuesChanged.next();
   }
 
@@ -418,10 +440,12 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
     for (let i = 0; i < step.fixtureCapabilityValues.length; i++) {
       if (
+        (step.fixtureCapabilityValues[i].blade ?? undefined) === (blade ?? undefined) &&
         this.fixtureService.capabilitiesMatch(
           step.fixtureCapabilityValues[i].type,
           capabilityType,
@@ -446,10 +470,11 @@ export class PresetService {
     slotNumber?: number,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
     // Delete existant properties with this type and set the new value
-    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
 
     const fixtureCapabilityValue = new FixtureCapabilityValue();
     fixtureCapabilityValue.type = capabilityType;
@@ -458,6 +483,7 @@ export class PresetService {
     fixtureCapabilityValue.valuePercentage = valuePercentage;
     fixtureCapabilityValue.slotNumber = slotNumber;
     fixtureCapabilityValue.profileUuid = profileUuid;
+    fixtureCapabilityValue.blade = blade;
 
     step.fixtureCapabilityValues.push(fixtureCapabilityValue);
     this.capabilityValuesChanged.next();
@@ -468,13 +494,14 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ): FixtureCapabilityValue {
     if (!step) {
       return undefined;
     }
 
-    return this.getCapabilityValueOf(step.fixtureCapabilityValues, capabilityType, color, wheel, profileUuid);
+    return this.getCapabilityValueOf(step.fixtureCapabilityValues, capabilityType, color, wheel, profileUuid, blade);
   }
 
   // the same lookup on a set of values which is not stored on a step: while a
@@ -484,10 +511,12 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ): FixtureCapabilityValue {
     for (const capabilityValue of capabilityValues) {
       if (
+        (capabilityValue.blade ?? undefined) === (blade ?? undefined) &&
         this.fixtureService.capabilitiesMatch(
           capabilityValue.type,
           capabilityType,
@@ -670,16 +699,10 @@ export class PresetService {
       return this.fixtureService.getBrightnessValue(channel, channelCapability, capabilityValue.valuePercentage);
     }
 
-    if (
-      (capabilityValue.type === FixtureCapabilityType.Pan || capabilityValue.type === FixtureCapabilityType.Tilt) &&
-      capabilityValue.valuePercentage >= 0
-    ) {
-      // a preset which mirrors this axis points its fixtures at the mirrored position
-      const valuePercentage = preset
-        ? preset.getMirroredValuePercentage(capabilityValue.type, capabilityValue.valuePercentage)
-        : capabilityValue.valuePercentage;
-
-      return channel.maxValue * valuePercentage;
+    if (isPanTilt(capabilityValue.type)) {
+      // a preset which mirrors this axis points its fixtures at the mirrored position. Without a fixture to place, the
+      // fixtures aren't fanned out, and a spot to aim at points nowhere.
+      return getPanTiltChannelValue(capabilityValue, channel, preset ? preset.mirrorsCapability(capabilityValue.type) : false, undefined);
     }
 
     if (
@@ -733,7 +756,27 @@ export class PresetService {
       return undefined;
     }
 
-    return getPositionedChannelValue(channel, capabilityValue.type, capabilityValue.valuePercentage);
+    if (capabilityValue.type === FixtureCapabilityType.WheelShake) {
+      return getShakeChannelValue(channel, capabilityValue.wheel, capabilityValue.slotNumber, capabilityValue.valuePercentage);
+    }
+
+    return getPositionedChannelValue(channel, capabilityValue.type, capabilityValue.valuePercentage, capabilityValue.blade);
+  }
+
+  // the value a pan or tilt value points a fixture of the passed profile at with a channel, or undefined, if the channel
+  // doesn't turn it on that axis (see pan-tilt). The context places the fixture within its preset and on the stage.
+  getPanTiltChannelValue(
+    capabilityValue: FixtureCapabilityValue,
+    channel: CachedFixtureChannel,
+    profileUuid: string,
+    preset: Preset,
+    context: PanTiltContext
+  ): number {
+    if (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid) {
+      return undefined;
+    }
+
+    return getPanTiltChannelValue(capabilityValue, channel, preset.mirrorsCapability(capabilityValue.type), context);
   }
 
   // the value a channel is driven to by the capability values of a preset, or undefined, if no
@@ -749,7 +792,14 @@ export class PresetService {
   ): number {
     let value: number;
 
-    for (const capabilityValue of getFixtureCapabilityValues(capabilityValues, fixtureChannels)) {
+    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels);
+
+    for (const capabilityValue of fixtureCapabilityValues) {
+      if (isOverridingCapabilityType(capabilityValue.type)) {
+        // played over the rest below
+        continue;
+      }
+
       if (isPositionedCapabilityType(capabilityValue.type)) {
         // a position drives the channel as a whole, like in the preview
         const positionedValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
@@ -780,6 +830,17 @@ export class PresetService {
             // a later capability value overwrites an earlier one, just like in the preview
             value = capabilityChannelValue;
           }
+        }
+      }
+    }
+
+    // the pulse of an iris or a frost and the shake of a gobo play over the rest, like in the preview
+    for (const capabilityValue of fixtureCapabilityValues) {
+      if (isOverridingCapabilityType(capabilityValue.type)) {
+        const overridingValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
+
+        if (overridingValue !== undefined) {
+          value = overridingValue;
         }
       }
     }

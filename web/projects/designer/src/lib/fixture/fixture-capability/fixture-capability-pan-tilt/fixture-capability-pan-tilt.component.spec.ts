@@ -5,42 +5,48 @@ import { FormsModule } from '@angular/forms';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { NgxBootstrapSliderModule } from 'ngx-bootstrap-slider';
 import { ToastrModule } from 'ngx-toastr';
 
+import { CachedFixture } from '../../../models/cached-fixture';
 import { FixtureCapabilityType } from '../../../models/fixture-capability';
+import { FixtureCapabilityValue } from '../../../models/fixture-capability-value';
+import { FixtureProfile } from '../../../models/fixture-profile';
 import { Preset } from '../../../models/preset';
+import { PresetFixture } from '../../../models/preset-fixture';
+import { FixtureService } from '../../../services/fixture.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
+import { PreviewService } from '../../../services/preview.service';
 import { FixtureCapabilityPanTiltComponent } from './fixture-capability-pan-tilt.component';
 
-// Where the step being edited points the moving heads, typed in percent or set with the
-// sliders, and whether the preset mirrors either axis.
+// Where the step being edited points the moving heads: dragged in the square or typed in, in degrees from the middle,
+// fanned out, aimed at a spot on the stage, and whether the preset mirrors either axis.
 describe('FixtureCapabilityPanTiltComponent', () => {
   let fixture: ComponentFixture<FixtureCapabilityPanTiltComponent>;
   let component: FixtureCapabilityPanTiltComponent;
   let element: HTMLElement;
   let presetService: PresetService;
+  let previewService: PreviewService;
   let preset: Preset;
   let previewLive: jasmine.Spy;
-  let capabilityValuesChanged: jasmine.Spy;
+
+  const pan = FixtureCapabilityType.Pan;
+  const tilt = FixtureCapabilityType.Tilt;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [FixtureCapabilityPanTiltComponent],
-      imports: [FormsModule, NgxBootstrapSliderModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
+      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
     }).compileComponents();
 
     previewLive = spyOn(TestBed.inject(LivePreviewService), 'previewLive');
+    previewService = TestBed.inject(PreviewService);
 
     preset = new Preset({ uuid: 'move', steps: [{ uuid: 'step' }] });
     presetService = TestBed.inject(PresetService);
     presetService.selectedPreset = preset;
     presetService.selectedStep = preset.steps[0];
-
-    capabilityValuesChanged = jasmine.createSpy('capabilityValuesChanged');
-    presetService.capabilityValuesChanged.subscribe(capabilityValuesChanged);
 
     fixture = TestBed.createComponent(FixtureCapabilityPanTiltComponent);
     component = fixture.componentInstance;
@@ -51,118 +57,239 @@ describe('FixtureCapabilityPanTiltComponent', () => {
   async function update() {
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   }
 
-  function activeCheckbox(): HTMLInputElement {
-    return element.querySelector('.card-header input');
+  function value(type: FixtureCapabilityType): FixtureCapabilityValue {
+    return presetService.getCapabilityValue(presetService.selectedStep, type);
   }
 
-  // the pan and the tilt
-  function inputs(): HTMLInputElement[] {
-    return Array.from(element.querySelectorAll('input.sd-value-input'));
+  function input(name: string): HTMLInputElement {
+    return element.querySelector(`input[name="${name}"]`);
   }
 
-  function type(input: HTMLInputElement, value: string) {
-    input.value = value;
-    input.dispatchEvent(new Event('input'));
+  function pad(): SVGSVGElement {
+    return element.querySelector('svg.pan-tilt-pad');
   }
 
-  function value(type: FixtureCapabilityType): number {
-    return presetService.getCapabilityValue(presetService.selectedStep, type)?.valuePercentage;
+  // a pointer event on the square, at a part of its width and height
+  function pointer(type: string, x: number, y: number): PointerEvent {
+    const bounds = pad().getBoundingClientRect();
+    const event = new PointerEvent(type, {
+      clientX: bounds.left + bounds.width * x,
+      clientY: bounds.top + bounds.height * y,
+      pointerId: 1,
+      bubbles: true,
+    });
+    pad().dispatchEvent(event);
+
+    return event;
   }
 
   it('is off while the step leaves the position alone', () => {
-    expect(element.querySelector('.card').classList).toContain('capability-deactivated');
-    expect(activeCheckbox().checked).toBe(false);
-    expect(inputs().map((input) => input.value)).toEqual(['0', '0']);
-  });
-
-  it('shows the position of the step in percent', async () => {
-    presetService.setCapabilityValue(presetService.selectedStep, FixtureCapabilityType.Pan, 0.12345);
-    presetService.setCapabilityValue(presetService.selectedStep, FixtureCapabilityType.Tilt, 0.75);
-    await update();
-
-    expect(element.querySelector('.card').classList).not.toContain('capability-deactivated');
-    expect(activeCheckbox().checked).toBe(true);
-    expect(inputs().map((input) => input.value)).toEqual(['12.35', '75']);
-  });
-
-  it('points the fixtures at the percentages typed in', () => {
-    type(inputs()[0], '20');
-    type(inputs()[1], '80');
-
-    expect(value(FixtureCapabilityType.Pan)).toBe(0.2);
-    expect(value(FixtureCapabilityType.Tilt)).toBe(0.8);
-    expect(previewLive).toHaveBeenCalled();
-  });
-
-  it('keeps the position for anything which is no percentage', () => {
-    type(inputs()[0], '20');
-    type(inputs()[1], '80');
-
-    for (const typed of ['abc', '101', '-1']) {
-      type(inputs()[0], typed);
-      type(inputs()[1], typed);
-    }
-
-    expect(value(FixtureCapabilityType.Pan)).toBe(0.2);
-    expect(value(FixtureCapabilityType.Tilt)).toBe(0.8);
-  });
-
-  it('points the fixtures with the sliders', () => {
-    component.setValuePan(0.1);
-    component.setValueTilt(0.9);
-
-    expect(value(FixtureCapabilityType.Pan)).toBe(0.1);
-    expect(value(FixtureCapabilityType.Tilt)).toBe(0.9);
+    expect(component.isActive()).toBe(false);
+    expect((element.querySelector('#capabilityPanTiltActive') as HTMLInputElement).checked).toBe(false);
+    expect(element.querySelector('.pan-tilt-point')).toBeNull();
+    expect(component.getDegreesText(pan)).toBe(0);
   });
 
   it('switches on pointing straight ahead, and off again', async () => {
-    activeCheckbox().click();
-
-    expect(value(FixtureCapabilityType.Pan)).toBe(0.5);
-    expect(value(FixtureCapabilityType.Tilt)).toBe(0.5);
-
+    component.changeActive(true);
     await update();
-    activeCheckbox().click();
 
-    expect(presetService.selectedStep.fixtureCapabilityValues).toEqual([]);
+    expect(value(pan).valueDegrees).toBe(0);
+    expect(value(tilt).valueDegrees).toBe(0);
+    expect(element.querySelector('.pan-tilt-point')).not.toBeNull();
+
+    component.changeActive(false);
+    expect(value(pan)).toBeUndefined();
+    expect(value(tilt)).toBeUndefined();
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('points the heads at the degrees typed in, as far as they reach', async () => {
+    const panInput = input('panDegrees');
+    panInput.value = '90';
+    panInput.dispatchEvent(new Event('input'));
+    input('tiltDegrees').value = '-500';
+    input('tiltDegrees').dispatchEvent(new Event('input'));
+    await update();
+
+    expect(value(pan).valueDegrees).toBe(90);
+    expect(value(pan).valuePercentage).toBeUndefined();
+    // the tilt reaches 135° to either side
+    expect(value(tilt).valueDegrees).toBe(-135);
+
+    // anything which is no number leaves the position alone
+    component.setDegrees(pan, 'left');
+    component.setDegrees(pan, '');
+    expect(value(pan).valueDegrees).toBe(90);
+  });
+
+  it('shows a position of a project before the degrees on the widest of the heads', () => {
+    presetService.setCapabilityValue(presetService.selectedStep, pan, 0.75);
+
+    expect(component.getDegrees(pan)).toBe(135);
+    expect(component.getDegrees(tilt)).toBeUndefined();
+  });
+
+  it('points the heads with the square: across for the pan, up for the tilt', async () => {
+    await update();
+
+    pointer('pointerdown', 1, 0);
+    expect(value(pan).valueDegrees).toBe(270);
+    expect(value(tilt).valueDegrees).toBe(135);
+
+    pointer('pointermove', 0.5, 0.75);
+    expect(value(pan).valueDegrees).toBe(0);
+    expect(value(tilt).valueDegrees).toBe(-67.5);
+
+    pointer('pointerup', 0, 0);
+    pointer('pointermove', 0, 0);
+    expect(value(pan).valueDegrees).toBe(0);
+    await update();
+
+    expect(component.getPadX()).toBe(100);
+    expect(component.getPadY()).toBe(150);
+  });
+
+  it('moves the position with the arrow keys and centres it with a double click', async () => {
+    component.padKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    component.padKey(new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: true }));
+    component.padKey(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(value(pan).valueDegrees).toBe(1);
+    expect(value(tilt).valueDegrees).toBe(10);
+
+    component.padKey(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true }));
+    component.padKey(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(value(pan).valueDegrees).toBe(-9);
+    expect(value(tilt).valueDegrees).toBe(9);
+
+    pad().dispatchEvent(new MouseEvent('dblclick'));
+    expect(value(pan).valueDegrees).toBe(0);
+    expect(value(tilt).valueDegrees).toBe(0);
+  });
+
+  it('reaches as far as the widest moving head of the preset', () => {
+    const profile = new FixtureProfile({
+      uuid: 'wide',
+      availableChannels: {
+        Pan: { capability: { type: 'Pan', angleStart: '0deg', angleEnd: '630deg' } },
+        Tilt: { capability: { type: 'Tilt', angleStart: '0deg', angleEnd: '180deg' } },
+      },
+      modes: [{ name: 'Mode', shortName: 'mode', channels: ['Pan', 'Tilt'] }],
+    });
+    const cached = new CachedFixture();
+    cached.channels = TestBed.inject(FixtureService).getCachedChannels(profile, profile.modes[0], null);
+    spyOn(TestBed.inject(FixtureService), 'getCachedFixtureByUuid').and.returnValue(cached);
+
+    preset.fixtures = [new PresetFixture({ fixtureUuid: 'wide' })];
+    presetService.fixtureSelectionChanged.next();
+
+    expect(component.panRange).toBe(630);
+    expect(component.tiltRange).toBe(180);
+  });
+
+  it('fans the heads out, around the middle if they point nowhere yet', async () => {
+    input('panSpread').value = '120';
+    input('panSpread').dispatchEvent(new Event('input'));
+    await update();
+
+    expect(value(pan).spreadDegrees).toBe(120);
+    expect(value(pan).valueDegrees).toBe(0);
+    expect(component.getSpread(pan)).toBe(120);
+    expect(component.getSpread(tilt)).toBe(0);
+
+    component.setSpread(pan, 'wide');
+    expect(value(pan).spreadDegrees).toBe(120);
+
+    // no fan
+    component.setSpread(pan, 0);
+    expect(value(pan).spreadDegrees).toBeUndefined();
+  });
+
+  it('aims the heads at a spot picked in the 3D preview, and points them where they pointed before', async () => {
+    component.setDegrees(pan, 30);
+    expect(component.isAiming()).toBe(false);
+
+    (element.querySelector('button[name="pickSpot"]') as HTMLButtonElement).click();
+    expect(previewService.pickingSpot).toBe(true);
+    expect(component.isPickingSpot()).toBe(true);
+
+    previewService.spotPicked.next([100, 30, -50]);
+    await update();
+
+    expect(component.isAiming()).toBe(true);
+    expect([value(pan).aimX, value(pan).aimY, value(pan).aimZ]).toEqual([100, 30, -50]);
+    expect([value(tilt).aimX, value(tilt).aimY, value(tilt).aimZ]).toEqual([100, 30, -50]);
+    // where the tilt points again once they stop aiming
+    expect(value(tilt).valueDegrees).toBe(0);
+    expect(component.getAim(2)).toBe(-50);
+
+    // the spot moved along an axis
+    input('aim1').value = '120';
+    input('aim1').dispatchEvent(new Event('input'));
+    expect(value(pan).aimY).toBe(120);
+    expect(value(tilt).aimY).toBe(120);
+    component.setAim(0, 'far');
+    expect(value(pan).aimX).toBe(100);
+
+    (element.querySelector('button[name="stopAiming"]') as HTMLButtonElement).click();
+    await update();
+
+    expect(component.isAiming()).toBe(false);
+    expect(value(pan).aimX).toBeUndefined();
+    expect(value(pan).valueDegrees).toBe(30);
+    expect(element.querySelector('button[name="stopAiming"]')).toBeNull();
+
+    // a spot without a step to aim with, or no spot at all
+    component.aimAt([1, Number.NaN, 2]);
+    expect(component.isAiming()).toBe(false);
+    component.setAim(0, 5);
+    expect(component.isAiming()).toBe(false);
+  });
+
+  it('stops aiming once the heads are pointed by hand, and picking a spot when it is gone', () => {
+    component.aimAt([0, 0, 0]);
+    expect(component.isAiming()).toBe(true);
+
+    component.setDegrees(tilt, 20);
+    expect(component.isAiming()).toBe(false);
+    expect(value(tilt).valueDegrees).toBe(20);
+
+    component.pickSpot();
+    fixture.destroy();
+    expect(previewService.pickingSpot).toBe(false);
   });
 
   it('mirrors the pan and the tilt of the whole preset', async () => {
+    const capabilityValuesChanged = jasmine.createSpy('capabilityValuesChanged');
+    presetService.capabilityValuesChanged.subscribe(capabilityValuesChanged);
+
     (element.querySelector('#capabilityPanTiltMirrorPan') as HTMLInputElement).click();
-
-    expect(preset.mirrorPan).toBe(true);
-    expect(preset.mirrorTilt).toBe(false);
-
-    // the channels show what the capabilities put on them
-    expect(capabilityValuesChanged).toHaveBeenCalled();
-    expect(previewLive).toHaveBeenCalled();
-
-    (element.querySelector('#capabilityPanTiltMirrorTilt') as HTMLInputElement).click();
-    expect(preset.mirrorTilt).toBe(true);
-
     await update();
-    expect((element.querySelector('#capabilityPanTiltMirrorPan') as HTMLInputElement).checked).toBe(true);
-    expect((element.querySelector('#capabilityPanTiltMirrorTilt') as HTMLInputElement).checked).toBe(true);
+    expect(preset.mirrorPan).toBe(true);
+    expect(component.getMirrorPan()).toBe(true);
+
+    component.setMirrorTilt(true);
+    expect(preset.mirrorTilt).toBe(true);
+    expect(component.getMirrorTilt()).toBe(true);
+    expect(capabilityValuesChanged).toHaveBeenCalled();
   });
 
-  it('mirrors nothing while no preset is being edited', () => {
+  it('changes nothing while no preset or step is being edited', () => {
     presetService.selectedPreset = undefined;
+    presetService.selectedStep = undefined;
 
     component.setMirrorPan(true);
     component.setMirrorTilt(true);
+    component.setDegrees(pan, 10);
+    component.aimAt([1, 2, 3]);
 
     expect(component.getMirrorPan()).toBe(false);
     expect(component.getMirrorTilt()).toBe(false);
-    expect(preset.mirrorPan).toBe(false);
-    expect(capabilityValuesChanged).not.toHaveBeenCalled();
-  });
-
-  it('shows nothing while no step is being edited', () => {
-    presetService.selectedStep = undefined;
-
-    expect(component.getValueTextPan()).toBeUndefined();
-    expect(component.getValueTextTilt()).toBeUndefined();
+    expect(component.isActive()).toBe(false);
+    expect(component.getDegrees(pan)).toBeUndefined();
   });
 });

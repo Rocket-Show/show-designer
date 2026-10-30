@@ -8,7 +8,8 @@ import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 
 // The gobo wheel of a profile in the preset: the step being edited picks one of its slots, by its name (or its number)
-// like the fixture library gives it. A gobo is the model's own, so it only plays on fixtures of this profile.
+// like the fixture library gives it, and shakes it from slow to fast, if the fixture can. A gobo is the model's own, so
+// it only plays on fixtures of this profile.
 @Component({
   selector: 'lib-app-fixture-capability-gobo-wheel',
   templateUrl: './fixture-capability-gobo-wheel.component.html',
@@ -79,7 +80,71 @@ export class FixtureCapabilityGoboWheelComponent {
     )?.slotNumber;
   }
 
+  // can the gobo picked shake?
+  canShake(): boolean {
+    const slotNumber = this.getCurrentSlotNumber();
+
+    return (
+      slotNumber !== undefined &&
+      !!this._channel?.capabilities.some(
+        (capability) =>
+          capability.capability.type === FixtureCapabilityType.WheelShake &&
+          (capability.capability.slotNumber === undefined || capability.capability.slotNumber === slotNumber)
+      )
+    );
+  }
+
+  // how fast the gobo picked shakes, 0 for not at all
+  getShake(): number {
+    return (
+      this.presetService.getCapabilityValue(
+        this.presetService.selectedStep,
+        FixtureCapabilityType.WheelShake,
+        undefined,
+        this.wheelName,
+        this._fixtureProfile?.uuid
+      )?.valuePercentage ?? 0
+    );
+  }
+
+  setShake(value: any) {
+    const speed = Number(value);
+
+    if (isNaN(speed) || speed < 0 || speed > 1 || !this.presetService.selectedStep) {
+      return;
+    }
+
+    this.putShake(speed);
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
+  // shake the gobo picked at the passed speed, or stop shaking it at 0
+  private putShake(speed: number) {
+    if (speed > 0 && this.canShake()) {
+      this.presetService.setCapabilityValue(
+        this.presetService.selectedStep,
+        FixtureCapabilityType.WheelShake,
+        speed,
+        this.getCurrentSlotNumber(),
+        undefined,
+        this.wheelName,
+        this._fixtureProfile.uuid
+      );
+    } else {
+      this.presetService.deleteCapabilityValue(
+        this.presetService.selectedStep,
+        FixtureCapabilityType.WheelShake,
+        undefined,
+        this.wheelName,
+        this._fixtureProfile.uuid
+      );
+    }
+  }
+
   selectSlotNumber(slotNumber: number) {
+    const shake = this.getShake();
+
     this.presetService.setCapabilityValue(
       this.presetService.selectedStep,
       FixtureCapabilityType.WheelSlot,
@@ -89,6 +154,12 @@ export class FixtureCapabilityGoboWheelComponent {
       this.wheelName,
       this._fixtureProfile.uuid
     );
+
+    // the shake goes over to the gobo picked, if it can shake as well
+    if (shake > 0) {
+      this.putShake(shake);
+    }
+
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }
@@ -107,6 +178,7 @@ export class FixtureCapabilityGoboWheelComponent {
       this.wheelName,
       this._fixtureProfile.uuid
     );
+    this.putShake(0);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }

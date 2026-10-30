@@ -30,5 +30,17 @@
       </button>
       }
     </div>
+
+    @if (canShake()) {
+    <div class="gobo-shake mt-2">
+      <div class="d-flex justify-content-between text-muted">
+        <span>{{ 'designer.fixture.capability-gobo-shake' | translate }}</span>
+        <span>{{
+          getShake() > 0 ? (getShake() * 100 | number : '1.0-0') + ' %' : ('designer.fixture.capability-gobo-shake-off' | translate)
+        }}</span>
+      </div>
+      <mv-slider [value]="getShake()" (change)="setShake($event.newValue)" [tooltip]="'hide'" [min]="0" [max]="1" [step]="0.01"></mv-slider>
+    </div>
+    }
   </div>
 </div>

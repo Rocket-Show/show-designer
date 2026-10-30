@@ -41,6 +41,11 @@ export class Project {
   // preview as well, it is never loaded back from a project.
   public identifyFixtureUuids: string[] = [];
 
+  // the fixtures the fixture pool asks to reset themselves or to switch their lamp on, over what the presets do with
+  // them (see maintenance). Like the identified fixtures, they only travel to the live preview.
+  public resetFixtureUuids: string[] = [];
+  public lampOnFixtureUuids: string[] = [];
+
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
 

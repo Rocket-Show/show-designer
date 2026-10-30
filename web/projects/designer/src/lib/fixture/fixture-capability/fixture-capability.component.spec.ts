@@ -104,7 +104,7 @@ describe('FixtureCapabilityComponent', () => {
         twoWheels,
         strobeSpeed,
         fan,
-        ...['test/beam', 'test/strobe-par', 'test/mover', 'test/hazer', 'test/macro-par'].map((name) => ({
+        ...['test/beam', 'test/strobe-par', 'test/mover', 'test/hazer', 'test/macro-par', 'test/effects-spot'].map((name) => ({
           ...JSON.parse(JSON.stringify(profiles[name])),
           uuid: name,
         })),
@@ -125,6 +125,7 @@ describe('FixtureCapabilityComponent', () => {
         { uuid: 'mover', profileUuid: 'test/mover', modeShortName: 'beam', dmxUniverseUuid: 'u', dmxFirstChannel: 100 },
         { uuid: 'hazer', profileUuid: 'test/hazer', modeShortName: '4ch', dmxUniverseUuid: 'u', dmxFirstChannel: 110 },
         { uuid: 'macro-par', profileUuid: 'test/macro-par', modeShortName: 'macros', dmxUniverseUuid: 'u', dmxFirstChannel: 120 },
+        { uuid: 'effects-spot', profileUuid: 'test/effects-spot', modeShortName: 'full', dmxUniverseUuid: 'u', dmxFirstChannel: 130 },
       ],
       presetFixtures: [
         'par',
@@ -142,6 +143,7 @@ describe('FixtureCapabilityComponent', () => {
         'mover',
         'hazer',
         'macro-par',
+        'effects-spot',
       ].map((fixtureUuid) => ({ fixtureUuid })),
       presets: [{ uuid: 'look', steps: [{ uuid: 'step' }] }],
     });
@@ -290,9 +292,33 @@ describe('FixtureCapabilityComponent', () => {
   it('sets the emitters besides red, green and blue and the beam, in their order', () => {
     light('beam', 'strobe-par');
 
-    expect(panels()).toEqual(['dimmer', 'color', 'color-wheel', ...Array(10).fill('position')]);
+    expect(panels()).toEqual(['dimmer', 'color', 'color-wheel', ...Array(11).fill('position')]);
     expect(emitters()).toEqual(['White', 'Amber', 'UV']);
-    expect(positions()).toEqual(['ShutterStrobe', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism']);
+    expect(positions()).toEqual(['ShutterStrobe', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism', 'IrisEffect']);
+  });
+
+  it('turns, pulses and frames a spot which can, blade by blade', () => {
+    light('effects-spot');
+
+    expect(positions()).toEqual([
+      'Iris',
+      'Frost',
+      'WheelSlotRotation',
+      'PrismRotation',
+      'Rotation',
+      'IrisEffect',
+      'FrostEffect',
+      'BladeSystemRotation',
+      'BladeInsertion',
+      'BladeInsertion',
+      'BladeRotation',
+    ]);
+
+    const blades = (Array.from(element.querySelectorAll('lib-app-fixture-capability-position')) as any[])
+      .filter((panel) => panel.blade)
+      .map((panel) => panel.type + ' ' + panel.blade);
+    expect(blades).toEqual(['BladeInsertion Top', 'BladeInsertion Bottom', 'BladeRotation Top']);
+    expect(panels()).toContain('gobo-wheel');
   });
 
   it('sets the movement speed, the flash duration and the zoom of a mover, which has a beam angle', () => {

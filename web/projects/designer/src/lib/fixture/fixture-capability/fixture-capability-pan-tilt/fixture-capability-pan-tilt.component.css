@@ -1,0 +1,65 @@
+.pan-tilt-body {
+  flex-direction: row;
+  gap: var(--sd-space-3, 1rem);
+  overflow-x: auto;
+}
+
+.pan-tilt-column {
+  flex-direction: column;
+  gap: var(--sd-space-2, 0.5rem);
+}
+
+/* the square the position is dragged in */
+.pan-tilt-pad {
+  width: 160px;
+  height: 160px;
+  flex: none;
+  border: 1px solid var(--sd-border, #6c757d);
+  border-radius: 4px;
+  background: var(--sd-surface-2, rgba(255, 255, 255, 0.04));
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.pan-tilt-pad:focus {
+  outline: 2px solid var(--sd-primary, #fd7e14);
+  outline-offset: 1px;
+}
+
+.pan-tilt-axis {
+  stroke: var(--sd-border, #6c757d);
+  stroke-dasharray: 4 4;
+}
+
+.pan-tilt-point {
+  fill: var(--sd-primary, #fd7e14);
+}
+
+/* the heads point at a spot, wherever the square says */
+.pan-tilt-pad-aiming .pan-tilt-point {
+  fill: none;
+  stroke: var(--sd-primary, #fd7e14);
+  stroke-width: 2;
+}
+
+.pan-tilt-reach {
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.pan-tilt-fields {
+  min-width: 9rem;
+}
+
+.pan-tilt-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sd-space-2, 0.5rem);
+  margin: 0;
+}
+
+.pan-tilt-title {
+  font-weight: 600;
+  margin-top: var(--sd-space-2, 0.5rem);
+}

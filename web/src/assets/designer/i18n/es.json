@@ -185,7 +185,6 @@
       "capability-color": "Color",
       "capability-color-wheel": "Rueda de color",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Reflejar",
       "profiles": "Perfiles",
       "setting-position-title": "Posición del fixture",
       "setting-position": "Posición",
@@ -217,7 +216,15 @@
         "ColorIntensity": "Apagado",
         "StrobeDuration": "Corto",
         "PanTiltSpeed": "Lento",
-        "FogOutput": "Apagado"
+        "FogOutput": "Apagado",
+        "WheelSlotRotation": "Rápido antihorario",
+        "PrismRotation": "Rápido antihorario",
+        "Rotation": "Rápido antihorario",
+        "BladeInsertion": "Fuera",
+        "BladeRotation": "Antihorario",
+        "BladeSystemRotation": "Antihorario",
+        "IrisEffect": "Apagado",
+        "FrostEffect": "Apagado"
       },
       "capability-position-high": {
         "ShutterStrobe": "Rápido",
@@ -230,10 +237,45 @@
         "ColorIntensity": "Lleno",
         "StrobeDuration": "Largo",
         "PanTiltSpeed": "Rápido",
-        "FogOutput": "Lleno"
+        "FogOutput": "Lleno",
+        "WheelSlotRotation": "Rápido horario",
+        "PrismRotation": "Rápido horario",
+        "Rotation": "Rápido horario",
+        "BladeInsertion": "Dentro",
+        "BladeRotation": "Horario",
+        "BladeSystemRotation": "Horario",
+        "IrisEffect": "Rápido",
+        "FrostEffect": "Rápido"
       },
       "model-specific-title": "Solo este modelo",
-      "model-specific-hint": "Lo que ajustas en estos canales solo funciona en este modelo de fixture. El dimmer, los colores, el estrobo, el zoom, el foco, el iris y el frost de las capacidades funcionan en todos los modelos, así el show funciona también en otros fixtures."
+      "model-specific-hint": "Lo que ajustas en estos canales solo funciona en este modelo de fixture. El dimmer, los colores, el estrobo, el zoom, el foco, el iris y el frost de las capacidades funcionan en todos los modelos, así el show funciona también en otros fixtures.",
+      "capability-pan-tilt-pad": "Posición",
+      "capability-pan-tilt-pad-hint": "Arrastra para orientar las cabezas móviles: en horizontal para el pan, en vertical para el tilt. Las flechas mueven un grado (diez con Mayús), un doble clic centra.",
+      "capability-pan-tilt-mirror-pan": "Reflejar pan",
+      "capability-pan-tilt-mirror-tilt": "Reflejar tilt",
+      "capability-pan-tilt-spread": "En abanico",
+      "capability-pan-tilt-spread-hint": "Reparte las cabezas uniformemente sobre estos grados, de la primera a la última.",
+      "capability-pan-tilt-aim": "Punto en el escenario",
+      "capability-pan-tilt-aim-hint": "Haz clic en un punto de la vista previa 3D: cada cabeza lo apunta desde donde cuelga, sea cual sea su modelo.",
+      "capability-pan-tilt-aim-pick": "Elegir un punto",
+      "capability-pan-tilt-aim-picking": "Haz clic en el escenario…",
+      "capability-pan-tilt-aim-stop": "Dejar de apuntar",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Apagado",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Cuchilla superior",
+          "Right": "Cuchilla derecha",
+          "Bottom": "Cuchilla inferior",
+          "Left": "Cuchilla izquierda"
+        },
+        "BladeRotation": {
+          "Top": "Ángulo de la cuchilla superior",
+          "Right": "Ángulo de la cuchilla derecha",
+          "Bottom": "Ángulo de la cuchilla inferior",
+          "Left": "Ángulo de la cuchilla izquierda"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -281,7 +323,11 @@
       "patch-in-a-row-full": "A partir de ahí los fixtures ya no caben en el universo.",
       "identify": "Identificar: hacer parpadear el fixture en blanco",
       "model-specific": "Los presets ajustan {{count}} valores que solo funcionan en este modelo.",
-      "add-fixture": "Añadir un fixture de este perfil"
+      "add-fixture": "Añadir un fixture de este perfil",
+      "reset": "Reset",
+      "reset-hint": "Pide al aparato en el escenario que se reinicie, p. ej. una cabeza móvil que perdió su posición",
+      "lamp-on": "Lámpara encendida",
+      "lamp-on-hint": "Enciende la lámpara del aparato en el escenario"
     },
     "effect": {
       "add-new": "Añadir nuevo efecto",
@@ -315,7 +361,15 @@
       "curve-square": "Cuadrada",
       "curve-triangle": "Triangular",
       "curve-sawtooth": "Diente de sierra",
-      "curve-reverse-sawtooth": "Diente de sierra inverso"
+      "curve-reverse-sawtooth": "Diente de sierra inverso",
+      "pan-tilt-shape-circle": "Círculo",
+      "pan-tilt-shape-figure8": "Ocho",
+      "pan-tilt-shape-line": "Línea",
+      "pan-tilt-shape-wave": "Ola",
+      "pan-tilt-size": "Tamaño",
+      "pan-tilt-beats": "tiempos",
+      "pan-tilt-chase-hint": "Cuántos movimientos completos se reparten entre todas las cabezas: 0 las mueve juntas, 1 hace pasar una ola.",
+      "pan-tilt-run-hint": "Cuántas veces se ejecuta el movimiento, 0 mientras suene el preset."
     },
     "composition": {
       "new": "Crear nueva composición..."

@@ -115,6 +115,15 @@ export class FixtureCapability {
   insertion: string;
   insertionStart: string;
   insertionEnd: string;
+  // the blade of a framing shutter: Top, Right, Bottom or Left (or its number)
+  blade: string;
+  shakeSpeed: string;
+  shakeSpeedStart: string;
+  shakeSpeedEnd: string;
+  // the name of the effect of an iris or a frost, e.g. Pulse
+  effectName: string;
+  // how long a maintenance value has to be held, e.g. 3s
+  hold: string;
   colors: string[];
   colorsStart: string[];
   colorsEnd: string[];
@@ -178,6 +187,12 @@ export class FixtureCapability {
     this.insertion = data.insertion;
     this.insertionStart = data.insertionStart;
     this.insertionEnd = data.insertionEnd;
+    this.blade = data.blade === undefined || data.blade === null ? undefined : String(data.blade);
+    this.shakeSpeed = data.shakeSpeed;
+    this.shakeSpeedStart = data.shakeSpeedStart;
+    this.shakeSpeedEnd = data.shakeSpeedEnd;
+    this.effectName = data.effectName;
+    this.hold = data.hold;
     this.colors = data.colors;
     this.colorsStart = data.colorsStart;
     this.colorsEnd = data.colorsEnd;

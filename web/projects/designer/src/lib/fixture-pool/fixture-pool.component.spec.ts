@@ -1214,6 +1214,82 @@ describe('FixturePoolComponent', () => {
     });
   });
 
+  // A fixture which can is asked to reset itself or to switch its lamp on, on the stage, for as long as it asks for
+  describe('maintaining fixtures', () => {
+    let previewPatch: jasmine.Spy;
+    let endPatchPreview: jasmine.Spy;
+
+    beforeEach(() => {
+      previewPatch = spyOn(TestBed.inject(LivePreviewService), 'previewPatch');
+      endPatchPreview = spyOn(TestBed.inject(LivePreviewService), 'endPatchPreview');
+
+      project.fixtureProfiles.push(new FixtureProfile(profile('test/wide-mover')));
+      project.fixtures.push(
+        new Fixture({
+          uuid: 'wide',
+          name: 'Wide',
+          profileUuid: 'test/wide-mover',
+          modeShortName: '5ch',
+          dmxUniverseUuid: 'floor',
+          dmxFirstChannel: 20,
+        })
+      );
+      project.presetFixtures.push({ fixtureUuid: 'wide' } as any);
+    });
+
+    const wide = () => pool.fixturePool.find((candidate) => candidate.uuid === 'wide');
+
+    it('offers it to the fixtures which can, and holds it for as long as they ask for', async () => {
+      await open();
+
+      expect(pool.canMaintain(wide(), 'reset')).toBe(true);
+      expect(pool.canMaintain(wide(), 'lamp-on')).toBe(true);
+      expect(pool.canMaintain(pool.fixturePool[0], 'reset')).toBe(false);
+      expect(treeRow('Wide').querySelectorAll('.fixture-maintenance').length).toBe(2);
+      expect(treeRow('Par 1').querySelector('.fixture-maintenance')).toBeNull();
+
+      // the time each of them is held for
+      const timers: { callback: () => void; millis: number }[] = [];
+      spyOn(window, 'setTimeout').and.callFake(((callback: () => void, millis: number) => timers.push({ callback, millis })) as any);
+
+      pool.maintain(wide(), 'reset');
+      pool.maintain(wide(), 'reset');
+      pool.maintain(wide(), 'lamp-on');
+      fixture.detectChanges();
+
+      expect(project.resetFixtureUuids).toEqual(['wide']);
+      expect(project.lampOnFixtureUuids).toEqual(['wide']);
+      expect(previewPatch).toHaveBeenCalledWith(pool.fixturePool);
+      expect(pool.isMaintaining(wide(), 'reset')).toBe(true);
+      expect(treeRow('Wide').querySelector('.fixture-maintenance').classList).toContain('maintaining');
+
+      // the reset is held for five seconds, the lamp for three (and a bit)
+      expect(timers.map((timer) => timer.millis)).toEqual([5500, 3500]);
+
+      timers[1].callback();
+      expect(project.lampOnFixtureUuids).toEqual([]);
+      expect(project.resetFixtureUuids).toEqual(['wide']);
+      expect(endPatchPreview).not.toHaveBeenCalled();
+
+      timers[0].callback();
+      expect(project.resetFixtureUuids).toEqual([]);
+      expect(endPatchPreview).toHaveBeenCalled();
+    });
+
+    it('asks nothing of a fixture which can not, and stops asking when it is closed', async () => {
+      await open();
+
+      pool.maintain(pool.fixturePool[0], 'lamp-on');
+      expect(project.lampOnFixtureUuids).toEqual([]);
+
+      pool.maintain(wide(), 'reset');
+      expect(project.resetFixtureUuids).toEqual(['wide']);
+
+      fixture.destroy();
+      expect(project.resetFixtureUuids).toEqual([]);
+    });
+  });
+
   describe('folders', () => {
     it('adds a folder in the folder of the fixture edited, after what is in it', async () => {
       await open();

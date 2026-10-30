@@ -25,6 +25,7 @@ import { UniverseConfig } from '../models/universe-config';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
 import { FixtureExchangeReport, FixtureExchangeService } from '../services/fixture-exchange.service';
 import { FixtureMode } from '../models/fixture-mode';
+import { getMaintenanceCapability, getMaintenanceHoldMillis, MaintenanceAction } from '../models/maintenance';
 
 // One row of the fixture tree: a fixture of the pool and the folder it is in. The
 // fixture panel shows a fixture with all its pixels, here it is a single row which
@@ -252,6 +253,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.endMaintenance();
     this.endIdentify();
     this.mapResized?.disconnect();
     this.dmxMap?.nativeElement.removeEventListener('mousemove', this.channelHovered);
@@ -1070,7 +1072,102 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       this.projectService.project.identifyFixtureUuids = [];
     }
 
-    this.livePreviewService.endPatchPreview();
+    if (this.maintenanceTimers.size === 0) {
+      this.livePreviewService.endPatchPreview();
+    }
+  }
+
+  // ---- asking fixtures to reset themselves or to switch their lamp on -------
+
+  // the fixtures doing it right now, until they have held it for as long as they ask for (see maintenance)
+  private maintenanceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // how long the maintenance capabilities of each mode of a profile are held, undefined if it has none
+  private maintenanceHolds = new Map<string, number>();
+
+  private maintenanceKey(fixture: Fixture, action: MaintenanceAction): string {
+    return action + ':' + fixture.uuid;
+  }
+
+  // how long the fixture has to be asked to do the passed action, or undefined if it can't (e.g. an LED par has no
+  // lamp to switch on)
+  getMaintenanceHold(fixture: Fixture, action: MaintenanceAction): number {
+    const key = action + ':' + fixture.profileUuid + ':' + fixture.modeShortName;
+
+    if (!this.maintenanceHolds.has(key)) {
+      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+      const mode = profile ? this.fixtureService.getModeByFixture(profile, fixture) : undefined;
+      const found = mode ? getMaintenanceCapability(this.fixtureService.getCachedChannels(profile, mode, null), action) : undefined;
+
+      this.maintenanceHolds.set(
+        key,
+        found && found.capability.centerValue !== undefined ? getMaintenanceHoldMillis(found.capability) : undefined
+      );
+    }
+
+    return this.maintenanceHolds.get(key);
+  }
+
+  canMaintain(fixture: Fixture, action: MaintenanceAction): boolean {
+    return this.getMaintenanceHold(fixture, action) !== undefined;
+  }
+
+  isMaintaining(fixture: Fixture, action: MaintenanceAction): boolean {
+    return this.maintenanceTimers.has(this.maintenanceKey(fixture, action));
+  }
+
+  // ask the fixture on the stage to reset itself or to switch its lamp on: the value is held for as long as the
+  // fixture asks for (three seconds at least), then the fixture plays the presets again
+  maintain(fixture: Fixture, action: MaintenanceAction) {
+    const hold = this.getMaintenanceHold(fixture, action);
+    const key = this.maintenanceKey(fixture, action);
+
+    if (hold === undefined || this.maintenanceTimers.has(key)) {
+      return;
+    }
+
+    this.maintenanceTimers.set(
+      key,
+      setTimeout(() => {
+        this.maintenanceTimers.delete(key);
+        this.updateMaintenance();
+      }, Math.max(hold, 3000) + 500)
+    );
+    this.updateMaintenance();
+  }
+
+  // tell the stage which fixtures do what
+  private updateMaintenance() {
+    const project = this.projectService.project;
+
+    if (!project) {
+      return;
+    }
+
+    const fixturesOf = (action: MaintenanceAction) =>
+      Array.from(this.maintenanceTimers.keys())
+        .filter((key) => key.startsWith(action + ':'))
+        .map((key) => key.substring(action.length + 1));
+
+    project.resetFixtureUuids = fixturesOf('reset');
+    project.lampOnFixtureUuids = fixturesOf('lamp-on');
+
+    if (this.maintenanceTimers.size > 0 || this.identifiedFixtureUuids.length > 0) {
+      this.livePreviewService.previewPatch(this.fixturePool);
+    } else {
+      this.livePreviewService.endPatchPreview();
+    }
+  }
+
+  // the dialog closes: nothing is asked of the fixtures anymore
+  private endMaintenance() {
+    this.maintenanceTimers.forEach((timer) => clearTimeout(timer));
+    this.maintenanceTimers.clear();
+
+    if (this.projectService.project) {
+      this.projectService.project.resetFixtureUuids = [];
+      this.projectService.project.lampOnFixtureUuids = [];
+    }
   }
 
   private fixtureChannelCount(fixture: Fixture): number {

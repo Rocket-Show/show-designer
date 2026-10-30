@@ -49,8 +49,14 @@ export class EffectComponent implements OnInit {
     this.livePreviewService.previewLive();
   }
 
+  // a movement of the moving heads: all of them together, until a chase is set
   addPanTiltEffect() {
-    this.addEffect(new EffectPanTilt());
+    const effect = new EffectPanTilt();
+    effect.uuid = this.uuidService.getUuid();
+    effect.phasingMode = 'spread';
+    effect.phasingCycles = 0;
+    this.addEffect(effect);
+    this.livePreviewService.previewLive();
   }
 
   openEffect(effect: Effect, event: any) {

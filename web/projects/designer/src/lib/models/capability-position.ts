@@ -6,10 +6,13 @@ import { FixtureCapability, FixtureCapabilityType } from './fixture-capability';
 // fixture it is and whichever way round its profile runs them: from narrow to wide (zoom, also on a channel of the
 // beam angle), near to far (focus), closed to open (iris), no frost to full frost, warm to cold (color temperature),
 // slow to fast (strobe speed, pan/tilt speed, given as a speed or as the time a movement takes), short to long
-// (strobe duration). The strobe opens the shutter at 0 and strobes from slow to fast above it, the prism is out at 0
-// and in above it, the fog (or haze) is off at 0 and puts out more above it. A preset written this way plays on
-// another model of fixture just the same, which a value of a channel doesn't. Rocket Show plays them the very same
-// way (CapabilityPositions).
+// (strobe duration), out to in (the blades of a framing shutter), from one end of their turn to the other (the blades
+// and the whole framing shutter turned). The strobe opens the shutter at 0 and strobes from slow to fast above it, the
+// prism is out at 0 and in above it, the fog (or haze) is off at 0 and puts out more above it, the pulse of an iris or
+// a frost is off at 0 and pulses from slow to fast above it. A rotation (of a gobo, a prism or of anything else
+// turning) turns anticlockwise below the middle (fastest at 0), stops in the middle and turns clockwise above it
+// (fastest at 1). A preset written this way plays on another model of fixture just the same, which a value of a
+// channel doesn't. Rocket Show plays them the very same way (CapabilityPositions).
 export const positionedCapabilityTypes = [
   FixtureCapabilityType.ShutterStrobe,
   FixtureCapabilityType.StrobeSpeed,
@@ -22,7 +25,47 @@ export const positionedCapabilityTypes = [
   FixtureCapabilityType.Prism,
   FixtureCapabilityType.PanTiltSpeed,
   FixtureCapabilityType.FogOutput,
+  FixtureCapabilityType.WheelSlotRotation,
+  FixtureCapabilityType.PrismRotation,
+  FixtureCapabilityType.Rotation,
+  FixtureCapabilityType.BladeInsertion,
+  FixtureCapabilityType.BladeRotation,
+  FixtureCapabilityType.BladeSystemRotation,
+  FixtureCapabilityType.IrisEffect,
+  FixtureCapabilityType.FrostEffect,
 ];
+
+// the rotations, which turn either way
+export const rotationCapabilityTypes = [
+  FixtureCapabilityType.WheelSlotRotation,
+  FixtureCapabilityType.PrismRotation,
+  FixtureCapabilityType.Rotation,
+];
+
+// What plays over what the rest of a preset puts on the same channel, whatever order they come in: the pulse of an
+// iris over the iris, the one of a frost over the frost and the shake of a gobo over the gobo. Each of them leaves the
+// channel to the rest at 0.
+export const overridingCapabilityTypes = [
+  FixtureCapabilityType.IrisEffect,
+  FixtureCapabilityType.FrostEffect,
+  FixtureCapabilityType.WheelShake,
+];
+
+// the blades of a framing shutter a preset sets on every model
+export const blades = ['Top', 'Right', 'Bottom', 'Left'];
+
+export function isRotationCapabilityType(type: FixtureCapabilityType): boolean {
+  return rotationCapabilityTypes.indexOf(type) >= 0;
+}
+
+export function isOverridingCapabilityType(type: FixtureCapabilityType): boolean {
+  return overridingCapabilityTypes.indexOf(type) >= 0;
+}
+
+// do the capabilities of the type turn a blade of a framing shutter, which the value names?
+export function isBladeCapabilityType(type: FixtureCapabilityType): boolean {
+  return type === FixtureCapabilityType.BladeInsertion || type === FixtureCapabilityType.BladeRotation;
+}
 
 // the capabilities of a channel a positioned capability is played with: the zoom also on a channel of the beam angle,
 // the fog output also on a channel of the fog (which names its kind as well, e.g. haze)
@@ -62,6 +105,17 @@ const wordRanks: { [word: string]: number } = {
   long: 1e9,
   weak: -1e9,
   strong: 1e9,
+  out: -1e9,
+  in: 1e9,
+};
+
+// where the speeds of a rotation lie: clockwise above 0, anticlockwise below it
+const rotationWordRanks: { [word: string]: number } = {
+  'fast CW': 1e9,
+  'slow CW': 1e-9,
+  stop: 0,
+  'slow CCW': -1e-9,
+  'fast CCW': -1e9,
 };
 
 // a number with the unit the fixture library writes after it, e.g. "12.5deg", "3200K" or "120bpm"
@@ -142,6 +196,16 @@ function getRangeEnds(capability: FixtureCapability): { ends: string[]; inverted
     case FixtureCapabilityType.FogOutput:
     case FixtureCapabilityType.Fog:
       return { ends: ends(capability.fogOutputStart, capability.fogOutputEnd, capability.fogOutput), inverted: false };
+    case FixtureCapabilityType.BladeInsertion:
+      return { ends: ends(capability.insertionStart, capability.insertionEnd, capability.insertion), inverted: false };
+    case FixtureCapabilityType.BladeRotation:
+    case FixtureCapabilityType.BladeSystemRotation:
+      return { ends: ends(capability.angleStart, capability.angleEnd, capability.angle), inverted: false };
+    case FixtureCapabilityType.IrisEffect:
+    case FixtureCapabilityType.FrostEffect:
+      return { ends: ends(capability.speedStart, capability.speedEnd, capability.speed), inverted: false };
+    case FixtureCapabilityType.WheelShake:
+      return { ends: ends(capability.shakeSpeedStart, capability.shakeSpeedEnd, capability.shakeSpeed), inverted: false };
     default:
       return { ends: [undefined, undefined], inverted: false };
   }
@@ -176,7 +240,7 @@ function getRangeWidth(channel: CachedFixtureChannel, channelCapability: CachedF
 }
 
 // the widest of the passed capabilities of the channel, the first of them as wide
-function getWidest(channel: CachedFixtureChannel, capabilities: CachedFixtureCapability[]): CachedFixtureCapability {
+export function getWidest(channel: CachedFixtureChannel, capabilities: CachedFixtureCapability[]): CachedFixtureCapability {
   let widest: CachedFixtureCapability;
 
   for (const channelCapability of capabilities) {
@@ -206,12 +270,26 @@ function getOff(channel: CachedFixtureChannel, type: FixtureCapabilityType): Cac
 }
 
 // the capability of the channel a positioned capability value is played with, or undefined if the channel doesn't
-// do it. A channel has one capability doing it: the widest one, unless the value says which kind it is.
+// do it. A channel has one capability doing it: the widest one, unless the value says which kind it is. A blade is
+// played by the capabilities of the blade the value names.
 export function getPositionedCapability(
   channel: CachedFixtureChannel,
   type: FixtureCapabilityType,
-  valuePercentage: number
+  valuePercentage: number,
+  blade?: string
 ): CachedFixtureCapability {
+  if (isBladeCapabilityType(type)) {
+    return getWidest(
+      channel,
+      ofType(channel, type).filter((channelCapability) => !blade || channelCapability.capability.blade === blade)
+    );
+  }
+
+  if ((type === FixtureCapabilityType.IrisEffect || type === FixtureCapabilityType.FrostEffect) && valuePercentage <= 0) {
+    // no pulse leaves the iris or the frost to the rest of the preset
+    return undefined;
+  }
+
   if (type === FixtureCapabilityType.ShutterStrobe) {
     if (valuePercentage > 0) {
       // a strobe flashing on its own, not at random or to the sound, or else any of them
@@ -266,8 +344,17 @@ function isSingleValue(type: FixtureCapabilityType, valuePercentage: number, cap
 }
 
 // the value of a channel playing a positioned capability value (0 to 1), or undefined if the channel doesn't do it
-export function getPositionedChannelValue(channel: CachedFixtureChannel, type: FixtureCapabilityType, valuePercentage: number): number {
-  const channelCapability = getPositionedCapability(channel, type, valuePercentage);
+export function getPositionedChannelValue(
+  channel: CachedFixtureChannel,
+  type: FixtureCapabilityType,
+  valuePercentage: number,
+  blade?: string
+): number {
+  if (isRotationCapabilityType(type)) {
+    return getRotationChannelValue(channel, type, valuePercentage);
+  }
+
+  const channelCapability = getPositionedCapability(channel, type, valuePercentage, blade);
 
   if (!channelCapability) {
     return undefined;
@@ -281,6 +368,13 @@ export function getPositionedChannelValue(channel: CachedFixtureChannel, type: F
 
   const position = isRangeReversed(capability) ? 1 - valuePercentage : valuePercentage;
 
+  return getRangeValue(channel, channelCapability, position);
+}
+
+// the value at the passed position (0 to 1) within the range of a capability of the channel
+function getRangeValue(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability, position: number): number {
+  const capability = channelCapability.capability;
+
   if (channel.capabilities.length === 1) {
     // the whole channel
     return channel.maxValue * position;
@@ -293,4 +387,123 @@ export function getPositionedChannelValue(channel: CachedFixtureChannel, type: F
   }
 
   return dmxRange[0] + (dmxRange[1] - dmxRange[0]) * position;
+}
+
+// where a speed of a rotation lies (e.g. "fast CW", "stop", "-10rpm" or "50%"), clockwise above 0, or undefined for one
+// which can't be read
+export function getRotationRank(text: string): number {
+  if (text === undefined || text === null) {
+    return undefined;
+  }
+
+  const trimmed = String(text).trim();
+
+  if (Object.prototype.hasOwnProperty.call(rotationWordRanks, trimmed)) {
+    return rotationWordRanks[trimmed];
+  }
+
+  return getPropertyRank(trimmed);
+}
+
+// the speeds a rotation runs between, or undefined for one turning to an angle instead (e.g. an indexed gobo)
+function getRotationEnds(channelCapability: CachedFixtureCapability): number[] {
+  const capability = channelCapability.capability;
+  const start = getRotationRank(capability.speedStart || capability.speed);
+  const end = getRotationRank(capability.speedEnd || capability.speed);
+
+  return start === undefined || end === undefined ? undefined : [start, end];
+}
+
+// The value of a channel turning something at the passed speed: anticlockwise below the middle (fastest at 0), stopped
+// in the middle, clockwise above it (fastest at 1), or undefined if the channel doesn't turn it that way. The widest
+// range turning the asked way only is taken from slow to fast, or else one turning both ways, from where it stops.
+export function getRotationChannelValue(channel: CachedFixtureChannel, type: FixtureCapabilityType, valuePercentage: number): number {
+  const speed = Math.max(Math.min(valuePercentage * 2 - 1, 1), -1);
+  const rotations = ofType(channel, type).filter((channelCapability) => getRotationEnds(channelCapability) !== undefined);
+
+  if (rotations.length === 0) {
+    return undefined;
+  }
+
+  // the ranges turning both ways and where they stop
+  const across = rotations.filter((channelCapability) => {
+    const [start, end] = getRotationEnds(channelCapability);
+    return start * end < 0;
+  });
+  const acrossValue = (direction: number, amount: number): number => {
+    const widest = getWidest(channel, across);
+    const [start, end] = getRotationEnds(widest);
+    const stop = start / (start - end);
+    const towardsEnd = Math.sign(end) === direction;
+
+    return getRangeValue(channel, widest, towardsEnd ? stop + (1 - stop) * amount : stop - stop * amount);
+  };
+
+  if (speed === 0) {
+    const stopped = rotations.find((channelCapability) => {
+      const [start, end] = getRotationEnds(channelCapability);
+      return start === 0 && end === 0;
+    });
+
+    if (stopped) {
+      return stopped.centerValue;
+    }
+
+    if (across.length > 0) {
+      return acrossValue(1, 0);
+    }
+
+    const off = getOff(channel, type);
+
+    return off ? off.centerValue : undefined;
+  }
+
+  const direction = Math.sign(speed);
+  const oneWay = rotations.filter((channelCapability) => {
+    const [start, end] = getRotationEnds(channelCapability);
+    return start * direction >= 0 && end * direction >= 0 && (start !== 0 || end !== 0);
+  });
+
+  if (oneWay.length > 0) {
+    const widest = getWidest(channel, oneWay);
+    const [start, end] = getRotationEnds(widest);
+
+    return getRangeValue(channel, widest, Math.abs(start) > Math.abs(end) ? 1 - Math.abs(speed) : Math.abs(speed));
+  }
+
+  return across.length > 0 ? acrossValue(direction, Math.abs(speed)) : undefined;
+}
+
+// the wheel a capability shakes: the one of its slot, the one it names or else the one named like its channel
+function getShakeWheelName(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability): string {
+  if (channelCapability.wheelName) {
+    return channelCapability.wheelName;
+  }
+
+  return typeof channelCapability.capability.wheel === 'string' ? channelCapability.capability.wheel : channel.name;
+}
+
+// The value of a channel shaking the passed slot of a wheel (or the whole wheel) at the passed speed, from slow to
+// fast, or undefined if the channel doesn't shake it or the speed is 0 (which leaves the wheel to the rest)
+export function getShakeChannelValue(channel: CachedFixtureChannel, wheel: string, slotNumber: number, valuePercentage: number): number {
+  if (!(valuePercentage > 0)) {
+    return undefined;
+  }
+
+  const shakes = channel.capabilities.filter(
+    (channelCapability) =>
+      channelCapability.capability.type === FixtureCapabilityType.WheelShake &&
+      (!wheel || getShakeWheelName(channel, channelCapability) === wheel) &&
+      (channelCapability.capability.slotNumber === undefined || channelCapability.capability.slotNumber === slotNumber)
+  );
+
+  // the slot shaking on its own, or else the whole wheel
+  const ofSlot = shakes.filter((channelCapability) => channelCapability.capability.slotNumber === slotNumber);
+  const shake = getWidest(channel, ofSlot.length > 0 ? ofSlot : shakes);
+
+  if (!shake) {
+    return undefined;
+  }
+
+  return getRangeValue(channel, shake, isRangeReversed(shake.capability) ? 1 - valuePercentage : valuePercentage);
 }

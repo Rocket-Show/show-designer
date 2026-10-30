@@ -185,7 +185,6 @@
       "capability-color": "Farbe",
       "capability-color-wheel": "Farbrad",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Spiegeln",
       "profiles": "Profiles",
       "setting-position-title": "Fixture Position",
       "setting-position": "Position",
@@ -217,7 +216,15 @@
         "ColorIntensity": "Aus",
         "StrobeDuration": "Kurz",
         "PanTiltSpeed": "Langsam",
-        "FogOutput": "Aus"
+        "FogOutput": "Aus",
+        "WheelSlotRotation": "Schnell gegen den Uhrzeigersinn",
+        "PrismRotation": "Schnell gegen den Uhrzeigersinn",
+        "Rotation": "Schnell gegen den Uhrzeigersinn",
+        "BladeInsertion": "Draussen",
+        "BladeRotation": "Gegen den Uhrzeigersinn",
+        "BladeSystemRotation": "Gegen den Uhrzeigersinn",
+        "IrisEffect": "Aus",
+        "FrostEffect": "Aus"
       },
       "capability-position-high": {
         "ShutterStrobe": "Schnell",
@@ -230,10 +237,45 @@
         "ColorIntensity": "Voll",
         "StrobeDuration": "Lang",
         "PanTiltSpeed": "Schnell",
-        "FogOutput": "Voll"
+        "FogOutput": "Voll",
+        "WheelSlotRotation": "Schnell im Uhrzeigersinn",
+        "PrismRotation": "Schnell im Uhrzeigersinn",
+        "Rotation": "Schnell im Uhrzeigersinn",
+        "BladeInsertion": "Drin",
+        "BladeRotation": "Im Uhrzeigersinn",
+        "BladeSystemRotation": "Im Uhrzeigersinn",
+        "IrisEffect": "Schnell",
+        "FrostEffect": "Schnell"
       },
       "model-specific-title": "Nur dieses Modell",
-      "model-specific-hint": "Was du auf diesen Kanälen einstellst, spielt nur auf diesem Fixture-Modell. Dimmer, Farben, Strobe, Zoom, Fokus, Iris und Frost der Fähigkeiten spielen auf jedem Modell, so läuft die Show auch auf anderen Fixtures."
+      "model-specific-hint": "Was du auf diesen Kanälen einstellst, spielt nur auf diesem Fixture-Modell. Dimmer, Farben, Strobe, Zoom, Fokus, Iris und Frost der Fähigkeiten spielen auf jedem Modell, so läuft die Show auch auf anderen Fixtures.",
+      "capability-pan-tilt-pad": "Position",
+      "capability-pan-tilt-pad-hint": "Ziehen, um die Moving Heads auszurichten: quer für Pan, hoch und runter für Tilt. Die Pfeiltasten bewegen um ein Grad (zehn mit Umschalt), ein Doppelklick zentriert.",
+      "capability-pan-tilt-mirror-pan": "Pan spiegeln",
+      "capability-pan-tilt-mirror-tilt": "Tilt spiegeln",
+      "capability-pan-tilt-spread": "Auffächern",
+      "capability-pan-tilt-spread-hint": "Verteilt die Köpfe gleichmässig über so viele Grad, vom ersten bis zum letzten.",
+      "capability-pan-tilt-aim": "Punkt auf der Bühne",
+      "capability-pan-tilt-aim-hint": "Einen Punkt in der 3D-Vorschau anklicken: Jeder Kopf zeigt darauf, wo immer er hängt und welches Modell er auch ist.",
+      "capability-pan-tilt-aim-pick": "Punkt wählen",
+      "capability-pan-tilt-aim-picking": "Bühne anklicken…",
+      "capability-pan-tilt-aim-stop": "Nicht mehr zielen",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Aus",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Blende oben",
+          "Right": "Blende rechts",
+          "Bottom": "Blende unten",
+          "Left": "Blende links"
+        },
+        "BladeRotation": {
+          "Top": "Blende oben Winkel",
+          "Right": "Blende rechts Winkel",
+          "Bottom": "Blende unten Winkel",
+          "Left": "Blende links Winkel"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Fixture Pool",
@@ -282,7 +324,11 @@
       "patch-in-a-row-full": "Die Fixtures passen ab dort nicht mehr ins Universum.",
       "identify": "Identifizieren: das Fixture weiss blinken lassen",
       "model-specific": "Die Presets stellen {{count}} Werte ein, die nur dieses Modell spielt.",
-      "add-fixture": "Ein Fixture dieses Profils hinzufügen"
+      "add-fixture": "Ein Fixture dieses Profils hinzufügen",
+      "reset": "Reset",
+      "reset-hint": "Lässt das Gerät auf der Bühne einen Reset machen, z. B. ein Moving Head, der seine Position verloren hat",
+      "lamp-on": "Lampe an",
+      "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein"
     },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",
@@ -316,7 +362,15 @@
       "curve-square": "Rechteck",
       "curve-triangle": "Dreieck",
       "curve-sawtooth": "Sägezahn",
-      "curve-reverse-sawtooth": "Entgegengesetzter Sägezahn"
+      "curve-reverse-sawtooth": "Entgegengesetzter Sägezahn",
+      "pan-tilt-shape-circle": "Kreis",
+      "pan-tilt-shape-figure8": "Acht",
+      "pan-tilt-shape-line": "Linie",
+      "pan-tilt-shape-wave": "Welle",
+      "pan-tilt-size": "Grösse",
+      "pan-tilt-beats": "Beats",
+      "pan-tilt-chase-hint": "Wie viele ganze Bewegungen über alle Köpfe verteilt werden: 0 bewegt sie gemeinsam, 1 lässt eine Welle durch sie laufen.",
+      "pan-tilt-run-hint": "Wie oft die Bewegung läuft, 0 solange das Preset spielt."
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

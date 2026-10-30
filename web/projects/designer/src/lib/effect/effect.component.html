@@ -50,7 +50,7 @@
           </div>
           } @if (item.type == 'pan-tilt') {
           <div style="min-width: 500px">
-            <lib-app-effect-pan-tilt></lib-app-effect-pan-tilt>
+            <lib-app-effect-pan-tilt [effect]="item"></lib-app-effect-pan-tilt>
           </div>
           }
         </accordion-group>
@@ -73,8 +73,9 @@
             <a class="dropdown-item" href="#" (click)="addCurveEffect(); (false)">
               <i class="fa fa-area-chart fa-fw" aria-hidden="true"></i> {{ 'designer.effect.curve' | translate }}</a
             >
-            <!-- <a class="dropdown-item" href="#" (click)="addPanTiltEffect()">
-                <i class="fa fa-arrows-alt fa-fw" aria-hidden="true"></i> Pan/Tilt</a> -->
+            <a class="dropdown-item" href="#" (click)="addPanTiltEffect(); (false)">
+              <i class="fa fa-arrows-alt fa-fw" aria-hidden="true"></i> {{ 'designer.effect.type-pan-tilt' | translate }}</a
+            >
           </div>
         </div>
       </div>

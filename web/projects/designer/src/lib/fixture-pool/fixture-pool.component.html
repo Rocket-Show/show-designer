@@ -199,10 +199,36 @@
                 <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
                 <!-- no tooltip on the rows: one is built, placed and thrown away again for
                      every row the cursor crosses, and a minus on a fixture speaks for itself -->
+                <!-- the fixture resets itself or switches its lamp on, on the stage -->
+                @if (canMaintain(node.fixture, 'reset')) {
+                <a
+                  href="#"
+                  class="fixture-maintenance ml-auto my-auto"
+                  role="button"
+                  [class.maintaining]="isMaintaining(node.fixture, 'reset')"
+                  [attr.aria-label]="'designer.fixture-pool.reset' | translate"
+                  [title]="'designer.fixture-pool.reset-hint' | translate"
+                  (click)="maintain(node.fixture, 'reset'); $event.stopPropagation(); (false)"
+                  ><i class="fa fa-refresh fa-fw" aria-hidden="true"></i
+                ></a>
+                } @if (canMaintain(node.fixture, 'lamp-on')) {
+                <a
+                  href="#"
+                  class="fixture-maintenance my-auto"
+                  [class.ml-auto]="!canMaintain(node.fixture, 'reset')"
+                  role="button"
+                  [class.maintaining]="isMaintaining(node.fixture, 'lamp-on')"
+                  [attr.aria-label]="'designer.fixture-pool.lamp-on' | translate"
+                  [title]="'designer.fixture-pool.lamp-on-hint' | translate"
+                  (click)="maintain(node.fixture, 'lamp-on'); $event.stopPropagation(); (false)"
+                  ><i class="fa fa-power-off fa-fw" aria-hidden="true"></i
+                ></a>
+                }
                 <!-- the fixture blinks at full white in the preview and on the stage, to find it -->
                 <a
                   href="#"
-                  class="fixture-identify ml-auto my-auto"
+                  class="fixture-identify my-auto"
+                  [class.ml-auto]="!canMaintain(node.fixture, 'reset') && !canMaintain(node.fixture, 'lamp-on')"
                   role="button"
                   [class.identifying]="isIdentified(node.fixture)"
                   [attr.aria-label]="'designer.fixture-pool.identify' | translate"

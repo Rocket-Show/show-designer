@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { NgxBootstrapSliderModule } from 'ngx-bootstrap-slider';
 import { ToastrModule } from 'ngx-toastr';
 
 import { CachedFixture } from '../../../models/cached-fixture';
@@ -31,7 +32,7 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [FixtureCapabilityGoboWheelComponent],
-      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
+      imports: [FormsModule, NgxBootstrapSliderModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
     }).compileComponents();
 
@@ -120,5 +121,36 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
     await update();
     expect(step.fixtureCapabilityValues).toEqual([]);
     expect(selected()).toEqual([]);
+  });
+
+  it('shakes the gobo picked, if it can, and carries the shake over to another one which can', async () => {
+    component.selectSlotNumber(1);
+    await update();
+    expect(component.canShake()).toBe(false);
+    expect(element.querySelector('.gobo-shake')).toBeNull();
+
+    component.selectSlotNumber(2);
+    await update();
+    expect(component.canShake()).toBe(true);
+    expect(element.querySelector('.gobo-shake')).not.toBeNull();
+    expect(component.getShake()).toBe(0);
+
+    component.setShake(0.6);
+    const shake = presetService.getCapabilityValue(step, FixtureCapabilityType.WheelShake, undefined, 'Gobo Wheel', 'spot');
+    expect([shake.valuePercentage, shake.slotNumber]).toEqual([0.6, 2]);
+
+    // beyond what a shake can be
+    component.setShake(2);
+    component.setShake('fast');
+    expect(component.getShake()).toBe(0.6);
+
+    // a gobo which can't shake stops it
+    component.selectSlotNumber(3);
+    expect(component.getShake()).toBe(0);
+
+    component.selectSlotNumber(2);
+    component.setShake(0.4);
+    component.changeActive(false);
+    expect(step.fixtureCapabilityValues).toEqual([]);
   });
 });

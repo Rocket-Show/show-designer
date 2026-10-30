@@ -8,6 +8,11 @@
   display: none;
 }
 
+/* a spot on the stage is picked with the next click (e.g. to aim the moving heads at) */
+.preview-picking-spot {
+  cursor: crosshair;
+}
+
 /* sits on top of the 3d preview, along its upper edge: what is being played on
    the left, the controls on the right. Only the elements themselves take the
    mouse, so the stage can still be dragged in the gap between them. */

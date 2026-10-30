@@ -185,7 +185,6 @@
       "capability-color": "Colore",
       "capability-color-wheel": "Ruota colori",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Speculare",
       "profiles": "Profili",
       "setting-position-title": "Posizione fixture",
       "setting-position": "Posizione",
@@ -217,7 +216,15 @@
         "ColorIntensity": "Spento",
         "StrobeDuration": "Breve",
         "PanTiltSpeed": "Lento",
-        "FogOutput": "Spento"
+        "FogOutput": "Spento",
+        "WheelSlotRotation": "Veloce antiorario",
+        "PrismRotation": "Veloce antiorario",
+        "Rotation": "Veloce antiorario",
+        "BladeInsertion": "Fuori",
+        "BladeRotation": "Antiorario",
+        "BladeSystemRotation": "Antiorario",
+        "IrisEffect": "Spento",
+        "FrostEffect": "Spento"
       },
       "capability-position-high": {
         "ShutterStrobe": "Veloce",
@@ -230,10 +237,45 @@
         "ColorIntensity": "Pieno",
         "StrobeDuration": "Lungo",
         "PanTiltSpeed": "Veloce",
-        "FogOutput": "Pieno"
+        "FogOutput": "Pieno",
+        "WheelSlotRotation": "Veloce orario",
+        "PrismRotation": "Veloce orario",
+        "Rotation": "Veloce orario",
+        "BladeInsertion": "Dentro",
+        "BladeRotation": "Orario",
+        "BladeSystemRotation": "Orario",
+        "IrisEffect": "Veloce",
+        "FrostEffect": "Veloce"
       },
       "model-specific-title": "Solo questo modello",
-      "model-specific-hint": "Ciò che imposti su questi canali funziona solo su questo modello di fixture. Il dimmer, i colori, lo strobo, lo zoom, il fuoco, l'iride e il frost delle capacità funzionano su ogni modello, così lo show funziona anche su altri fixture."
+      "model-specific-hint": "Ciò che imposti su questi canali funziona solo su questo modello di fixture. Il dimmer, i colori, lo strobo, lo zoom, il fuoco, l'iride e il frost delle capacità funzionano su ogni modello, così lo show funziona anche su altri fixture.",
+      "capability-pan-tilt-pad": "Posizione",
+      "capability-pan-tilt-pad-hint": "Trascina per puntare le teste mobili: in orizzontale per il pan, in verticale per il tilt. Le frecce spostano di un grado (dieci con Maiusc), un doppio clic centra.",
+      "capability-pan-tilt-mirror-pan": "Specchia pan",
+      "capability-pan-tilt-mirror-tilt": "Specchia tilt",
+      "capability-pan-tilt-spread": "A ventaglio",
+      "capability-pan-tilt-spread-hint": "Distribuisce le teste in modo uniforme su questi gradi, dalla prima all’ultima.",
+      "capability-pan-tilt-aim": "Punto sul palco",
+      "capability-pan-tilt-aim-hint": "Fai clic su un punto nell’anteprima 3D: ogni testa lo punta da dove è appesa, qualunque sia il modello.",
+      "capability-pan-tilt-aim-pick": "Scegli un punto",
+      "capability-pan-tilt-aim-picking": "Fai clic sul palco…",
+      "capability-pan-tilt-aim-stop": "Smetti di puntare",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Spento",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Lama in alto",
+          "Right": "Lama a destra",
+          "Bottom": "Lama in basso",
+          "Left": "Lama a sinistra"
+        },
+        "BladeRotation": {
+          "Top": "Angolo lama in alto",
+          "Right": "Angolo lama a destra",
+          "Bottom": "Angolo lama in basso",
+          "Left": "Angolo lama a sinistra"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Pool fixture",
@@ -281,7 +323,11 @@
       "patch-in-a-row-full": "Da lì in poi i fixture non entrano più nell'universo.",
       "identify": "Identifica: fai lampeggiare il fixture in bianco",
       "model-specific": "I preset impostano {{count}} valori che funzionano solo su questo modello.",
-      "add-fixture": "Aggiungi un fixture di questo profilo"
+      "add-fixture": "Aggiungi un fixture di questo profilo",
+      "reset": "Reset",
+      "reset-hint": "Chiede all’apparecchio sul palco di resettarsi, ad es. una testa mobile che ha perso la posizione",
+      "lamp-on": "Lampada accesa",
+      "lamp-on-hint": "Accende la lampada dell’apparecchio sul palco"
     },
     "effect": {
       "add-new": "Aggiungi nuovo effetto",
@@ -315,7 +361,15 @@
       "curve-square": "Quadra",
       "curve-triangle": "Triangolare",
       "curve-sawtooth": "Dente di sega",
-      "curve-reverse-sawtooth": "Dente di sega inverso"
+      "curve-reverse-sawtooth": "Dente di sega inverso",
+      "pan-tilt-shape-circle": "Cerchio",
+      "pan-tilt-shape-figure8": "Otto",
+      "pan-tilt-shape-line": "Linea",
+      "pan-tilt-shape-wave": "Onda",
+      "pan-tilt-size": "Ampiezza",
+      "pan-tilt-beats": "battiti",
+      "pan-tilt-chase-hint": "Quanti movimenti completi sono distribuiti su tutte le teste: 0 le muove insieme, 1 fa passare un’onda.",
+      "pan-tilt-run-hint": "Quante volte viene eseguito il movimento, 0 finché il preset è attivo."
     },
     "composition": {
       "new": "Crea nuova composizione..."

@@ -21,6 +21,7 @@ import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { Composition } from '../models/composition';
 import { EffectCurve } from '../models/effect-curve';
+import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { assignTracks } from '../models/timeline-track';
 
 @Injectable({
@@ -154,7 +155,8 @@ export class ProjectLoadService {
     // others swung over half of it -> halve their amplitude, so the show looks the same.
     for (const preset of this.projectService.project.presets) {
       for (const effect of preset.effects) {
-        if (effect instanceof EffectCurve && effect.curveType !== 'square') {
+        // (a movement of the pan and the tilt runs on the timing of a curve, but swings over no amplitude)
+        if (effect instanceof EffectCurve && !(effect instanceof EffectPanTilt) && effect.curveType !== 'square') {
           effect.amplitude /= 2;
         }
       }

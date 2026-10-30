@@ -106,6 +106,16 @@ lib-tree,
   color: var(--sd-primary);
 }
 
+/* a fixture asked to reset itself or to switch its lamp on, while it does */
+.fixture-maintenance {
+  color: var(--sd-text-muted);
+  margin-right: var(--sd-space-1, 0.25rem);
+}
+
+.fixture-maintenance.maintaining {
+  color: var(--sd-primary);
+}
+
 /* what becomes of the values of the old model of a fixture changed to another one */
 .exchange-report {
   padding: var(--sd-space-2);

@@ -1,6 +1,14 @@
 <!-- The 3d render. It stays in the DOM while the preview is hidden: throwing the
      WebGL context away and building it up again costs more than leaving it idle. -->
-<div class="h-100" #canvas style="overflow: hidden" [class.preview-canvas-hidden]="previewHidden"></div>
+<div
+  class="h-100"
+  #canvas
+  style="overflow: hidden"
+  [class.preview-canvas-hidden]="previewHidden"
+  [class.preview-picking-spot]="previewService.pickingSpot"
+  (pointerdown)="pointerDown($event)"
+  (pointerup)="pointerUp($event)"
+></div>
 
 @if (previewHidden) {
 <!-- nothing is rendered while the preview is hidden, so say so where the render was -->

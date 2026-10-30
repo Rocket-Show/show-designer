@@ -185,7 +185,6 @@
       "capability-color": "颜色",
       "capability-color-wheel": "色轮",
       "capability-pan-tilt": "水平/垂直",
-      "capability-pan-tilt-mirror": "镜像",
       "profiles": "配置文件",
       "setting-position-title": "灯具位置",
       "setting-position": "位置",
@@ -217,7 +216,15 @@
         "ColorIntensity": "关",
         "StrobeDuration": "短",
         "PanTiltSpeed": "慢",
-        "FogOutput": "关"
+        "FogOutput": "关",
+        "WheelSlotRotation": "快速逆时针",
+        "PrismRotation": "快速逆时针",
+        "Rotation": "快速逆时针",
+        "BladeInsertion": "移出",
+        "BladeRotation": "逆时针",
+        "BladeSystemRotation": "逆时针",
+        "IrisEffect": "关",
+        "FrostEffect": "关"
       },
       "capability-position-high": {
         "ShutterStrobe": "快",
@@ -230,10 +237,45 @@
         "ColorIntensity": "满",
         "StrobeDuration": "长",
         "PanTiltSpeed": "快",
-        "FogOutput": "满"
+        "FogOutput": "满",
+        "WheelSlotRotation": "快速顺时针",
+        "PrismRotation": "快速顺时针",
+        "Rotation": "快速顺时针",
+        "BladeInsertion": "切入",
+        "BladeRotation": "顺时针",
+        "BladeSystemRotation": "顺时针",
+        "IrisEffect": "快",
+        "FrostEffect": "快"
       },
       "model-specific-title": "仅此型号",
-      "model-specific-hint": "在这些通道上设置的内容只在此灯具型号上播放。功能中的调光器、颜色、频闪、变焦、对焦、光圈和雾化在每个型号上都会播放，因此演出在其他灯具上也能播放。"
+      "model-specific-hint": "在这些通道上设置的内容只在此灯具型号上播放。功能中的调光器、颜色、频闪、变焦、对焦、光圈和雾化在每个型号上都会播放，因此演出在其他灯具上也能播放。",
+      "capability-pan-tilt-pad": "位置",
+      "capability-pan-tilt-pad-hint": "拖动来调整摇头灯的方向：左右为水平（Pan），上下为俯仰（Tilt）。方向键移动一度（按住 Shift 移动十度），双击回到中心。",
+      "capability-pan-tilt-mirror-pan": "镜像水平",
+      "capability-pan-tilt-mirror-tilt": "镜像俯仰",
+      "capability-pan-tilt-spread": "扇形展开",
+      "capability-pan-tilt-spread-hint": "将灯头从第一台到最后一台均匀展开到这么多度。",
+      "capability-pan-tilt-aim": "舞台上的点",
+      "capability-pan-tilt-aim-hint": "在 3D 预览中点击一个点：每个灯头无论悬挂在何处、无论型号，都会指向它。",
+      "capability-pan-tilt-aim-pick": "选择一个点",
+      "capability-pan-tilt-aim-picking": "点击舞台…",
+      "capability-pan-tilt-aim-stop": "停止瞄准",
+      "capability-gobo-shake": "抖动",
+      "capability-gobo-shake-off": "关",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "上切光片",
+          "Right": "右切光片",
+          "Bottom": "下切光片",
+          "Left": "左切光片"
+        },
+        "BladeRotation": {
+          "Top": "上切光片角度",
+          "Right": "右切光片角度",
+          "Bottom": "下切光片角度",
+          "Left": "左切光片角度"
+        }
+      }
     },
     "fixture-pool": {
       "title": "灯具库",
@@ -281,7 +323,11 @@
       "patch-in-a-row-full": "从那里开始，灯具已放不进该域。",
       "identify": "识别：让灯具以白光闪烁",
       "model-specific": "预设设置了 {{count}} 个仅此型号播放的值。",
-      "add-fixture": "添加此配置文件的灯具"
+      "add-fixture": "添加此配置文件的灯具",
+      "reset": "复位",
+      "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
+      "lamp-on": "开灯泡",
+      "lamp-on-hint": "打开舞台上灯具的灯泡"
     },
     "effect": {
       "add-new": "添加新效果",
@@ -315,7 +361,15 @@
       "curve-square": "方波",
       "curve-triangle": "三角波",
       "curve-sawtooth": "锯齿波",
-      "curve-reverse-sawtooth": "反向锯齿波"
+      "curve-reverse-sawtooth": "反向锯齿波",
+      "pan-tilt-shape-circle": "圆形",
+      "pan-tilt-shape-figure8": "8 字形",
+      "pan-tilt-shape-line": "直线",
+      "pan-tilt-shape-wave": "波浪",
+      "pan-tilt-size": "幅度",
+      "pan-tilt-beats": "拍",
+      "pan-tilt-chase-hint": "在所有灯头之间分布多少个完整动作：0 让它们一起移动，1 让一道波浪穿过它们。",
+      "pan-tilt-run-hint": "动作运行多少次，0 表示只要预设在播放就一直运行。"
     },
     "composition": {
       "new": "创建新合成..."

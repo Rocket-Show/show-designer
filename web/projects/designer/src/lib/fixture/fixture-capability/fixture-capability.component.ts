@@ -4,7 +4,7 @@ import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
-import { getPlayingTypes } from '../../models/capability-position';
+import { blades, getPlayingTypes } from '../../models/capability-position';
 import { FixtureService } from '../../services/fixture.service';
 import { IntroService } from '../../services/intro.service';
 import { PresetService } from '../../services/preset.service';
@@ -36,6 +36,9 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   positionedTypes: FixtureCapabilityType[] = [];
   emitterColors: FixtureCapabilityColor[] = [];
 
+  // the blades of a framing shutter the fixtures of the preset have, put in and turned
+  bladePanels: { type: FixtureCapabilityType; blade: string }[] = [];
+
   private static readonly positionedPanels = [
     FixtureCapabilityType.ShutterStrobe,
     FixtureCapabilityType.StrobeDuration,
@@ -47,6 +50,12 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
     FixtureCapabilityType.Prism,
     FixtureCapabilityType.PanTiltSpeed,
     FixtureCapabilityType.FogOutput,
+    FixtureCapabilityType.WheelSlotRotation,
+    FixtureCapabilityType.PrismRotation,
+    FixtureCapabilityType.Rotation,
+    FixtureCapabilityType.IrisEffect,
+    FixtureCapabilityType.FrostEffect,
+    FixtureCapabilityType.BladeSystemRotation,
   ];
 
   private static readonly emitters = [
@@ -145,6 +154,26 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
     this.emitterColors = FixtureCapabilityComponent.emitters.filter((color) =>
       this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, color)
     );
+    this.bladePanels = [];
+
+    for (const type of [FixtureCapabilityType.BladeInsertion, FixtureCapabilityType.BladeRotation]) {
+      for (const blade of blades) {
+        if (this.hasBlade(type, blade)) {
+          this.bladePanels.push({ type, blade });
+        }
+      }
+    }
+  }
+
+  // does a fixture of the preset put in or turn the passed blade?
+  private hasBlade(type: FixtureCapabilityType, blade: string): boolean {
+    return (this.presetService.selectedPreset?.fixtures || []).some((presetFixture) =>
+      (this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey)?.channels || []).some((channel) =>
+        channel.capabilities.some(
+          (channelCapability) => channelCapability.capability.type === type && channelCapability.capability.blade === blade
+        )
+      )
+    );
   }
 
   // does any of the panels above apply to the fixtures of the preset?
@@ -155,6 +184,7 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
       this.hasCapabilityPanTilt ||
       this.positionedTypes.length > 0 ||
       this.emitterColors.length > 0 ||
+      this.bladePanels.length > 0 ||
       this.goboWheelChannels.length > 0
     );
   }

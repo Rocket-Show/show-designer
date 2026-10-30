@@ -50,6 +50,12 @@
         <lib-app-fixture-capability-position [type]="type"></lib-app-fixture-capability-position>
       </div>
       }
+      <!-- The blades of a framing shutter -->
+      @for (panel of bladePanels; track panel.type + panel.blade) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="panel.type" [blade]="panel.blade"></lib-app-fixture-capability-position>
+      </div>
+      }
       <!-- Gobo wheels -->
       @for (entry of goboWheelChannels; track $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">

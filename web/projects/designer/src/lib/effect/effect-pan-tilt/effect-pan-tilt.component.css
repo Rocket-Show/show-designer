@@ -1,0 +1,37 @@
+.pan-tilt-effect {
+  gap: var(--sd-space-3, 1rem);
+  padding: var(--sd-space-2, 0.5rem);
+}
+
+.pan-tilt-grid {
+  width: 150px;
+  height: 150px;
+  flex: none;
+  border: 1px solid var(--sd-border, #6c757d);
+  border-radius: 4px;
+}
+
+.pan-tilt-grid-axis {
+  stroke: var(--sd-border, #6c757d);
+  stroke-dasharray: 4 4;
+}
+
+.pan-tilt-grid-shape {
+  fill: none;
+  stroke: var(--sd-primary, #fd7e14);
+  stroke-width: 2;
+}
+
+.pan-tilt-effect-fields {
+  flex-direction: column;
+  gap: var(--sd-space-2, 0.5rem);
+  min-width: 14rem;
+}
+
+.pan-tilt-effect-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sd-space-2, 0.5rem);
+  margin: 0;
+}

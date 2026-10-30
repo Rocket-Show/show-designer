@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, Input } from '@angular/core';
+import { isRotationCapabilityType } from '../../../models/capability-position';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../../models/fixture-capability';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
@@ -16,8 +17,9 @@ const emitterColors: { [color: string]: string } = {
 
 // A capability of the step being edited which plays the same on every model of fixture: a position between the two
 // ends of what a fixture does (the strobe, the zoom, the focus, the iris, the frost, the color temperature, see
-// capability-position), a prism put in or taken out, or an emitter of light besides red, green and blue (e.g. white,
-// amber or UV). Switched off, the step leaves it alone.
+// capability-position), a prism put in or taken out, a rotation either way, a blade of a framing shutter, the pulse of
+// an iris or a frost, or an emitter of light besides red, green and blue (e.g. white, amber or UV). Switched off, the
+// step leaves it alone.
 @Component({
   selector: 'lib-app-fixture-capability-position',
   templateUrl: './fixture-capability-position.component.html',
@@ -32,6 +34,10 @@ export class FixtureCapabilityPositionComponent {
   // the color of an emitter
   @Input()
   color: FixtureCapabilityColor;
+
+  // the blade of a framing shutter (Top, Right, Bottom or Left)
+  @Input()
+  blade: string;
 
   constructor(
     private presetService: PresetService,
@@ -48,8 +54,12 @@ export class FixtureCapabilityPositionComponent {
     return this.type === FixtureCapabilityType.ColorIntensity;
   }
 
-  // what the card is named after: the color of an emitter or the capability
+  // what the card is named after: the color of an emitter, the blade or the capability
   get labelKey(): string {
+    if (this.blade) {
+      return 'designer.fixture.capability-blade.' + this.type + '.' + this.blade;
+    }
+
     return this.isEmitter ? 'designer.fixtureCapabilityColor.' + this.color : 'designer.fixtureCapabilityType.' + this.type;
   }
 
@@ -67,7 +77,7 @@ export class FixtureCapabilityPositionComponent {
   }
 
   get id(): string {
-    return 'capabilityPosition' + this.type + (this.color ? this.color.replace(' ', '') : '');
+    return 'capabilityPosition' + this.type + (this.color ? this.color.replace(' ', '') : '') + (this.blade || '');
   }
 
   // The strobe drives the speed of a fixture with a channel of its own for it (see StrobeSpeed) as well
@@ -75,8 +85,33 @@ export class FixtureCapabilityPositionComponent {
     return this.type === FixtureCapabilityType.ShutterStrobe ? [this.type, FixtureCapabilityType.StrobeSpeed] : [this.type];
   }
 
+  // where a capability switched on starts: the prism in and the emitter at full, a rotation, a blade turned and the
+  // whole framing shutter turned in the middle (standing still or straight), a pulse pulsing, the others at their low
+  // end (e.g. the shutter open, a blade out)
+  get startValue(): number {
+    if (this.isSwitch || this.isEmitter) {
+      return 1;
+    }
+
+    const middle = [
+      FixtureCapabilityType.BladeRotation,
+      FixtureCapabilityType.BladeSystemRotation,
+      FixtureCapabilityType.IrisEffect,
+      FixtureCapabilityType.FrostEffect,
+    ];
+
+    return isRotationCapabilityType(this.type) || middle.indexOf(this.type) >= 0 ? 0.5 : 0;
+  }
+
   getValue(): number {
-    const capabilityValue = this.presetService.getCapabilityValue(this.presetService.selectedStep, this.type, this.color);
+    const capabilityValue = this.presetService.getCapabilityValue(
+      this.presetService.selectedStep,
+      this.type,
+      this.color,
+      undefined,
+      undefined,
+      this.blade
+    );
 
     return capabilityValue ? capabilityValue.valuePercentage : undefined;
   }
@@ -93,7 +128,16 @@ export class FixtureCapabilityPositionComponent {
     }
 
     for (const type of this.types) {
-      this.presetService.setCapabilityValue(this.presetService.selectedStep, type, value, undefined, this.color);
+      this.presetService.setCapabilityValue(
+        this.presetService.selectedStep,
+        type,
+        value,
+        undefined,
+        this.color,
+        undefined,
+        undefined,
+        this.blade
+      );
     }
 
     this.changeDetectorRef.detectChanges();
@@ -102,14 +146,12 @@ export class FixtureCapabilityPositionComponent {
 
   changeActive(active: boolean) {
     if (active) {
-      // a capability switched on starts where it does the most: the prism in, the emitter at full, the others at
-      // their low end (e.g. the shutter open)
-      this.setValue(this.isSwitch || this.isEmitter ? 1 : 0);
+      this.setValue(this.startValue);
       return;
     }
 
     for (const type of this.types) {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, type, this.color);
+      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, type, this.color, undefined, undefined, this.blade);
     }
 
     this.changeDetectorRef.detectChanges();

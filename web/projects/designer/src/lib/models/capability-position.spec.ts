@@ -5,8 +5,13 @@ import {
   getPositionedCapability,
   getPositionedChannelValue,
   getPropertyRank,
+  getRotationChannelValue,
+  getRotationRank,
+  getShakeChannelValue,
+  isOverridingCapabilityType,
   isPositionedCapabilityType,
   isRangeReversed,
+  isRotationCapabilityType,
 } from './capability-position';
 import { FixtureCapability, FixtureCapabilityType } from './fixture-capability';
 import { FixtureProfile } from './fixture-profile';
@@ -317,6 +322,129 @@ describe('capability-position', () => {
 
         expect(getPositionedChannelValue(rotating, FixtureCapabilityType.Prism, 1)).toBe(137);
       });
+    });
+  });
+
+  describe('rotations', () => {
+    it('should read the speeds of a rotation, clockwise above 0', () => {
+      expect(getRotationRank('fast CW')).toBeGreaterThan(getRotationRank('slow CW'));
+      expect(getRotationRank('slow CW')).toBeGreaterThan(0);
+      expect(getRotationRank('stop')).toBe(0);
+      expect(getRotationRank('slow CCW')).toBeLessThan(0);
+      expect(getRotationRank('fast CCW')).toBeLessThan(getRotationRank('slow CCW'));
+      expect(getRotationRank('-10rpm')).toBeCloseTo(-1 / 6, 9);
+      expect(getRotationRank(undefined)).toBeUndefined();
+      expect(isRotationCapabilityType(FixtureCapabilityType.PrismRotation)).toBe(true);
+      expect(isRotationCapabilityType(FixtureCapabilityType.Prism)).toBe(false);
+    });
+
+    // anticlockwise from fast to slow, stopped, clockwise from slow to fast, then turning to an angle
+    const gobo = channelOf({
+      capabilities: [
+        range(0, 63, 'WheelSlotRotation', { speedStart: 'fast CCW', speedEnd: 'slow CCW' }),
+        range(64, 67, 'WheelSlotRotation', { speed: 'stop' }),
+        range(68, 127, 'WheelSlotRotation', { speedStart: 'slow CW', speedEnd: 'fast CW' }),
+        range(128, 255, 'WheelSlotRotation', { angleStart: '0deg', angleEnd: '360deg' }),
+      ],
+    });
+
+    it('should turn either way on the range turning that way only, and stop in the middle', () => {
+      expect(getRotationChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 0)).toBe(0);
+      expect(getRotationChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 0.25)).toBeCloseTo(31.5, 9);
+      expect(getRotationChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 0.5)).toBe(65);
+      expect(getRotationChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 0.75)).toBeCloseTo(97.5, 9);
+      expect(getRotationChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 1)).toBe(127);
+      // played as a position as well
+      expect(getPositionedChannelValue(gobo, FixtureCapabilityType.WheelSlotRotation, 1)).toBe(127);
+    });
+
+    it('should turn a range turning both ways from where it stops', () => {
+      const prism = channelOf({ capability: { type: 'PrismRotation', speedStart: '-10rpm', speedEnd: '10rpm' } });
+
+      expect(getRotationChannelValue(prism, FixtureCapabilityType.PrismRotation, 0)).toBe(0);
+      expect(getRotationChannelValue(prism, FixtureCapabilityType.PrismRotation, 0.5)).toBe(127.5);
+      expect(getRotationChannelValue(prism, FixtureCapabilityType.PrismRotation, 1)).toBe(255);
+
+      // the other way round
+      const reversed = channelOf({ capability: { type: 'PrismRotation', speedStart: 'fast CW', speedEnd: 'fast CCW' } });
+      expect(getRotationChannelValue(reversed, FixtureCapabilityType.PrismRotation, 1)).toBe(0);
+      expect(getRotationChannelValue(reversed, FixtureCapabilityType.PrismRotation, 0)).toBe(255);
+    });
+
+    it('should stop with no function, and not turn a way the fixture does not', () => {
+      const clockwise = channelOf({
+        capabilities: [range(0, 9, 'NoFunction'), range(10, 255, 'Rotation', { speedStart: 'slow CW', speedEnd: 'fast CW' })],
+      });
+
+      expect(getRotationChannelValue(clockwise, FixtureCapabilityType.Rotation, 0.5)).toBe(4);
+      expect(getRotationChannelValue(clockwise, FixtureCapabilityType.Rotation, 0)).toBeUndefined();
+      expect(getRotationChannelValue(clockwise, FixtureCapabilityType.Rotation, 1)).toBe(255);
+
+      // nothing stopping it
+      const turning = channelOf({ capability: { type: 'Rotation', speedStart: 'slow CW', speedEnd: 'fast CW' } });
+      expect(getRotationChannelValue(turning, FixtureCapabilityType.Rotation, 0.5)).toBeUndefined();
+
+      // turned to an angle only
+      const indexed = channelOf({ capability: { type: 'Rotation', angleStart: '0deg', angleEnd: '360deg' } });
+      expect(getRotationChannelValue(indexed, FixtureCapabilityType.Rotation, 1)).toBeUndefined();
+    });
+  });
+
+  describe('framing blades, pulses and shakes', () => {
+    it('should put in the blade the value names', () => {
+      const blades = channelOf({
+        capabilities: [
+          range(0, 127, 'BladeInsertion', { blade: 'Top', insertionStart: 'out', insertionEnd: 'in' }),
+          range(128, 255, 'BladeInsertion', { blade: 'Bottom', insertionStart: '100%', insertionEnd: '0%' }),
+        ],
+      });
+
+      expect(getPositionedChannelValue(blades, FixtureCapabilityType.BladeInsertion, 1, 'Top')).toBe(127);
+      expect(getPositionedChannelValue(blades, FixtureCapabilityType.BladeInsertion, 1, 'Bottom')).toBe(128);
+      expect(getPositionedChannelValue(blades, FixtureCapabilityType.BladeInsertion, 0, 'Bottom')).toBe(255);
+      expect(getPositionedChannelValue(blades, FixtureCapabilityType.BladeInsertion, 1, 'Left')).toBeUndefined();
+      // without a blade, the widest
+      expect(getPositionedChannelValue(blades, FixtureCapabilityType.BladeInsertion, 0)).toBe(0);
+    });
+
+    it('should turn a blade and the whole framing shutter from one end to the other', () => {
+      const turned = channelOf({ capability: { type: 'BladeSystemRotation', angleStart: '45deg', angleEnd: '-45deg' } });
+
+      expect(getPositionedChannelValue(turned, FixtureCapabilityType.BladeSystemRotation, 1)).toBe(0);
+      expect(getPositionedChannelValue(turned, FixtureCapabilityType.BladeSystemRotation, 0.5)).toBe(127.5);
+    });
+
+    it('should pulse the iris from slow to fast, and leave it alone at 0', () => {
+      const iris = channelOf({
+        capabilities: [
+          range(0, 199, 'Iris', { openPercentStart: '100%', openPercentEnd: '0%' }),
+          range(200, 255, 'IrisEffect', { effectName: 'Pulse', speedStart: 'slow', speedEnd: 'fast' }),
+        ],
+      });
+
+      expect(isOverridingCapabilityType(FixtureCapabilityType.IrisEffect)).toBe(true);
+      expect(isOverridingCapabilityType(FixtureCapabilityType.Iris)).toBe(false);
+      expect(getPositionedChannelValue(iris, FixtureCapabilityType.IrisEffect, 0)).toBeUndefined();
+      expect(getPositionedChannelValue(iris, FixtureCapabilityType.IrisEffect, 1)).toBe(255);
+      expect(getPositionedCapability(iris, FixtureCapabilityType.IrisEffect, 0)).toBeUndefined();
+    });
+
+    it('should shake the gobo picked, or else the whole wheel', () => {
+      const wheel = channelOf({
+        capabilities: [
+          range(0, 9, 'WheelSlot', { slotNumber: 1 }),
+          range(10, 59, 'WheelShake', { slotNumber: 2, shakeSpeedStart: 'slow', shakeSpeedEnd: 'fast' }),
+          range(60, 255, 'WheelShake', { shakeSpeedStart: 'fast', shakeSpeedEnd: 'slow' }),
+        ],
+      });
+
+      expect(getShakeChannelValue(wheel, 'Channel', 2, 1)).toBe(59);
+      expect(getShakeChannelValue(wheel, undefined, 2, 0.5)).toBe(34.5);
+      // a gobo shaking with the wheel only
+      expect(getShakeChannelValue(wheel, 'Channel', 3, 1)).toBe(60);
+      // not shaking, or another wheel
+      expect(getShakeChannelValue(wheel, 'Channel', 2, 0)).toBeUndefined();
+      expect(getShakeChannelValue(wheel, 'Other', 2, 1)).toBeUndefined();
     });
   });
 });

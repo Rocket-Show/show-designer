@@ -54,7 +54,7 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     private fixtureService: FixtureService,
     private previewMeshService: PreviewMeshService,
     private animationService: AnimationService,
-    private previewService: PreviewService,
+    public previewService: PreviewService,
     private timelineService: TimelineService,
     public projectService: ProjectService,
     private presetService: PresetService,
@@ -293,6 +293,47 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     }
 
     return this.canvas.clientWidth / this.canvas.clientHeight;
+  }
+
+  // where a click into the preview started: turning the view around is no click picking a spot
+  private pointerDownAt: { x: number; y: number };
+
+  pointerDown(event: PointerEvent) {
+    this.pointerDownAt = { x: event.clientX, y: event.clientY };
+  }
+
+  // a click into the preview while a spot is being picked picks the spot on the stage below the pointer
+  pointerUp(event: PointerEvent) {
+    const downAt = this.pointerDownAt;
+    this.pointerDownAt = undefined;
+
+    if (!this.previewService.pickingSpot || !downAt || !this.camera) {
+      return;
+    }
+
+    if (Math.abs(event.clientX - downAt.x) > 4 || Math.abs(event.clientY - downAt.y) > 4) {
+      return;
+    }
+
+    const bounds = this.canvas.getBoundingClientRect();
+
+    if (bounds.width === 0 || bounds.height === 0) {
+      return;
+    }
+
+    const pointer = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(pointer, this.camera);
+
+    const spot = this.previewService.getStageSpot(raycaster);
+
+    if (spot) {
+      this.previewService.pickSpot(false);
+      this.previewService.spotPicked.next(spot);
+    }
   }
 
   @HostListener('window:resize')

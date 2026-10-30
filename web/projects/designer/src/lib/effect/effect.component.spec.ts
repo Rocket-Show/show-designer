@@ -158,11 +158,15 @@ describe('EffectComponent', () => {
     expect(headings().length).toBe(3);
   });
 
-  it('adds a pan/tilt effect', () => {
+  it('adds a movement of the moving heads, moving them all together', () => {
     fixture.componentInstance.addPanTiltEffect();
 
-    expect(preset.effects[2] instanceof EffectPanTilt).toBe(true);
-    expect(effectService.selectedEffect).toBe(preset.effects[2]);
+    const movement = preset.effects[2] as EffectPanTilt;
+    expect(movement instanceof EffectPanTilt).toBe(true);
+    expect(movement.uuid).toBeTruthy();
+    expect(movement.phasingMode).toBe('spread');
+    expect(movement.phasingCycles).toBe(0);
+    expect(effectService.selectedEffect).toBe(movement);
   });
 
   it('opens a new effect, even without a preset to add it to', () => {

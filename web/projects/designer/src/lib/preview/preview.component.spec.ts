@@ -326,6 +326,41 @@ describe('PreviewComponent', () => {
     expect(fixture3dOf('head')[0].isSelected).toBe(true);
   });
 
+  it('picks a spot on the stage with a click while one is being picked, not while the view is turned', () => {
+    open();
+    frame(0);
+
+    const picked: number[][] = [];
+    previewService.spotPicked.subscribe((spot) => picked.push(spot));
+    const canvas = element('.h-100');
+    const bounds = canvas.getBoundingClientRect();
+    // low in the view, where the floor is
+    const at = (x: number) => ({ clientX: bounds.left + bounds.width / 2 + x, clientY: bounds.top + bounds.height * 0.9 });
+
+    // not picking: a click is a click
+    component.pointerDown(new PointerEvent('pointerdown', at(0)));
+    component.pointerUp(new PointerEvent('pointerup', at(0)));
+    expect(picked).toEqual([]);
+
+    previewService.pickSpot(true);
+    fixture.detectChanges();
+    expect(canvas.classList).toContain('preview-picking-spot');
+
+    // turning the view around
+    component.pointerDown(new PointerEvent('pointerdown', at(0)));
+    component.pointerUp(new PointerEvent('pointerup', at(40)));
+    // a pointer let go without being pressed here
+    component.pointerUp(new PointerEvent('pointerup', at(0)));
+    expect(picked).toEqual([]);
+
+    component.pointerDown(new PointerEvent('pointerdown', at(0)));
+    component.pointerUp(new PointerEvent('pointerup', at(2)));
+
+    expect(picked.length).toBe(1);
+    expect(picked[0].every((coordinate) => Number.isInteger(coordinate))).toBe(true);
+    expect(previewService.pickingSpot).toBe(false);
+  });
+
   it('fits the render into its panel', () => {
     open();
 

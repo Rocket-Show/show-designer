@@ -10,6 +10,7 @@ import { of } from 'rxjs';
 import { caseFiles, profiles } from '../../conformance/index';
 import { CachedFixturePixel } from './models/cached-fixture-pixel';
 import { EffectCurve } from './models/effect-curve';
+import { EffectPanTilt } from './models/effect-pan-tilt';
 import { FixtureCapabilityValue } from './models/fixture-capability-value';
 import { FixtureChannel } from './models/fixture-channel';
 import { FixtureMatrixPixelGroup } from './models/fixture-matrix-pixel-group';
@@ -173,6 +174,8 @@ function channelValues(projectData: any, preview: any, times: number[]): any[] {
 
   // the fixtures identified from the fixture pool, if any
   project.identifyFixtureUuids = preview.identify ?? [];
+  project.resetFixtureUuids = preview.reset ?? [];
+  project.lampOnFixtureUuids = preview.lampOn ?? [];
 
   return times.map((timeMillis: number) => {
     const values = services.previewService.getChannelValues(timeMillis, services.previewService.getPresets(timeMillis));
@@ -245,7 +248,7 @@ function migratedProjectOf(project: Project): any {
         effects: step.effectAmounts.map((effectAmount) => [effectAmount.effectUuid, effectAmount.amount]),
       })),
       effects: preset.effects.map((effect) =>
-        effect instanceof EffectCurve
+        effect instanceof EffectCurve && !(effect instanceof EffectPanTilt)
           ? {
               uuid: effect.uuid,
               type: effect.type,

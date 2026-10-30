@@ -82,6 +82,41 @@ test.describe('Presets', () => {
     await expect(designer.dimmerField).toHaveValue('40');
   });
 
+  test('points a moving head with the square and aims it at a spot clicked on the stage', async ({ designer, page }) => {
+    await designer.open();
+    await designer.row(designer.panel('Fixtures'), 'Spot').getByRole('checkbox').check();
+
+    // a quarter of the way to the right and up: 135° of the pan, 67.5° of the tilt
+    const pad = designer.editor.getByRole('slider', { name: 'Position' });
+    const box = await pad.boundingBox();
+    await page.mouse.click(box.x + box.width * 0.75, box.y + box.height * 0.25);
+
+    await expect(designer.editor.getByRole('checkbox', { name: 'Pan/Tilt' })).toBeChecked();
+    const panDegrees = designer.editor.locator('input[name="panDegrees"]');
+    await expect(panDegrees).toHaveValue('135');
+    await expect(designer.editor.locator('input[name="tiltDegrees"]')).toHaveValue('67.5');
+
+    // a degree further with the arrow key
+    await pad.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(panDegrees).toHaveValue('136');
+
+    // the stage takes the next click as the spot the head points at
+    await designer.editor.getByRole('button', { name: 'Pick a spot' }).click();
+    const stage = page.locator('.preview-picking-spot');
+    await expect(stage).toBeVisible();
+    const stageBox = await stage.boundingBox();
+    await page.mouse.click(stageBox.x + stageBox.width / 2, stageBox.y + stageBox.height * 0.9);
+
+    await expect(designer.editor.getByRole('button', { name: 'Stop aiming' })).toBeVisible();
+    await expect(stage).toHaveCount(0);
+    await expect(designer.editor.locator('input[name="aim1"]')).toBeVisible();
+
+    // pointed by hand again, where it pointed before
+    await designer.editor.getByRole('button', { name: 'Stop aiming' }).click();
+    await expect(panDegrees).toHaveValue('136');
+  });
+
   test('gives each step of a preset a look of its own', async ({ designer }) => {
     await designer.open();
     const presets = designer.panel('Presets');

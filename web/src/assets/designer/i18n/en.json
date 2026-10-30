@@ -185,7 +185,6 @@
       "capability-color": "Color",
       "capability-color-wheel": "Color wheel",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Mirror",
       "profiles": "Profiles",
       "setting-position-title": "Fixture position",
       "setting-position": "Position",
@@ -217,7 +216,15 @@
         "ColorIntensity": "Off",
         "StrobeDuration": "Short",
         "PanTiltSpeed": "Slow",
-        "FogOutput": "Off"
+        "FogOutput": "Off",
+        "WheelSlotRotation": "Fast anticlockwise",
+        "PrismRotation": "Fast anticlockwise",
+        "Rotation": "Fast anticlockwise",
+        "BladeInsertion": "Out",
+        "BladeRotation": "Anticlockwise",
+        "BladeSystemRotation": "Anticlockwise",
+        "IrisEffect": "Off",
+        "FrostEffect": "Off"
       },
       "capability-position-high": {
         "ShutterStrobe": "Fast",
@@ -230,10 +237,45 @@
         "ColorIntensity": "Full",
         "StrobeDuration": "Long",
         "PanTiltSpeed": "Fast",
-        "FogOutput": "Full"
+        "FogOutput": "Full",
+        "WheelSlotRotation": "Fast clockwise",
+        "PrismRotation": "Fast clockwise",
+        "Rotation": "Fast clockwise",
+        "BladeInsertion": "In",
+        "BladeRotation": "Clockwise",
+        "BladeSystemRotation": "Clockwise",
+        "IrisEffect": "Fast",
+        "FrostEffect": "Fast"
       },
       "model-specific-title": "This model only",
-      "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well."
+      "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well.",
+      "capability-pan-tilt-pad": "Position",
+      "capability-pan-tilt-pad-hint": "Drag to point the moving heads: across for the pan, up and down for the tilt. The arrow keys move a degree (ten with Shift), a double click centres them.",
+      "capability-pan-tilt-mirror-pan": "Mirror pan",
+      "capability-pan-tilt-mirror-tilt": "Mirror tilt",
+      "capability-pan-tilt-spread": "Fan out",
+      "capability-pan-tilt-spread-hint": "Spreads the heads evenly over this many degrees, from the first to the last.",
+      "capability-pan-tilt-aim": "Spot on stage",
+      "capability-pan-tilt-aim-hint": "Click a spot in the 3D preview: every head points at it from wherever it hangs, whatever its model.",
+      "capability-pan-tilt-aim-pick": "Pick a spot",
+      "capability-pan-tilt-aim-picking": "Click the stage…",
+      "capability-pan-tilt-aim-stop": "Stop aiming",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Off",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Blade top",
+          "Right": "Blade right",
+          "Bottom": "Blade bottom",
+          "Left": "Blade left"
+        },
+        "BladeRotation": {
+          "Top": "Blade top angle",
+          "Right": "Blade right angle",
+          "Bottom": "Blade bottom angle",
+          "Left": "Blade left angle"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -281,7 +323,11 @@
       "patch-in-a-row-full": "The fixtures do not fit into the universe from there on.",
       "identify": "Identify: let the fixture blink at full white",
       "model-specific": "The presets set {{count}} values only this model plays.",
-      "add-fixture": "Add a fixture of this profile"
+      "add-fixture": "Add a fixture of this profile",
+      "reset": "Reset",
+      "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
+      "lamp-on": "Lamp on",
+      "lamp-on-hint": "Switches the lamp of the fixture on stage on"
     },
     "effect": {
       "add-new": "Add new Effect",
@@ -315,7 +361,15 @@
       "curve-square": "Square",
       "curve-triangle": "Triangle",
       "curve-sawtooth": "Sawtooth",
-      "curve-reverse-sawtooth": "Reverse sawtooth"
+      "curve-reverse-sawtooth": "Reverse sawtooth",
+      "pan-tilt-shape-circle": "Circle",
+      "pan-tilt-shape-figure8": "Figure 8",
+      "pan-tilt-shape-line": "Line",
+      "pan-tilt-shape-wave": "Wave",
+      "pan-tilt-size": "Size",
+      "pan-tilt-beats": "beats",
+      "pan-tilt-chase-hint": "How many full movements are spread over all the heads: 0 moves them together, 1 runs a wave through them.",
+      "pan-tilt-run-hint": "How many times the movement runs, 0 for as long as the preset plays."
     },
     "composition": {
       "new": "Create new composition..."

@@ -1410,6 +1410,211 @@ function channelValuesCapabilities() {
   );
 }
 
+// The moving heads test/wide-mover (pan over 630°, tilt from 90° to -90°, maintenance), test/moving-head (pan over 540°,
+// tilt over 270°) and test/mover (a pan which doesn't say how far it reaches): positions in degrees from the middle,
+// mirrored, beyond what a head reaches, fanned out over the fixtures and given as a percentage like before; spots on the
+// stage the heads hanging in front, standing at the back and placed by hand point at; movements around the positions;
+// and test/effects-spot: rotations both ways, the blades of a framing shutter, the pulse of an iris and of a frost and
+// the shake of a gobo over the rest of the preset, whatever order they come in. The fixtures asked to reset themselves
+// or to switch their lamp on do it over the presets.
+function channelValuesMovements() {
+  const cases = [];
+  const wideMover = 'test/wide-mover';
+  const movingHead = 'test/moving-head';
+  const mover = 'test/mover';
+  const effectsSpot = 'test/effects-spot';
+  const pan = (extra) => ({ type: 'Pan', ...extra });
+  const tilt = (extra) => ({ type: 'Tilt', ...extra });
+
+  const heads = [
+    edgeFixture('wide', wideMover, '5ch', 0),
+    edgeFixture('head', movingHead, '6ch', 1),
+    edgeFixture('mover', mover, 'beam', 2),
+  ];
+  const all = heads.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const positions = {
+    degrees: [pan({ valueDegrees: 90 }), tilt({ valueDegrees: -45 })],
+    beyond: [pan({ valueDegrees: 400 }), tilt({ valueDegrees: -150 })],
+    fanned: [pan({ valueDegrees: 0, spreadDegrees: 120 }), tilt({ valuePercentage: 0.25, spreadDegrees: 60 })],
+    percentage: [pan({ valuePercentage: 0.3 }), tilt({ valuePercentage: 0.7 })],
+  };
+  const positionPresets = [];
+
+  for (const [name, values] of Object.entries(positions)) {
+    positionPresets.push(edgePreset(name, all, { fixtureCapabilityValues: [capability('Intensity', 1), ...values] }));
+    positionPresets.push({
+      ...edgePreset(name + '-mirrored', all, { fixtureCapabilityValues: [capability('Intensity', 1), ...values] }),
+      mirrorPan: true,
+      mirrorTilt: true,
+    });
+  }
+
+  cases.push({
+    name: 'positions in degrees on moving heads reaching different ranges, mirrored, fanned out and as a percentage',
+    input: {
+      project: edgeProject(
+        [wideMover, movingHead, mover],
+        heads,
+        positionPresets,
+        positionPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: positionPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // Heads hanging in front (spread over the width of the stage), one standing on the floor at the back, one placed by
+  // hand turned by a quarter and one turned by odd angles, pointing at a spot in front of the stage (fanned out on the
+  // pan), at the spot right below the first of them and at a spot with the preset mirrored, which a spot ignores
+  const placed = [
+    edgeFixture('front-1', wideMover, '5ch', 0),
+    edgeFixture('front-2', movingHead, '6ch', 1),
+    { ...edgeFixture('back', wideMover, '5ch', 2), positioning: 'bottomBack' },
+    { ...edgeFixture('quarter', wideMover, '5ch', 3), positioning: 'manual', positionX: 100, positionY: 300, positionZ: 0, rotationY: 90 },
+    {
+      ...edgeFixture('odd', movingHead, '6ch', 4),
+      positioning: 'manual',
+      positionX: -150,
+      positionY: 250,
+      positionZ: 50,
+      rotationX: 30,
+      rotationY: 0,
+      rotationZ: 15,
+    },
+  ];
+  const placedFixtures = placed.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const aim = (x, y, z, extra = {}) => [pan({ aimX: x, aimY: y, aimZ: z, ...extra }), tilt({ aimX: x, aimY: y, aimZ: z })];
+  const aimPresets = [
+    edgePreset('front', placedFixtures, { fixtureCapabilityValues: aim(50, 30, 250, { spreadDegrees: 20 }) }),
+    edgePreset('below', placedFixtures, { fixtureCapabilityValues: aim(-100, 30, 230) }),
+    { ...edgePreset('mirrored', placedFixtures, { fixtureCapabilityValues: aim(-80, 0, -100) }), mirrorPan: true, mirrorTilt: true },
+  ];
+
+  cases.push({
+    name: 'moving heads pointing at spots on the stage from wherever they hang',
+    input: {
+      project: edgeProject(
+        [wideMover, movingHead],
+        placed,
+        aimPresets,
+        aimPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: aimPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // A circle chasing over the heads around a position, the same mirrored, a figure 8, a line and a wave around the
+  // middle, half opened by the step, and a circle running once, which leaves the heads where the step points them
+  const moving = [
+    edgeFixture('wide-1', wideMover, '5ch', 0),
+    edgeFixture('wide-2', wideMover, '5ch', 1),
+    edgeFixture('head', movingHead, '6ch', 2),
+  ];
+  const movingFixtures = moving.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const movement = (uuid, shape, extra = {}) => ({
+    type: 'pan-tilt',
+    uuid,
+    shape,
+    sizePanDegrees: 90,
+    sizeTiltDegrees: 40,
+    lengthMillis: 2000,
+    phasingMode: 'spread',
+    phasingCycles: 1,
+    ...extra,
+  });
+  const at = [pan({ valueDegrees: 30 }), tilt({ valueDegrees: 10 })];
+  const movementPresets = [
+    { ...edgePreset('circle', movingFixtures, { fixtureCapabilityValues: at }), effects: [movement('circle', 'circle')] },
+    {
+      ...edgePreset('circle-mirrored', movingFixtures, { fixtureCapabilityValues: at }),
+      effects: [movement('circle', 'circle')],
+      mirrorPan: true,
+      mirrorTilt: true,
+    },
+    {
+      ...edgePreset('shapes', movingFixtures, { effectAmounts: [{ effectUuid: 'line', amount: 0.5 }] }),
+      effects: [
+        movement('figure8', 'figure8'),
+        movement('line', 'line', { phasingMode: 'millis', phasingMillis: 300 }),
+        movement('wave', 'wave'),
+      ],
+    },
+    {
+      ...edgePreset('once', movingFixtures, { fixtureCapabilityValues: at }),
+      effects: [movement('once', 'circle', { runMode: 'cycles', runCycles: 1, endMode: 'base', phasingCycles: 0 })],
+    },
+  ];
+  const movementScenes = movementPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }));
+
+  cases.push({
+    name: 'movements of the moving heads around where the preset points them',
+    input: {
+      project: edgeProject([wideMover, movingHead], moving, movementPresets, movementScenes),
+      runs: movementScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 250, 500, 1000, 1500, 2200] })),
+    },
+  });
+
+  // Rotations, blades and pulses at both ends, a quarter of the way and in the middle. The iris and the frost are set
+  // before and after their pulse, the shake of the gobo picked after the gobo.
+  const amounts = [0, 0.25, 0.5, 0.75, 1];
+  const spots = amounts.map((amount, index) => edgeFixture('spot-' + amount, effectsSpot, 'full', index));
+  const spotPresets = amounts.map((amount, index) =>
+    edgePreset('spot-' + amount, [{ fixtureUuid: spots[index].uuid }], {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        capability('Iris', 0.5),
+        ...['WheelSlotRotation', 'PrismRotation', 'Rotation', 'BladeSystemRotation', 'IrisEffect', 'FrostEffect'].map((type) =>
+          capability(type, amount)
+        ),
+        capability('BladeInsertion', amount, { blade: 'Top' }),
+        capability('BladeInsertion', 1 - amount, { blade: 'Bottom' }),
+        capability('BladeRotation', amount, { blade: 'Top' }),
+        capability('Frost', 0.5),
+        { type: 'WheelSlot', wheel: 'Gobo Wheel', slotNumber: index % 2 === 0 ? 2 : 3, profileUuid: effectsSpot },
+        capability('WheelShake', amount, { wheel: 'Gobo Wheel', slotNumber: index % 2 === 0 ? 2 : 3 }),
+      ],
+    })
+  );
+
+  cases.push({
+    name: 'rotations both ways, framing blades, pulses and shakes over the rest of the preset',
+    input: {
+      project: edgeProject([effectsSpot], spots, spotPresets, [
+        { uuid: 'spots', name: 'Spots', presetUuids: spotPresets.map((preset) => preset.uuid) },
+      ]),
+      runs: previewScenes(['spots']),
+    },
+  });
+
+  // A head resetting itself (not only its pan and tilt), one switching its lamp on, one asked for both on the same
+  // channel (the lamp, asked after the reset, wins) and a spot without any maintenance, which plays its preset
+  const maintained = [
+    edgeFixture('reset', wideMover, '5ch', 0),
+    edgeFixture('lamp', wideMover, '5ch', 1),
+    edgeFixture('both', wideMover, '5ch', 2),
+    edgeFixture('spot', effectsSpot, 'full', 3),
+  ];
+  const maintainedPreset = edgePreset(
+    'lit',
+    maintained.map((fixture) => ({ fixtureUuid: fixture.uuid })),
+    { fixtureCapabilityValues: [capability('Intensity', 1), pan({ valueDegrees: 45 })] }
+  );
+
+  cases.push({
+    name: 'fixtures resetting themselves and switching their lamp on, asked from the fixture pool',
+    input: {
+      project: edgeProject([wideMover, effectsSpot], maintained, [maintainedPreset], [{ uuid: 'lit', name: 'Lit', presetUuids: ['lit'] }]),
+      runs: [{ preview: { mode: 'scenes', scenes: ['lit'], reset: ['reset', 'both', 'spot'], lampOn: ['lamp', 'both'] }, times: [0] }],
+    },
+  });
+
+  return write(
+    'channel-values-movements.json',
+    'channelValues',
+    'Positions of moving heads in degrees, fanned out and aimed at spots on the stage, their movements, rotations, framing blades, pulses, shakes and maintenance asked from the fixture pool',
+    cases
+  );
+}
+
 // ---- projects of older versions, migrated ----------------------------------------------------
 
 // A profile of a matrix given by its pixel count (or by its pixel keys), with a red channel for each
@@ -1984,6 +2189,7 @@ export function generate() {
     channelValuesEdges(),
     channelValuesMixingEdges(),
     channelValuesCapabilities(),
+    channelValuesMovements(),
     migrations(),
     migrationEdges(),
   ];

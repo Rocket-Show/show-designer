@@ -71,8 +71,9 @@ export class EffectCurve extends Effect {
   // how many fixtures share the same chase step (1 = each fixture on its own)
   phasingGroupSize = 1;
 
-  constructor(data?: any) {
-    super('curve', data);
+  // a movement of the pan and the tilt runs on the timing of a curve as well (see EffectPanTilt)
+  constructor(data?: any, type = 'curve') {
+    super(type, data);
 
     if (!data) {
       return;
@@ -215,6 +216,19 @@ export class EffectCurve extends Effect {
   // the value the curve puts on its channels, or undefined if it does not apply at this
   // moment - the fixtures keep whatever the rest of the preset puts on them then
   public getValueAtMillis(timeMillis: number, fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number | undefined {
+    const cyclePosition = this.getCyclePositionAtMillis(timeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+
+    return cyclePosition === undefined ? undefined : this.getCurveValue(cyclePosition);
+  }
+
+  // where the curve is inside its cycle (between 0 and 1) for the passed fixture, or undefined if it does not apply at
+  // this moment
+  public getCyclePositionAtMillis(
+    timeMillis: number,
+    fixtureIndex?: number,
+    fixtureCount?: number,
+    beatsPerMinute?: number
+  ): number | undefined {
     const lengthMillis = this.getLengthMillis(beatsPerMinute);
     const phasingMillis = this.getPhasingMillis(fixtureIndex, fixtureCount, beatsPerMinute);
     const phaseMillis = this.getPhaseMillis(beatsPerMinute);
@@ -237,11 +251,11 @@ export class EffectCurve extends Effect {
           return undefined;
         }
 
-        return this.getCurveValue(this.getCyclePosition(runEndMillis - phaseMillis, true, lengthMillis));
+        return this.getCyclePosition(runEndMillis - phaseMillis, true, lengthMillis);
       }
     }
 
-    return this.getCurveValue(this.getCyclePosition(timeMillis - phase, false, lengthMillis));
+    return this.getCyclePosition(timeMillis - phase, false, lengthMillis);
   }
 
   // the position inside the current cycle, between 0 and 1

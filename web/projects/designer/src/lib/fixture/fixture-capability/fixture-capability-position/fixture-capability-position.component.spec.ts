@@ -41,12 +41,13 @@ describe('FixtureCapabilityPositionComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  async function render(type: FixtureCapabilityType, color?: FixtureCapabilityColor) {
+  async function render(type: FixtureCapabilityType, color?: FixtureCapabilityColor, blade?: string) {
     fixture = TestBed.createComponent(FixtureCapabilityPositionComponent);
     component = fixture.componentInstance;
     element = fixture.nativeElement;
     fixture.componentRef.setInput('type', type);
     fixture.componentRef.setInput('color', color);
+    fixture.componentRef.setInput('blade', blade);
     await update();
   }
 
@@ -187,5 +188,45 @@ describe('FixtureCapabilityPositionComponent', () => {
     component.setValue(0.5);
 
     expect(step.fixtureCapabilityValues).toEqual([]);
+  });
+
+  it('starts a rotation and a turned blade standing still, a pulse pulsing and a blade out', async () => {
+    for (const [capabilityType, start] of [
+      [FixtureCapabilityType.WheelSlotRotation, 0.5],
+      [FixtureCapabilityType.PrismRotation, 0.5],
+      [FixtureCapabilityType.BladeSystemRotation, 0.5],
+      [FixtureCapabilityType.IrisEffect, 0.5],
+      [FixtureCapabilityType.FrostEffect, 0.5],
+      [FixtureCapabilityType.Zoom, 0],
+    ] as [FixtureCapabilityType, number][]) {
+      await render(capabilityType);
+      component.changeActive(true);
+
+      expect(valueOf(capabilityType)).toBe(start, capabilityType);
+      fixture.destroy();
+    }
+  });
+
+  it('sets each blade of a framing shutter on its own', async () => {
+    await render(FixtureCapabilityType.BladeInsertion, undefined, 'Top');
+    expect(component.labelKey).toBe('designer.fixture.capability-blade.BladeInsertion.Top');
+    expect(checkbox().id).toBe('capabilityPositionBladeInsertionTop');
+
+    component.changeActive(true);
+    component.setValue(0.75);
+    fixture.destroy();
+
+    await render(FixtureCapabilityType.BladeInsertion, undefined, 'Left');
+    component.changeActive(true);
+
+    const blades = step.fixtureCapabilityValues.map((value) => [value.type, value.blade, value.valuePercentage]);
+    expect(blades).toEqual([
+      ['BladeInsertion', 'Top', 0.75],
+      ['BladeInsertion', 'Left', 0],
+    ]);
+    expect(component.getValue()).toBe(0);
+
+    component.changeActive(false);
+    expect(step.fixtureCapabilityValues.map((value) => value.blade)).toEqual(['Top']);
   });
 });

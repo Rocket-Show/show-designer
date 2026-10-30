@@ -16,6 +16,7 @@ import { FixtureProfile } from '../models/fixture-profile';
 import { FolderPosition } from '../models/folder-position';
 import { Preset } from '../models/preset';
 import { PresetFixture } from '../models/preset-fixture';
+import { PresetStep } from '../models/preset-step';
 import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
 import { Project } from '../models/project';
 import { AnimationService } from './animation.service';
@@ -787,5 +788,94 @@ describe('PresetService editing presets', () => {
     const channels = service.getSelectedProfileChannels(profiles);
     expect(channels.get(profiles[0]).map((channel) => channel.name)).toEqual(['Dimmer', 'Red', 'Green', 'Blue', 'Strobe']);
     expect(channels.get(profiles[1]).map((channel) => channel.name)).toEqual(['Pan', 'Tilt', 'Dimmer', 'Color Wheel']);
+  });
+});
+
+// Positions in degrees, the values of the blades of a framing shutter and what plays over the rest of a channel
+describe('PresetService positions, blades and pulses', () => {
+  let service: PresetService;
+  let fixtureService: FixtureService;
+
+  beforeEach(() => {
+    fixtureService = new FixtureService(undefined, undefined, undefined, undefined, undefined, new FixturePixelGroupResolveService());
+    service = new PresetService(undefined, undefined, undefined, undefined, fixtureService, undefined, undefined, undefined);
+  });
+
+  function channelsOf(availableChannels: any): CachedFixtureChannel[] {
+    const profile = new FixtureProfile({
+      uuid: 'profile',
+      availableChannels,
+      modes: [{ name: 'Mode', shortName: 'mode', channels: Object.keys(availableChannels) }],
+    });
+
+    return fixtureService.getCachedChannels(profile, profile.modes[0], null);
+  }
+
+  it('points a channel at degrees, at a spot only with a fixture to place, and only on the profile named', () => {
+    const [pan] = channelsOf({ Pan: { capability: { type: 'Pan', angleStart: '0deg', angleEnd: '540deg' } } });
+    const degrees = new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 135 });
+    const aimed = new FixtureCapabilityValue({ type: 'Pan', aimX: 0, aimY: 0, aimZ: 0 });
+    const placement = { position: [0, 405.4, 0], rotation: [0, 0, 0] };
+
+    expect(service.getCapabilityChannelValue(degrees, pan, pan.capabilities[0])).toBe(191.25);
+    expect(service.getCapabilityChannelValue(aimed, pan, pan.capabilities[0])).toBeUndefined();
+    expect(service.getPanTiltChannelValue(aimed, pan, 'profile', new Preset(), { fixtureIndex: 0, fixtureCount: 1, placement })).toBe(
+      127.5
+    );
+
+    degrees.profileUuid = 'other';
+    expect(service.getPanTiltChannelValue(degrees, pan, 'profile', new Preset(), undefined)).toBeUndefined();
+  });
+
+  it('keeps the values of each blade apart, and puts a whole value in place of the one it had', () => {
+    const step = new PresetStep({ uuid: 'step' });
+
+    service.setCapabilityValue(step, FixtureCapabilityType.BladeInsertion, 0.2, undefined, undefined, undefined, undefined, 'Top');
+    service.setCapabilityValue(step, FixtureCapabilityType.BladeInsertion, 0.7, undefined, undefined, undefined, undefined, 'Left');
+    service.setCapabilityValue(step, FixtureCapabilityType.BladeInsertion, 0.3, undefined, undefined, undefined, undefined, 'Top');
+
+    expect(
+      service.getCapabilityValue(step, FixtureCapabilityType.BladeInsertion, undefined, undefined, undefined, 'Top').valuePercentage
+    ).toBe(0.3);
+    expect(service.getCapabilityValue(step, FixtureCapabilityType.BladeInsertion)).toBeUndefined();
+
+    service.deleteCapabilityValue(step, FixtureCapabilityType.BladeInsertion, undefined, undefined, undefined, 'Top');
+    expect(step.fixtureCapabilityValues.map((value) => value.blade)).toEqual(['Left']);
+
+    service.putCapabilityValue(step, new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 10, spreadDegrees: 20 }));
+    service.putCapabilityValue(step, new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 30 }));
+    expect(
+      step.fixtureCapabilityValues.filter((value) => value.type === FixtureCapabilityType.Pan).map((value) => value.valueDegrees)
+    ).toEqual([30]);
+  });
+
+  it('shows the pulse of an iris and the shake of a gobo over the rest of their channel, whatever order they come in', () => {
+    const [iris, gobo] = channelsOf({
+      Iris: {
+        capabilities: [
+          { dmxRange: [0, 199], type: 'Iris', openPercentStart: '100%', openPercentEnd: '0%' },
+          { dmxRange: [200, 255], type: 'IrisEffect', speedStart: 'slow', speedEnd: 'fast' },
+        ],
+      },
+      Gobo: {
+        capabilities: [
+          { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+          { dmxRange: [10, 255], type: 'WheelShake', slotNumber: 1, shakeSpeedStart: 'slow', shakeSpeedEnd: 'fast' },
+        ],
+      },
+    });
+    const values = [
+      new FixtureCapabilityValue({ type: 'IrisEffect', valuePercentage: 1 }),
+      new FixtureCapabilityValue({ type: 'Iris', valuePercentage: 0.5 }),
+      new FixtureCapabilityValue({ type: 'WheelShake', valuePercentage: 1, wheel: 'Gobo', slotNumber: 1 }),
+      new FixtureCapabilityValue({ type: 'WheelSlot', wheel: 'Gobo', slotNumber: 1 }),
+    ];
+
+    expect(service.getChannelValueFromCapabilities(values, iris, 'profile')).toBe(255);
+    expect(service.getChannelValueFromCapabilities(values, gobo, 'profile')).toBe(255);
+
+    // no pulse leaves the iris to the rest
+    values[0].valuePercentage = 0;
+    expect(service.getChannelValueFromCapabilities(values, iris, 'profile')).toBe(99.5);
   });
 });

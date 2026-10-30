@@ -10,7 +10,17 @@ import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/pres
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
-import { isPositionedCapabilityType } from '../models/capability-position';
+import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
+import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
+import {
+  getAxisChannelValue,
+  getAxisRange,
+  getPresetPanTiltDegrees,
+  getStagePlacements,
+  isPanTilt,
+  PanTiltContext,
+} from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { getIdentifyCapabilityValues } from '../models/identify';
 import { FixtureService } from './fixture.service';
@@ -42,6 +52,11 @@ export class PreviewService implements OnDestroy {
   public scene: THREE.Scene;
 
   private stageMeshes: THREE.Mesh[] = [];
+
+  // a spot on the stage being picked with a click into the 3D preview (e.g. to aim the moving heads at), and the spot
+  // picked, in cm
+  public pickingSpot = false;
+  public spotPicked = new Subject<number[]>();
   private stageMaterial: THREE.MeshStandardMaterial;
   fixtureMaterial: THREE.MeshStandardMaterial;
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
@@ -365,7 +380,8 @@ export class PreviewService implements OnDestroy {
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number,
-    preset: Preset
+    preset: Preset,
+    context: PanTiltContext
   ) {
     let hasColor = false;
 
@@ -382,6 +398,29 @@ export class PreviewService implements OnDestroy {
     for (const presetCapabilityValue of capabilityValues) {
       for (const cachedChannel of cachedFixture.channels) {
         if (cachedChannel.channel) {
+          if (isOverridingCapabilityType(presetCapabilityValue.type)) {
+            // played over the rest below
+            continue;
+          }
+
+          if (isPanTilt(presetCapabilityValue.type)) {
+            // a position of a moving head is played on the channel as a whole, by where the fixture is placed in its
+            // preset and on the stage (see pan-tilt)
+            const value = this.presetService.getPanTiltChannelValue(
+              presetCapabilityValue,
+              cachedChannel,
+              cachedFixture.profile.uuid,
+              preset,
+              context
+            );
+
+            if (value !== undefined) {
+              this.mixFixtureChannelValue(values, cachedFixture, cachedChannel.name, value);
+            }
+
+            continue;
+          }
+
           if (isPositionedCapabilityType(presetCapabilityValue.type)) {
             // a position is played on the channel as a whole, by the capability of it doing it
             const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
@@ -440,6 +479,22 @@ export class PreviewService implements OnDestroy {
       }
     }
 
+    // The pulse of an iris or a frost and the shake of a gobo play over what the rest puts on the same channel,
+    // whatever order they come in
+    for (const presetCapabilityValue of capabilityValues) {
+      if (isOverridingCapabilityType(presetCapabilityValue.type)) {
+        for (const cachedChannel of cachedFixture.channels) {
+          if (cachedChannel.channel) {
+            const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
+
+            if (value !== undefined) {
+              this.mixFixtureChannelValue(values, cachedFixture, cachedChannel.name, value);
+            }
+          }
+        }
+      }
+    }
+
     // A fixture which lights no color of its own (with its color channels or a slot of its color wheel) shows the
     // color on its color wheel, approximated from the colors set or from a slot of a different wheel. Only once all
     // the values are mixed, so that the order they come in doesn't decide whether the wheel turns as well.
@@ -481,6 +536,15 @@ export class PreviewService implements OnDestroy {
         }
       }
     }
+  }
+
+  // put a value on a channel of the fixture, over what is on it
+  private mixFixtureChannelValue(values: FixtureChannelValue[], cachedFixture: CachedFixture, channelName: string, value: number) {
+    const fixtureChannelValue = new FixtureChannelValue();
+    fixtureChannelValue.channelName = channelName;
+    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+    fixtureChannelValue.value = value;
+    this.mixChannelValue(values, fixtureChannelValue, 1);
   }
 
   private mixChannelValues(
@@ -539,7 +603,8 @@ export class PreviewService implements OnDestroy {
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number,
-    state: PresetStepState
+    state: PresetStepState,
+    context: PanTiltContext
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -553,6 +618,11 @@ export class PreviewService implements OnDestroy {
       const effectIntensityPercentage = intensityPercentage * effectAmount;
 
       if (effect.visible && effectAmount > 0) {
+        if (effect instanceof EffectPanTilt) {
+          this.mixPanTiltEffect(effect, effectTimeMillis, preset, cachedFixture, values, effectIntensityPercentage, state, context);
+          continue;
+        }
+
         // EffectCurve
         if (effect instanceof EffectCurve) {
           const effectCurve = effect as EffectCurve;
@@ -617,8 +687,53 @@ export class PreviewService implements OnDestroy {
             }
           }
         }
+      }
+    }
+  }
 
-        // TODO other effects (PanTilt, etc.)
+  // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),
+  // mirrored with the preset. This follows the same rules as Rocket Show.
+  private mixPanTiltEffect(
+    effect: EffectPanTilt,
+    effectTimeMillis: number,
+    preset: PresetRegionScene,
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number,
+    state: PresetStepState,
+    context: PanTiltContext
+  ) {
+    const beatsPerMinute = this.getBeatsPerMinute();
+    const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, context.fixtureCount, beatsPerMinute);
+    const offset = effect.getOffsetAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute);
+
+    // the movement does not apply anymore after it has finished running
+    if (!offset) {
+      return;
+    }
+
+    for (const cachedChannel of cachedFixture.channels) {
+      if (!cachedChannel.channel) {
+        continue;
+      }
+
+      for (const type of [FixtureCapabilityType.Pan, FixtureCapabilityType.Tilt]) {
+        const range = getAxisRange(cachedChannel, type);
+
+        if (range === undefined) {
+          continue;
+        }
+
+        const mirror = preset.preset.mirrorsCapability(type);
+        const center =
+          getPresetPanTiltDegrees(state.fixtureCapabilityValues, type, cachedFixture.profile.uuid, range, mirror, context) ?? 0;
+        const move = type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
+
+        const fixtureChannelValue = new FixtureChannelValue();
+        fixtureChannelValue.channelName = cachedChannel.name;
+        fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+        fixtureChannelValue.value = getAxisChannelValue(cachedChannel, range, center + (mirror ? -move : move));
+        this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
       }
     }
   }
@@ -670,6 +785,13 @@ export class PreviewService implements OnDestroy {
     this.presetService.activeStepProgress = activeStepProgress;
 
     const identifyFixtureUuids = this.projectService.project.identifyFixtureUuids || [];
+    const maintenance: { action: MaintenanceAction; fixtureUuids: string[] }[] = [
+      { action: 'reset', fixtureUuids: this.projectService.project.resetFixtureUuids || [] },
+      { action: 'lamp-on', fixtureUuids: this.projectService.project.lampOnFixtureUuids || [] },
+    ];
+
+    // where the fixtures hang, to aim the moving heads at a spot
+    const placements = getStagePlacements(this.projectService.project);
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
@@ -713,7 +835,13 @@ export class PreviewService implements OnDestroy {
                 timeMillis - this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
               );
 
-            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset);
+            const context: PanTiltContext = {
+              fixtureIndex,
+              fixtureCount: fixtureCounts.get(preset.preset),
+              placement: placements.get(cachedFixture.fixture.uuid),
+            };
+
+            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset, context);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
             this.mixEffects(
               timeMillis,
@@ -723,7 +851,8 @@ export class PreviewService implements OnDestroy {
               cachedFixture,
               values,
               intensityPercentage,
-              state
+              state,
+              context
             );
           }
         }
@@ -732,6 +861,18 @@ export class PreviewService implements OnDestroy {
       // a fixture being identified from the fixture pool blinks, whatever the presets light it with
       if (identifyFixtureUuids.indexOf(cachedFixture.fixture.uuid) >= 0) {
         values = this.getIdentifyValues(cachedFixture, values, timeMillis);
+      }
+
+      // a fixture asked to reset itself or to switch its lamp on does it, whatever the presets do with it
+      for (const entry of maintenance) {
+        if (entry.fixtureUuids.indexOf(cachedFixture.fixture.uuid) >= 0) {
+          const found = getMaintenanceCapability(cachedFixture.channels, entry.action);
+
+          if (found && found.capability.centerValue !== undefined) {
+            values = values.slice();
+            this.mixFixtureChannelValue(values, cachedFixture, found.channel.name, found.capability.centerValue);
+          }
+        }
       }
 
       // Store the calculated values for subsequent fixtures on the same DMX address
@@ -747,7 +888,7 @@ export class PreviewService implements OnDestroy {
     const values = presetValues.slice();
     const state = new PresetStepState();
     state.fixtureCapabilityValues = getIdentifyCapabilityValues(cachedFixture, timeMillis);
-    this.mixCapabilityValues(state, cachedFixture, values, 1, new Preset());
+    this.mixCapabilityValues(state, cachedFixture, values, 1, new Preset(), { fixtureIndex: 0, fixtureCount: 1 });
 
     return values;
   }
@@ -760,6 +901,24 @@ export class PreviewService implements OnDestroy {
     }
 
     return false;
+  }
+
+  // the spot on the stage (or on the ground around it) the passed ray hits first, in cm, or undefined if it misses
+  public getStageSpot(raycaster: THREE.Raycaster): number[] {
+    const hits = raycaster.intersectObjects(this.stageMeshes, false);
+
+    if (hits.length === 0) {
+      return undefined;
+    }
+
+    const point = hits[0].point;
+
+    return [Math.round(point.x), Math.round(point.y), Math.round(point.z)];
+  }
+
+  // pick a spot on the stage with the next click into the 3D preview, or stop picking it
+  public pickSpot(picking: boolean) {
+    this.pickingSpot = picking;
   }
 
   public updateFixtureSetup() {

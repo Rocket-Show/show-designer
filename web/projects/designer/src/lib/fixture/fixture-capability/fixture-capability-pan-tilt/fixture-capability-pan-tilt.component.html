@@ -1,100 +1,141 @@
-<div class="card border-secondary h-100" [class.capability-deactivated]="getValuePan() == undefined && getValueTilt() == undefined">
+<div class="card border-secondary h-100" [class.capability-deactivated]="!isActive()">
   <div class="card-header">
     <div class="my-auto">
       <div class="form-check">
         <input
           type="checkbox"
           class="form-check-input"
-          id="capabilityColorWheelActive"
-          [ngModel]="getValuePan() != undefined || getValueTilt() != undefined"
+          id="capabilityPanTiltActive"
+          [ngModel]="isActive()"
           (ngModelChange)="changeActive($event)"
         />
-        <label class="form-check-label" for="capabilityColorWheelActive">{{ 'designer.fixture.capability-pan-tilt' | translate }}</label>
+        <label class="form-check-label" for="capabilityPanTiltActive">{{ 'designer.fixture.capability-pan-tilt' | translate }}</label>
       </div>
     </div>
   </div>
 
-  <div class="card-body h-100 d-flex" style="flex-direction: row">
-    <div class="d-flex h-100 mr-3" style="flex-direction: column">
-      <div class="mb-4 w-100 d-flex">
-        <input
-          class="mx-auto sd-value-input"
-          type="text"
-          [ngModel]="getValueTextPan() >= 0 ? getValueTextPan() : 0"
-          (ngModelChange)="setValuePan($event / 100)"
-        />
-      </div>
-
-      <div class="h-100 w-100 d-flex">
-        <mv-slider
-          class="mx-auto"
-          [value]="getValuePan() >= 0 ? getValuePan() : 0"
-          (change)="setValuePan($event.newValue)"
-          [orientation]="'vertical'"
-          [reversed]="true"
-          style="height: 100%"
-          [tooltip]="'hide'"
-          [min]="0"
-          [max]="1"
-          [step]="0.001"
-        ></mv-slider>
-      </div>
-
-      <div class="mt-3 w-100 d-flex">
-        <div class="form-check mx-auto">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="capabilityPanTiltMirrorPan"
-            [ngModel]="getMirrorPan()"
-            (ngModelChange)="setMirrorPan($event)"
-          />
-          <label class="form-check-label" for="capabilityPanTiltMirrorPan">
-            {{ 'designer.fixture.capability-pan-tilt-mirror' | translate }}
-          </label>
-        </div>
-      </div>
+  <div class="card-body d-flex pan-tilt-body">
+    <div class="d-flex pan-tilt-column">
+      <!-- the position, the pan across and the tilt up and down -->
+      <svg
+        class="pan-tilt-pad"
+        [class.pan-tilt-pad-aiming]="isAiming()"
+        [attr.viewBox]="'0 0 ' + padSize + ' ' + padSize"
+        tabindex="0"
+        role="slider"
+        [attr.aria-label]="'designer.fixture.capability-pan-tilt-pad' | translate"
+        [attr.aria-valuetext]="getDegreesText(pan) + '° / ' + getDegreesText(tilt) + '°'"
+        [title]="'designer.fixture.capability-pan-tilt-pad-hint' | translate"
+        (pointerdown)="padDown($event)"
+        (pointermove)="padMove($event)"
+        (pointerup)="padUp()"
+        (pointercancel)="padUp()"
+        (dblclick)="padCenter()"
+        (keydown)="padKey($event)"
+      >
+        <line class="pan-tilt-axis" [attr.x1]="padSize / 2" y1="0" [attr.x2]="padSize / 2" [attr.y2]="padSize"></line>
+        <line class="pan-tilt-axis" x1="0" [attr.y1]="padSize / 2" [attr.x2]="padSize" [attr.y2]="padSize / 2"></line>
+        @if (isActive()) {
+        <circle class="pan-tilt-point" [attr.cx]="getPadX()" [attr.cy]="getPadY()" r="7"></circle>
+        }
+      </svg>
+      <div class="pan-tilt-reach text-muted">±{{ panRange / 2 }}° / ±{{ tiltRange / 2 }}°</div>
     </div>
 
-    <div class="d-flex h-100" style="flex-direction: column">
-      <div class="mb-4 w-100 d-flex">
+    <div class="d-flex pan-tilt-column pan-tilt-fields">
+      <label class="pan-tilt-field">
+        <span>{{ 'designer.fixtureCapabilityType.Pan' | translate }} °</span>
         <input
-          class="mx-auto sd-value-input"
+          class="sd-value-input"
           type="text"
-          [ngModel]="getValueTextTilt() >= 0 ? getValueTextTilt() : 0"
-          (ngModelChange)="setValueTilt($event / 100)"
+          name="panDegrees"
+          [ngModel]="getDegreesText(pan)"
+          (ngModelChange)="setDegrees(pan, $event)"
         />
+      </label>
+      <label class="pan-tilt-field">
+        <span>{{ 'designer.fixtureCapabilityType.Tilt' | translate }} °</span>
+        <input
+          class="sd-value-input"
+          type="text"
+          name="tiltDegrees"
+          [ngModel]="getDegreesText(tilt)"
+          (ngModelChange)="setDegrees(tilt, $event)"
+        />
+      </label>
+
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="capabilityPanTiltMirrorPan"
+          [ngModel]="getMirrorPan()"
+          (ngModelChange)="setMirrorPan($event)"
+        />
+        <label class="form-check-label" for="capabilityPanTiltMirrorPan">{{
+          'designer.fixture.capability-pan-tilt-mirror-pan' | translate
+        }}</label>
+      </div>
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="capabilityPanTiltMirrorTilt"
+          [ngModel]="getMirrorTilt()"
+          (ngModelChange)="setMirrorTilt($event)"
+        />
+        <label class="form-check-label" for="capabilityPanTiltMirrorTilt">{{
+          'designer.fixture.capability-pan-tilt-mirror-tilt' | translate
+        }}</label>
       </div>
 
-      <div class="h-100 w-100 d-flex">
-        <mv-slider
-          class="mx-auto"
-          [value]="getValueTilt() >= 0 ? getValueTilt() : 0"
-          (change)="setValueTilt($event.newValue)"
-          [orientation]="'vertical'"
-          [reversed]="true"
-          style="height: 100%"
-          [tooltip]="'hide'"
-          [min]="0"
-          [max]="1"
-          [step]="0.001"
-        ></mv-slider>
+      <!-- the heads fanned out from the first to the last -->
+      <div class="pan-tilt-title" [title]="'designer.fixture.capability-pan-tilt-spread-hint' | translate">
+        {{ 'designer.fixture.capability-pan-tilt-spread' | translate }}
       </div>
+      <label class="pan-tilt-field">
+        <span>{{ 'designer.fixtureCapabilityType.Pan' | translate }} °</span>
+        <input class="sd-value-input" type="text" name="panSpread" [ngModel]="getSpread(pan)" (ngModelChange)="setSpread(pan, $event)" />
+      </label>
+      <label class="pan-tilt-field">
+        <span>{{ 'designer.fixtureCapabilityType.Tilt' | translate }} °</span>
+        <input class="sd-value-input" type="text" name="tiltSpread" [ngModel]="getSpread(tilt)" (ngModelChange)="setSpread(tilt, $event)" />
+      </label>
+    </div>
 
-      <div class="mt-3 w-100 d-flex">
-        <div class="form-check mx-auto">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="capabilityPanTiltMirrorTilt"
-            [ngModel]="getMirrorTilt()"
-            (ngModelChange)="setMirrorTilt($event)"
-          />
-          <label class="form-check-label" for="capabilityPanTiltMirrorTilt">
-            {{ 'designer.fixture.capability-pan-tilt-mirror' | translate }}
-          </label>
-        </div>
-      </div>
+    <!-- a spot on the stage the heads point at, from wherever they hang -->
+    <div class="d-flex pan-tilt-column pan-tilt-fields">
+      <div class="pan-tilt-title">{{ 'designer.fixture.capability-pan-tilt-aim' | translate }}</div>
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        name="pickSpot"
+        [class.active]="isPickingSpot()"
+        [title]="'designer.fixture.capability-pan-tilt-aim-hint' | translate"
+        (click)="pickSpot()"
+      >
+        <i class="fa fa-crosshairs mr-1"></i>
+        {{
+          (isPickingSpot() ? 'designer.fixture.capability-pan-tilt-aim-picking' : 'designer.fixture.capability-pan-tilt-aim-pick')
+            | translate
+        }}
+      </button>
+      @if (isAiming()) { @for (axis of [0, 1, 2]; track axis) {
+      <label class="pan-tilt-field">
+        <span>{{ ['X', 'Y', 'Z'][axis] }} cm</span>
+        <input
+          class="sd-value-input"
+          type="text"
+          [attr.name]="'aim' + axis"
+          [ngModel]="getAim(axis)"
+          (ngModelChange)="setAim(axis, $event)"
+        />
+      </label>
+      }
+      <button type="button" class="btn btn-secondary btn-sm" name="stopAiming" (click)="stopAiming()">
+        {{ 'designer.fixture.capability-pan-tilt-aim-stop' | translate }}
+      </button>
+      }
     </div>
   </div>
 </div>
