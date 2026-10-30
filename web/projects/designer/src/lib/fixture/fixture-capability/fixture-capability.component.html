@@ -38,6 +38,24 @@
         <lib-app-fixture-capability-pan-tilt></lib-app-fixture-capability-pan-tilt>
       </div>
       }
+      <!-- The emitters besides red, green and blue (e.g. white, amber or UV) -->
+      @for (color of emitterColors; track color) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="'ColorIntensity'" [color]="color"></lib-app-fixture-capability-position>
+      </div>
+      }
+      <!-- Strobe, zoom, focus, iris, frost, color temperature and prism, which play the same on every model -->
+      @for (type of positionedTypes; track type) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="type"></lib-app-fixture-capability-position>
+      </div>
+      }
+      <!-- Gobo wheels -->
+      @for (entry of goboWheelChannels; track $index) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-gobo-wheel [profile]="entry.profile" [channel]="entry.channel"></lib-app-fixture-capability-gobo-wheel>
+      </div>
+      }
       <!-- Fix spacing at the end -->
       <div class="col col-auto p-0 my-3 mr-3">&nbsp;</div>
     </div>
@@ -51,7 +69,7 @@
       <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
     } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length > 0
-    && !hasCapabilityDimmer && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
+    && !hasCapabilities ) {
     <div class="m-auto">
       <p class="m-auto text-muted">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
     </div>

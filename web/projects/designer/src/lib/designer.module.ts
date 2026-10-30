@@ -27,6 +27,8 @@ import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capabili
 import { FixtureCapabilityColorComponent } from './fixture/fixture-capability/fixture-capability-color/fixture-capability-color.component';
 import { FixtureCapabilityDimmerComponent } from './fixture/fixture-capability/fixture-capability-dimmer/fixture-capability-dimmer.component';
 import { FixtureCapabilityPanTiltComponent } from './fixture/fixture-capability/fixture-capability-pan-tilt/fixture-capability-pan-tilt.component';
+import { FixtureCapabilityPositionComponent } from './fixture/fixture-capability/fixture-capability-position/fixture-capability-position.component';
+import { FixtureCapabilityGoboWheelComponent } from './fixture/fixture-capability/fixture-capability-gobo-wheel/fixture-capability-gobo-wheel.component';
 import { FixtureCapabilityComponent } from './fixture/fixture-capability/fixture-capability.component';
 import { FixtureChannelComponent } from './fixture/fixture-channel/fixture-channel.component';
 import { FixtureSettingsPositionComponent } from './fixture/fixture-settings/fixture-settings-position/fixture-settings-position.component';
@@ -89,6 +91,8 @@ import { keepSliderValues } from './slider-value';
     CompositionSettingsComponent,
     ArraySortPipe,
     FixtureCapabilityPanTiltComponent,
+    FixtureCapabilityPositionComponent,
+    FixtureCapabilityGoboWheelComponent,
     FixtureCapabilityChannelComponent,
     FixtureChannelComponent,
     FixtureCapabilityColorWheelComponent,

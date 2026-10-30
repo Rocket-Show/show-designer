@@ -171,6 +171,9 @@ function channelValues(projectData: any, preview: any, times: number[]): any[] {
     throw new Error('Unknown preview mode ' + preview.mode);
   }
 
+  // the fixtures identified from the fixture pool, if any
+  project.identifyFixtureUuids = preview.identify ?? [];
+
   return times.map((timeMillis: number) => {
     const values = services.previewService.getChannelValues(timeMillis, services.previewService.getPresets(timeMillis));
     const frame = {};

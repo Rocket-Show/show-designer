@@ -164,7 +164,8 @@
       "steps-settings": "Ajustes de la secuencia",
       "steps-loop": "Repetir los pasos",
       "steps-loop-length": "Duración del bucle",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} valores solo funcionan en: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",
@@ -203,7 +204,30 @@
       "setting-stage-pillar-width": "Anchura del pilar",
       "capability-sound-controlled": "Control por sonido",
       "capability-random-timing": "Temporización aleatoria",
-      "channel-effect-driven": "Un efecto controla este canal y anula el valor mostrado aquí"
+      "channel-effect-driven": "Un efecto controla este canal y anula el valor mostrado aquí",
+      "capability-gobo-wheel": "Rueda de gobos",
+      "capability-position-low": {
+        "ShutterStrobe": "Apagado",
+        "Zoom": "Cerrado",
+        "Focus": "Cerca",
+        "Iris": "Cerrado",
+        "Frost": "Ninguno",
+        "ColorTemperature": "Cálido",
+        "Prism": "Fuera",
+        "ColorIntensity": "Apagado"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Rápido",
+        "Zoom": "Abierto",
+        "Focus": "Lejos",
+        "Iris": "Abierto",
+        "Frost": "Lleno",
+        "ColorTemperature": "Frío",
+        "Prism": "Dentro",
+        "ColorIntensity": "Lleno"
+      },
+      "model-specific-title": "Solo este modelo",
+      "model-specific-hint": "Lo que ajustas en estos canales solo funciona en este modelo de fixture. El dimmer, los colores, el estrobo, el zoom, el foco, el iris y el frost de las capacidades funcionan en todos los modelos, así el show funciona también en otros fixtures."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -235,7 +259,23 @@
       "create-fixture-from-profile-file-dialog-title": "Seleccionar archivo de perfil OFL",
       "invalid-fixture-profile-file": "Este no es un archivo de perfil OFL válido. Por favor selecciona un archivo de perfil válido.",
       "edit-universes": "Editar universos",
-      "edit-universes-title": "Editar universos"
+      "edit-universes-title": "Editar universos",
+      "change-type": "Cambiar los fixtures seleccionados a este perfil",
+      "fixture-type": "Tipo de fixture",
+      "change-type-hint": "¿Otros fixtures en el lugar? Selecciona los fixtures y haz clic en ⇄ junto a su perfil a la izquierda.",
+      "exchanged-from": "Cambiado desde {{from}}. Con OK, los presets reciben también para este modelo lo que ajustan para el antiguo:",
+      "exchange-carried": "{{count}} valores se traspasan",
+      "exchange-lost": "{{count}} valores no se pueden traspasar:",
+      "exchange-reason": {
+        "nothing": "el nuevo modelo no tiene nada que lo haga",
+        "gobo": "el nuevo modelo no tiene este gobo",
+        "taken": "ya ajustado en {{to}}"
+      },
+      "patch-in-a-row": "Patchear los {{count}} fixtures uno tras otro",
+      "patch-in-a-row-full": "A partir de ahí los fixtures ya no caben en el universo.",
+      "identify": "Identificar: hacer parpadear el fixture en blanco",
+      "model-specific": "Los presets ajustan {{count}} valores que solo funcionan en este modelo.",
+      "add-fixture": "Añadir un fixture de este perfil"
     },
     "effect": {
       "add-new": "Añadir nuevo efecto",

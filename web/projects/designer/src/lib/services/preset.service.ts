@@ -19,6 +19,9 @@ import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from './live-preview.service';
 import { AnimationService } from './animation.service';
+import { getPositionedChannelValue, isPositionedCapabilityType } from '../models/capability-position';
+import { getFixtureCapabilityValues } from '../models/subtractive-color';
+import { countModelSpecificValues } from '../models/model-specific';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +31,12 @@ export class PresetService {
 
   // the icon a preset is shown with, while none has been picked for it
   static readonly defaultIcon = 'fa-lightbulb-o';
+
+  // the model-specific values counted per preset (see getModelSpecificValues)
+  private modelSpecificValues = new WeakMap<
+    Preset,
+    { size: number; profiles: FixtureProfile[]; values: { profile: FixtureProfile; count: number }[] }
+  >();
 
   // the step of the selected preset the capability, channel and effect panels edit. It
   // is also what the preview shows while nothing is playing.
@@ -74,6 +83,52 @@ export class PresetService {
   // the icon of a preset: the one picked for it, or the default one
   getPresetIcon(preset: Preset): string {
     return preset.icon || PresetService.defaultIcon;
+  }
+
+  // The models of fixtures of the project the preset sets values for which only they play (see model-specific), with
+  // how many. The lists of presets ask for it on every change detection, so what was counted is kept as long as the
+  // preset holds as many values.
+  getModelSpecificValues(preset: Preset): { profile: FixtureProfile; count: number }[] {
+    const size = this.getValueCount(preset);
+    const counted = this.modelSpecificValues.get(preset);
+
+    if (counted && counted.size === size && counted.profiles === this.projectService.project.fixtureProfiles) {
+      return counted.values;
+    }
+
+    const values: { profile: FixtureProfile; count: number }[] = [];
+
+    for (const [profileUuid, count] of countModelSpecificValues(preset)) {
+      const profile = this.fixtureService.getProfileByUuid(profileUuid);
+
+      // the values of a model the project has no fixture of anymore play on nothing
+      if (profile) {
+        values.push({ profile, count });
+      }
+    }
+
+    this.modelSpecificValues.set(preset, { size, profiles: this.projectService.project.fixtureProfiles, values });
+
+    return values;
+  }
+
+  // how many values a preset holds, which tells whether it has to be counted again
+  private getValueCount(preset: Preset): number {
+    let size = preset.effects.length + preset.fixtureChannelValues.length + preset.fixtureCapabilityValues.length;
+
+    for (const step of preset.steps) {
+      size += step.fixtureChannelValues.length + step.fixtureCapabilityValues.length;
+    }
+
+    for (const effect of preset.effects) {
+      if (effect instanceof EffectCurve) {
+        for (const profileChannels of effect.channels) {
+          size += profileChannels.channels.length + 1;
+        }
+      }
+    }
+
+    return size;
   }
 
   getPresetByUuid(uuid: string): Preset {
@@ -602,7 +657,7 @@ export class PresetService {
     profileUuid: string,
     preset?: Preset
   ): boolean {
-    return capabilityValues.some((capabilityValue) =>
+    return getFixtureCapabilityValues(capabilityValues, channels).some((capabilityValue) =>
       channels.some(
         (channel) =>
           channel.channel &&
@@ -626,9 +681,20 @@ export class PresetService {
     );
   }
 
+  // the value a positioned capability value (see capability-position) drives a channel of a fixture of the passed
+  // profile to, or undefined, if the channel doesn't do it
+  getPositionedChannelValue(capabilityValue: FixtureCapabilityValue, channel: CachedFixtureChannel, profileUuid: string): number {
+    if (!(capabilityValue.valuePercentage >= 0) || (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid)) {
+      return undefined;
+    }
+
+    return getPositionedChannelValue(channel, capabilityValue.type, capabilityValue.valuePercentage);
+  }
+
   // the value a channel is driven to by the capability values of a preset, or undefined, if no
   // capability touches it. A channel value set on the channel itself wins over this one. The
-  // passed channels of the fixture tell whether it lights a color of its own (see lightsColorOfItsOwn).
+  // passed channels of the fixture tell whether it lights a color of its own (see lightsColorOfItsOwn)
+  // and whether it mixes its colors with filters (see subtractive-color).
   getChannelValueFromCapabilities(
     capabilityValues: FixtureCapabilityValue[],
     channel: CachedFixtureChannel,
@@ -638,7 +704,18 @@ export class PresetService {
   ): number {
     let value: number;
 
-    for (const capabilityValue of capabilityValues) {
+    for (const capabilityValue of getFixtureCapabilityValues(capabilityValues, fixtureChannels)) {
+      if (isPositionedCapabilityType(capabilityValue.type)) {
+        // a position drives the channel as a whole, like in the preview
+        const positionedValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
+
+        if (positionedValue !== undefined) {
+          value = positionedValue;
+        }
+
+        continue;
+      }
+
       for (const channelCapability of channel.capabilities) {
         if (
           this.fixtureService.capabilitiesMatch(
@@ -717,20 +794,21 @@ export class PresetService {
     return false;
   }
 
-  private hasCapabilityType(type: FixtureCapabilityType): boolean {
+  // does a fixture of the preset being edited have a channel with the passed capability (of the passed color, if any)?
+  hasCapabilityType(type: FixtureCapabilityType, color?: FixtureCapabilityColor): boolean {
     // nothing is being edited yet: the panels are asked while the project is still
     // being loaded, before a preset has been picked
     if (!this.selectedPreset) {
       return false;
     }
 
-    // there is at least one channel with at least one intensity capability
+    // there is at least one channel with at least one such capability
     for (const presetFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
       for (const channel of fixture.channels) {
         if (channel.channel) {
           for (const capability of channel.capabilities) {
-            if (capability.capability.type === type) {
+            if (capability.capability.type === type && (!color || capability.capability.color === color)) {
               return true;
             }
           }

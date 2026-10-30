@@ -36,6 +36,11 @@ export class Project {
   public stepPreviewRunning = false;
   public stepPreviewStartMillis = 0;
 
+  // the fixtures being identified from the fixture pool: they blink at full, whatever the
+  // presets do with them (see PreviewService.getIdentifyValues). Only travels to the live
+  // preview as well, it is never loaded back from a project.
+  public identifyFixtureUuids: string[] = [];
+
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
 

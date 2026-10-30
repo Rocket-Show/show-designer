@@ -164,7 +164,8 @@
       "steps-settings": "Sequence settings",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} values only play on: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
@@ -203,7 +204,30 @@
       "setting-stage-pillar-width": "Pillar width",
       "capability-sound-controlled": "Sound controlled",
       "capability-random-timing": "Random timing",
-      "channel-effect-driven": "An effect drives this channel and overrides the value shown here"
+      "channel-effect-driven": "An effect drives this channel and overrides the value shown here",
+      "capability-gobo-wheel": "Gobo wheel",
+      "capability-position-low": {
+        "ShutterStrobe": "Off",
+        "Zoom": "Narrow",
+        "Focus": "Near",
+        "Iris": "Closed",
+        "Frost": "None",
+        "ColorTemperature": "Warm",
+        "Prism": "Out",
+        "ColorIntensity": "Off"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Fast",
+        "Zoom": "Wide",
+        "Focus": "Far",
+        "Iris": "Open",
+        "Frost": "Full",
+        "ColorTemperature": "Cold",
+        "Prism": "In",
+        "ColorIntensity": "Full"
+      },
+      "model-specific-title": "This model only",
+      "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well."
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -235,7 +259,23 @@
       "create-fixture-from-profile-file-dialog-title": "Select an OFL profile file",
       "invalid-fixture-profile-file": "This is not a valid OFL fixture profile file. Please select a valid profile file.",
       "edit-universes": "Edit universes",
-      "edit-universes-title": "Edit universes"
+      "edit-universes-title": "Edit universes",
+      "change-type": "Change the selected fixtures to this profile",
+      "fixture-type": "Fixture type",
+      "change-type-hint": "Other fixtures at the venue? Select the fixtures and click ⇄ next to their profile on the left.",
+      "exchanged-from": "Changed from {{from}}. On OK, the presets get what they set for the old model for this one as well:",
+      "exchange-carried": "{{count}} values carry over",
+      "exchange-lost": "{{count}} values cannot be carried over:",
+      "exchange-reason": {
+        "nothing": "the new model has nothing doing it",
+        "gobo": "the new model does not have this gobo",
+        "taken": "already set on {{to}}"
+      },
+      "patch-in-a-row": "Patch the {{count}} fixtures one after another",
+      "patch-in-a-row-full": "The fixtures do not fit into the universe from there on.",
+      "identify": "Identify: let the fixture blink at full white",
+      "model-specific": "The presets set {{count}} values only this model plays.",
+      "add-fixture": "Add a fixture of this profile"
     },
     "effect": {
       "add-new": "Add new Effect",

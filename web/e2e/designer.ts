@@ -252,7 +252,11 @@ export class Designer {
 
   // add a fixture of a profile listed in the search of the fixture pool, e.g. 'Test - RGB par'
   async addFromLibrary(profile: string) {
-    await this.fixturePool.locator('.list-group-item').filter({ hasText: profile }).getByRole('button').click();
+    await this.fixturePool
+      .locator('.list-group-item')
+      .filter({ hasText: profile })
+      .getByRole('button', { name: 'Add a fixture of this profile' })
+      .click();
   }
 
   // ---- the preview -----------------------------------------------------------------

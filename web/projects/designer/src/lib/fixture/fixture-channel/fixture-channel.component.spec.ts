@@ -122,6 +122,14 @@ describe('FixtureChannelComponent', () => {
     expect(message()).toBeUndefined();
   });
 
+  it('says that what the channels are set to only plays on their model of fixture', async () => {
+    await render();
+    expect(element.querySelector('.model-specific-hint .card-body').textContent.trim()).toBe('designer.fixture.model-specific-hint');
+
+    await light();
+    expect(element.querySelector('.model-specific-hint')).toBeNull();
+  });
+
   it('filters the channels by the profiles, while the fixtures have several', async () => {
     await render();
     await light('par', 'head');

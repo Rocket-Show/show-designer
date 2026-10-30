@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
+import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureService } from '../../services/fixture.service';
 import { IntroService } from '../../services/intro.service';
 import { PresetService } from '../../services/preset.service';
@@ -25,6 +26,34 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   hasCapabilityDimmer: boolean = false;
   hasCapabilityColorOrColorWheel: boolean = false;
   hasCapabilityPanTilt: boolean = false;
+
+  // the gobo wheels, once for each profile, like the color wheels
+  goboWheelChannels: { profile: FixtureProfile; channel: CachedFixtureChannel }[] = [];
+
+  // the capabilities besides the dimmer, the color and pan/tilt which play the same on every model of fixture (see
+  // capability-position) and the emitters of light besides red, green and blue, which the fixtures of the preset have
+  positionedTypes: FixtureCapabilityType[] = [];
+  emitterColors: FixtureCapabilityColor[] = [];
+
+  private static readonly positionedPanels = [
+    FixtureCapabilityType.ShutterStrobe,
+    FixtureCapabilityType.Zoom,
+    FixtureCapabilityType.Focus,
+    FixtureCapabilityType.Iris,
+    FixtureCapabilityType.Frost,
+    FixtureCapabilityType.ColorTemperature,
+    FixtureCapabilityType.Prism,
+  ];
+
+  private static readonly emitters = [
+    FixtureCapabilityColor.White,
+    FixtureCapabilityColor['Warm White'],
+    FixtureCapabilityColor['Cold White'],
+    FixtureCapabilityColor.Amber,
+    FixtureCapabilityColor.UV,
+    FixtureCapabilityColor.Lime,
+    FixtureCapabilityColor.Indigo,
+  ];
 
   constructor(
     public presetService: PresetService,
@@ -67,6 +96,7 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
 
   private updateColorWheels() {
     this.colorWheelChannels = [];
+    this.goboWheelChannels = [];
 
     if (!this.presetService.selectedPreset) {
       return;
@@ -84,7 +114,11 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
               }
             } else if (this.fixtureService.wheelHasSlotType(capability.wheel, FixtureWheelSlotType.Gobo)) {
               // gobo wheel
-              // TODO
+              if (
+                !this.goboWheelChannels.some((wheel) => wheel.profile.uuid === fixture.profile.uuid && wheel.channel.name === channel.name)
+              ) {
+                this.goboWheelChannels.push({ profile: fixture.profile, channel });
+              }
             }
           }
         }
@@ -96,6 +130,28 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
     this.hasCapabilityDimmer = this.presetService.hasCapabilityDimmer();
     this.hasCapabilityColorOrColorWheel = this.presetService.hasCapabilityColorOrColorWheel();
     this.hasCapabilityPanTilt = this.presetService.hasCapabilityPanTilt();
+
+    // the strobe drives a channel of its own for its speed as well
+    this.positionedTypes = FixtureCapabilityComponent.positionedPanels.filter(
+      (type) =>
+        this.presetService.hasCapabilityType(type) ||
+        (type === FixtureCapabilityType.ShutterStrobe && this.presetService.hasCapabilityType(FixtureCapabilityType.StrobeSpeed))
+    );
+    this.emitterColors = FixtureCapabilityComponent.emitters.filter((color) =>
+      this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, color)
+    );
+  }
+
+  // does any of the panels above apply to the fixtures of the preset?
+  get hasCapabilities(): boolean {
+    return (
+      this.hasCapabilityDimmer ||
+      this.hasCapabilityColorOrColorWheel ||
+      this.hasCapabilityPanTilt ||
+      this.positionedTypes.length > 0 ||
+      this.emitterColors.length > 0 ||
+      this.goboWheelChannels.length > 0
+    );
   }
 
   private update() {

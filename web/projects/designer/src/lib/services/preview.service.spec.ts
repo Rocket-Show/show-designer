@@ -298,6 +298,167 @@ describe('PreviewService dimmers and fades', () => {
   });
 });
 
+// The capabilities set as a position, the colors of a spot mixing them with filters and the fixtures identified from
+// the fixture pool. These mirror the cases of DesignerDmxTest in Rocket Show (the conformance cases play them all).
+describe('PreviewService positions, filters and identifying', () => {
+  let fixtureService: FixtureService;
+  let previewService: PreviewService;
+  let project: Project;
+
+  // a moving spot mixing its colors with filters, with a zoom and a strobe, and an RGB par without a dimmer
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    fixtureService = TestBed.inject(FixtureService);
+    previewService = TestBed.inject(PreviewService);
+
+    project = new Project({
+      fixtureProfiles: [
+        {
+          uuid: 'spot',
+          name: 'CMY spot',
+          categories: ['Moving Head'],
+          availableChannels: {
+            Pan: { capability: { type: 'Pan' } },
+            Dimmer: { capability: { type: 'Intensity' } },
+            Cyan: { capability: { type: 'ColorIntensity', color: 'Cyan' } },
+            Magenta: { capability: { type: 'ColorIntensity', color: 'Magenta' } },
+            Yellow: { capability: { type: 'ColorIntensity', color: 'Yellow' } },
+            Zoom: { capability: { type: 'Zoom', angleStart: '40deg', angleEnd: '10deg' } },
+            Shutter: {
+              capabilities: [
+                { dmxRange: [0, 9], type: 'ShutterStrobe', shutterEffect: 'Open' },
+                { dmxRange: [10, 255], type: 'ShutterStrobe', shutterEffect: 'Strobe', speedStart: 'slow', speedEnd: 'fast' },
+              ],
+            },
+          },
+          modes: [{ name: '7-channel', shortName: '7ch', channels: ['Pan', 'Dimmer', 'Cyan', 'Magenta', 'Yellow', 'Zoom', 'Shutter'] }],
+        },
+        {
+          uuid: 'rgb',
+          name: 'RGB par without dimmer',
+          categories: ['Color Changer'],
+          availableChannels: {
+            Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+            Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+            Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+          },
+          modes: [{ name: '3-channel', shortName: '3ch', channels: ['Red', 'Green', 'Blue'] }],
+        },
+      ],
+      fixtures: [
+        { uuid: 'spot', profileUuid: 'spot', modeShortName: '7ch', dmxFirstChannel: 0 },
+        { uuid: 'rgb', profileUuid: 'rgb', modeShortName: '3ch', dmxFirstChannel: 10 },
+      ],
+      presetFixtures: [{ fixtureUuid: 'spot' }, { fixtureUuid: 'rgb' }],
+    });
+    TestBed.inject(ProjectService).project = project;
+    fixtureService.updateCachedFixtures();
+  });
+
+  function capability(type: string, valuePercentage: number, color?: string): FixtureCapabilityValue {
+    return new FixtureCapabilityValue({ type, valuePercentage, color });
+  }
+
+  function preset(capabilityValues: FixtureCapabilityValue[]): Preset {
+    const look = new Preset();
+    look.fixtures = ['spot', 'rgb'].map((fixtureUuid) => new PresetFixture({ fixtureUuid }));
+
+    const step = new PresetStep();
+    step.fixtureCapabilityValues = capabilityValues;
+    look.steps = [step];
+
+    return look;
+  }
+
+  function channelValues(fixtureUuid: string, presets: PresetRegionScene[], timeMillis = 0): { [channelName: string]: number } {
+    const cachedFixture = fixtureService.cachedFixtures.find((fixture) => fixture.fixture.uuid === fixtureUuid);
+    const values = {};
+
+    for (const value of previewService.getChannelValues(timeMillis, presets).get(cachedFixture)) {
+      values[value.channelName] = value.value;
+    }
+
+    return values;
+  }
+
+  function inScene(look: Preset, dimmer = 1): PresetRegionScene[] {
+    const scene = new Scene();
+    scene.dimmer = dimmer;
+
+    return [new PresetRegionScene(look, undefined, scene)];
+  }
+
+  it('zooms from narrow to wide, whichever way round the profile runs the zoom', () => {
+    expect(channelValues('spot', inScene(preset([capability('Zoom', 0)])))['Zoom']).toBe(255);
+    expect(channelValues('spot', inScene(preset([capability('Zoom', 0.25)])))['Zoom']).toBe(191.25);
+  });
+
+  it('does not fade a position with the dimmer of the scene', () => {
+    const values = channelValues(
+      'spot',
+      inScene(preset([capability('Intensity', 1), capability('Zoom', 1), capability('ShutterStrobe', 1)]), 0.5)
+    );
+
+    expect(values['Dimmer']).toBe(127.5);
+    expect(values['Zoom']).toBe(0);
+    expect(values['Shutter']).toBe(255);
+  });
+
+  it('opens the shutter with the strobe at 0', () => {
+    expect(channelValues('spot', inScene(preset([capability('ShutterStrobe', 0)])))['Shutter']).toBe(4);
+  });
+
+  it('gives a spot mixing its colors with filters the filters taking away what it does not light', () => {
+    const values = channelValues(
+      'spot',
+      inScene(
+        preset([
+          capability('ColorIntensity', 1, 'Red'),
+          capability('ColorIntensity', 0.2, 'Green'),
+          capability('ColorIntensity', 0, 'Blue'),
+        ])
+      )
+    );
+
+    expect(values['Cyan']).toBe(0);
+    expect(values['Magenta']).toBeCloseTo(204, 10);
+    expect(values['Yellow']).toBe(255);
+  });
+
+  it('blinks a fixture being identified at full white, keeping where the preset points it', () => {
+    const look = inScene(
+      preset([capability('Intensity', 0.2), capability('Pan', 0.5), capability('ColorIntensity', 1, 'Red'), capability('ShutterStrobe', 1)])
+    );
+    project.identifyFixtureUuids = ['spot'];
+
+    const lit = channelValues('spot', look, 0);
+    expect(lit['Dimmer']).toBe(255);
+    expect(lit['Pan']).toBe(127.5);
+    expect([lit['Cyan'], lit['Magenta'], lit['Yellow']]).toEqual([0, 0, 0]);
+    expect(lit['Shutter']).toBe(4);
+
+    const dark = channelValues('spot', look, 500);
+    expect(dark['Dimmer']).toBe(0);
+    expect(dark['Pan']).toBe(127.5);
+
+    // the par plays the preset
+    expect(channelValues('rgb', look, 500)['Red']).toBe(255);
+  });
+
+  it('identifies a fixture no preset lights, with its virtual dimmer', () => {
+    project.identifyFixtureUuids = ['rgb'];
+
+    const values = channelValues('rgb', [], 0);
+
+    expect(values[FixtureService.virtualDimmerChannelName]).toBe(255);
+    expect([values['Red'], values['Green'], values['Blue']]).toEqual([255, 255, 255]);
+  });
+});
+
 // The place of each fixture in the chase of its preset. These mirror the chase cases of
 // DesignerDmxTest in Rocket Show.
 describe('PreviewService chases', () => {

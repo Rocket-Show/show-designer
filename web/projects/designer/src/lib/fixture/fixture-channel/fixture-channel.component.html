@@ -5,6 +5,17 @@
     anymore afterwards. -->
     @if (presetService.selectedPreset) {
     <div class="row m-0 pl-3" [class.h-100]="isChrome()">
+      <!-- a value set on a channel only plays on the model of fixture of the channel -->
+      @if (channelCapabilities.size > 0) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <div class="card border-secondary h-100 model-specific-hint">
+          <div class="card-header">
+            <i class="fa fa-link fa-fw" aria-hidden="true"></i> {{ 'designer.fixture.model-specific-title' | translate }}
+          </div>
+          <div class="card-body overflow-auto text-muted">{{ 'designer.fixture.model-specific-hint' | translate }}</div>
+        </div>
+      </div>
+      }
       <!-- profile selection -->
       @if (profiles.length > 1) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">

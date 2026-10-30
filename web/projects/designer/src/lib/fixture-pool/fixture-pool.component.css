@@ -96,3 +96,34 @@ lib-tree,
 .fixture-remove:hover {
   color: var(--sd-text);
 }
+
+/* a fixture blinking on the stage to be found keeps its bulb lit in the tree */
+.fixture-identify {
+  color: var(--sd-text-muted);
+}
+
+.fixture-identify.identifying {
+  color: var(--sd-primary);
+}
+
+/* what becomes of the values of the old model of a fixture changed to another one */
+.exchange-report {
+  padding: var(--sd-space-2);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius);
+  font-size: 0.85rem;
+}
+
+.exchange-carried {
+  color: var(--sd-success);
+}
+
+.exchange-lost-title {
+  color: var(--sd-warning);
+}
+
+.exchange-lost {
+  max-height: 8rem;
+  overflow-y: auto;
+  padding-left: 1.25rem;
+}

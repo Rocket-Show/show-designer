@@ -1184,6 +1184,158 @@ function channelValuesMixingEdges() {
   );
 }
 
+// The capabilities a preset sets as a position between the ends of what a fixture does with them (strobe, zoom, focus,
+// iris, frost, color temperature, prism, see capability-position.ts), on the test profiles test/beam (ranges running
+// both ways round, words and numbers, several of a kind on a channel) and test/strobe-par (a strobe sharing its channel
+// with the dimmer, "no function" switching it off). A spot mixing its colors with filters (test/cmy-spot) and fixtures
+// identified from the fixture pool.
+function channelValuesCapabilities() {
+  const cases = [];
+  const beam = 'test/beam';
+  const strobePar = 'test/strobe-par';
+  const cmySpot = 'test/cmy-spot';
+  const positioned = ['ShutterStrobe', 'StrobeSpeed', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism'];
+
+  // Each of them at the low end, in between and at the high end, in a scene dimmed to half: a position doesn't fade
+  // with the dimmer
+  const positions = [0, 0.25, 1];
+  const beams = positions.map((position, index) => edgeFixture('beam-' + position, beam, '11ch', index));
+  const pars = positions.map((position, index) => edgeFixture('par-' + position, strobePar, '8ch', positions.length + index));
+  const positionPresets = positions.map((position, index) =>
+    edgePreset('at-' + position, [{ fixtureUuid: beams[index].uuid }, { fixtureUuid: pars[index].uuid }], {
+      fixtureCapabilityValues: [capability('Intensity', 0.6), ...positioned.map((type) => capability(type, position))],
+    })
+  );
+
+  cases.push({
+    name: 'the positioned capabilities at the low end, in between and at the high end of their ranges',
+    input: {
+      project: edgeProject([beam, strobePar], [...beams, ...pars], positionPresets, [
+        { uuid: 'all', name: 'All', presetUuids: positionPresets.map((preset) => preset.uuid), dimmer: 0.5 },
+      ]),
+      runs: previewScenes(['all']),
+    },
+  });
+
+  // A preset above stopping the strobe of the one below (a strobe sharing its channel with the dimmer has nothing to
+  // switch it off with), and a zoom meant for another profile, which the spot doesn't take
+  const par = edgeFixture('par', strobePar, '8ch', 0);
+  const zoomed = edgeFixture('zoomed', beam, '11ch', 1);
+  const both = [{ fixtureUuid: 'par' }, { fixtureUuid: 'zoomed' }];
+  const strobing = edgePreset('strobing', both, {
+    fixtureCapabilityValues: [capability('Intensity', 1), capability('ShutterStrobe', 0.5), capability('Zoom', 0)],
+  });
+  const stopped = edgePreset('stopped', both, {
+    fixtureCapabilityValues: [capability('ShutterStrobe', 0), capability('Zoom', 1, { profileUuid: strobePar })],
+  });
+
+  cases.push({
+    name: 'a strobe stopped by the preset above, a position meant for another profile',
+    input: {
+      project: edgeProject(
+        [strobePar, beam],
+        [par, zoomed],
+        [stopped, strobing],
+        [
+          { uuid: 'top', name: 'Top', presetUuids: ['stopped'] },
+          { uuid: 'below', name: 'Below', presetUuids: ['strobing'] },
+        ]
+      ),
+      runs: [{ preview: { mode: 'preset', preset: 'strobing' }, times: [0] }, ...previewScenes(['top', 'below'])],
+    },
+  });
+
+  // The zoom and the iris travelling from one end to the other between two steps
+  const spot = edgeFixture('spot', beam, '11ch', 0);
+  const travelling = {
+    uuid: 'travelling',
+    name: 'Travelling',
+    fixtures: [{ fixtureUuid: 'spot' }],
+    steps: [
+      step('narrow', 0, { fixtureCapabilityValues: [capability('Zoom', 0), capability('Iris', 1)] }),
+      step('wide', 1000, { fixtureCapabilityValues: [capability('Zoom', 1), capability('Iris', 0)] }, { transitionMillis: 1000 }),
+    ],
+    effects: [],
+  };
+
+  cases.push({
+    name: 'positions travelling between two steps',
+    input: {
+      project: edgeProject([beam], [spot], [travelling], []),
+      runs: [{ preview: { mode: 'preset', preset: 'travelling', stepPreviewStartMillis: 0 }, times: [0, 1250, 1500, 2000] }],
+    },
+  });
+
+  // The colors of presets on a spot mixing them with filters: lit in a color, black, only red given, a slot of its color
+  // wheel picked as well and no color at all. Its color wheel isn't approximated, it lights the colors itself.
+  const looks = {
+    orange: rgb(1, 0.25, 0),
+    black: rgb(0, 0, 0),
+    red: [capability('ColorIntensity', 0.5, { color: 'Red' })],
+    slot: [...rgb(0, 1, 1), { type: 'WheelSlot', wheel: 'Color Wheel', slotNumber: 2, profileUuid: cmySpot }],
+    none: [],
+  };
+  const spots = Object.keys(looks).map((look, index) => edgeFixture('cmy-' + look, cmySpot, '6ch', index));
+  const colorPresets = Object.entries(looks).map(([look, values]) =>
+    edgePreset(look, [{ fixtureUuid: 'cmy-' + look }], { fixtureCapabilityValues: [capability('Intensity', 1), ...values] })
+  );
+
+  cases.push({
+    name: 'colors on a spot mixing them with filters, fading in',
+    input: {
+      project: edgeProject([cmySpot], spots, colorPresets, [
+        { uuid: 'colors', name: 'Colors', presetUuids: colorPresets.map((preset) => preset.uuid), dimmer: 0.5 },
+      ]),
+      runs: previewScenes(['colors']),
+    },
+  });
+
+  // Fixtures identified from the fixture pool blink at full white, whatever the preset lights them with: a spot with a
+  // color wheel, a spot mixing its colors with filters, a par lighting in colors without a dimmer of its own, the pixels
+  // of a bar and a moving head, which keeps pointing where the preset points it. The other par plays the preset.
+  const pixelBar = 'test/pixel-bar';
+  const identified = [
+    edgeFixture('spot', beam, '11ch', 0),
+    edgeFixture('cmy', cmySpot, '6ch', 1),
+    edgeFixture('rgb', 'test/rgb', '4ch', 2),
+    edgeFixture('bar', pixelBar, '10ch', 3),
+    edgeFixture('strobe-par', strobePar, '8ch', 4),
+    edgeFixture('playing', strobePar, '8ch', 5),
+    edgeFixture('head', 'test/moving-head', '6ch', 6),
+  ];
+  const allParts = identified.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid)));
+  const lookPreset = edgePreset('look', allParts, {
+    fixtureCapabilityValues: [
+      capability('Intensity', 0.4),
+      ...rgb(0, 0, 1),
+      capability('ShutterStrobe', 0.5),
+      capability('Zoom', 0.5),
+      capability('Iris', 0),
+      capability('Pan', 0.3),
+    ],
+  });
+
+  cases.push({
+    name: 'fixtures identified from the fixture pool, blinking',
+    input: {
+      project: edgeProject([beam, cmySpot, 'test/rgb', pixelBar, strobePar, 'test/moving-head'], identified, [lookPreset], []),
+      runs: [
+        {
+          preview: { mode: 'preset', preset: 'look', identify: ['spot', 'cmy', 'rgb', 'bar', 'strobe-par', 'head'] },
+          times: [0, 499.9, 500, 999.9, 1000, -1],
+        },
+      ],
+    },
+  });
+
+  return write(
+    'channel-values-capabilities.json',
+    'channelValues',
+    'Positioned capabilities (strobe, zoom, focus, iris, frost, color temperature, prism), colors mixed with filters and fixtures identified from the fixture pool',
+    cases
+  );
+}
+
 // ---- projects of older versions, migrated ----------------------------------------------------
 
 // A profile of a matrix given by its pixel count (or by its pixel keys), with a red channel for each
@@ -1757,6 +1909,7 @@ export function generate() {
     presetStepsEdges(),
     channelValuesEdges(),
     channelValuesMixingEdges(),
+    channelValuesCapabilities(),
     migrations(),
     migrationEdges(),
   ];

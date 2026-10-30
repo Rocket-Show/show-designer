@@ -470,6 +470,63 @@ describe('PresetService editing presets', () => {
     expect(service.getChannelValueFromCapabilities(values, wheel, 'rgb-wheel')).toBe(14);
   });
 
+  it('shows what a position of a step drives a channel to, for its profile only', () => {
+    const strobe = cachedChannel('par-1', 'Strobe');
+
+    // the shutter open at 0, strobing above it, like the preview plays it
+    expect(
+      service.getChannelValueFromCapabilities(
+        [new FixtureCapabilityValue({ type: 'ShutterStrobe', valuePercentage: 0 })],
+        strobe,
+        'test/rgb-par'
+      )
+    ).toBe(4);
+    expect(
+      service.getChannelValueFromCapabilities(
+        [new FixtureCapabilityValue({ type: 'ShutterStrobe', valuePercentage: 1 })],
+        strobe,
+        'test/rgb-par'
+      )
+    ).toBe(255);
+    expect(
+      service.getChannelValueFromCapabilities(
+        [new FixtureCapabilityValue({ type: 'ShutterStrobe', valuePercentage: 1, profileUuid: 'other' })],
+        strobe,
+        'test/rgb-par'
+      )
+    ).toBeUndefined();
+    expect(
+      service.getChannelValueFromCapabilities([new FixtureCapabilityValue({ type: 'ShutterStrobe' })], strobe, 'test/rgb-par')
+    ).toBeUndefined();
+  });
+
+  it('shows the filters a fixture mixing its colors with them is given for a color', () => {
+    project.fixtureProfiles.push(
+      new FixtureProfile({
+        uuid: 'cmy',
+        name: 'CMY',
+        availableChannels: { Cyan: { capability: { type: 'ColorIntensity', color: 'Cyan' } } },
+        modes: [{ name: '1-channel', shortName: '1ch', channels: ['Cyan'] }],
+      })
+    );
+    project.fixtures.push(new Fixture({ uuid: 'cmy', profileUuid: 'cmy', modeShortName: '1ch', dmxUniverseUuid: 'x' }));
+    fixtureService.updateCachedFixtures();
+    const channels = fixtureService.getCachedFixtureByUuid('cmy', undefined).channels;
+    const red = [new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage: 0.2 })];
+
+    expect(service.getChannelValueFromCapabilities(red, channels[0], 'cmy', undefined, channels)).toBeCloseTo(204, 9);
+    expect(service.lightsColorOfItsOwn(red, channels, 'cmy')).toBe(true);
+  });
+
+  it('knows the capabilities and the colors the fixtures of the preset have', () => {
+    service.selectedPreset = preset('red');
+
+    expect(service.hasCapabilityType(FixtureCapabilityType.ShutterStrobe)).toBe(true);
+    expect(service.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red)).toBe(true);
+    expect(service.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.White)).toBe(false);
+    expect(service.hasCapabilityType(FixtureCapabilityType.Zoom)).toBe(false);
+  });
+
   it('knows the channels an effect of a preset drives', () => {
     const move = preset('move');
     move.effects = [

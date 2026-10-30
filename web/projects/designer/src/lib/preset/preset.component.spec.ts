@@ -11,6 +11,8 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ToastrModule } from 'ngx-toastr';
 
 import { InlineEditComponent } from '../inline-edit/inline-edit.component';
+import { FixtureChannelValue } from '../models/fixture-channel-value';
+import { FixtureProfile } from '../models/fixture-profile';
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { Scene } from '../models/scene';
@@ -147,6 +149,19 @@ describe('PresetComponent', () => {
   function presetNames(): string[] {
     return project.presets.map((projectPreset) => projectPreset.name);
   }
+
+  it('marks a preset setting values only one model of fixture of the project plays', async () => {
+    project.fixtureProfiles.push(new FixtureProfile({ uuid: 'par', name: 'Par', modes: [] }));
+    preset('white').steps[0].fixtureChannelValues.push(new FixtureChannelValue({ profileUuid: 'par', channelName: 'Strobe', value: 20 }));
+    // a value for a model the project has no fixture of plays on nothing
+    preset('red').steps[0].fixtureChannelValues.push(new FixtureChannelValue({ profileUuid: 'gone', channelName: 'Strobe', value: 20 }));
+    TestBed.inject(TranslateService).setTranslation('en', { designer: { preset: { 'model-specific': '{{count}} for {{models}}' } } }, true);
+    await update();
+
+    expect(row('White').querySelector('.model-specific').getAttribute('title')).toBe('1 for Par');
+    expect(row('Red').querySelector('.model-specific')).toBeNull();
+    expect(row('Amber').querySelector('.model-specific')).toBeNull();
+  });
 
   it('lists the presets in their folders, marked with their icon and color', () => {
     expect(rowNames()).toEqual(['Red', 'Warm', 'Amber', 'White']);

@@ -12,10 +12,12 @@ import { Subject } from 'rxjs';
 import { profiles } from '../../../conformance/index';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
+import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { InlineEditComponent } from '../inline-edit/inline-edit.component';
 import { ConfigService } from '../services/config.service';
 import { FixtureOrderService } from '../services/fixture-order.service';
+import { FixtureExchangeService } from '../services/fixture-exchange.service';
 import { FixtureService } from '../services/fixture.service';
 import { LivePreviewService } from '../services/live-preview.service';
 import { PresetService } from '../services/preset.service';
@@ -894,6 +896,321 @@ describe('FixturePoolComponent', () => {
       expect(poolFixture('bar').dmxUniverseUuid).toBe('floor');
       expect(occupied()).toEqual(['0-5', '6-11']);
       expect(treeRow('Bar').classList).toContain('inactive-list-item');
+    });
+  });
+
+  // The pars of the venue are another model than the ones the show was written for: the fixtures selected become
+  // fixtures of the profile picked, and what the presets set for the old model goes over to the new one on OK
+  describe('changing fixtures to another model', () => {
+    // the button changing the fixtures to the profile of the row, e.g. "Test - RGB par"
+    const exchangeButton = (rowText: string): HTMLElement =>
+      (Array.from(element().querySelectorAll('.list-group-flush > .list-group-item')) as HTMLElement[])
+        .find((row) => row.textContent.replace(/\s+/g, ' ').trim() === rowText)
+        .querySelector('.profile-exchange');
+
+    async function exchangeTo(rowText: string) {
+      await click(exchangeButton(rowText));
+    }
+
+    async function loadProfile(name: string, searchProfile: any) {
+      http.expectOne('fixtures?uuid=' + name).flush([searchProfile]);
+      http.expectOne('fixture?uuid=' + name).flush(profiles[name]);
+      await update();
+    }
+
+    it('changes the fixture edited to the profile picked, in the mode it fits its address with, keeping its name', async () => {
+      await open();
+      await click(treeRow('Head'));
+
+      // the moving head of the project becomes an RGB par
+      await exchangeTo('Test - RGB par');
+
+      expect(poolFixture('head').profileUuid).toBe('test/rgb-par');
+      expect(poolFixture('head').modeShortName).toBe('6ch');
+      expect(poolFixture('head').name).toBe('Head');
+      expect(poolFixture('head').dmxFirstChannel).toBe(0);
+      expect(element().querySelector('#settings .fixture-type').textContent.trim()).toBe('RGB par');
+      expect(project.fixtures[3].profileUuid).toBe('test/moving-head');
+    });
+
+    it('loads the profile picked from the library, and renames a fixture named after its old model', async () => {
+      await open();
+      poolFixture('par-1').name = 'RGB par';
+
+      await exchangeTo('Test - RGB par without dimmer');
+      await loadProfile('test/rgb', library[2]);
+
+      // without a mode of as many channels, the first mode of the new model
+      expect(poolFixture('par-1').profileUuid).toBe('test/rgb');
+      expect(poolFixture('par-1').modeShortName).toBe('4ch');
+      expect(poolFixture('par-1').name).toBe('RGB par without dimmer');
+      expect(occupied()).toEqual(['0-3', '6-11', '12-17']);
+    });
+
+    it('changes all the fixtures selected in the tree, and nothing without a fixture to change', async () => {
+      await open();
+      pool.onSelectedNodesChange([pool.treeNodes[0].children[0], pool.treeNodes[0].children[1]]);
+      await update();
+
+      await exchangeTo('Test - Moving head');
+
+      expect(['par-1', 'par-2'].map((uuid) => poolFixture(uuid).profileUuid)).toEqual(['test/moving-head', 'test/moving-head']);
+      expect(poolFixture('bar').profileUuid).toBe('chauvet-dj/colorband-pix');
+
+      // a pool without fixtures to change leaves the button off
+      pool.removeFixture(poolFixture('par-1'));
+      pool.removeFixture(poolFixture('par-2'));
+      pool.removeFixture(poolFixture('bar'));
+      pool.removeFixture(poolFixture('head'));
+      pool.removeFixture(poolFixture('bar-2'));
+      pool.onSelectedNodesChange([]);
+      await update();
+      expect(exchangeButton('Test - RGB par').classList).toContain('disabled');
+      pool.exchangeProfile(new FixtureProfile(library[0]));
+    });
+
+    it('tells what the presets set for the old model carry over and what not', async () => {
+      project.presets.push(
+        new Preset({
+          uuid: 'flash',
+          name: 'Flash',
+          fixtures: [{ fixtureUuid: 'par-2' }],
+          steps: [
+            {
+              uuid: 'flash-1',
+              fixtureChannelValues: [
+                { profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 132.5 },
+                { profileUuid: 'test/rgb-par', channelName: 'Red', value: 255 },
+              ],
+            },
+          ],
+        })
+      );
+      await open();
+      await click(treeRow('Par 2'));
+
+      expect(element().querySelector('#settings .exchange-report')).toBeNull();
+
+      await exchangeTo('Test - Moving head');
+
+      const report = element().querySelector('#settings .exchange-report');
+      expect(pool.exchangedFrom.uuid).toBe('test/rgb-par');
+      expect(report.querySelector('.exchange-carried').textContent).toContain('designer.fixture-pool.exchange-carried');
+      // the moving head has no red to carry the red to
+      expect(pool.exchangeReport.carried.map((item) => item.from + ' > ' + item.to)).toEqual(['Strobe > Dimmer']);
+      expect(Array.from(report.querySelectorAll('.exchange-lost li')).map((item) => item.textContent.replace(/\s+/g, ' ').trim())).toEqual([
+        'Flash: Red - designer.fixture-pool.exchange-reason.nothing',
+      ]);
+
+      // the values stay as they are until OK
+      expect(project.presets[1].steps[0].fixtureChannelValues.length).toBe(2);
+    });
+
+    it('tells how many values the presets set which only the model of the fixture edited plays', async () => {
+      project.presets.push(
+        new Preset({
+          uuid: 'flash',
+          name: 'Flash',
+          fixtures: [{ fixtureUuid: 'par-2' }],
+          steps: [{ uuid: 'flash-1', fixtureChannelValues: [{ profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 132.5 }] }],
+        })
+      );
+      await open();
+
+      expect(pool.modelSpecificCount).toBe(1);
+      expect(element().querySelector('#settings .model-specific-count')).not.toBeNull();
+
+      await click(treeRow('Head'));
+      expect(pool.modelSpecificCount).toBe(0);
+      expect(element().querySelector('#settings .model-specific-count')).toBeNull();
+    });
+
+    it('carries the values of the old model over on OK, keeping the fixture in its presets', async () => {
+      project.presets.push(
+        new Preset({
+          uuid: 'flash',
+          name: 'Flash',
+          fixtures: [{ fixtureUuid: 'par-2' }],
+          steps: [{ uuid: 'flash-1', fixtureChannelValues: [{ profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 132.5 }] }],
+        })
+      );
+      await open();
+      await click(treeRow('Par 2'));
+      await exchangeTo('Test - Moving head');
+
+      pool.ok();
+
+      const values = project.presets[1].steps[0].fixtureChannelValues.map((value) => [value.profileUuid, value.channelName, value.value]);
+      // the strobe of the moving head shares its dimmer channel (135 to 255), half way through it
+      expect(values).toEqual([
+        ['test/rgb-par', 'Strobe', 132.5],
+        ['test/moving-head', 'Dimmer', 195],
+      ]);
+      expect(project.fixtures.find((candidate) => candidate.uuid === 'par-2').profileUuid).toBe('test/moving-head');
+      expect(project.presets.map((preset) => preset.fixtures.map((presetFixture) => presetFixture.fixtureUuid))).toEqual([
+        ['par-2', 'bar'],
+        ['par-2'],
+      ]);
+      // the profile of the old model stays for the other par
+      expect(fixtureService.getProfileByUuid('test/rgb-par')).toBeDefined();
+    });
+
+    it('carries nothing over for a fixture changed back to its model', async () => {
+      project.presets.push(
+        new Preset({
+          uuid: 'flash',
+          name: 'Flash',
+          fixtures: [{ fixtureUuid: 'par-2' }],
+          steps: [{ uuid: 'flash-1', fixtureChannelValues: [{ profileUuid: 'test/rgb-par', channelName: 'Strobe', value: 132.5 }] }],
+        })
+      );
+      await open();
+      await click(treeRow('Par 2'));
+      await exchangeTo('Test - Moving head');
+      await exchangeTo('Test - RGB par');
+
+      expect(pool.exchangeReport).toBeUndefined();
+
+      pool.ok();
+
+      expect(project.presets[1].steps[0].fixtureChannelValues.length).toBe(1);
+    });
+
+    it('carries the values to the mode picked for the new model', async () => {
+      await open();
+      await click(treeRow('Par 1'));
+      await exchangeTo('Chauvet DJ - COLORband PiX');
+      const report = spyOn(TestBed.inject(FixtureExchangeService), 'exchange').and.callThrough();
+
+      await choose(selects()[1], '3-channel');
+
+      expect(report).toHaveBeenCalled();
+      expect(report.calls.mostRecent().args[4].shortName).toBe('3ch');
+    });
+
+    it('keeps the pixels of a bar changed to a bar of as many pixels in its presets', async () => {
+      // the bar of the stage is the one of the floor, in the mode of the same number of pixels
+      const halves = {
+        ...profile('chauvet-dj/colorband-pix'),
+        uuid: 'halves',
+        name: 'Halves',
+      };
+      project.fixtureProfiles.push(new FixtureProfile(halves));
+      await open();
+      await click(treeRow('Bar'));
+
+      pool.exchangeProfile(new FixtureProfile({ uuid: 'halves' }));
+      await update();
+      expect(poolFixture('bar').modeShortName).toBe('6ch');
+
+      pool.ok();
+
+      expect(project.presets[0].fixtures.map((presetFixture) => presetFixture.fixtureUuid + ' ' + presetFixture.pixelKey)).toEqual([
+        'par-2 undefined',
+        'bar 1/2',
+      ]);
+    });
+  });
+
+  describe('patching fixtures one after another', () => {
+    it('patches the fixtures selected in the order of the tree, from the lowest address among them', async () => {
+      await open();
+      poolFixture('par-1').dmxFirstChannel = 40;
+      poolFixture('par-2').dmxFirstChannel = 30;
+      pool.onSelectedNodesChange([pool.treeNodes[0].children[1], pool.treeNodes[0].children[0]]);
+      await update();
+
+      await click(element().querySelector('#settings .patch-in-a-row'));
+
+      expect(poolFixture('par-1').dmxFirstChannel).toBe(30);
+      expect(poolFixture('par-2').dmxFirstChannel).toBe(36);
+    });
+
+    it('only offers it for more than one fixture', async () => {
+      await open();
+
+      expect(element().querySelector('#settings .patch-in-a-row')).toBeNull();
+      pool.patchInARow();
+      expect(poolFixture('par-1').dmxFirstChannel).toBe(0);
+    });
+
+    it('says so, when the fixtures do not fit into the universe from there on', async () => {
+      await open();
+      poolFixture('par-1').dmxFirstChannel = 510;
+      poolFixture('par-2').dmxFirstChannel = 505;
+      pool.onSelectedNodesChange([pool.treeNodes[0].children[0], pool.treeNodes[0].children[1]]);
+
+      pool.patchInARow();
+
+      expect(error).toHaveBeenCalledWith('designer.fixture-pool.patch-in-a-row-full', 'designer.fixture-pool.channel-occupied-title');
+      expect(poolFixture('par-1').dmxFirstChannel).toBe(510);
+    });
+  });
+
+  // A fixture blinks at full white in the preview and on the stage while its bulb in the tree is on, in the patch
+  // edited here (e.g. right after moving it to another address)
+  describe('identifying fixtures', () => {
+    let previewPatch: jasmine.Spy;
+    let endPatchPreview: jasmine.Spy;
+
+    beforeEach(() => {
+      previewPatch = spyOn(TestBed.inject(LivePreviewService), 'previewPatch');
+      endPatchPreview = spyOn(TestBed.inject(LivePreviewService), 'endPatchPreview').and.callThrough();
+    });
+
+    const bulb = (name: string): HTMLElement => treeRow(name).querySelector('.fixture-identify');
+
+    it('lets the fixtures blink while their bulbs are on, on the patch edited', async () => {
+      await open();
+
+      await click(bulb('Par 2'));
+      await click(bulb('Head'));
+
+      expect(project.identifyFixtureUuids).toEqual(['par-2', 'head']);
+      expect(bulb('Par 2').classList).toContain('identifying');
+      expect(bulb('Par 1').classList).not.toContain('identifying');
+      expect(previewPatch).toHaveBeenCalledWith(pool.fixturePool);
+      // the row is not edited by the click
+      expect(pool.selectedFixture.uuid).toBe('par-1');
+
+      // moved on the map, the fixture is found on its new channels
+      previewPatch.calls.reset();
+      pool.setFirstChannel(30);
+      expect(previewPatch).toHaveBeenCalled();
+
+      await click(bulb('Par 2'));
+      await click(bulb('Head'));
+
+      expect(project.identifyFixtureUuids).toEqual([]);
+      expect(endPatchPreview).toHaveBeenCalled();
+      expect(previewLive).toHaveBeenCalled();
+    });
+
+    it('stops identifying on OK and on cancel, and when it is closed', async () => {
+      await open();
+      await click(bulb('Par 2'));
+      pool.ok();
+      expect(project.identifyFixtureUuids).toEqual([]);
+
+      await open();
+      await click(bulb('Par 2'));
+      previewLive.calls.reset();
+      pool.cancel();
+      expect(project.identifyFixtureUuids).toEqual([]);
+      expect(previewLive).toHaveBeenCalled();
+
+      await open();
+      await click(bulb('Par 2'));
+      fixture.destroy();
+      expect(project.identifyFixtureUuids).toEqual([]);
+    });
+
+    it('leaves the stage alone on cancel, when nothing was identified', async () => {
+      await open();
+
+      pool.cancel();
+
+      expect(previewLive).not.toHaveBeenCalled();
     });
   });
 

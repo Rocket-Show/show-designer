@@ -164,7 +164,8 @@
       "steps-settings": "Paramètres de la séquence",
       "steps-loop": "Répéter les étapes",
       "steps-loop-length": "Durée de la boucle",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}"
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",
@@ -203,7 +204,30 @@
       "setting-stage-pillar-width": "Largeur du pilier",
       "capability-sound-controlled": "Contrôlé par le son",
       "capability-random-timing": "Temporisation aléatoire",
-      "channel-effect-driven": "Un effet pilote ce canal et remplace la valeur affichée ici"
+      "channel-effect-driven": "Un effet pilote ce canal et remplace la valeur affichée ici",
+      "capability-gobo-wheel": "Roue de gobos",
+      "capability-position-low": {
+        "ShutterStrobe": "Éteint",
+        "Zoom": "Serré",
+        "Focus": "Proche",
+        "Iris": "Fermé",
+        "Frost": "Aucun",
+        "ColorTemperature": "Chaud",
+        "Prism": "Sorti",
+        "ColorIntensity": "Éteint"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Rapide",
+        "Zoom": "Large",
+        "Focus": "Loin",
+        "Iris": "Ouvert",
+        "Frost": "Plein",
+        "ColorTemperature": "Froid",
+        "Prism": "Entré",
+        "ColorIntensity": "Plein"
+      },
+      "model-specific-title": "Ce modèle seulement",
+      "model-specific-hint": "Ce que vous réglez sur ces canaux ne fonctionne que sur ce modèle de fixture. Le gradateur, les couleurs, le strobe, le zoom, le focus, l'iris et le frost des capacités fonctionnent sur tous les modèles, ainsi le spectacle fonctionne aussi sur d'autres fixtures."
     },
     "fixture-pool": {
       "title": "Parc de fixtures",
@@ -235,7 +259,23 @@
       "create-fixture-from-profile-file-dialog-title": "Sélectionner un fichier de profil OFL",
       "invalid-fixture-profile-file": "Ce n'est pas un fichier de profil OFL valide. Veuillez sélectionner un fichier de profil valide.",
       "edit-universes": "Modifier les univers",
-      "edit-universes-title": "Modifier les univers"
+      "edit-universes-title": "Modifier les univers",
+      "change-type": "Changer les fixtures sélectionnés vers ce profil",
+      "fixture-type": "Type de fixture",
+      "change-type-hint": "D'autres fixtures sur place ? Sélectionnez les fixtures et cliquez sur ⇄ à côté de leur profil à gauche.",
+      "exchanged-from": "Changé depuis {{from}}. Avec OK, les presets reçoivent aussi pour ce modèle ce qu'ils règlent pour l'ancien :",
+      "exchange-carried": "{{count}} valeurs sont reprises",
+      "exchange-lost": "{{count}} valeurs ne peuvent pas être reprises :",
+      "exchange-reason": {
+        "nothing": "le nouveau modèle n'a rien qui le fait",
+        "gobo": "le nouveau modèle n'a pas ce gobo",
+        "taken": "déjà réglé sur {{to}}"
+      },
+      "patch-in-a-row": "Patcher les {{count}} fixtures les uns après les autres",
+      "patch-in-a-row-full": "Les fixtures ne tiennent plus dans l'univers à partir de là.",
+      "identify": "Identifier : faire clignoter le fixture en blanc",
+      "model-specific": "Les presets règlent {{count}} valeurs qui ne fonctionnent que sur ce modèle.",
+      "add-fixture": "Ajouter un fixture de ce profil"
     },
     "effect": {
       "add-new": "Ajouter un nouvel effet",

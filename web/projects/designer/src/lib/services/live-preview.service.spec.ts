@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ToastrModule } from 'ngx-toastr';
 
 import { Composition } from '../models/composition';
+import { Fixture } from '../models/fixture';
 import { Project } from '../models/project';
 import { AnimationService } from './animation.service';
 import { ConfigService } from './config.service';
@@ -56,6 +57,28 @@ describe('LivePreviewService', () => {
     expect(request.request.method).toBe('POST');
     expect(JSON.parse(request.request.body).name).toBe('Show');
     request.flush(null);
+    tick(50);
+  }));
+
+  it('sends the patch the fixture pool edits instead of the one of the project, until it is done', fakeAsync(() => {
+    const project = TestBed.inject(ProjectService).project;
+    project.fixtures = [new Fixture({ uuid: 'par', dmxFirstChannel: 0 })];
+    project.identifyFixtureUuids = ['par'];
+
+    service.previewPatch([new Fixture({ uuid: 'par', dmxFirstChannel: 30 })]);
+
+    const patched = JSON.parse(http.expectOne('preview?positionMillis=0&compositionName=').request.body);
+    expect(patched.name).toBe('Show');
+    expect(patched.fixtures.map((fixture) => fixture.dmxFirstChannel)).toEqual([30]);
+    expect(patched.identifyFixtureUuids).toEqual(['par']);
+    // the project keeps its own patch
+    expect(project.fixtures[0].dmxFirstChannel).toBe(0);
+    tick(50);
+
+    service.endPatchPreview();
+    service.previewLive();
+
+    expect(JSON.parse(http.expectOne('preview?positionMillis=0&compositionName=').request.body).fixtures[0].dmxFirstChannel).toBe(0);
     tick(50);
   }));
 

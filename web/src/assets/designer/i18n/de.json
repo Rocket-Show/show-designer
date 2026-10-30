@@ -164,7 +164,8 @@
       "steps-settings": "Sequenz-Einstellungen",
       "steps-loop": "Schritte wiederholen",
       "steps-loop-length": "Schleifenlänge",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} Werte spielen nur auf: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
@@ -203,7 +204,30 @@
       "setting-stage-pillar-width": "Trägerdicke",
       "capability-sound-controlled": "Sound controlled",
       "capability-random-timing": "Zufallsgesteuert",
-      "channel-effect-driven": "Ein Effekt steuert diesen Kanal und überschreibt den hier angezeigten Wert"
+      "channel-effect-driven": "Ein Effekt steuert diesen Kanal und überschreibt den hier angezeigten Wert",
+      "capability-gobo-wheel": "Goborad",
+      "capability-position-low": {
+        "ShutterStrobe": "Aus",
+        "Zoom": "Eng",
+        "Focus": "Nah",
+        "Iris": "Zu",
+        "Frost": "Kein",
+        "ColorTemperature": "Warm",
+        "Prism": "Raus",
+        "ColorIntensity": "Aus"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Schnell",
+        "Zoom": "Weit",
+        "Focus": "Fern",
+        "Iris": "Offen",
+        "Frost": "Voll",
+        "ColorTemperature": "Kalt",
+        "Prism": "Rein",
+        "ColorIntensity": "Voll"
+      },
+      "model-specific-title": "Nur dieses Modell",
+      "model-specific-hint": "Was du auf diesen Kanälen einstellst, spielt nur auf diesem Fixture-Modell. Dimmer, Farben, Strobe, Zoom, Fokus, Iris und Frost der Fähigkeiten spielen auf jedem Modell, so läuft die Show auch auf anderen Fixtures."
     },
     "fixture-pool": {
       "title": "Fixture Pool",
@@ -236,7 +260,23 @@
       "create-fixture-from-profile-file-dialog-title": "OFL Profil-Datei auswählen",
       "invalid-fixture-profile-file": "Das ist keine gültige OFL Profil-Datei. Bitte wähle eine gültige OFL Profil-Datei.",
       "edit-universes": "Universen bearbeiten",
-      "edit-universes-title": "Universen bearbeiten"
+      "edit-universes-title": "Universen bearbeiten",
+      "change-type": "Die ausgewählten Fixtures auf dieses Profil ändern",
+      "fixture-type": "Fixture-Typ",
+      "change-type-hint": "Andere Fixtures am Veranstaltungsort? Wähle die Fixtures aus und klicke links neben ihrem Profil auf ⇄.",
+      "exchanged-from": "Geändert von {{from}}. Mit OK erhalten die Presets, was sie für das alte Modell einstellen, auch für dieses:",
+      "exchange-carried": "{{count}} Werte werden übernommen",
+      "exchange-lost": "{{count}} Werte können nicht übernommen werden:",
+      "exchange-reason": {
+        "nothing": "das neue Modell hat nichts, was das macht",
+        "gobo": "das neue Modell hat dieses Gobo nicht",
+        "taken": "bereits auf {{to}} eingestellt"
+      },
+      "patch-in-a-row": "Die {{count}} Fixtures nacheinander patchen",
+      "patch-in-a-row-full": "Die Fixtures passen ab dort nicht mehr ins Universum.",
+      "identify": "Identifizieren: das Fixture weiss blinken lassen",
+      "model-specific": "Die Presets stellen {{count}} Werte ein, die nur dieses Modell spielt.",
+      "add-fixture": "Ein Fixture dieses Profils hinzufügen"
     },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { AnimationService } from './animation.service';
 import { ConfigService } from './config.service';
+import { Fixture } from '../models/fixture';
 import { ProjectService } from './project.service';
 import { TimelineStateService } from './timeline-state.service';
 
@@ -18,6 +19,10 @@ export class LivePreviewService {
 
   // the position of the update collected while the throttle timer is running, if any
   private pendingPositionMillis: number;
+
+  // the fixtures of a patch which isn't the project's yet (the one the fixture pool edits), sent instead of the ones
+  // of the project while fixtures are identified in it (see previewPatch)
+  private patchFixtures: Fixture[];
 
   constructor(
     private configService: ConfigService,
@@ -81,9 +86,20 @@ export class LivePreviewService {
     this.http
       .post(
         'preview?positionMillis=' + positionMillis + '&compositionName=' + encodeURIComponent(compositionName),
-        JSON.stringify(this.projectService.project)
+        JSON.stringify(this.patchFixtures ? { ...this.projectService.project, fixtures: this.patchFixtures } : this.projectService.project)
       )
       .subscribe();
+  }
+
+  // Preview the project with the passed fixtures instead of its own ones, e.g. to identify a fixture just moved to
+  // another address in the fixture pool, until endPatchPreview
+  previewPatch(fixtures: Fixture[]) {
+    this.patchFixtures = fixtures;
+    this.previewLive();
+  }
+
+  endPatchPreview() {
+    this.patchFixtures = undefined;
   }
 
   stopPreviewPlay() {

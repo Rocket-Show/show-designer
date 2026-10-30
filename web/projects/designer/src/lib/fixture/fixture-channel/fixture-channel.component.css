@@ -1,0 +1,5 @@
+/* says that what the channels are set to only plays on their model of fixture */
+.model-specific-hint {
+  width: 200px;
+  font-size: 0.85rem;
+}

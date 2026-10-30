@@ -30,6 +30,9 @@ made of it (`expected`).
 | `channelValues`         | a project and how it is previewed (the timeline of a composition, the selected preset, its steps running, the selected scenes) | the value of every channel of every fixture and pixel at each time                          |
 | `migration`             | a project of an older version                                                                                                  | what both keep of it migrated to the current version and play it with (see below)           |
 
+A run of a `channelValues` case may name fixtures identified from the fixture pool (`"identify"`), which blink at full
+white on top of what the presets light them with.
+
 A project of a `channelValues` case names the profiles of `profiles` like the fixture library does (`"$profile":
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of
 `profiles/test`.

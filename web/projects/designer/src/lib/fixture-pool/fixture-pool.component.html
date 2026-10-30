@@ -29,15 +29,33 @@
             } @for (profile of filteredProfiles; track profile.uuid) {
             <div class="list-group-item">
               <div class="row">
-                <div class="col-10 col-auto my-auto pl-2">
+                <div class="col-9 col-auto my-auto pl-2">
                   <p class="mb-0">
                     <span class="icon-{{ fixtureService.getFixtureIconClass(profile) }} mr-1"></span> {{ profile.manufacturerName }} -
                     {{ profile.name }}
                   </p>
                 </div>
-                <div class="col-2 my-auto">
-                  <a class="btn btn-primary btn-sm float-right" href="#" role="button" (click)="addFixture(profile); (false)">
+                <div class="col-3 my-auto">
+                  <a
+                    class="btn btn-primary btn-sm float-right"
+                    href="#"
+                    role="button"
+                    [attr.aria-label]="'designer.fixture-pool.add-fixture' | translate"
+                    (click)="addFixture(profile); (false)"
+                  >
                     <i class="fa fa-plus" aria-hidden="true"></i>
+                  </a>
+                  <!-- the fixtures selected become fixtures of this profile, e.g. the model the venue has -->
+                  <a
+                    class="btn btn-secondary btn-sm float-right mr-1 profile-exchange"
+                    href="#"
+                    role="button"
+                    [class.disabled]="actedOnFixtures.length === 0"
+                    [attr.title]="'designer.fixture-pool.change-type' | translate"
+                    [attr.aria-label]="'designer.fixture-pool.change-type' | translate"
+                    (click)="exchangeProfile(profile); (false)"
+                  >
+                    <i class="fa fa-exchange" aria-hidden="true"></i>
                   </a>
                 </div>
               </div>
@@ -181,9 +199,20 @@
                 <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
                 <!-- no tooltip on the rows: one is built, placed and thrown away again for
                      every row the cursor crosses, and a minus on a fixture speaks for itself -->
+                <!-- the fixture blinks at full white in the preview and on the stage, to find it -->
                 <a
                   href="#"
-                  class="fixture-remove ml-auto my-auto"
+                  class="fixture-identify ml-auto my-auto"
+                  role="button"
+                  [class.identifying]="isIdentified(node.fixture)"
+                  [attr.aria-label]="'designer.fixture-pool.identify' | translate"
+                  [attr.aria-pressed]="isIdentified(node.fixture)"
+                  (click)="switchIdentify(node.fixture); $event.stopPropagation(); (false)"
+                  ><i class="fa fa-lightbulb-o fa-fw" aria-hidden="true"></i
+                ></a>
+                <a
+                  href="#"
+                  class="fixture-remove my-auto"
                   role="button"
                   [attr.aria-label]="'designer.fixture-pool.remove-fixture' | translate"
                   (click)="removeFixture(node.fixture); $event.stopPropagation(); (false)"
@@ -250,14 +279,54 @@
                 <input type="text" class="form-control" [(ngModel)]="selectedFixture.name" maxlength="200" id="fixtureName" />
               </div>
             </div>
+            <!-- the model of the fixture, which a profile picked on the left changes -->
+            <div class="form-group row">
+              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.fixture-type' | translate }}</label>
+              <div class="col-lg-9">
+                <p class="form-control-plaintext mb-0 fixture-type">{{ profileName(selectedFixtureProfile) }}</p>
+                <small class="form-text text-muted mt-0">{{ 'designer.fixture-pool.change-type-hint' | translate }}</small>
+                <!-- what would have to be carried over to another model -->
+                @if (modelSpecificCount > 0) {
+                <small class="form-text text-muted mt-0 model-specific-count">
+                  <i class="fa fa-link fa-fw" aria-hidden="true"></i>
+                  {{ 'designer.fixture-pool.model-specific' | translate : { count: modelSpecificCount } }}
+                </small>
+                }
+              </div>
+            </div>
+            @if (exchangeReport && exchangedFrom) {
+            <div class="form-group row">
+              <div class="offset-lg-3 col-lg-9">
+                <div class="exchange-report">
+                  <p class="mb-1">
+                    {{ 'designer.fixture-pool.exchanged-from' | translate : { from: profileName(exchangedFrom) } }}
+                  </p>
+                  <p class="mb-1 exchange-carried">
+                    <i class="fa fa-check fa-fw" aria-hidden="true"></i>
+                    {{ 'designer.fixture-pool.exchange-carried' | translate : { count: exchangeReport.carried.length } }}
+                  </p>
+                  @if (exchangeReport.lost.length > 0) {
+                  <p class="mb-1 exchange-lost-title">
+                    <i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i>
+                    {{ 'designer.fixture-pool.exchange-lost' | translate : { count: exchangeReport.lost.length } }}
+                  </p>
+                  <ul class="exchange-lost mb-0">
+                    @for (item of exchangeReport.lost; track $index) {
+                    <li>
+                      {{ item.presetName }}: {{ item.from }} -
+                      {{ 'designer.fixture-pool.exchange-reason.' + item.reason | translate : { to: item.to } }}
+                    </li>
+                    }
+                  </ul>
+                  }
+                </div>
+              </div>
+            </div>
+            }
             <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.mode' | translate }}</label>
               <div class="col-lg-9">
-                <select
-                  class="custom-select"
-                  [ngModel]="selectedFixture.modeShortName"
-                  (ngModelChange)="selectedFixture.modeShortName = $event; updateChannelMap()"
-                >
+                <select class="custom-select" [ngModel]="selectedFixture.modeShortName" (ngModelChange)="selectMode($event)">
                   @for (mode of selectedFixtureProfile.modes; track mode) {
                   <option [ngValue]="mode.shortName || mode.name">
                     {{ mode.name }}
@@ -302,6 +371,12 @@
                 <button type="button" class="btn btn-primary" (click)="addCopy(selectedFixture)">
                   {{ 'designer.fixture.add-copy' | translate }}
                 </button>
+                <!-- the fixtures selected in the tree, one after another, e.g. after changing them to another model -->
+                @if (actedOnFixtures.length > 1) {
+                <button type="button" class="btn btn-secondary ml-2 patch-in-a-row" (click)="patchInARow()">
+                  {{ 'designer.fixture-pool.patch-in-a-row' | translate : { count: actedOnFixtures.length } }}
+                </button>
+                }
               </div>
             </div>
           </div>

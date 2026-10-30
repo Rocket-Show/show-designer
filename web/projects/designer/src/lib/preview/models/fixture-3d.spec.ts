@@ -413,3 +413,63 @@ describe('Fixture3d color wheel', () => {
     expect(fixture3d.beamColor.getHexString()).toBe('ff00ff');
   });
 });
+
+// The emitters besides red, green and blue add their light to the color, the filters of a fixture mixing its colors
+// with them (cyan, magenta and yellow) take some of it away from white
+describe('Fixture3d emitters and filters', () => {
+  beforeEach(() => {
+    configureTestingModule();
+  });
+
+  function bulb(channels: { [channelName: string]: string }): Bulb3d {
+    const availableChannels = {};
+
+    for (const channelName of Object.keys(channels)) {
+      availableChannels[channelName] = { capability: { type: 'ColorIntensity', color: channels[channelName] } };
+    }
+
+    TestBed.inject(ProjectService).project = new Project({
+      fixtureProfiles: [
+        {
+          uuid: 'test/rgb',
+          name: 'Colors',
+          availableChannels,
+          modes: [{ name: 'mode', shortName: 'mode', channels: Object.keys(channels) }],
+        },
+      ],
+      fixtures: [{ uuid: 'fixture-1', profileUuid: 'test/rgb', modeShortName: 'mode', dmxFirstChannel: 0, positioning: 'topFront' }],
+    });
+
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.updateCachedFixtures();
+
+    return new Bulb3d(fixtureService, TestBed.inject(PreviewService), fixtureService.cachedFixtures[0]);
+  }
+
+  it('adds the light of white to the color', () => {
+    const fixture3d = bulb({ Red: 'Red', Green: 'Green', Blue: 'Blue', White: 'White' });
+
+    fixture3d.updatePreview(values({ Red: 255, Green: 0, Blue: 0, White: 127.5 }), 1);
+
+    expect(fixture3d.glow.getHexString()).toBe(new THREE.Color('rgb(255, 128, 128)').getHexString());
+  });
+
+  it('lights in amber alone', () => {
+    const fixture3d = bulb({ Red: 'Red', Green: 'Green', Blue: 'Blue', Amber: 'Amber' });
+
+    fixture3d.updatePreview(values({ Red: 0, Green: 0, Blue: 0, Amber: 255 }), 1);
+
+    expect(fixture3d.glow.getHexString()).toBe(new THREE.Color('rgb(255, 191, 0)').getHexString());
+  });
+
+  it('shows a fixture mixing its colors with filters white until they take colors away', () => {
+    const fixture3d = bulb({ Cyan: 'Cyan', Magenta: 'Magenta', Yellow: 'Yellow' });
+
+    fixture3d.updatePreview(values({ Cyan: 0, Magenta: 0, Yellow: 0 }), 1);
+    expect(fixture3d.glow.getHex()).toBe(0xffffff);
+
+    // full magenta and yellow let red through only
+    fixture3d.updatePreview(values({ Cyan: 0, Magenta: 255, Yellow: 255 }), 1);
+    expect(fixture3d.glow.getHex()).toBe(0xff0000);
+  });
+});

@@ -10,6 +10,9 @@ import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/pres
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
+import { isPositionedCapabilityType } from '../models/capability-position';
+import { getFixtureCapabilityValues } from '../models/subtractive-color';
+import { getIdentifyCapabilityValues } from '../models/identify';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { PresetStepService } from './preset-step.service';
@@ -372,10 +375,28 @@ export class PreviewService implements OnDestroy {
     const presetBrightness =
       brightnessBelow === undefined ? 0 : this.getPresetDimmerBrightness(state, cachedFixture, preset, brightnessBelow);
 
+    // a fixture mixing its colors with filters is given the colors the other way round (see subtractive-color)
+    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels);
+
     // mix the capability values of the state the preset is in
-    for (const presetCapabilityValue of state.fixtureCapabilityValues) {
+    for (const presetCapabilityValue of capabilityValues) {
       for (const cachedChannel of cachedFixture.channels) {
         if (cachedChannel.channel) {
+          if (isPositionedCapabilityType(presetCapabilityValue.type)) {
+            // a position is played on the channel as a whole, by the capability of it doing it
+            const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
+
+            if (value !== undefined) {
+              const fixtureChannelValue = new FixtureChannelValue();
+              fixtureChannelValue.channelName = cachedChannel.name;
+              fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+              fixtureChannelValue.value = value;
+              this.mixChannelValue(values, fixtureChannelValue, 1);
+            }
+
+            continue;
+          }
+
           for (const channelCapability of cachedChannel.capabilities) {
             if (
               this.fixtureService.capabilitiesMatch(
@@ -628,6 +649,8 @@ export class PreviewService implements OnDestroy {
     this.presetService.activeStep = activeStep;
     this.presetService.activeStepProgress = activeStepProgress;
 
+    const identifyFixtureUuids = this.projectService.project.identifyFixtureUuids || [];
+
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
 
@@ -686,11 +709,27 @@ export class PreviewService implements OnDestroy {
         }
       }
 
+      // a fixture being identified from the fixture pool blinks, whatever the presets light it with
+      if (identifyFixtureUuids.indexOf(cachedFixture.fixture.uuid) >= 0) {
+        values = this.getIdentifyValues(cachedFixture, values, timeMillis);
+      }
+
       // Store the calculated values for subsequent fixtures on the same DMX address
       calculatedFixtures.set(cachedFixture, values);
     }
 
     return calculatedFixtures;
+  }
+
+  // the values of a fixture being identified: the ones the presets give it, with what identifies it on top (see
+  // identify). It keeps everything else, e.g. where it points to.
+  private getIdentifyValues(cachedFixture: CachedFixture, presetValues: FixtureChannelValue[], timeMillis: number): FixtureChannelValue[] {
+    const values = presetValues.slice();
+    const state = new PresetStepState();
+    state.fixtureCapabilityValues = getIdentifyCapabilityValues(cachedFixture, timeMillis);
+    this.mixCapabilityValues(state, cachedFixture, values, 1, new Preset());
+
+    return values;
   }
 
   public fixtureIsSelected(uuid: string, pixelKey: string, presets: PresetRegionScene[]): boolean {

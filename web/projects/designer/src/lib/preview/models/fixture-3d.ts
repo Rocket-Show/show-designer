@@ -7,6 +7,25 @@ import { Positioning } from '../../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { FixtureService } from '../../services/fixture.service';
+import { mixesSubtractively } from '../../models/subtractive-color';
+
+// the light an emitter besides red, green and blue adds at full, in red, green and blue
+const emitterLights: { [color: string]: number[] } = {
+  White: [255, 255, 255],
+  'Warm White': [255, 214, 170],
+  'Cold White': [220, 235, 255],
+  Amber: [255, 191, 0],
+  UV: [100, 0, 255],
+  Lime: [191, 255, 0],
+  Indigo: [75, 0, 130],
+};
+
+// the part of the light (red, green or blue) a filter takes away
+const filteredLights: { [color: string]: number } = {
+  Cyan: 0,
+  Magenta: 1,
+  Yellow: 2,
+};
 import { PreviewService } from '../../services/preview.service';
 
 export abstract class Fixture3d {
@@ -26,6 +45,9 @@ export abstract class Fixture3d {
   private dimmerDefaultBrightness = 0;
   private fixtureHasColorWheel = false;
   private fixtureHasColor = false;
+
+  // a fixture mixing its colors with filters (cyan, magenta and yellow) is white until they take colors away
+  private fixtureMixesSubtractively = false;
 
   private colorRed: number;
   private colorGreen: number;
@@ -87,6 +109,8 @@ export abstract class Fixture3d {
         }
       }
     }
+
+    this.fixtureMixesSubtractively = mixesSubtractively(this.fixture.channels);
   }
 
   private createSpotlightMaterial() {
@@ -256,7 +280,7 @@ export abstract class Fixture3d {
     this.colorGreen = 255;
     this.colorBlue = 255;
 
-    if (!this.fixtureHasColorWheel && this.fixtureHasColor) {
+    if (!this.fixtureHasColorWheel && this.fixtureHasColor && !this.fixtureMixesSubtractively) {
       this.colorRed = 0;
       this.colorGreen = 0;
       this.colorBlue = 0;
@@ -265,6 +289,11 @@ export abstract class Fixture3d {
     // the color of a selected color preset (e.g. a color macro). It takes over from the color
     // channels, whichever order they come in, the way a fixture disables them for its macros.
     let presetColor: Color;
+
+    // the emitters besides red, green and blue and the filters, with how much they are in (0 to 1). They change the
+    // color once the colors themselves are set, whichever order they come in.
+    const emitters: [number[], number][] = [];
+    const filters: [number, number][] = [];
 
     for (const channelValue of channelValues) {
       const channel = this.fixtureService.getChannelByName(this.fixture, channelValue.channelName);
@@ -292,6 +321,12 @@ export abstract class Fixture3d {
                 // Round needed for threejs
                 this.colorBlue = Math.round(valuePercentage);
                 break;
+              default:
+                if (emitterLights[capability.capability.color]) {
+                  emitters.push([emitterLights[capability.capability.color], valuePercentage / 255]);
+                } else if (filteredLights[capability.capability.color] !== undefined) {
+                  filters.push([filteredLights[capability.capability.color], valuePercentage / 255]);
+                }
             }
             break;
           }
@@ -310,6 +345,25 @@ export abstract class Fixture3d {
           }
         }
       }
+    }
+
+    if (emitters.length > 0 || filters.length > 0) {
+      const light = [this.colorRed, this.colorGreen, this.colorBlue];
+
+      for (const [emitterLight, level] of emitters) {
+        for (let i = 0; i < 3; i++) {
+          light[i] = Math.min(255, light[i] + emitterLight[i] * level);
+        }
+      }
+
+      for (const [filtered, level] of filters) {
+        light[filtered] *= 1 - level;
+      }
+
+      // Round needed for threejs
+      this.colorRed = Math.round(light[0]);
+      this.colorGreen = Math.round(light[1]);
+      this.colorBlue = Math.round(light[2]);
     }
 
     if (presetColor) {
