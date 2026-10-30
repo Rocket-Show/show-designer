@@ -601,6 +601,11 @@
   }
 
   .slider.slider-vertical {
+    // the handle reaches half its size past the ends of the track: keep it inside the fader, so at either end it
+    // doesn't cover what is written above or below it (e.g. the ends of a position)
+    margin: ($sd-slider-handle-size * 0.5) 0;
+    max-height: calc(100% - #{$sd-slider-handle-size});
+
     .slider-track {
       width: $sd-slider-track-size !important;
       left: 50% !important;
