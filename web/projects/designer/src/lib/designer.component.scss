@@ -1314,7 +1314,110 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
+    display: inline-flex;
     color: $sd-text;
+  }
+
+  // -------------------------------------------------------------------------
+  // Phones
+  //
+  // Nothing is split on a phone (see LayoutService.compact): the open panels are stacked
+  // down the page, which scrolls. Each panel is as high as a good part of the screen and
+  // scrolls what it holds. The 3D preview is left out by DesignerLayout.
+  // -------------------------------------------------------------------------
+
+  .designer-compact & {
+    // the menus wrap onto as many lines as they need, the name of the project starts the
+    // line below them
+    .navbar {
+      height: auto;
+      flex-wrap: wrap !important;
+      row-gap: $sd-space-1;
+      padding: $sd-space-1 $sd-space-2;
+    }
+
+    .navbar-nav {
+      flex-wrap: wrap;
+    }
+
+    .navbar > .navbar-nav.mr-auto {
+      flex: 1 0 100%;
+    }
+
+    .navbar > .navbar-nav:last-child {
+      margin-left: auto;
+    }
+
+    .navbar .project-name {
+      position: static;
+      transform: none;
+      min-width: 0;
+      padding: 0 $sd-space-1;
+    }
+
+    // a menu opens below the navbar, across the screen, wherever its entry is
+    .navbar .nav-item.dropdown {
+      position: static;
+    }
+
+    .navbar-nav .dropdown-menu {
+      top: 100%;
+      left: $sd-space-2;
+      right: $sd-space-2;
+    }
+
+    .designer-rows {
+      height: auto !important;
+      gap: $sd-space-3;
+    }
+
+    // the tab rail of the preset editor stays on its left, everything else takes the
+    // whole width
+    .designer-row {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: $sd-space-3 0;
+    }
+
+    .designer-row > * {
+      grid-column: 1 / -1;
+    }
+
+    .designer-row > .tab-rail {
+      grid-column: 1;
+    }
+
+    .designer-row > #capabilities {
+      grid-column: 2;
+    }
+
+    // the fixtures are picked before they are edited: above the editor, which asks for them
+    .designer-row > #fixtures {
+      order: -1;
+    }
+
+    #scenes,
+    #presets,
+    #fixtures {
+      height: max(240px, 45vh) !important;
+    }
+
+    #capabilities {
+      height: max(420px, 75vh) !important;
+    }
+
+    // lying down, only as high as the slider
+    #masterDimmer {
+      height: auto !important;
+    }
+
+    .designer-rows > #row3 {
+      height: max(320px, 60vh);
+    }
+
+    .designer-rows > #row3.fold-toolbar {
+      height: auto;
+    }
   }
 
   // -------------------------------------------------------------------------

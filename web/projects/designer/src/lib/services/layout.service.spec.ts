@@ -1,4 +1,4 @@
-import { LayoutService } from './layout.service';
+import { compactMediaQuery, LayoutService } from './layout.service';
 
 describe('LayoutService', () => {
   beforeEach(() => {
@@ -84,5 +84,26 @@ describe('LayoutService', () => {
     localStorage.setItem('designerLayout', '{broken');
 
     expect(new LayoutService().folded).toEqual([]);
+  });
+
+  it('knows when the screen is as small as a phone, and when it no longer is', () => {
+    let screenChanged: (event: Partial<MediaQueryListEvent>) => void;
+    const matchMedia = spyOn(window, 'matchMedia').and.returnValue({
+      matches: true,
+      addEventListener: (type: string, listener: any) => (screenChanged = listener),
+    } as any);
+
+    const service = new LayoutService();
+    let changes = 0;
+    service.changed.subscribe(() => changes++);
+
+    expect(matchMedia).toHaveBeenCalledWith(compactMediaQuery);
+    expect(service.compact).toBe(true);
+
+    // e.g. a tablet turned around
+    screenChanged({ matches: false });
+
+    expect(service.compact).toBe(false);
+    expect(changes).toBe(1);
   });
 });

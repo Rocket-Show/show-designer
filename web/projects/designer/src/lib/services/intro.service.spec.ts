@@ -1,9 +1,11 @@
 import { ConfigService } from './config.service';
 import { IntroService } from './intro.service';
+import { LayoutService } from './layout.service';
 
 // The intro walks a new user through the panels of the designer, shown next to each of them.
 describe('IntroService', () => {
   let configService: ConfigService;
+  let layoutService: LayoutService;
   let service: IntroService;
   let stored: string;
 
@@ -11,7 +13,9 @@ describe('IntroService', () => {
     stored = localStorage.getItem('showIntro');
     localStorage.removeItem('showIntro');
     configService = new ConfigService();
-    service = new IntroService(configService);
+    layoutService = new LayoutService();
+    layoutService.compact = false;
+    service = new IntroService(configService, layoutService);
   });
 
   afterEach(() => {
@@ -41,7 +45,7 @@ describe('IntroService', () => {
     configService.intro = true;
     service.setShowIntro(false);
 
-    const reloaded = new IntroService(configService);
+    const reloaded = new IntroService(configService, layoutService);
     reloaded.refresh();
 
     expect(reloaded.showIntro).toBe(false);
@@ -71,6 +75,25 @@ describe('IntroService', () => {
       ['finish', 50, 50],
     ]);
     expect(changed).toHaveBeenCalledTimes(8);
+  });
+
+  it('leaves out the 3D preview on a phone, which has none', () => {
+    layoutService.compact = true;
+    const walked: string[] = [position()[0]];
+
+    while (position()[0] !== 'finish') {
+      service.next();
+      walked.push(position()[0]);
+    }
+
+    expect(walked).toEqual(['start', 'fixtures', 'presets', 'capabilities', 'scenes', 'timeline', 'finish']);
+
+    while (position()[0] !== 'start') {
+      service.back();
+      walked.push(position()[0]);
+    }
+
+    expect(walked.slice(6)).toEqual(['finish', 'timeline', 'scenes', 'capabilities', 'presets', 'fixtures', 'start']);
   });
 
   it('shows each step at the same place when going back to it', () => {

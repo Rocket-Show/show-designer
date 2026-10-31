@@ -28,6 +28,7 @@ describe('DesignerLayout', () => {
     document.body.appendChild(root);
 
     layoutService = new LayoutService();
+    layoutService.compact = false;
     resized = jasmine.createSpy('resized');
     layout = new DesignerLayout(root, layoutService, translateService, 6, resized);
   });
@@ -155,6 +156,34 @@ describe('DesignerLayout', () => {
     build();
     expect(root.querySelectorAll('.fold-edge').length).toBe(0);
     expect(element('#scenes').classList).not.toContain('fold-hidden');
+  });
+
+  it('splits nothing on a phone, where the open panels are stacked without the 3D preview', () => {
+    build();
+    layoutService.compact = true;
+    resized.calls.reset();
+    build('presets');
+
+    expect(root.querySelectorAll('.gutter').length).toBe(0);
+    expect(root.querySelectorAll('.fold-edge').length).toBe(0);
+    expect(element('#scenes').style.flexBasis).toBe('');
+    expect(element('#row1').style.flexBasis).toBe('');
+    expect(element('#scenes').classList).not.toContain('fold-hidden');
+    expect(element('#presets').classList).toContain('fold-hidden');
+    expect(element('#preview').classList).toContain('fold-hidden');
+    expect(resized).toHaveBeenCalled();
+
+    // a row of which only the 3D preview is open is left out as a whole
+    build('scenes', 'presets');
+    expect(element('#row1').classList).toContain('fold-hidden');
+    expect(element('#row2').classList).not.toContain('fold-hidden');
+
+    // turned around to a larger screen
+    layoutService.compact = false;
+    build('scenes', 'presets');
+    expect(element('#row1').classList).not.toContain('fold-hidden');
+    expect(element('#preview').classList).not.toContain('fold-hidden');
+    expect(arrows(element('#rows'), '.gutter').length).toBe(2);
   });
 
   it('keeps the sizes the panels are dragged to', () => {

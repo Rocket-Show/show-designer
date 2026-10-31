@@ -1,8 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { ConfigService } from '../services/config.service';
 import { IntroService } from '../services/intro.service';
+import { LayoutService } from '../services/layout.service';
 import { IntroComponent } from './intro.component';
 
 // The introduction walks a new user through the designer step by step, next to the panel
@@ -10,6 +11,7 @@ import { IntroComponent } from './intro.component';
 describe('IntroComponent', () => {
   let fixture: ComponentFixture<IntroComponent>;
   let introService: IntroService;
+  let layoutService: LayoutService;
   let stored: string;
 
   beforeEach(() => {
@@ -21,6 +23,8 @@ describe('IntroComponent', () => {
       imports: [TranslateModule.forRoot()],
     });
 
+    layoutService = TestBed.inject(LayoutService);
+    layoutService.compact = false;
     introService = TestBed.inject(IntroService);
     introService.showIntro = true;
 
@@ -72,6 +76,33 @@ describe('IntroComponent', () => {
 
     expect(card().querySelector('.card-body').textContent).toContain('designer.intro.step-start');
   });
+
+  it('stays at the bottom of a phone, and brings the panel of each step into view there', fakeAsync(() => {
+    // the panels of the designer, the one of the step marked
+    const designer = document.createElement('div');
+    designer.id = 'designer';
+    designer.innerHTML = '<div class="card"></div><div class="card card-intro-active"></div>';
+    document.body.appendChild(designer);
+    const scrolled = spyOn(designer.querySelector<HTMLElement>('.card-intro-active'), 'scrollIntoView');
+
+    // next to the panel, it is in view already
+    click('designer.intro.next');
+    tick();
+    expect(scrolled).not.toHaveBeenCalled();
+
+    layoutService.compact = true;
+    fixture.detectChanges();
+
+    expect(card().style.top).toBe('');
+    expect(card().style.left).toBe('');
+
+    click('designer.intro.next');
+    tick();
+
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(scrolled).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    designer.remove();
+  }));
 
   it('is closed at its last step, for good', () => {
     for (let i = 0; i < 7; i++) {

@@ -23,7 +23,8 @@ interface FoldArrow {
  * of a row from left to right. Only the open panels are split, a folded one drops out of the
  * layout. The gutters carry the arrows to fold the panels next to them, or to open the ones
  * folded into them. A panel folded at the edge of a row leaves a thin strip with its arrow.
- * The timeline folds down to its toolbar, which stays below the rows.
+ * The timeline folds down to its toolbar, which stays below the rows. On a phone, nothing is
+ * split: the open panels are stacked, without the 3D preview.
  */
 export class DesignerLayout {
   private splits: Split.Instance[] = [];
@@ -60,14 +61,23 @@ export class DesignerLayout {
     Object.keys(panels).forEach((panel) => (panels[panel].style.flexBasis = ''));
     rows.forEach((row) => (row.style.flexBasis = ''));
 
-    Object.keys(panels).forEach((panel) => panels[panel].classList.toggle('fold-hidden', layout.isFolded(panel as LayoutPanel)));
-    rows[0].classList.toggle('fold-hidden', layout.isRowFolded(0));
-    rows[1].classList.toggle('fold-hidden', layout.isRowFolded(1));
+    // on a phone, the 3D preview is left out like a folded panel
+    const hidden = (panel: LayoutPanel) => layout.isFolded(panel) || (layout.compact && panel === 'preview');
+
+    Object.keys(panels).forEach((panel) => panels[panel].classList.toggle('fold-hidden', hidden(panel as LayoutPanel)));
+    rows[0].classList.toggle('fold-hidden', layout.rows[0].every(hidden));
+    rows[1].classList.toggle('fold-hidden', layout.rows[1].every(hidden));
     // the tab rail of the preset editor goes with it (it is only there once a project is loaded)
     rows[1].classList.toggle('fold-editor', layout.isFolded('editor'));
 
     const timelineFolded = layout.isFolded('timeline');
     rows[2].classList.toggle('fold-toolbar', timelineFolded);
+
+    // a phone has no room to split: the open panels are stacked by the styles (.designer-compact)
+    if (layout.compact) {
+      this.resized();
+      return;
+    }
 
     // the panels of the open rows
     for (const row of [0, 1]) {

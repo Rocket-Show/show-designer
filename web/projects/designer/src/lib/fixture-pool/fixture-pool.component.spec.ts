@@ -627,7 +627,7 @@ describe('FixturePoolComponent', () => {
     it('adds a fixture from a profile file into the folder of the fixture edited', async () => {
       await open();
 
-      await click(element().querySelector('.col-6 > .row button.btn-secondary'));
+      await click(element().querySelector('.col-md-6 > .row button.btn-secondary'));
 
       expect(show.calls.mostRecent().args[0]).toBe(FixturePoolCreateFromFileComponent);
 

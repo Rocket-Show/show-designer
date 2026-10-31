@@ -14,6 +14,7 @@ import { Project } from '../models/project';
 import { AnimationService } from '../services/animation.service';
 import { ConfigService } from '../services/config.service';
 import { FixtureService } from '../services/fixture.service';
+import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
@@ -116,6 +117,11 @@ describe('PreviewComponent', () => {
         provideRouter([]),
       ],
     });
+
+    // a larger screen, the preview not folded away
+    const layoutService = TestBed.inject(LayoutService);
+    layoutService.compact = false;
+    layoutService.folded = [];
 
     project = new Project(projectData());
     TestBed.inject(ProjectService).project = project;
@@ -402,6 +408,26 @@ describe('PreviewComponent', () => {
     expect(element('.h-100').classList).toContain('preview-canvas-hidden');
     expect(element('.preview-chrome-button i').classList).toContain('fa-eye');
     expect(localStorage.getItem('previewHidden')).toBe('true');
+  });
+
+  it('only keeps the clock running while its panel is folded, or left out on a phone', () => {
+    const layoutService = TestBed.inject(LayoutService);
+    open();
+    const render = spyOn(renderer(), 'render');
+
+    layoutService.folded = ['preview'];
+    frame(1000);
+    layoutService.folded = [];
+    layoutService.compact = true;
+    frame(2000);
+
+    expect(TestBed.inject(AnimationService).timeMillis).toBe(2000);
+    expect(render).not.toHaveBeenCalled();
+
+    layoutService.compact = false;
+    frame(3000);
+
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
   it("doesn't measure the render while it is turned off", () => {

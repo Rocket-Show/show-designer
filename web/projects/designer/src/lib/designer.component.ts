@@ -1,4 +1,14 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostBinding,
+  HostListener,
+  Input,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation,
+} from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { map } from 'rxjs/operators';
@@ -126,6 +136,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   // the panels, split and folded
   private layout: DesignerLayout;
+
+  // on a phone, the panels are stacked down the page (see LayoutService.compact)
+  @HostBinding('class.designer-compact')
+  get compact(): boolean {
+    return this.layoutService.compact;
+  }
 
   currentTab = 'properties';
 

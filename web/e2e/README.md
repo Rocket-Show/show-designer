@@ -15,6 +15,7 @@ their own, these test that the parts work together the way a user goes through t
 | `undo.spec.ts`     | undo and redo with the keyboard and the Edit menu                                                                                              |
 | `layout.spec.ts`   | folding panels with the arrows in the gutters and in the View menu, the layouts of the View menu, kept through a reload                        |
 | `errors.spec.ts`   | what the user is told when a project can't be opened or saved, or is shared before it has been saved                                           |
+| `phone.spec.ts`    | the panels stacked down the page of a phone without the 3D preview, editing a preset and the timeline there, the View menu, the intro          |
 
 ## Running them
 

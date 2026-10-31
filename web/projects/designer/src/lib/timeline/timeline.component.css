@@ -1,3 +1,10 @@
+/* on a phone, the toolbar wraps onto as many lines as its buttons need */
+:host-context(.designer-compact) .tl-toolbar,
+:host-context(.designer-compact) .tl-toolbar > .d-flex {
+  flex-wrap: wrap;
+  row-gap: var(--sd-space-2);
+}
+
 /* The tracks scroll in both directions below the toolbar. The column with the names of the
    tracks sticks to the left, the ruler and the waveform stick to the top. */
 .tl-frame {

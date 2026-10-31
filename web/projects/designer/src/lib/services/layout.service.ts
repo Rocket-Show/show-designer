@@ -35,11 +35,16 @@ const layouts: { [name in LayoutName]: Layout } = {
   stage: { folded: ['presets', 'editor', 'fixtures', 'master', 'timeline'], shares: { scenes: 20, preview: 80 } },
 };
 
+// A phone has no room to split: below the md breakpoint of bootstrap, the open panels are
+// stacked from the top to the bottom of the page, all but the 3D preview. Kept in step with
+// $sd-compact-max-width in designer.component.scss.
+export const compactMediaQuery = '(max-width: 767.98px)';
+
 /**
  * Which panels of the designer are open and how much room they get. A panel is folded with
  * the arrows in the gutters next to it or in the View menu, and the timeline folds down to
  * its toolbar. The layout is a matter of the browser, not of the project: it is kept in the
- * local storage.
+ * local storage. On a phone, the panels are stacked instead (see compactMediaQuery).
  */
 @Injectable({
   providedIn: 'root',
@@ -69,11 +74,16 @@ export class LayoutService {
   // the layout picked last, as long as nothing has been changed by hand since
   layout: LayoutName = 'default';
 
-  // the panels have been folded, opened or resized
+  // the screen is as small as a phone's: the open panels are stacked, the 3D preview left out
+  compact = false;
+
+  // the panels have been folded, opened or resized, or the screen has become a phone's or no
+  // longer is one (e.g. turned around)
   changed: Subject<void> = new Subject<void>();
 
   constructor() {
     this.restore();
+    this.watchCompact();
   }
 
   isFolded(panel: LayoutPanel): boolean {
@@ -134,6 +144,16 @@ export class LayoutService {
     this.layout = undefined;
     this.store();
     this.changed.next();
+  }
+
+  private watchCompact() {
+    const query = window.matchMedia(compactMediaQuery);
+
+    this.compact = query.matches;
+    query.addEventListener('change', (event: MediaQueryListEvent) => {
+      this.compact = event.matches;
+      this.changed.next();
+    });
   }
 
   private store() {

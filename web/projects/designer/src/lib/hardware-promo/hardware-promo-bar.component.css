@@ -15,6 +15,13 @@
   box-shadow: var(--sd-shadow-3);
 }
 
+/* on a phone, as wide as the screen leaves room for */
+:host-context(.designer-compact) .hardware-promo-bar {
+  left: var(--sd-space-3);
+  right: var(--sd-space-3);
+  bottom: var(--sd-space-3);
+}
+
 .hardware-promo-bar-icon {
   font-size: 1.25rem;
   color: var(--sd-primary-text);

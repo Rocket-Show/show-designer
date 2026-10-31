@@ -90,6 +90,8 @@ describe('DesignerComponent', () => {
     });
 
     configService = TestBed.inject(ConfigService);
+    // a larger screen, where the panels are split
+    TestBed.inject(LayoutService).compact = false;
     project = new Project({
       uuid: 'show',
       name: 'Rock',
@@ -339,6 +341,38 @@ describe('DesignerComponent', () => {
       expect(layoutService.layout).toBe('show');
       expect(layoutService.isFolded('fixtures')).toBe(true);
       expect(menuItem('designer.layout.layout-show').querySelector('i').classList).toContain('fa-dot-circle-o');
+    });
+
+    it('stacks all the panels but the 3D preview down the page on a phone', async () => {
+      const layoutService = TestBed.inject(LayoutService);
+      await open();
+
+      expect(fixture.nativeElement.classList).not.toContain('designer-compact');
+      expect(menuItem('designer.layout.panel-preview')).toBeDefined();
+
+      layoutService.compact = true;
+      layoutService.changed.next();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.classList).toContain('designer-compact');
+      expect(element('#designer').style.height).toBe('auto');
+      expect(element('#row1').querySelectorAll('.gutter').length).toBe(0);
+      expect(element('#preview').classList).toContain('fold-hidden');
+      // there is no preview to open, the rest of the view menu is there
+      expect(menuItem('designer.layout.panel-preview')).toBeUndefined();
+      expect(menuItem('designer.layout.panel-fixtures')).toBeDefined();
+      expect(menuItem('designer.layout.layout-show')).toBeDefined();
+      // the same panels as on a larger screen, each of them once
+      for (const panel of [
+        'lib-app-scene',
+        'lib-app-preset',
+        'lib-app-fixture-capability',
+        'lib-app-fixture',
+        'lib-app-master-dimmer',
+        'lib-app-timeline',
+      ]) {
+        expect(fixture.nativeElement.querySelectorAll('#designer ' + panel).length).toBe(1, panel);
+      }
     });
   });
 

@@ -6,6 +6,7 @@ import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
+import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
 import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
@@ -60,7 +61,8 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     private presetService: PresetService,
     private sceneService: SceneService,
     private ngZone: NgZone,
-    public hardwarePromoService: HardwarePromoService
+    public hardwarePromoService: HardwarePromoService,
+    private layoutService: LayoutService
   ) {
     this.promoLink = this.hardwarePromoService.link('preview-badge');
 
@@ -267,8 +269,9 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
 
     // While the preview is hidden, only the clock above keeps running: the effect
     // curves and the live preview still read it. The rest of the frame is what
-    // hiding the preview is meant to save.
-    if (!this.previewHidden) {
+    // hiding the preview is meant to save. Its panel folded away, or left out on a
+    // phone, nobody sees it either.
+    if (!this.previewHidden && !this.layoutService.compact && !this.layoutService.isFolded('preview')) {
       // Update the controls
       if (this.controls) {
         this.controls.update();

@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ConfigService } from './config.service';
+import { LayoutService } from './layout.service';
 
 // the steps of the intro in their order, and where the intro is shown on each of them (in
-// percent of the designer, next to the panel the step is about)
-const steps: { name: string; topPercentage: number; leftPercentage: number }[] = [
+// percent of the designer, next to the panel the step is about). On a phone, it is shown at the
+// bottom of the screen instead.
+const allSteps: { name: string; topPercentage: number; leftPercentage: number }[] = [
   { name: 'start', topPercentage: 50, leftPercentage: 50 },
   { name: 'preview', topPercentage: 60, leftPercentage: 40 },
   { name: 'fixtures', topPercentage: 40, leftPercentage: 30 },
@@ -25,7 +27,12 @@ export class IntroService {
   positionLeftPercentage = 50;
   stepChanged: Subject<void> = new Subject<void>();
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService, private layoutService: LayoutService) {}
+
+  // a phone has no 3D preview to show
+  private get steps() {
+    return this.layoutService.compact ? allSteps.filter((step) => step.name !== 'preview') : allSteps;
+  }
 
   refresh() {
     // called, as soon as the config has been updated
@@ -66,7 +73,7 @@ export class IntroService {
   }
 
   next() {
-    this.goTo(Math.min(this.getStepIndex() + 1, steps.length - 1));
+    this.goTo(Math.min(this.getStepIndex() + 1, this.steps.length - 1));
   }
 
   back() {
@@ -74,11 +81,11 @@ export class IntroService {
   }
 
   private getStepIndex(): number {
-    return steps.findIndex((step) => step.name === this.activeStep);
+    return this.steps.findIndex((step) => step.name === this.activeStep);
   }
 
   private goTo(index: number) {
-    const step = steps[index];
+    const step = this.steps[index];
 
     this.activeStep = step.name;
     this.positionTopPercentage = step.topPercentage;
