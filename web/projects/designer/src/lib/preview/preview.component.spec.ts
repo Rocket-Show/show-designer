@@ -17,13 +17,14 @@ import { FixtureService } from '../services/fixture.service';
 import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
-import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
+import { PREVIEW_BACKGROUND_COLOR, PREVIEW_GLOW_LAYER, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
 import { ColorChanger3d } from './models/color-changer-3d';
 import { Fixture3d } from './models/fixture-3d';
 import { MovingHead3d } from './models/moving-head-3d';
+import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
 import { PreviewComponent } from './preview.component';
 
 // The 3D preview renders the stage with the fixtures of the project, in the light of what is
@@ -35,6 +36,7 @@ describe('PreviewComponent', () => {
   let previewService: PreviewService;
   let frames: ((time: number) => void)[];
   let stored: string;
+  let storedGlow: string;
   let style: HTMLStyleElement;
 
   // a fixture of each kind the preview knows: a par, a pixel bar with two pixels, a moving
@@ -99,6 +101,8 @@ describe('PreviewComponent', () => {
   beforeEach(() => {
     stored = localStorage.getItem('previewHidden');
     localStorage.removeItem('previewHidden');
+    storedGlow = localStorage.getItem('previewGlow');
+    localStorage.removeItem('previewGlow');
 
     // the render fills the panel it is in
     style = document.createElement('style');
@@ -144,6 +148,11 @@ describe('PreviewComponent', () => {
     } else {
       localStorage.setItem('previewHidden', stored);
     }
+    if (storedGlow === null) {
+      localStorage.removeItem('previewGlow');
+    } else {
+      localStorage.setItem('previewGlow', storedGlow);
+    }
   });
 
   function open() {
@@ -169,6 +178,52 @@ describe('PreviewComponent', () => {
 
   function fixtures3d(): Fixture3d[] {
     return (component as any).fixtures3d;
+  }
+
+  // the body of a fixture with pixels, which its parts light
+  function housingOf(uuid: string): PixelHousing3d {
+    return (component as any).pixelHousings.get(uuid);
+  }
+
+  // the color an LED of a fixture with pixels shows (linear red, green and blue)
+  function ledColor(uuid: string, index: number): number[] {
+    const color = new THREE.Color();
+    (housingOf(uuid) as any).leds.getColorAt(index, color);
+
+    return [color.r, color.g, color.b].map((component) => Math.round(component * 1000) / 1000);
+  }
+
+  // the value of a channel, for a part of a fixture
+  function channelValue(channelName: string, value: number): FixtureChannelValue {
+    const channelValue = new FixtureChannelValue();
+    channelValue.channelName = channelName;
+    channelValue.value = value;
+
+    return channelValue;
+  }
+
+  // the project with another profile of the bar, e.g. with general channels
+  function withBar(change: (bar: any) => void) {
+    const data = projectData();
+    change(data.fixtureProfiles.find((profile: any) => profile.uuid === 'test/bar'));
+    project = new Project(data);
+    TestBed.inject(ProjectService).project = project;
+    TestBed.inject(FixtureService).updateCachedFixtures();
+  }
+
+  // the bar with a dimmer among its general channels, before its pixels
+  function barWithDimmer() {
+    withBar((bar) => {
+      bar.availableChannels = { Dimmer: { capability: { type: 'Intensity' } } };
+      bar.modes[0].channels.unshift('Dimmer');
+    });
+  }
+
+  // an LED lit in red alone: the other colors stay on the dark glass of one which is off
+  function redLed(): number[] {
+    const off = new THREE.Color(0x1c1f25);
+
+    return [1, off.g, off.b].map((component) => Math.round(component * 1000) / 1000);
   }
 
   // the 3D fixtures of a fixture of the project (a pixel bar has one for each pixel)
@@ -205,31 +260,140 @@ describe('PreviewComponent', () => {
     expect(groups).toEqual(['fixture-par', 'fixture-bar', 'fixture-head', 'fixture-smoke']);
   });
 
-  it('shows the pixels of a bar as bulbs without a beam', () => {
+  it('shows a bar as a housing with an LED for each pixel, which its pixels light without a beam each', () => {
     open();
 
     const pixels: any[] = fixture3dOf('bar');
     expect(pixels.map((pixel) => pixel.fixture.pixel.key)).toEqual(['1', '2']);
-    expect(pixels.map((pixel) => [pixel.hasSpotLight, pixel.hasBulb])).toEqual([
-      [false, true],
-      [false, true],
+    expect(pixels.map((pixel) => [pixel instanceof PixelFixture3d, pixel.hasSpotLight, pixel.hasBulb])).toEqual([
+      [true, false, false],
+      [true, false, false],
     ]);
+    expect(pixels.map((pixel) => pixel.housing)).toEqual([housingOf('bar'), housingOf('bar')]);
+    expect(housingOf('bar').ledCount).toBe(2);
+    expect(housingOf('bar').object.parent).toBe(scene().getObjectByName('fixture-bar'));
     expect((fixture3dOf('par')[0] as any).hasSpotLight).toBe(true);
+
+    // a bar which does not say how large it is takes the room of a pixel each
+    expect([housingOf('bar').width, housingOf('bar').height]).toEqual([16, 8]);
   });
 
   for (const categories of [['Pixel Bar'], ['Matrix'], ['Matrix', 'Color Changer']]) {
-    it(`shows the pixels of a fixture of the categories ${categories.join(', ')} as bulbs without a beam`, () => {
+    it(`shows a fixture of the categories ${categories.join(', ')} as a housing with LEDs`, () => {
       project.fixtureProfiles.find((profile) => profile.uuid === 'test/bar').categories = categories as any;
       TestBed.inject(FixtureService).updateCachedFixtures();
       open();
 
-      const pixels: any[] = fixture3dOf('bar');
-      expect(pixels.map((pixel) => [pixel.hasSpotLight, pixel.hasBulb])).toEqual([
-        [false, true],
-        [false, true],
-      ]);
+      expect(fixture3dOf('bar').map((pixel) => pixel instanceof PixelFixture3d)).toEqual([true, true]);
     });
   }
+
+  it('lights the LEDs in the colors of their pixels, and the stage around in all of them together', () => {
+    open();
+    const [first, second] = fixture3dOf('bar');
+    spyOn(previewService, 'getChannelValues').and.returnValue(
+      new Map([
+        [first.fixture, [channelValue('Red 1', 255)]],
+        [second.fixture, [channelValue('Red 2', 0)]],
+      ])
+    );
+
+    frame(0);
+
+    expect(ledColor('bar', 0)).toEqual(redLed());
+    // an LED which is off still shows as dark glass
+    const off = new THREE.Color(0x1c1f25);
+    expect(ledColor('bar', 1)).toEqual([off.r, off.g, off.b].map((component) => Math.round(component * 1000) / 1000));
+
+    const spill = (housingOf('bar') as any).spill as THREE.PointLight;
+    expect(spill.color.getHex()).toBe(0xff0000);
+    expect(spill.intensity).toBeGreaterThan(0);
+
+    // each frame starts dark
+    (previewService.getChannelValues as jasmine.Spy).and.returnValue(new Map());
+    frame(16);
+    expect(spill.intensity).toBe(0);
+  });
+
+  it('dims all of the LEDs by a dimmer among the general channels of the fixture', () => {
+    barWithDimmer();
+    open();
+    const general = fixture3dOf('bar').find((part) => !part.fixture.pixel);
+    const [first, second] = fixture3dOf('bar').filter((part) => part.fixture.pixel);
+    spyOn(previewService, 'getChannelValues').and.returnValue(
+      new Map([
+        [general.fixture, [channelValue('Dimmer', 0)]],
+        [first.fixture, [channelValue('Red 1', 255)]],
+        [second.fixture, [channelValue('Red 2', 255)]],
+      ])
+    );
+
+    frame(0);
+    expect(ledColor('bar', 0)[0]).toBeLessThan(0.02);
+
+    (previewService.getChannelValues as jasmine.Spy).and.returnValue(
+      new Map([
+        [general.fixture, [channelValue('Dimmer', 255)]],
+        [first.fixture, [channelValue('Red 1', 255)]],
+        [second.fixture, [channelValue('Red 2', 255)]],
+      ])
+    );
+    frame(16);
+    expect([ledColor('bar', 0)[0], ledColor('bar', 1)[0]]).toEqual([1, 1]);
+  });
+
+  it('lights all of the LEDs alike on a fixture in a mode without pixels', () => {
+    withBar((bar) => {
+      bar.availableChannels = { Red: { capability: { type: 'ColorIntensity', color: 'Red' } } };
+      bar.modes[0].channels = ['Red'];
+    });
+    open();
+    const [whole] = fixture3dOf('bar');
+    spyOn(previewService, 'getChannelValues').and.returnValue(new Map([[whole.fixture, [channelValue('Red', 255)]]]));
+
+    frame(0);
+
+    expect([ledColor('bar', 0), ledColor('bar', 1)]).toEqual([redLed(), redLed()]);
+  });
+
+  it('marks the housing of a fixture with pixels as selected once one of its pixels is', () => {
+    open();
+    spyOn(previewService, 'fixtureIsSelected').and.callFake((uuid: string, pixelKey: string) => pixelKey === '2');
+    const body = (housingOf('bar') as any).body as THREE.Mesh;
+
+    frame(0);
+    expect(body.material).toBe(previewService.fixtureSelectedMaterial);
+
+    (previewService.fixtureIsSelected as jasmine.Spy).and.returnValue(false);
+    frame(16);
+    expect(body.material).toBe(previewService.fixtureMaterial);
+  });
+
+  it('hangs a housing below the truss with its LEDs to the audience, also on the floor', () => {
+    project.fixtures[1].positioning = 'bottomFront' as any;
+    open();
+    frame(0);
+
+    // the group of a fixture on the floor is turned upside down, its housing not
+    const housing = housingOf('bar').object;
+    const group = scene().getObjectByName('fixture-bar');
+    expect(group.rotation.x).toBeCloseTo(Math.PI, 9);
+    housing.updateMatrixWorld(true);
+    const front = new THREE.Vector3(0, 0, 1).transformDirection(housing.matrixWorld);
+    expect(front.z).toBeCloseTo(1, 9);
+  });
+
+  it('builds the housings anew when the fixture setup changes', () => {
+    open();
+    const housing = housingOf('bar');
+    spyOn(housing, 'destroy').and.callThrough();
+
+    previewService.updateFixtureSetup();
+
+    expect(housing.destroy).toHaveBeenCalled();
+    expect(housing.object.parent).toBeNull();
+    expect(housingOf('bar') === housing).toBe(false);
+  });
 
   it('shows the fixtures again when the fixture setup changes', () => {
     open();
@@ -409,7 +573,7 @@ describe('PreviewComponent', () => {
     const render = spyOn(renderer(), 'render');
     const getPresets = spyOn(previewService, 'getPresets').and.callThrough();
 
-    element('.preview-chrome-button').click();
+    element('.preview-hide-button').click();
     fixture.detectChanges();
     frame(1000);
 
@@ -420,14 +584,14 @@ describe('PreviewComponent', () => {
 
     expect(element('.preview-off').textContent).toContain('designer.preview.hidden');
     expect(element('.h-100').classList).toContain('preview-canvas-hidden');
-    expect(element('.preview-chrome-button i').classList).toContain('fa-eye');
+    expect(element('.preview-hide-button i').classList).toContain('fa-eye');
     expect(localStorage.getItem('previewHidden')).toBe('true');
   });
 
   it('only keeps the clock running while its panel is folded, or left out on a phone', () => {
     const layoutService = TestBed.inject(LayoutService);
     open();
-    const render = spyOn(renderer(), 'render');
+    const render = spyOn<any>(component, 'render');
 
     layoutService.folded = ['preview'];
     frame(1000);
@@ -442,6 +606,80 @@ describe('PreviewComponent', () => {
     frame(3000);
 
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the lights glow: they are rendered alone, blurred, and added to the stage', () => {
+    open();
+    const glowComposer = (component as any).glowComposer;
+    const composer = (component as any).composer;
+    const stage = scene().children.find((child) => child instanceof THREE.Mesh) as THREE.Mesh;
+    const stageMaterial = stage.material;
+    const leds = (housingOf('bar') as any).leds as THREE.InstancedMesh;
+    const ledMaterial = leds.material;
+    const beam = (fixture3dOf('par')[0] as any).spotLightBeam as THREE.Mesh;
+    let whileGlowing: any[];
+    spyOn(glowComposer, 'render').and.callFake(() => {
+      whileGlowing = [stage.material, leds.material, beam.visible, scene().background];
+    });
+    spyOn(composer, 'render');
+
+    frame(0);
+
+    expect(previewService.glow).toBe(true);
+    expect(leds.layers.isEnabled(PREVIEW_GLOW_LAYER)).toBe(true);
+    // the stage black in front of the lights, the beams left out, on no background
+    expect(whileGlowing).toEqual([(component as any).glowDarkMaterial, ledMaterial, false, null]);
+    expect(composer.render).toHaveBeenCalledTimes(1);
+    // and back for the stage itself
+    expect([stage.material, leds.material, beam.visible]).toEqual([stageMaterial, ledMaterial, true]);
+    expect((scene().background as THREE.Color).getHex()).toBe(PREVIEW_BACKGROUND_COLOR);
+    expect(element('.preview-glow-button').classList).toContain('preview-chrome-button-on');
+  });
+
+  it('can let the lights glow no more, which it keeps the next time', () => {
+    open();
+    const composer = spyOn((component as any).composer, 'render');
+    const render = spyOn(renderer(), 'render');
+
+    element('.preview-glow-button').click();
+    fixture.detectChanges();
+    frame(0);
+
+    expect(previewService.glow).toBe(false);
+    expect(localStorage.getItem('previewGlow')).toBe('false');
+    expect(composer).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(element('.preview-glow-button').classList).not.toContain('preview-chrome-button-on');
+
+    element('.preview-glow-button').click();
+    expect(localStorage.getItem('previewGlow')).toBe('true');
+  });
+
+  it('renders the stage without the glow where the browser can not let the lights glow', () => {
+    spyOn<any>(PreviewComponent.prototype, 'glowTarget').and.throwError('no half floats');
+    open();
+    const render = spyOn(renderer(), 'render');
+
+    frame(0);
+
+    expect(console.warn).toHaveBeenCalledWith('The preview can not let the lights glow', jasmine.any(Error));
+    expect((component as any).composer).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the stage without the glow from the time it fails', () => {
+    open();
+    spyOn((component as any).glowComposer, 'render').and.throwError('no half floats');
+    const render = spyOn(renderer(), 'render');
+
+    frame(0);
+    frame(16);
+
+    expect(console.warn).toHaveBeenCalledWith('The preview can not let the lights glow', jasmine.any(Error));
+    expect(render).toHaveBeenCalledTimes(2);
+    expect((component as any).composer).toBeUndefined();
+    // the stage keeps its materials
+    expect(scene().children.some((child) => (child as THREE.Mesh).material === (component as any).glowDarkMaterial)).toBe(false);
   });
 
   it("doesn't measure the render while it is turned off", () => {
@@ -461,7 +699,7 @@ describe('PreviewComponent', () => {
     frame(0);
     fixture.nativeElement.style.height = '400px';
 
-    element('.preview-chrome-button').click();
+    element('.preview-hide-button').click();
     fixture.detectChanges();
 
     expect(previewService.stageAndPositionsDirty).toBe(true);

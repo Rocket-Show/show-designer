@@ -12,7 +12,7 @@ import { Positioning } from '../../models/fixture';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { Project } from '../../models/project';
 import { FixtureService } from '../../services/fixture.service';
-import { PreviewService } from '../../services/preview.service';
+import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.service';
 import { ProjectService } from '../../services/project.service';
 import { Fixture3d } from './fixture-3d';
 
@@ -41,6 +41,10 @@ class Beam3d extends Fixture3d {
 
   get beamOpacity(): number {
     return this.spotlightMaterial.uniforms.opacity.value;
+  }
+
+  get lensMesh(): THREE.Mesh {
+    return (this as any).lens;
   }
 }
 
@@ -224,6 +228,28 @@ describe('Fixture3d beam', () => {
 
     expect(fixture3d.beamOpacity).toBe(0);
   });
+
+  it('adds its light to what is behind it, and to the other beams it crosses', () => {
+    expect((beam(['Red', 'Green', 'Blue']) as any).spotlightMaterial.blending).toBe(THREE.AdditiveBlending);
+  });
+
+  it('lights its lens at the start of the beam in its color, which glows', () => {
+    const fixture3d = beam(['Dimmer', 'Red', 'Green', 'Blue']);
+    const lensColor = () => (fixture3d.lensMesh.material as THREE.MeshBasicMaterial).color;
+
+    fixture3d.updatePreview(values({ Dimmer: 255, Red: 255, Green: 0, Blue: 0 }), 1);
+
+    expect(fixture3d.lensMesh.parent).toBe((fixture3d as any).spotlightGroup);
+    expect(fixture3d.lensMesh.layers.isEnabled(PREVIEW_GLOW_LAYER)).toBe(true);
+    expect(lensColor().r).toBeCloseTo(1, 5);
+
+    // half as bright with the dimmer at half, dark glass while off
+    fixture3d.updatePreview(values({ Dimmer: 127.5, Red: 255, Green: 0, Blue: 0 }), 1);
+    expect(lensColor().r).toBeCloseTo(0.5, 2);
+
+    fixture3d.updatePreview(values({ Dimmer: 0, Red: 255, Green: 0, Blue: 0 }), 1);
+    expect(lensColor().getHex()).toBe(0x15171c);
+  });
 });
 
 // A color macro shows its own color: the fixture disables its color channels while one is
@@ -379,11 +405,14 @@ describe('Fixture3d placed on the stage', () => {
 
   it('frees its materials', () => {
     const material: THREE.ShaderMaterial = (fixture3d as any).spotlightMaterial;
+    const lensMaterial: THREE.Material = (fixture3d as any).lensMaterial;
     spyOn(material, 'dispose');
+    spyOn(lensMaterial, 'dispose');
 
     fixture3d.destroy();
 
     expect(material.dispose).toHaveBeenCalled();
+    expect(lensMaterial.dispose).toHaveBeenCalled();
   });
 });
 

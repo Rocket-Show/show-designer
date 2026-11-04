@@ -132,7 +132,9 @@
       "hide": "Nascondi l'anteprima per risparmiare prestazioni",
       "show": "Mostra l'anteprima",
       "hidden": "Anteprima nascosta",
-      "hidden-hint": "Il palco non viene renderizzato mentre l'anteprima è nascosta."
+      "hidden-hint": "Il palco non viene renderizzato mentre l'anteprima è nascosta.",
+      "glow-off": "Disattiva l'alone delle luci per risparmiare prestazioni",
+      "glow-on": "Attiva l'alone delle luci"
     },
     "preset": {
       "title": "Preset",

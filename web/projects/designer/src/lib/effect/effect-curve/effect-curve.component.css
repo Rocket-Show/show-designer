@@ -1,4 +1,6 @@
 .curve-grid {
+  /* the size set on a screen with more device pixels than CSS pixels is the one of its drawing, without the border */
+  box-sizing: content-box;
   background-color: var(--sd-bg);
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius);

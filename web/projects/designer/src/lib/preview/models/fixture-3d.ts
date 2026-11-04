@@ -27,7 +27,10 @@ const filteredLights: { [color: string]: number } = {
   Magenta: 1,
   Yellow: 2,
 };
-import { PreviewService } from '../../services/preview.service';
+import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.service';
+
+// a lens which does not light: dark glass
+const LENS_OFF = new THREE.Color(0x15171c);
 
 export abstract class Fixture3d {
   private readonly pointLightMaxIntensity: number = 2;
@@ -39,13 +42,13 @@ export abstract class Fixture3d {
   protected fixtureGroup: THREE.Group;
 
   public fixture: CachedFixture;
-  private fixtureHasDimmer = false;
+  protected fixtureHasDimmer = false;
 
   // how bright the dimmer lights while no value is set for it: as far as its default value lets
   // it (a virtual dimmer is at full, see FixtureService.addVirtualDimmers)
   private dimmerDefaultBrightness = 0;
-  private fixtureHasColorWheel = false;
-  private fixtureHasColor = false;
+  protected fixtureHasColorWheel = false;
+  protected fixtureHasColor = false;
 
   // a fixture mixing its colors with filters (cyan, magenta and yellow) is white until they take colors away
   private fixtureMixesSubtractively = false;
@@ -54,6 +57,9 @@ export abstract class Fixture3d {
   private colorGreen: number;
   private colorBlue: number;
   private dimmer: number = 0;
+
+  // the light of the fixture in this frame: its color, as bright as its dimmer lets it (linear red, green and blue)
+  protected litColor = new THREE.Color();
 
   protected lastSelected: boolean;
   public isSelected = false;
@@ -65,6 +71,13 @@ export abstract class Fixture3d {
   protected spotLightBeam: THREE.Mesh;
   protected spotlightGroup: THREE.Object3D;
   protected spotlightMaterial: THREE.ShaderMaterial;
+
+  // The lens the beam comes out of, which glows in its light: where it sits below the middle of the mesh, and how
+  // large it is (in the units of the mesh, which is scaled to the size of the fixture)
+  protected lensOffset = -1.66;
+  protected lensRadius = 0.85;
+  private lens: THREE.Mesh;
+  private lensMaterial: THREE.MeshBasicMaterial;
 
   // glowing bulb
   private hasBulb: boolean = false;
@@ -177,6 +190,8 @@ export abstract class Fixture3d {
       fragmentShader,
       transparent: true,
       depthWrite: false,
+      // light adds up where beams cross, and over what is behind them
+      blending: THREE.AdditiveBlending,
     });
   }
 
@@ -200,6 +215,7 @@ export abstract class Fixture3d {
       this.spotLight.position.set(0, -1.4, 0);
       spotLightTarget.position.set(0, -10, 0);
       this.createSpotLightBeam();
+      this.createLens();
     }
 
     if (this.hasBulb) {
@@ -418,16 +434,43 @@ export abstract class Fixture3d {
       this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
+
+      const lensLevel = (colorMax / 255) * this.dimmer;
+      this.lensMaterial.color.setRGB(
+        Math.max(beamColor.r * lensLevel, LENS_OFF.r),
+        Math.max(beamColor.g * lensLevel, LENS_OFF.g),
+        Math.max(beamColor.b * lensLevel, LENS_OFF.b)
+      );
     }
+
+    // the color carries the brightness of the pixel already, the dimmer (if the fixture has one) scales it. Taking
+    // the brightness away again turned a fully lit pixel black.
+    this.litColor.copy(color).multiplyScalar(this.dimmer);
 
     if (this.hasBulb) {
-      // the color carries the brightness of the pixel already, the dimmer (if the fixture
-      // has one) scales it. Taking the brightness away again turned a fully lit pixel black.
-      const bulbColor = color.clone().multiplyScalar(this.dimmer);
-
-      this.bulbMaterial.color.copy(bulbColor);
-      this.bulbMaterial.emissive.copy(bulbColor);
+      this.bulbMaterial.color.copy(this.litColor);
+      this.bulbMaterial.emissive.copy(this.litColor);
     }
+  }
+
+  // whether the fixture (or the part of it) has a color of its own, or only lights white
+  protected get hasColor(): boolean {
+    return this.fixtureHasColor || this.fixtureHasColorWheel;
+  }
+
+  // how bright the fixture lights in this frame, by its dimmer and its shutter, between 0 and 1
+  protected get brightness(): number {
+    return this.dimmer;
+  }
+
+  // a disc of light at the start of the beam, facing along it
+  private createLens() {
+    this.lensMaterial = new THREE.MeshBasicMaterial({ color: LENS_OFF.clone() });
+    this.lens = new THREE.Mesh(new THREE.CircleGeometry(this.lensRadius, 32), this.lensMaterial);
+    this.lens.position.set(0, this.lensOffset, 0);
+    this.lens.rotation.x = Math.PI / 2;
+    this.lens.layers.enable(PREVIEW_GLOW_LAYER);
+    this.spotlightGroup.add(this.lens);
   }
 
   protected createSpotLightBeam() {
@@ -450,6 +493,10 @@ export abstract class Fixture3d {
   destroy() {
     if (this.spotlightMaterial) {
       this.spotlightMaterial.dispose();
+    }
+    if (this.lens) {
+      this.lens.geometry.dispose();
+      this.lensMaterial.dispose();
     }
     if (this.bulbMaterial) {
       this.bulbMaterial.dispose();

@@ -2,13 +2,18 @@ import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, 
 import { Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
 import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
-import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
+import { PREVIEW_BACKGROUND_COLOR, PREVIEW_GLOW_LAYER, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
@@ -17,9 +22,36 @@ import { AnimationService } from './../services/animation.service';
 import { ColorChanger3d } from './models/color-changer-3d';
 import { Fixture3d } from './models/fixture-3d';
 import { MovingHead3d } from './models/moving-head-3d';
+import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
 
 // remembers whether the render is turned off, across sessions
 const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
+
+// The glow around the lights: how strong it is, how far it spreads (0 to 1), and how much each of the blurs adds to it,
+// from the narrowest to the widest. The wide ones add little, so the stage away from the lights stays dark.
+const GLOW_STRENGTH = 1.1;
+const GLOW_RADIUS = 0.1;
+const GLOW_BLURS = [1.0, 0.7, 0.4, 0.18, 0.06];
+
+// adds the glow of the lights to the stage
+const GLOW_MIX_SHADER = {
+  uniforms: { baseTexture: { value: null as THREE.Texture }, glowTexture: { value: null as THREE.Texture } },
+  vertexShader: `
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: `
+    uniform sampler2D baseTexture;
+    uniform sampler2D glowTexture;
+    varying vec2 vUv;
+
+    void main() {
+      gl_FragColor = texture2D(baseTexture, vUv) + vec4(texture2D(glowTexture, vUv).rgb, 0.0);
+    }`,
+};
 
 @Component({
   selector: 'lib-app-preview',
@@ -34,6 +66,19 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   public controls: OrbitControls;
 
   private fixtures3d: Fixture3d[] = [];
+
+  // the bodies of the fixtures with pixels, which their parts light (see PixelFixture3d), by the UUID of the fixture
+  private pixelHousings = new Map<string, PixelHousing3d>();
+
+  // The glow around the lights: the lights alone in front of a black stage, blurred, and the stage with it added. None
+  // where the browser can not (the stage is rendered without the glow then).
+  private glowComposer: EffectComposer;
+  private glowPass: UnrealBloomPass;
+  private composer: EffectComposer;
+
+  // what the stage is drawn with while only the lights are rendered for their glow
+  private glowDarkMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  private glowDarkened: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
 
   // grouping fixture (pixels) into the same fixture to being able to properly rotate around the center
   private fixtureGroups = new Map<string, THREE.Group>();
@@ -84,6 +129,11 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     }
     this.fixtures3d = [];
 
+    for (const housing of this.pixelHousings.values()) {
+      housing.destroy();
+    }
+    this.pixelHousings.clear();
+
     // destroy all groups
     for (const fixtureGroup of this.fixtureGroups.values()) {
       this.scene.remove(fixtureGroup);
@@ -119,22 +169,19 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
       if (category) {
         const Fixture3dClass = fixture3dMap[category];
 
-        if (Fixture3dClass === ColorChanger3d) {
-          // the pixels of a bar or a matrix glow as bulbs, without a beam each (a matrix can bring hundreds of them)
-          const isPixelBar = [FixtureCategory['Pixel Bar'], FixtureCategory['Matrix']].indexOf(fixture.profile.categories?.[0]) >= 0;
+        // a bar or a matrix: a housing with an LED for each pixel, without a beam each (a matrix can bring hundreds
+        // of them), which all parts of the fixture light
+        const isPixelBar = [FixtureCategory['Pixel Bar'], FixtureCategory['Matrix']].indexOf(fixture.profile.categories?.[0]) >= 0;
 
-          const fixture3d = new ColorChanger3d(
-            this.fixtureService,
-            this.previewService,
-            this.previewMeshService,
-            fixture,
-            this.scene,
-            fixtureGroup,
-            !isPixelBar,
-            isPixelBar
-          );
+        if (isPixelBar) {
+          let housing = this.pixelHousings.get(uuid);
 
-          this.fixtures3d.push(fixture3d);
+          if (!housing) {
+            housing = new PixelHousing3d(this.fixtureService, this.previewService, fixture, fixtureGroup);
+            this.pixelHousings.set(uuid, housing);
+          }
+
+          this.fixtures3d.push(new PixelFixture3d(this.fixtureService, this.previewService, fixture, this.scene, fixtureGroup, housing));
         } else {
           const fixture3d = new Fixture3dClass(
             this.fixtureService,
@@ -158,7 +205,54 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   }
 
   private render() {
+    if (this.composer && this.previewService.glow) {
+      try {
+        this.renderGlow();
+        this.composer.render();
+        return;
+      } catch (error) {
+        // the stage is still rendered, without the glow from now on
+        console.warn('The preview can not let the lights glow', error);
+        this.composer = undefined;
+      }
+    }
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // The lights which glow (on the glow layer) alone, blurred: the rest of the stage black in front of them, so it
+  // still hides them where it is in front, what is see-through (the beams) left out.
+  private renderGlow() {
+    const background = this.scene.background;
+    this.scene.background = null;
+
+    this.scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+
+      if (!mesh.isMesh || !mesh.visible || mesh.layers.isEnabled(PREVIEW_GLOW_LAYER)) {
+        return;
+      }
+
+      this.glowDarkened.push([mesh, mesh.material]);
+
+      if (Array.isArray(mesh.material) ? mesh.material.some((material) => material.transparent) : mesh.material.transparent) {
+        mesh.visible = false;
+      } else {
+        mesh.material = this.glowDarkMaterial;
+      }
+    });
+
+    try {
+      this.glowComposer.render();
+    } finally {
+      for (const [mesh, material] of this.glowDarkened) {
+        mesh.material = material;
+        mesh.visible = true;
+      }
+
+      this.glowDarkened = [];
+      this.scene.background = background;
+    }
   }
 
   private updateStagePosition(
@@ -261,6 +355,15 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
         fixture3d.isSelected = this.previewService.fixtureIsSelected(fixture3d.fixture.fixture.uuid, fixture3d.fixture.pixel?.key, presets);
       }
     }
+
+    // all parts of the fixtures with pixels have added their light
+    for (const housing of this.pixelHousings.values()) {
+      if (this.previewService.stageAndPositionsDirty) {
+        housing.updatePosition();
+      }
+
+      housing.endFrame();
+    }
   }
 
   private animate(timeMillis: number) {
@@ -353,6 +456,8 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     this.camera.aspect = this.getAspectRatio();
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+    this.glowComposer?.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+    this.composer?.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
   }
 
   private setupRenderer() {
@@ -363,6 +468,59 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     // this.renderer.shadowMap.enabled = true;
     // this.renderer.gammaInput = true;
     // this.renderer.gammaOutput = true;
+  }
+
+  // The glow is rendered at half the resolution, which its blur does not need more of. The stage is rendered into a
+  // buffer which smooths the edges like the renderer does on its own, the glow added and the result shown in the
+  // colors of the screen.
+  private setupGlow() {
+    try {
+      const width = this.canvas.clientWidth;
+      const height = this.canvas.clientHeight;
+      const pixelRatio = this.renderer.getPixelRatio();
+
+      this.glowComposer = new EffectComposer(this.renderer, this.glowTarget(width, height, pixelRatio / 2, 0));
+      this.glowComposer.renderToScreen = false;
+      this.glowComposer.setPixelRatio(pixelRatio / 2);
+      this.glowComposer.setSize(width, height);
+      this.glowComposer.addPass(new RenderPass(this.scene, this.camera));
+      this.glowPass = new UnrealBloomPass(new THREE.Vector2(width, height), GLOW_STRENGTH, GLOW_RADIUS, 0);
+
+      const blurs = this.glowPass.compositeMaterial?.uniforms?.['bloomFactors'];
+
+      if (blurs) {
+        blurs.value = GLOW_BLURS;
+      }
+      this.glowComposer.addPass(this.glowPass);
+
+      const mix = new ShaderPass(GLOW_MIX_SHADER, 'baseTexture');
+      // where the glow pass leaves its result
+      mix.material.uniforms['glowTexture'].value = this.glowComposer.readBuffer.texture;
+
+      this.composer = new EffectComposer(this.renderer, this.glowTarget(width, height, pixelRatio, 4));
+      this.composer.setPixelRatio(pixelRatio);
+      this.composer.setSize(width, height);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      this.composer.addPass(mix);
+      this.composer.addPass(new OutputPass());
+    } catch (error) {
+      console.warn('The preview can not let the lights glow', error);
+      this.glowComposer = undefined;
+      this.composer = undefined;
+    }
+  }
+
+  // a buffer of a composer, which keeps what is brighter than white
+  private glowTarget(width: number, height: number, pixelRatio: number, samples: number): THREE.WebGLRenderTarget {
+    return new THREE.WebGLRenderTarget(Math.max(Math.round(width * pixelRatio), 1), Math.max(Math.round(height * pixelRatio), 1), {
+      type: THREE.HalfFloatType,
+      samples,
+    });
+  }
+
+  // the lights glow, or not (to save performance)
+  switchGlow() {
+    this.previewService.setGlow(!this.previewService.glow);
   }
 
   private setupCamera() {
@@ -454,6 +612,7 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     this.setupRenderer();
     this.setupCamera();
+    this.setupGlow();
     this.setupControls();
     this.setupScene();
 
@@ -472,6 +631,10 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     this.fixtureSetupSubscription.unsubscribe();
 
     this.controls?.dispose();
+    this.glowPass?.dispose();
+    this.glowComposer?.dispose();
+    this.composer?.dispose();
+    this.glowDarkMaterial.dispose();
     this.renderer?.dispose();
     this.renderer?.forceContextLoss();
   }

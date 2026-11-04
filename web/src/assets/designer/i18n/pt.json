@@ -132,7 +132,9 @@
       "hide": "Ocultar a pré-visualização para poupar desempenho",
       "show": "Mostrar a pré-visualização",
       "hidden": "Pré-visualização oculta",
-      "hidden-hint": "O palco não é renderizado enquanto a pré-visualização estiver oculta."
+      "hidden-hint": "O palco não é renderizado enquanto a pré-visualização estiver oculta.",
+      "glow-off": "Desativar o brilho das luzes para poupar desempenho",
+      "glow-on": "Ativar o brilho das luzes"
     },
     "preset": {
       "title": "Predefinições",

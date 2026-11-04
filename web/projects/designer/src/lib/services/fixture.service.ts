@@ -482,6 +482,16 @@ export class FixtureService {
     return String(Math.max(x, y, z));
   }
 
+  // The pixels of its matrix a part of a fixture lights: a pixel itself, the pixels of a group, none for a part without a
+  // pixel (the general channels, or a fixture without pixels). The pixels of the whole matrix, see getAllPixelKeys.
+  getPixelsOfPart(cachedFixture: CachedFixture, allPixels: CachedFixturePixel[]): CachedFixturePixel[] {
+    if (!cachedFixture.pixel || !cachedFixture.profile.matrix) {
+      return [];
+    }
+
+    return this.fixturePixelGroupResolveService.getPixelsForKeyOrGroup(cachedFixture.profile.matrix, allPixels, cachedFixture.pixel.key);
+  }
+
   // Where a part of a fixture is in it, for the pixel effects: a pixel in its column and row of the matrix (a bar has one
   // row), a pixel group in the middle of its pixels, and a part without a pixel (a fixture without pixels, or the general
   // channels of one with pixels) as the one pixel of the fixture. Rocket Show places them the very same way.

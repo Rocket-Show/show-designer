@@ -44,6 +44,12 @@ export const PREVIEW_FIXTURE_EMISSIVE = 0x0d0e11;
 export const PREVIEW_FIXTURE_SELECTED_COLOR = 0x7a3a05; // --sd-primary, darkened
 export const PREVIEW_FIXTURE_SELECTED_EMISSIVE = 0xfd7e14; // --sd-primary
 
+// remembers whether the lights of the 3d preview glow, across sessions
+const PREVIEW_GLOW_STORAGE_KEY = 'previewGlow';
+
+// the layer of the scene the lights which glow are on as well (the LEDs and the lenses), see PreviewComponent.render
+export const PREVIEW_GLOW_LAYER = 1;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -56,6 +62,10 @@ export class PreviewService implements OnDestroy {
 
   public scene: THREE.Scene;
 
+  // Whether the lights glow in the 3d preview, the way they do in the dark (it costs a bit of performance). On unless
+  // it was turned off.
+  public glow = localStorage.getItem(PREVIEW_GLOW_STORAGE_KEY) !== 'false';
+
   private stageMeshes: THREE.Mesh[] = [];
 
   // a spot on the stage being picked with a click into the 3D preview (e.g. to aim the moving heads at), and the spot
@@ -65,6 +75,11 @@ export class PreviewService implements OnDestroy {
   private stageMaterial: THREE.MeshStandardMaterial;
   fixtureMaterial: THREE.MeshStandardMaterial;
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
+
+  public setGlow(glow: boolean) {
+    this.glow = glow;
+    localStorage.setItem(PREVIEW_GLOW_STORAGE_KEY, glow ? 'true' : 'false');
+  }
 
   constructor(
     private presetService: PresetService,

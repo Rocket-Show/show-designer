@@ -132,7 +132,9 @@
       "hide": "Masquer l'aperçu pour économiser des performances",
       "show": "Afficher l'aperçu",
       "hidden": "Aperçu masqué",
-      "hidden-hint": "La scène n'est pas rendue tant que l'aperçu est masqué."
+      "hidden-hint": "La scène n'est pas rendue tant que l'aperçu est masqué.",
+      "glow-off": "Désactiver le halo des lumières pour économiser des performances",
+      "glow-on": "Activer le halo des lumières"
     },
     "preset": {
       "title": "Préréglages",

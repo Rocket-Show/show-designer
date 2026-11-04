@@ -132,7 +132,9 @@
       "hide": "Vorschau ausblenden, um Leistung zu sparen",
       "show": "Vorschau einblenden",
       "hidden": "Vorschau ausgeblendet",
-      "hidden-hint": "Die Bühne wird nicht gerendert, solange die Vorschau ausgeblendet ist."
+      "hidden-hint": "Die Bühne wird nicht gerendert, solange die Vorschau ausgeblendet ist.",
+      "glow-off": "Lichtschein ausschalten, um Leistung zu sparen",
+      "glow-on": "Lichtschein einschalten"
     },
     "preset": {
       "title": "Presets",

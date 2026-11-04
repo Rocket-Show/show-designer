@@ -245,16 +245,48 @@ function valueRange(curve: EffectCurve): { min: number; max: number } {
 }
 
 // a canvas context which keeps the color of each cell the preview of a pixel effect fills, from the left
+// (the cells are filled in rgb(), the housing around them in hex), and how often the glow of the lit ones is drawn over them
 class PixelContextRecorder {
   public fillStyle = '';
+  public strokeStyle = '';
+  public lineWidth = 1;
+  public filter = 'none';
+  public globalAlpha = 1;
+  public globalCompositeOperation = 'source-over';
+  public imageSmoothingEnabled = true;
   public cells: { x: number; color: string }[] = [];
+  public glows: HTMLCanvasElement[] = [];
+  private pathX: number;
 
   clearRect() {}
+  save() {}
+  restore() {}
+  setTransform() {}
+  arcTo() {}
+  closePath() {}
+  stroke() {}
 
-  fillRect(x: number) {
-    this.cells.push({ x, color: this.fillStyle });
+  beginPath() {
+    this.pathX = undefined;
+  }
+
+  moveTo(x: number) {
+    this.pathX = this.pathX ?? x;
+  }
+
+  fill() {
+    if (this.fillStyle.startsWith('rgb(')) {
+      this.cells.push({ x: this.pathX, color: this.fillStyle });
+    }
+  }
+
+  drawImage(image: HTMLCanvasElement) {
+    this.glows.push(image);
   }
 }
+
+// an unlit pixel, which is drawn dark grey
+const PIXEL_OFF = 'rgb(20, 23, 28)';
 
 describe('EffectCurveComponent pixel preview', () => {
   // the component with a bar of three pixels in its preset, which lights in colors
@@ -315,21 +347,58 @@ describe('EffectCurveComponent pixel preview', () => {
 
     component.redraw();
 
-    expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(32, 36, 43)', 'rgb(255, 0, 0)', 'rgb(32, 36, 43)']);
+    expect(context.cells.map((cell) => cell.color)).toEqual([PIXEL_OFF, 'rgb(255, 23, 28)', PIXEL_OFF]);
     expect(context.cells[0].x).toBeLessThan(context.cells[1].x);
+  });
+
+  it('lets the lit pixels glow: their colors, a pixel each, are drawn blurred over the fixture', () => {
+    const { component, context } = pixelPreview(chase());
+
+    component.redraw();
+
+    expect(context.glows.length).toBe(1);
+    const glow = context.glows[0].getContext('2d');
+    expect([context.glows[0].width, context.glows[0].height]).toEqual([3, 1]);
+    expect(Array.from(glow.getImageData(0, 0, 3, 1).data)).toEqual([0, 0, 0, 255, 255, 0, 0, 255, 0, 0, 0, 255]);
   });
 
   it('blends the effect with the color of the preset, and follows that color where its palette does', () => {
     const masked = pixelPreview(chase({ blend: 'mask' }));
     masked.component.redraw();
-    expect(masked.context.cells.map((cell) => cell.color)).toEqual(['rgb(32, 36, 43)', 'rgb(0, 0, 255)', 'rgb(32, 36, 43)']);
+    expect(masked.context.cells.map((cell) => cell.color)).toEqual([PIXEL_OFF, 'rgb(20, 23, 255)', PIXEL_OFF]);
 
     const shades = pixelPreview(chase({ palette: { ref: 'preset' } }));
     shades.component.redraw();
     const [red, green, blue] = shades.context.cells[1].color.match(/\d+/g).map(Number);
-    expect(red).toBe(0);
-    expect(green).toBe(0);
-    expect(blue).toBeGreaterThan(0);
+    expect(red).toBe(20);
+    expect(green).toBe(23);
+    expect(blue).toBeGreaterThan(28);
+  });
+
+  it('adds the effect to the color of the preset, or takes the brighter of both', () => {
+    const added = pixelPreview(chase({ blend: 'add' }));
+    added.component.redraw();
+    expect(added.context.cells.map((cell) => cell.color)).toEqual(['rgb(20, 23, 255)', 'rgb(255, 23, 255)', 'rgb(20, 23, 255)']);
+
+    const brighter = pixelPreview(chase({ blend: 'max' }));
+    brighter.component.redraw();
+    expect(brighter.context.cells.map((cell) => cell.color)).toEqual(['rgb(20, 23, 255)', 'rgb(255, 23, 255)', 'rgb(20, 23, 255)']);
+  });
+
+  it('lets the pixels glow less smoothly in a browser which does not blur on a canvas', () => {
+    const { component, context } = pixelPreview(chase());
+    (component as any).canvasBlurs = false;
+    const drawn: number[] = [];
+    context.drawImage = (image: HTMLCanvasElement) => {
+      context.glows.push(image);
+      drawn.push(context.globalAlpha);
+    };
+
+    component.redraw();
+
+    expect(context.glows.length).toBe(1);
+    expect(drawn[0]).toBeCloseTo(0.32, 5);
+    expect(context.filter).toBe('none');
   });
 
   it('shows the color of the preset once the effect has stopped and leaves the pixels to it', () => {
@@ -338,7 +407,7 @@ describe('EffectCurveComponent pixel preview', () => {
 
     component.redraw();
 
-    expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(0, 0, 255)', 'rgb(0, 0, 255)', 'rgb(0, 0, 255)']);
+    expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(20, 23, 255)', 'rgb(20, 23, 255)', 'rgb(20, 23, 255)']);
   });
 
   it('shows the pattern on a bar and a matrix while the preset has no fixture with pixels yet', () => {
@@ -531,6 +600,15 @@ describe('EffectCurveComponent', () => {
 
   const intensity = 'designer.fixtureCapabilityType.Intensity';
   const red = 'designer.fixtureCapabilityType.ColorIntensity, designer.fixtureCapabilityColor.Red';
+
+  it('draws its grid on as many pixels as the screen shows it with', async () => {
+    spyOnProperty(window, 'devicePixelRatio').and.returnValue(2);
+
+    await render();
+
+    const canvas = element.querySelector('canvas.curve-grid') as HTMLCanvasElement;
+    expect([canvas.width, canvas.height, canvas.style.width, canvas.style.height]).toEqual([400, 200, '200px', '100px']);
+  });
 
   it('edits a movement of the moving heads like a curve, with its shape and its size', async () => {
     const movement = new EffectPanTilt({ uuid: 'move' });

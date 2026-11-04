@@ -132,7 +132,9 @@
       "hide": "Hide the preview to save performance",
       "show": "Show the preview",
       "hidden": "Preview hidden",
-      "hidden-hint": "The stage is not rendered while the preview is hidden."
+      "hidden-hint": "The stage is not rendered while the preview is hidden.",
+      "glow-off": "Turn the glow of the lights off to save performance",
+      "glow-on": "Let the lights glow"
     },
     "preset": {
       "title": "Presets",

@@ -132,7 +132,9 @@
       "hide": "Ocultar la vista previa para ahorrar rendimiento",
       "show": "Mostrar la vista previa",
       "hidden": "Vista previa oculta",
-      "hidden-hint": "El escenario no se renderiza mientras la vista previa está oculta."
+      "hidden-hint": "El escenario no se renderiza mientras la vista previa está oculta.",
+      "glow-off": "Desactivar el halo de las luces para ahorrar rendimiento",
+      "glow-on": "Activar el halo de las luces"
     },
     "preset": {
       "title": "Preajustes",

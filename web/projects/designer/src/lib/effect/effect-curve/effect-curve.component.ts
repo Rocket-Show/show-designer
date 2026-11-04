@@ -29,7 +29,22 @@ interface PixelPreviewFixture {
   columns: number;
   rows: number;
   parts: PixelContext[];
+
+  // the colors of its lit pixels, a pixel of this canvas each, drawn blurred over them to let them glow (see
+  // drawPixelGlow). Made with the first preview.
+  glow?: CanvasRenderingContext2D;
 }
+
+// the housing around the pixels of a fixture in the preview of a pixel effect, and its edge
+const PIXEL_HOUSING_COLOR = '#08090b';
+const PIXEL_HOUSING_EDGE_COLOR = 'rgba(255, 255, 255, 0.07)';
+
+// the darkest a pixel is drawn in, so one which is off still shows where it is: a dark grey, like an LED in the dark
+const PIXEL_OFF_COLOR = [20, 23, 28];
+
+// how strong the glow around the lit pixels is, and how far it reaches (in pixels of the fixture)
+const PIXEL_GLOW_ALPHA = 0.8;
+const PIXEL_GLOW_REACH = 0.9;
 
 // a capability checkbox, prepared for the template. the name and the checked state are
 // calculated whenever they change instead of on each change detection cycle, because the
@@ -61,6 +76,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   private ctx: any;
   private maxWidth: number;
   private maxHeight: number;
+
+  // the device pixels the canvas has per CSS pixel, to be sharp on a screen with more than one
+  private pixelRatio = 1;
+
+  // whether the browser blurs what is drawn on a canvas (a browser without it lets the pixels glow less smoothly)
+  private canvasBlurs = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 
   // how far a movement of the moving heads reaches, in degrees (more can be typed in)
   public sizeMin = 0;
@@ -201,6 +222,18 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.ctx = canvas.getContext('2d');
     this.maxWidth = canvas.width;
     this.maxHeight = canvas.height;
+
+    // The canvas gets as many pixels as the screen shows it with, the grid keeps drawing on the size it has in CSS
+    // pixels. A ratio of 1 leaves the canvas as it is.
+    this.pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
+
+    if (this.ctx && this.pixelRatio !== 1) {
+      canvas.style.width = this.maxWidth + 'px';
+      canvas.style.height = this.maxHeight + 'px';
+      canvas.width = Math.round(this.maxWidth * this.pixelRatio);
+      canvas.height = Math.round(this.maxHeight * this.pixelRatio);
+      this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    }
 
     this.redraw();
   }
@@ -431,7 +464,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     const bars = fixtures.filter((fixture) => fixture.rows === 1).slice(0, 6);
     const matrices = fixtures.filter((fixture) => fixture.rows > 1).slice(0, 2);
     const margin = 6;
-    const gap = 6;
+    // room for the housings around the pixels between the fixtures
+    const gap = 10;
     const preset = this.presetService.selectedPreset;
     const base = hexToRgb(preset ? this.colorService.getPresetColor(preset) : '#ffffff');
     const fixtureCount = Math.max(...fixtures.map((fixture) => fixture.index)) + 1;
@@ -458,6 +492,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     });
   }
 
+  // A fixture of the preview with its pixels as the effect lights them now: in a dark housing, each a rounded LED, the
+  // lit ones glowing
   private drawPixelFixture(
     effect: EffectPixel,
     fixture: PixelPreviewFixture,
@@ -469,42 +505,124 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     base: number[]
   ) {
     const cycles = effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
-    const gap = Math.max(1, cell * 0.15);
+    const width = fixture.columns * cell;
+    const height = fixture.rows * cell;
+    const pad = Math.max(1.5, cell * 0.26);
+    const gap = Math.max(0.5, cell * 0.15);
+    const glow = this.pixelGlowOf(fixture);
+
+    this.ctx.fillStyle = PIXEL_HOUSING_COLOR;
+    this.roundedRect(left - pad, top - pad, width + pad * 2, height + pad * 2, Math.min(5, pad * 1.4));
+    this.ctx.fill();
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = PIXEL_HOUSING_EDGE_COLOR;
+    this.ctx.stroke();
+
+    glow?.clearRect(0, 0, fixture.columns, fixture.rows);
 
     for (const part of fixture.parts) {
-      let color = base;
+      const [red, green, blue] = this.pixelColorOf(effect, part, cycles, fixture.index, base).map((component) =>
+        Math.round(Math.min(Math.max(component, 0), 1) * 255)
+      );
 
-      if (cycles !== undefined) {
-        const context = Object.assign(new PixelContext(), part);
-        context.seed = toInt(effect.seed * 7919 + fixture.index * 131);
+      this.ctx.fillStyle = `rgb(${Math.max(red, PIXEL_OFF_COLOR[0])}, ${Math.max(green, PIXEL_OFF_COLOR[1])}, ${Math.max(
+        blue,
+        PIXEL_OFF_COLOR[2]
+      )})`;
+      this.roundedRect(left + part.column * cell + gap / 2, top + part.row * cell + gap / 2, cell - gap, cell - gap, cell * 0.2);
+      this.ctx.fill();
 
-        if (effect.mirror) {
-          context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
-        }
-
-        const [place, level] = samplePixelPattern(effect, cycles, context);
-        const stops = effect.palette.ref === 'preset' ? PixelPalette.shadesOf(base) : effect.palette.stops;
-        const lit = PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, place).map((component) => component * level);
-
-        color = lit.map((component, i) => {
-          switch (effect.blend) {
-            case 'mask':
-              return base[i] * level;
-            case 'add':
-              return Math.min(base[i] + component, 1);
-            case 'max':
-              return Math.max(base[i], component);
-            default:
-              return component;
-          }
-        });
+      if (glow) {
+        glow.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+        glow.fillRect(part.column, part.row, 1, 1);
       }
-
-      // an unlit pixel still shows where it is
-      const [red, green, blue] = color.map((component) => Math.round(component * 255));
-      this.ctx.fillStyle = Math.max(red, green, blue) < 40 ? 'rgb(32, 36, 43)' : `rgb(${red}, ${green}, ${blue})`;
-      this.ctx.fillRect(left + part.column * cell + gap / 2, top + part.row * cell + gap / 2, cell - gap, cell - gap);
     }
+
+    if (glow) {
+      this.drawPixelGlow(glow.canvas, left, top, width, height, cell);
+    }
+  }
+
+  // the color of a pixel of the preview, as red, green and blue between 0 and 1: what the effect lights it in, blended
+  // with the color of the preset, or that color alone before and after the effect runs on the fixture
+  private pixelColorOf(effect: EffectPixel, part: PixelContext, cycles: number, fixtureIndex: number, base: number[]): number[] {
+    if (cycles === undefined) {
+      return base;
+    }
+
+    const context = Object.assign(new PixelContext(), part);
+    context.seed = toInt(effect.seed * 7919 + fixtureIndex * 131);
+
+    if (effect.mirror) {
+      context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
+    }
+
+    const [place, level] = samplePixelPattern(effect, cycles, context);
+    const stops = effect.palette.ref === 'preset' ? PixelPalette.shadesOf(base) : effect.palette.stops;
+    const lit = PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, place).map((component) => component * level);
+
+    return lit.map((component, i) => {
+      switch (effect.blend) {
+        case 'mask':
+          return base[i] * level;
+        case 'add':
+          return Math.min(base[i] + component, 1);
+        case 'max':
+          return Math.max(base[i], component);
+        default:
+          return component;
+      }
+    });
+  }
+
+  // the canvas a fixture of the preview keeps the colors of its pixels on for their glow, none where there is no document
+  // to make one in
+  private pixelGlowOf(fixture: PixelPreviewFixture): CanvasRenderingContext2D {
+    if (!fixture.glow && typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = fixture.columns;
+      canvas.height = fixture.rows;
+      fixture.glow = canvas.getContext('2d');
+    }
+
+    return fixture.glow;
+  }
+
+  // The lit pixels of a fixture glowing: their colors stretched over them, blurred and added to what is drawn. The blur
+  // is worked out in pixels of the device, which a browser blurs by, whatever the canvas is scaled with.
+  private drawPixelGlow(glow: HTMLCanvasElement, left: number, top: number, width: number, height: number, cell: number) {
+    const ratio = this.pixelRatio;
+    const reach = Math.max(2, cell * PIXEL_GLOW_REACH) * ratio;
+
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.globalCompositeOperation = 'lighter';
+    this.ctx.imageSmoothingEnabled = true;
+
+    if (this.canvasBlurs) {
+      this.ctx.filter = `blur(${reach.toFixed(1)}px)`;
+      this.ctx.globalAlpha = PIXEL_GLOW_ALPHA;
+      this.ctx.drawImage(glow, left * ratio, top * ratio, width * ratio, height * ratio);
+    } else {
+      // stretched beyond the pixels, the smoothing blurs a little
+      this.ctx.globalAlpha = PIXEL_GLOW_ALPHA * 0.4;
+      this.ctx.drawImage(glow, left * ratio - reach, top * ratio - reach, width * ratio + reach * 2, height * ratio + reach * 2);
+    }
+
+    this.ctx.restore();
+  }
+
+  // the path of a rectangle with rounded corners (drawn with arcs, which every browser has)
+  private roundedRect(x: number, y: number, width: number, height: number, radius: number) {
+    const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + r, y);
+    this.ctx.arcTo(x + width, y, x + width, y + height, r);
+    this.ctx.arcTo(x + width, y + height, x, y + height, r);
+    this.ctx.arcTo(x, y + height, x, y, r);
+    this.ctx.arcTo(x, y, x + width, y, r);
+    this.ctx.closePath();
   }
 
   // the size of the movement on the pan or the tilt, in degrees

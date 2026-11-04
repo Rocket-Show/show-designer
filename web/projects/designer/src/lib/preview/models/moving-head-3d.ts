@@ -22,6 +22,10 @@ export class MovingHead3d extends Fixture3d {
   private objectGroup: THREE.Object3D = new THREE.Object3D();
 
   private lastBeamAngleDegrees: number;
+
+  // the lens on the bottom of the head
+  protected override lensOffset = -1.26;
+  protected override lensRadius = 0.42;
   private destroyed = false;
 
   constructor(
