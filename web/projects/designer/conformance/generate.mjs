@@ -2175,6 +2175,151 @@ function migrationEdges() {
   );
 }
 
+// ---- pixel patterns ---------------------------------------------------------------------------
+
+const pixelPatternNames = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'plasma', 'ripple', 'shapes', 'fire'];
+
+// palettes of a few colors: smooth and in steps, mirrored and wrapping, a color twice on the same place, unsorted
+const pixelPalettes = [
+  {
+    stops: [
+      { position: 0, color: '#000000' },
+      { position: 0.45, color: '#c21a00' },
+      { position: 0.68, color: '#ff7a00' },
+      { position: 1, color: '#fff5d6' },
+    ],
+  },
+  {
+    stops: [
+      { position: 0, color: '#ff0000' },
+      { position: 1 / 3, color: '#00ff00' },
+      { position: 2 / 3, color: '#0000ff' },
+      { position: 1, color: '#ff0000' },
+    ],
+    repeat: 'wrap',
+  },
+  {
+    stops: [
+      { position: 0, color: '#ff1d25' },
+      { position: 1, color: '#1e4bff' },
+    ],
+    between: 'steps',
+  },
+  {
+    stops: [
+      { position: 0.8, color: '#FFE14A' },
+      { position: 0.2, color: '#00d85a' },
+      { position: 0.5, color: '#ff2b2b' },
+      { position: 0.5, color: '#2c6bff' },
+    ],
+  },
+  {
+    stops: [
+      { position: 0, color: '#2a0845' },
+      { position: 0.55, color: '#e8407a' },
+      { position: 1, color: '#ffd76e' },
+    ],
+    between: 'steps',
+    repeat: 'wrap',
+  },
+];
+
+// where a pixel is: in a bar, in a matrix (also one wider than high), a fixture without pixels, or somewhere in a picture
+// of the stage
+function pixelContext(random) {
+  const grid = random.pick([
+    [12, 1],
+    [24, 1],
+    [8, 8],
+    [16, 16],
+    [5, 3],
+    [3, 7],
+    [1, 1],
+    [40, 9],
+  ]);
+  const [columns, rows] = grid;
+  const column = random.int(columns);
+  const row = random.int(rows);
+  const longest = Math.max(columns, rows);
+  const stage = columns === 40;
+
+  return {
+    x: stage ? random.next() : (column + 0.5) / columns,
+    y: stage ? random.next() : (row + 0.5) / rows,
+    column,
+    row,
+    columns,
+    rows,
+    aspectX: stage ? 1 : columns / longest,
+    aspectY: stage ? 0.25 : rows / longest,
+    seed: random.chance(0.5) ? 0 : random.int(2000) - 300,
+  };
+}
+
+function pixelPatterns() {
+  const random = randomSource(11);
+  const cases = [];
+  const cycles = [0, 0.25, 0.5, 0.999, 1, 2.5, -0.25, -3.75, 1234.5678];
+
+  for (const pattern of pixelPatternNames) {
+    for (let index = 0; index < 10; index++) {
+      const settings = {
+        pattern,
+        size: random.pick([0, 1, random.number(1), random.number(1)]),
+        softness: random.pick([0, 1, random.number(1), random.number(1)]),
+        direction: random.pick(['right', 'left', 'out', 'in', 'up', 'down']),
+        shape: random.pick(['circle', 'square', 'diamond', 'star', 'heart']),
+        bounce: random.chance(0.5),
+      };
+      const input = { settings, palette: random.pick(pixelPalettes), samples: [] };
+
+      for (let sample = 0; sample < 20; sample++) {
+        input.samples.push({ cycle: random.chance(0.4) ? random.pick(cycles) : random.number(8) - 2, pixel: pixelContext(random) });
+      }
+
+      cases.push({ name: `${pattern} ${index}`, input });
+    }
+  }
+
+  // a pattern of a newer designer, and a palette without colors or with one which can't be read
+  cases.push({
+    name: 'a pattern of a newer designer',
+    input: {
+      settings: { pattern: 'fireworks', size: 0.5, softness: 0.5, direction: 'right', shape: 'circle', bounce: false },
+      palette: pixelPalettes[0],
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+  cases.push({
+    name: 'a palette without colors',
+    input: {
+      settings: { pattern: 'flow', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false },
+      palette: { stops: [] },
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+  cases.push({
+    name: 'a palette with a color which cannot be read',
+    input: {
+      settings: { pattern: 'flow', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false },
+      palette: {
+        stops: [
+          { position: 0, color: 'orange' },
+          { position: 1, color: '#fff' },
+        ],
+      },
+      samples: [0.1, 0.6].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+
+  return write(
+    'pixel-pattern.json',
+    'pixelPattern',
+    'The patterns of the pixel effects, through a palette, at pixels of bars, matrices and the stage',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -2192,6 +2337,7 @@ export function generate() {
     channelValuesMovements(),
     migrations(),
     migrationEdges(),
+    pixelPatterns(),
   ];
 }
 

@@ -14,13 +14,14 @@ import case10 from './cases/migration-edges.json';
 import case11 from './cases/migration.json';
 import case12 from './cases/mix-colors.json';
 import case13 from './cases/pixel-group.json';
-import case14 from './cases/pixels.json';
-import case15 from './cases/preset-intensity-edges.json';
-import case16 from './cases/preset-intensity.json';
-import case17 from './cases/preset-steps-edges.json';
-import case18 from './cases/preset-steps.json';
-import case19 from './cases/profile-number.json';
-import case20 from './cases/transition-curve.json';
+import case14 from './cases/pixel-pattern.json';
+import case15 from './cases/pixels.json';
+import case16 from './cases/preset-intensity-edges.json';
+import case17 from './cases/preset-intensity.json';
+import case18 from './cases/preset-steps-edges.json';
+import case19 from './cases/preset-steps.json';
+import case20 from './cases/profile-number.json';
+import case21 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -61,13 +62,14 @@ export const caseFiles: { [fileName: string]: any } = {
   'migration.json': case11,
   'mix-colors.json': case12,
   'pixel-group.json': case13,
-  'pixels.json': case14,
-  'preset-intensity-edges.json': case15,
-  'preset-intensity.json': case16,
-  'preset-steps-edges.json': case17,
-  'preset-steps.json': case18,
-  'profile-number.json': case19,
-  'transition-curve.json': case20,
+  'pixel-pattern.json': case14,
+  'pixels.json': case15,
+  'preset-intensity-edges.json': case16,
+  'preset-intensity.json': case17,
+  'preset-steps-edges.json': case18,
+  'preset-steps.json': case19,
+  'profile-number.json': case20,
+  'transition-curve.json': case21,
 };
 
 export const profiles: { [name: string]: any } = {

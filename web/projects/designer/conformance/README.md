@@ -27,6 +27,7 @@ made of it (`expected`).
 | `hexColor`, `mixColors` | colors of the fixture library                                                                                                  | their RGB values, mixed                                                                     |
 | `pixels`                | a fixture matrix                                                                                                               | its pixels, its groups and the order a channel is repeated for them in                      |
 | `pixelGroup`            | a group and pixels                                                                                                             | the pixels it covers, or `error` for a rule which can't be read                             |
+| `pixelPattern`          | a pattern of the pixel effects with its settings, a palette, moments and pixels (of a bar, a matrix or the stage)              | where the pattern puts each pixel in the palette, how bright it makes it and its color      |
 | `channelValues`         | a project and how it is previewed (the timeline of a composition, the selected preset, its steps running, the selected scenes) | the value of every channel of every fixture and pixel at each time                          |
 | `migration`             | a project of an older version                                                                                                  | what both keep of it migrated to the current version and play it with (see below)           |
 
@@ -72,4 +73,6 @@ testing/sync-designer-conformance.sh ../show-designer
 
 Both engines compute with doubles and the same operations in the same order, so they come to the very same numbers.
 Where a function of the platform rounds differently (Math.sin of the browser and of Java), both use one of their own
-(`models/cycle-sine.ts`, `CycleSine`).
+(`models/cycle-sine.ts`, `CycleSine`). The pixel effects keep to the same operations (`models/pixel-math.ts`,
+`PixelMath`), and what looks random in them comes from a hash of whole numbers, which wraps around at 32 bits on both
+sides.
