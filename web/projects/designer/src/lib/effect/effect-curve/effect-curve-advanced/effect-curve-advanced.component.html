@@ -62,8 +62,8 @@
 
   <hr />
 
-  <!-- the part of the period the curve is on (a movement of the moving heads has no such part) -->
-  @if (!isMovement) {
+  <!-- the part of the period the curve is on (a movement of the moving heads and a pixel effect have no such part) -->
+  @if (hasDutyCycle) {
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.effect.curve-duty' | translate }}</label>
     <div class="col-lg-8 d-flex align-items-center">

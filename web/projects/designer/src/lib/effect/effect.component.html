@@ -11,6 +11,8 @@
               <i class="fa fa-area-chart fa-fw my-auto" aria-hidden="true"></i>
               } @if (item.type == 'pan-tilt') {
               <i class="fa fa-arrows-alt fa-fw my-auto" aria-hidden="true"></i>
+              } @if (item.type == 'pixel') {
+              <i class="fa fa-th fa-fw my-auto" aria-hidden="true"></i>
               }
               <span class="ml-2">{{ 'designer.effect.type-' + item.type | translate }}</span>
               <div class="ml-auto mr-2">
@@ -44,7 +46,7 @@
               </div>
             </div>
           </button>
-          <!-- a curve, or a movement of the moving heads, which is edited the same way -->
+          <!-- a curve, a movement of the moving heads or a pixel effect, which are edited the same way -->
           <div style="min-width: 670px">
             <lib-app-effect-curve [curve]="item" [isSelected]="item == effectService.selectedEffect"></lib-app-effect-curve>
           </div>
@@ -70,6 +72,9 @@
             >
             <a class="dropdown-item" href="#" (click)="addPanTiltEffect(); (false)">
               <i class="fa fa-arrows-alt fa-fw" aria-hidden="true"></i> {{ 'designer.effect.type-pan-tilt' | translate }}</a
+            >
+            <a class="dropdown-item" href="#" (click)="addPixelEffect(); (false)">
+              <i class="fa fa-th fa-fw" aria-hidden="true"></i> {{ 'designer.effect.type-pixel' | translate }}</a
             >
           </div>
         </div>

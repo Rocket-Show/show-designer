@@ -27,6 +27,8 @@ import { TimelineService } from '../../services/timeline.service';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect-curve.component';
 import { EffectPanTilt } from '../../models/effect-pan-tilt';
+import { EffectPixel } from '../../models/effect-pixel';
+import { PixelContext } from '../../models/pixel-pattern';
 
 // a canvas context that only counts what the grid draws on it: every mark of the chase
 // is a filled circle
@@ -87,7 +89,8 @@ function gridComponent(curve: EffectCurve, fixtureCount: number): { component: E
     unused,
     livePreviewService,
     unused,
-    timelineService
+    timelineService,
+    unused
   );
 
   component.curve = curve;
@@ -240,6 +243,127 @@ function valueRange(curve: EffectCurve): { min: number; max: number } {
 
   return { min, max };
 }
+
+// a canvas context which keeps the color of each cell the preview of a pixel effect fills, from the left
+class PixelContextRecorder {
+  public fillStyle = '';
+  public cells: { x: number; color: string }[] = [];
+
+  clearRect() {}
+
+  fillRect(x: number) {
+    this.cells.push({ x, color: this.fillStyle });
+  }
+}
+
+describe('EffectCurveComponent pixel preview', () => {
+  // the component with a bar of three pixels in its preset, which lights in colors
+  function pixelPreview(effect: EffectPixel, withBar = true) {
+    const parts = [0, 1, 2].map((column) => ({
+      fixture: { uuid: 'bar' },
+      pixel: { key: String(column + 1) },
+      channels: [{ capabilities: [{ capability: { type: FixtureCapabilityType.ColorIntensity } }] }],
+      place: Object.assign(new PixelContext(), { x: (column + 0.5) / 3, column, columns: 3, aspectY: 1 / 3 }),
+    }));
+    const presetService: any = {
+      fixtureSelectionChanged: new Subject<void>(),
+      selectedPreset: {},
+      getPresetWholeFixtureChase: () => ({ indices: new Map([['bar', 0]]), count: 1 }),
+      getPresetFixture: () => (withBar ? {} : undefined),
+    };
+    const fixtureService: any = { cachedFixtures: parts, getPixelPlace: (part: any) => part.place };
+    const animationService: any = { timeMillis: 1500 };
+    const unused: any = undefined;
+
+    const component = new EffectCurveComponent(
+      presetService,
+      animationService,
+      fixtureService,
+      { onLangChange: new Subject<void>() } as any,
+      { effectsOpenChanged: new Subject<void>(), effectsOpen: false } as any,
+      unused,
+      { previewLive: () => {} } as any,
+      unused,
+      { selectedComposition: undefined } as any,
+      { getPresetColor: () => '#0000ff' } as any
+    );
+    component.curve = effect;
+
+    const context = new PixelContextRecorder();
+    const internals: any = component;
+    internals.ctx = context;
+    internals.maxWidth = 200;
+    internals.maxHeight = 100;
+
+    return { component, context, presetService };
+  }
+
+  // a block of a third of the bar, in red: halfway through its period it is on the middle pixel
+  function chase(settings: any = {}): EffectPixel {
+    return new EffectPixel({
+      pattern: 'chase',
+      size: 0.34,
+      softness: 0,
+      lengthMillis: 3000,
+      palette: { stops: [{ position: 0, color: '#ff0000' }] },
+      ...settings,
+    });
+  }
+
+  it('draws the pixels of the fixtures of the preset as the effect lights them', () => {
+    const { component, context } = pixelPreview(chase());
+
+    component.redraw();
+
+    expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(32, 36, 43)', 'rgb(255, 0, 0)', 'rgb(32, 36, 43)']);
+    expect(context.cells[0].x).toBeLessThan(context.cells[1].x);
+  });
+
+  it('blends the effect with the color of the preset, and follows that color where its palette does', () => {
+    const masked = pixelPreview(chase({ blend: 'mask' }));
+    masked.component.redraw();
+    expect(masked.context.cells.map((cell) => cell.color)).toEqual(['rgb(32, 36, 43)', 'rgb(0, 0, 255)', 'rgb(32, 36, 43)']);
+
+    const shades = pixelPreview(chase({ palette: { ref: 'preset' } }));
+    shades.component.redraw();
+    const [red, green, blue] = shades.context.cells[1].color.match(/\d+/g).map(Number);
+    expect(red).toBe(0);
+    expect(green).toBe(0);
+    expect(blue).toBeGreaterThan(0);
+  });
+
+  it('shows the color of the preset once the effect has stopped and leaves the pixels to it', () => {
+    // it runs for 1.25 s: played on its own, the preview repeats its run of 1.5625 s, 1.5 s into it the effect has stopped
+    const { component, context } = pixelPreview(chase({ runMode: 'duration', runDurationMillis: 1250, endMode: 'base' }));
+
+    component.redraw();
+
+    expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(0, 0, 255)', 'rgb(0, 0, 255)', 'rgb(0, 0, 255)']);
+  });
+
+  it('shows the pattern on a bar and a matrix while the preset has no fixture with pixels yet', () => {
+    const { component, context } = pixelPreview(chase({ mirror: true }), false);
+
+    component.redraw();
+
+    // a bar of 12 pixels and a matrix of 8 x 8
+    expect(context.cells.length).toBe(12 + 64);
+  });
+
+  it('works out the fixtures again once the selection of the preset changes', () => {
+    const { component, context, presetService } = pixelPreview(chase());
+    component.redraw();
+
+    presetService.getPresetFixture = () => undefined;
+    // (the capabilities and channels to offer are worked out as well, which these services leave out)
+    spyOn<any>(component, 'updateCapabilitiesAndChannels');
+    presetService.fixtureSelectionChanged.next();
+    context.cells = [];
+    component.redraw();
+
+    expect(context.cells.length).toBe(12 + 64);
+  });
+});
 
 describe('EffectCurveComponent position', () => {
   it('should move the curve until it rests flat at the bottom or the top', () => {
@@ -435,6 +559,87 @@ describe('EffectCurveComponent', () => {
     expect(movement.sizePanDegrees).toBe(120);
     expect(movement.sizeTiltDegrees).toBe(45);
     expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('edits a pixel effect like a curve, with its pattern and what the pattern lets be set', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // the pattern in place of the curve, nothing to pick to drive
+    const pattern: HTMLSelectElement = element.querySelector('select[name="pattern"]');
+    expect(pattern.value).toBe('chase');
+    expect(element.querySelectorAll('optgroup').length).toBe(2);
+    expect(element.querySelectorAll('.tab-pane').length).toBe(0);
+    expect(element.querySelector('select[name="direction"]')).not.toBeNull();
+    expect(element.textContent).toContain('designer.effect.pixel-size-chase');
+
+    // the size and the softness, between 0 and 1
+    type(element.querySelector('input[name="pixelSize"]'), '0.6');
+    type(element.querySelector('input[name="pixelSoftness"]'), '0.1');
+    expect([pixels.size, pixels.softness]).toEqual([0.6, 0.1]);
+    type(element.querySelector('input[name="pixelSize"]'), '2');
+    type(element.querySelector('input[name="pixelSoftness"]'), 'soft');
+    expect([pixels.size, pixels.softness]).toEqual([0.6, 0.1]);
+
+    await select(element.querySelector('select[name="direction"]'), 'out');
+    expect(pixels.direction).toBe('out');
+
+    // a comet bounces, a plasma has no direction and no softness, the shapes have a shape
+    await select(pattern, 'comet');
+    expect(pixels.pattern).toBe('comet');
+    const bounce: HTMLInputElement = element.querySelector('#bounce_pixels');
+    bounce.click();
+    await update();
+    expect(pixels.bounce).toBe(true);
+
+    await select(pattern, 'plasma');
+    expect(element.querySelector('select[name="direction"]')).toBeNull();
+    expect(element.querySelector('input[name="pixelSoftness"]')).toBeNull();
+
+    await select(pattern, 'shapes');
+    await select(element.querySelector('select[name="pixelShape"]'), 'heart');
+    expect(pixels.shape).toBe('heart');
+
+    await select(pattern, 'sparkle');
+    expect(element.textContent).toContain('designer.effect.pixel-fade');
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('picks the palette of a pixel effect and how it is blended with the color of the preset', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // the color of the preset first, each palette shown in its colors
+    const palettes = Array.from(element.querySelectorAll('.pixel-palette'));
+    expect(palettes.length).toBe(15);
+    expect((palettes[0].querySelector('input') as HTMLInputElement).checked).toBe(true);
+    expect((palettes[3].querySelector('.pixel-palette-swatch') as HTMLElement).style.background).toContain('linear-gradient');
+
+    (element.querySelector('#palette_pixels_fire') as HTMLInputElement).click();
+    await update();
+    expect(pixels.palette.ref).toBe('fire');
+    expect(pixels.palette.stops.length).toBe(6);
+
+    // the second tab: the blend, the mirror and the seed
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[1] as HTMLElement).click();
+    await update();
+    expect(element.querySelectorAll('.pixel-palette').length).toBe(0);
+
+    (element.querySelector('#blend_pixels_mask') as HTMLInputElement).click();
+    (element.querySelector('#mirror_pixels') as HTMLInputElement).click();
+    await update();
+    expect(pixels.blend).toBe('mask');
+    expect(pixels.mirror).toBe(true);
+
+    type(element.querySelector('input[name="seed"]'), '7');
+    type(element.querySelector('input[name="seed"]'), '1.5');
+    expect(pixels.seed).toBe(7);
+
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[0] as HTMLElement).click();
+    await update();
+    expect(element.querySelectorAll('.pixel-palette').length).toBe(15);
   });
 
   it('offers the capabilities of the fixtures of the preset', async () => {

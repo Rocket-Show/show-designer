@@ -9,6 +9,20 @@
       </option>
       }
     </select>
+    } @else if (isPixel) {
+    <!-- the pattern painted over the pixels -->
+    <select class="flex-grow-1" style="min-width: 0" name="pattern" [ngModel]="pixelEffect.pattern" (ngModelChange)="setPattern($event)">
+      <optgroup [label]="'designer.effect.pixel-patterns-bars' | translate">
+        @for (pattern of pixelPatternsForBars; track pattern) {
+        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
+        }
+      </optgroup>
+      <optgroup [label]="'designer.effect.pixel-patterns-matrices' | translate">
+        @for (pattern of pixelPatternsForMatrices; track pattern) {
+        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
+        }
+      </optgroup>
+    </select>
     } @else {
     <select
       class="flex-grow-1"
@@ -136,6 +150,92 @@
       />
     </div>
     <div class="my-auto ml-1">°</div>
+  </div>
+  } } @else if (isPixel) {
+  <!-- what the pattern lets be set: its size always, its softness, direction, shape and bounce if it has them -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ pixelSizeLabel() | translate }}
+    </div>
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        [value]="pixelEffect.size"
+        (valueChange)="setPixelSize($event)"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" name="pixelSize" [ngModel]="pixelEffect.size" (ngModelChange)="setPixelSize($event)" />
+    </div>
+  </div>
+
+  @if (usesSoftness()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ pixelSoftnessLabel() | translate }}
+    </div>
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        [value]="pixelEffect.softness"
+        (valueChange)="setPixelSoftness($event)"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input
+        type="text"
+        class="slider-input"
+        name="pixelSoftness"
+        [ngModel]="pixelEffect.softness"
+        (ngModelChange)="setPixelSoftness($event)"
+      />
+    </div>
+  </div>
+  } @if (usesDirection()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-direction' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="direction" [ngModel]="pixelEffect.direction" (ngModelChange)="setDirection($event)">
+        @for (direction of pixelDirections; track direction) {
+        <option [value]="direction">{{ 'designer.effect.pixel-direction-' + direction | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (usesBounce()) {
+    <div class="form-check my-auto ml-3">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        [id]="'bounce_' + curve.uuid"
+        [ngModel]="pixelEffect.bounce"
+        (ngModelChange)="setBounce($event)"
+      />
+      <label class="form-check-label" [for]="'bounce_' + curve.uuid">{{ 'designer.effect.pixel-bounce' | translate }}</label>
+    </div>
+    }
+  </div>
+  } @if (usesShape()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-shape' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelShape" [ngModel]="pixelEffect.shape" (ngModelChange)="setPixelShape($event)">
+        @for (shape of pixelShapes; track shape) {
+        <option [value]="shape">{{ 'designer.effect.pixel-shape-' + shape | translate }}</option>
+        }
+      </select>
+    </div>
   </div>
   } } @else {
   <div class="d-flex">
@@ -279,8 +379,97 @@
   </div>
 </div>
 
+<!-- a pixel effect lights the colors of the pixels: its palette and how it is blended are picked instead -->
+@if (isPixel) {
+<div class="col col-auto p-0 effect-tab-rail">
+  <div class="nav flex-column nav-pills nav-pills-attached" role="tablist" aria-orientation="vertical">
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'colors'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'colors'"
+      popover="{{ 'designer.effect.pixel-colors' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'colors'; (false)"
+    >
+      <i class="fa fa-paint-brush fa-fw" aria-hidden="true"></i>
+    </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'blend'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'blend'"
+      popover="{{ 'designer.effect.pixel-blend' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'blend'; (false)"
+    >
+      <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+  </div>
+</div>
+
+<div class="applying-to">
+  @if (pixelTab === 'colors') {
+  <!-- the palettes, each shown with its colors -->
+  @for (palette of pixelPalettes; track palette.id) {
+  <div class="form-check pixel-palette">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'palette_' + curve.uuid"
+      [id]="'palette_' + curve.uuid + '_' + palette.id"
+      [checked]="pixelEffect.palette.ref === palette.id"
+      (change)="setPalette(palette)"
+    />
+    <label class="form-check-label d-flex align-items-center" [for]="'palette_' + curve.uuid + '_' + palette.id">
+      <span class="pixel-palette-swatch" [style.background]="paletteCss(palette)"></span>
+      {{ 'designer.effect.pixel-palette-' + palette.id | translate }}
+    </label>
+  </div>
+  } } @else {
+  <!-- what the effect does with the color the preset puts on a pixel -->
+  @for (blend of pixelBlends; track blend) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'blend_' + curve.uuid"
+      [id]="'blend_' + curve.uuid + '_' + blend"
+      [checked]="pixelEffect.blend === blend"
+      (change)="setBlend(blend)"
+    />
+    <label class="form-check-label" [for]="'blend_' + curve.uuid + '_' + blend">{{
+      'designer.effect.pixel-blend-' + blend | translate
+    }}</label>
+  </div>
+  }
+  <hr class="my-1" style="border-color: white" />
+  <div class="form-check">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      [id]="'mirror_' + curve.uuid"
+      [ngModel]="pixelEffect.mirror"
+      (ngModelChange)="setMirror($event)"
+    />
+    <label class="form-check-label" [for]="'mirror_' + curve.uuid">{{ 'designer.effect.pixel-mirror' | translate }}</label>
+  </div>
+  <div class="d-flex mt-1">
+    <div class="my-auto mr-2">{{ 'designer.effect.pixel-seed' | translate }}</div>
+    <input type="text" class="slider-input" name="seed" [ngModel]="pixelEffect.seed" (ngModelChange)="setSeed($event)" />
+  </div>
+  }
+</div>
+}
+
 <!-- a movement always moves the pan and the tilt: nothing to pick for it to drive -->
-@if (!isMovement) {
+@if (!isMovement && !isPixel) {
 <!-- Menu for the capabilities and channels-->
 <div class="col col-auto p-0 effect-tab-rail">
   <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">

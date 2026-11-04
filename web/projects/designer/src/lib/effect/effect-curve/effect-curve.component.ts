@@ -15,6 +15,21 @@ import { LivePreviewService } from '../../services/live-preview.service';
 import { TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
+import { EffectPixel } from '../../models/effect-pixel';
+import { CachedFixture } from '../../models/cached-fixture';
+import { hexToRgb, PixelPalette } from '../../models/pixel-palette';
+import { PixelContext, pixelPatternsForBars, pixelPatternsForMatrices, samplePixelPattern } from '../../models/pixel-pattern';
+import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf } from '../../models/pixel-palettes';
+import { toInt } from '../../models/pixel-math';
+import { ColorService } from '../../services/color.service';
+
+// a fixture in the preview of a pixel effect: where each of its parts is, and the step of the chase it takes
+interface PixelPreviewFixture {
+  index: number;
+  columns: number;
+  rows: number;
+  parts: PixelContext[];
+}
 
 // a capability checkbox, prepared for the template. the name and the checked state are
 // calculated whenever they change instead of on each change detection cycle, because the
@@ -113,6 +128,21 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   private phasingCount = 0;
   private phasingCountMillis: number;
 
+  // ---- a pixel effect, edited with its pattern, palette and blend in place of the curve and what it drives
+
+  public readonly pixelPatternsForBars = pixelPatternsForBars;
+  public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
+  public readonly pixelDirections = ['right', 'left', 'out', 'in', 'up', 'down'];
+  public readonly pixelShapes = ['circle', 'square', 'diamond', 'star', 'heart'];
+  public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
+  public readonly pixelPalettes = builtInPixelPalettes;
+
+  // the tab the panel on the right shows: the colors or how they are blended
+  public pixelTab = 'colors';
+
+  // the fixtures of the preset the grid shows the pixel effect on, worked out when the selection changes
+  private pixelPreviewFixtures: PixelPreviewFixture[];
+
   @Input() curve: EffectCurve;
 
   // whether the effect is currently being edited (open) or not
@@ -138,9 +168,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private ngZone: NgZone,
     public livePreviewService: LivePreviewService,
     private modalService: BsModalService,
-    private timelineService: TimelineService
+    private timelineService: TimelineService,
+    private colorService: ColorService
   ) {
     this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
+      this.pixelPreviewFixtures = undefined;
       this.updateCapabilitiesAndChannels();
 
       // the chase is spread over the fixtures of the preset
@@ -222,6 +254,257 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   setShape(shape: string) {
     this.movement.shape = shape;
     this.livePreviewService.previewLive();
+  }
+
+  // A pixel effect runs on the timing of a curve as well, with its pattern, its palette and how it is blended in place of
+  // the curve and the capabilities and channels it drives (see EffectPixel)
+  get isPixel(): boolean {
+    return this.curve instanceof EffectPixel;
+  }
+
+  get pixelEffect(): EffectPixel {
+    return this.curve as EffectPixel;
+  }
+
+  // what the pattern of a pixel effect lets be set besides its size
+  usesDirection(): boolean {
+    return ['chase', 'comet', 'wipe', 'flow'].indexOf(this.pixelEffect.pattern) >= 0;
+  }
+
+  usesShape(): boolean {
+    return this.pixelEffect.pattern === 'shapes';
+  }
+
+  usesBounce(): boolean {
+    return this.pixelEffect.pattern === 'comet';
+  }
+
+  usesSoftness(): boolean {
+    return ['comet', 'flow', 'plasma', 'fire'].indexOf(this.pixelEffect.pattern) < 0;
+  }
+
+  // the size means something else for each pattern (a tail, rings, a density, ...)
+  pixelSizeLabel(): string {
+    return 'designer.effect.pixel-size-' + this.pixelEffect.pattern;
+  }
+
+  pixelSoftnessLabel(): string {
+    return this.pixelEffect.pattern === 'sparkle' ? 'designer.effect.pixel-fade' : 'designer.effect.pixel-softness';
+  }
+
+  setPattern(pattern: string) {
+    this.pixelEffect.pattern = pattern;
+    this.livePreviewService.previewLive();
+  }
+
+  // the size and the softness are set between 0 and 1
+  setPixelSize(value: any) {
+    if (value !== '' && value !== null && !isNaN(value) && value >= 0 && value <= 1) {
+      this.pixelEffect.size = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setPixelSoftness(value: any) {
+    if (value !== '' && value !== null && !isNaN(value) && value >= 0 && value <= 1) {
+      this.pixelEffect.softness = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setDirection(direction: string) {
+    this.pixelEffect.direction = direction;
+    this.livePreviewService.previewLive();
+  }
+
+  setPixelShape(shape: string) {
+    this.pixelEffect.shape = shape;
+    this.livePreviewService.previewLive();
+  }
+
+  setBounce(bounce: boolean) {
+    this.pixelEffect.bounce = bounce;
+    this.livePreviewService.previewLive();
+  }
+
+  setPalette(palette: BuiltInPixelPalette) {
+    this.pixelEffect.palette = pixelPaletteOf(palette);
+    this.livePreviewService.previewLive();
+  }
+
+  setBlend(blend: string) {
+    this.pixelEffect.blend = blend;
+    this.livePreviewService.previewLive();
+  }
+
+  setMirror(mirror: boolean) {
+    this.pixelEffect.mirror = mirror;
+    this.livePreviewService.previewLive();
+  }
+
+  // a whole number, which starts the random looking patterns somewhere else
+  setSeed(value: any) {
+    if (value !== '' && value !== null && Number.isInteger(+value)) {
+      this.pixelEffect.seed = +value;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  // how a palette looks in the list, the one of the preset in its color
+  paletteCss(palette: BuiltInPixelPalette): string {
+    const preset = this.presetService.selectedPreset;
+    return pixelPaletteCss(palette, preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+  }
+
+  // The fixtures of the preset which light in colors, each with the parts it has in the preset (its pixels, or itself),
+  // in the order the effect chases them in. None selected yet: a bar and a matrix to show what the pattern looks like.
+  private getPixelPreviewFixtures(): PixelPreviewFixture[] {
+    if (this.pixelPreviewFixtures) {
+      return this.pixelPreviewFixtures;
+    }
+
+    const fixtures: PixelPreviewFixture[] = [];
+    const preset = this.presetService.selectedPreset;
+
+    if (preset) {
+      const chase = this.presetService.getPresetWholeFixtureChase(preset);
+      const byFixture = new Map<string, CachedFixture[]>();
+
+      for (const cachedFixture of this.fixtureService.cachedFixtures) {
+        const lightsInColors = cachedFixture.channels.some((channel) =>
+          channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
+        );
+
+        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+          const parts = byFixture.get(cachedFixture.fixture.uuid) || [];
+          parts.push(cachedFixture);
+          byFixture.set(cachedFixture.fixture.uuid, parts);
+        }
+      }
+
+      byFixture.forEach((parts, fixtureUuid) => {
+        const places = parts.map((part) => this.fixtureService.getPixelPlace(part));
+        fixtures.push({ index: chase.indices.get(fixtureUuid) ?? 0, columns: places[0].columns, rows: places[0].rows, parts: places });
+      });
+
+      fixtures.sort((fixture1, fixture2) => fixture1.index - fixture2.index);
+    }
+
+    if (fixtures.length === 0) {
+      fixtures.push(this.examplePixelFixture(0, 12, 1), this.examplePixelFixture(1, 8, 8));
+    }
+
+    this.pixelPreviewFixtures = fixtures;
+
+    return fixtures;
+  }
+
+  private examplePixelFixture(index: number, columns: number, rows: number): PixelPreviewFixture {
+    const parts: PixelContext[] = [];
+    const longest = Math.max(columns, rows);
+
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        parts.push(
+          Object.assign(new PixelContext(), {
+            x: (column + 0.5) / columns,
+            y: (row + 0.5) / rows,
+            column,
+            row,
+            columns,
+            rows,
+            aspectX: columns / longest,
+            aspectY: rows / longest,
+          })
+        );
+      }
+    }
+
+    return { index, columns, rows, parts };
+  }
+
+  // The pixels of the fixtures of the preset as the pixel effect lights them now, in the color of the preset where the
+  // palette follows it: the bars stacked on the left, the matrices next to them
+  private drawPixels() {
+    const effect = this.pixelEffect;
+    const fixtures = this.getPixelPreviewFixtures().slice(0, 8);
+    const bars = fixtures.filter((fixture) => fixture.rows === 1).slice(0, 6);
+    const matrices = fixtures.filter((fixture) => fixture.rows > 1).slice(0, 2);
+    const margin = 6;
+    const gap = 6;
+    const preset = this.presetService.selectedPreset;
+    const base = hexToRgb(preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+    const fixtureCount = Math.max(...fixtures.map((fixture) => fixture.index)) + 1;
+    const loopMillis = effect.getRunLoopMillis(fixtureCount, this.beatsPerMinute);
+    const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
+
+    const matrixSize = matrices.length
+      ? Math.min(this.maxHeight - margin * 2, (this.maxWidth - margin * 2) / (matrices.length + (bars.length ? 1.2 : 0)))
+      : 0;
+    const barsWidth = this.maxWidth - margin * 2 - matrices.length * (matrixSize + gap);
+    const barColumns = Math.max(1, ...bars.map((bar) => bar.columns));
+    const barCell = Math.min(barsWidth / barColumns, (this.maxHeight - margin * 2) / Math.max(bars.length * 1.6, 1));
+
+    bars.forEach((bar, i) => {
+      const top = (this.maxHeight - bars.length * barCell * 1.6) / 2 + i * barCell * 1.6 + barCell * 0.3;
+      this.drawPixelFixture(effect, bar, margin, top, barCell, timeMillis, fixtureCount, base);
+    });
+
+    matrices.forEach((matrix, i) => {
+      const cell = matrixSize / Math.max(matrix.columns, matrix.rows);
+      const left = this.maxWidth - margin - (i + 1) * matrixSize - i * gap + (matrixSize - cell * matrix.columns) / 2;
+      const top = (this.maxHeight - cell * matrix.rows) / 2;
+      this.drawPixelFixture(effect, matrix, left, top, cell, timeMillis, fixtureCount, base);
+    });
+  }
+
+  private drawPixelFixture(
+    effect: EffectPixel,
+    fixture: PixelPreviewFixture,
+    left: number,
+    top: number,
+    cell: number,
+    timeMillis: number,
+    fixtureCount: number,
+    base: number[]
+  ) {
+    const cycles = effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
+    const gap = Math.max(1, cell * 0.15);
+
+    for (const part of fixture.parts) {
+      let color = base;
+
+      if (cycles !== undefined) {
+        const context = Object.assign(new PixelContext(), part);
+        context.seed = toInt(effect.seed * 7919 + fixture.index * 131);
+
+        if (effect.mirror) {
+          context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
+        }
+
+        const [place, level] = samplePixelPattern(effect, cycles, context);
+        const stops = effect.palette.ref === 'preset' ? PixelPalette.shadesOf(base) : effect.palette.stops;
+        const lit = PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, place).map((component) => component * level);
+
+        color = lit.map((component, i) => {
+          switch (effect.blend) {
+            case 'mask':
+              return base[i] * level;
+            case 'add':
+              return Math.min(base[i] + component, 1);
+            case 'max':
+              return Math.max(base[i], component);
+            default:
+              return component;
+          }
+        });
+      }
+
+      // an unlit pixel still shows where it is
+      const [red, green, blue] = color.map((component) => Math.round(component * 255));
+      this.ctx.fillStyle = Math.max(red, green, blue) < 40 ? 'rgb(32, 36, 43)' : `rgb(${red}, ${green}, ${blue})`;
+      this.ctx.fillRect(left + part.column * cell + gap / 2, top + part.row * cell + gap / 2, cell - gap, cell - gap);
+    }
   }
 
   // the size of the movement on the pan or the tilt, in degrees
@@ -420,6 +703,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     if (this.isMovement) {
       this.drawMovement();
+      return;
+    }
+
+    if (this.isPixel) {
+      this.drawPixels();
       return;
     }
 

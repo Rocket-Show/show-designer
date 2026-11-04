@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { EffectCurve } from '../../../models/effect-curve';
 import { EffectPanTilt } from '../../../models/effect-pan-tilt';
+import { EffectPixel } from '../../../models/effect-pixel';
 import { LivePreviewService } from '../../../services/live-preview.service';
 
 // The settings of a curve that do not fit next to its grid anymore. They are applied
@@ -19,6 +20,11 @@ export class EffectCurveAdvancedComponent {
   // a movement of the moving heads runs on the timing of a curve, but has no part of its period it is on
   get isMovement(): boolean {
     return this.curve instanceof EffectPanTilt;
+  }
+
+  // only a curve is on over a part of its period
+  get hasDutyCycle(): boolean {
+    return !(this.curve instanceof EffectPanTilt) && !(this.curve instanceof EffectPixel);
   }
 
   public runCyclesMin = 1;

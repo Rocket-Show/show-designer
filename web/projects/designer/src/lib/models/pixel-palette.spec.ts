@@ -78,11 +78,11 @@ describe('PixelPalette', () => {
     );
   });
 
-  it('makes the shades of a color, from black up to the color and on to nearly white', () => {
+  it('makes the shades of a color, from the color itself to nearly white', () => {
     const shades = new PixelPalette({ stops: PixelPalette.shadesOf([1, 0.5, 0]) });
 
-    expect(shades.stops.map((stop) => stop.color)).toEqual(['#000000', '#ff8000', '#ffdfbf']);
-    expect(round(shades.colorAt(0.62))).toEqual([255, 128, 0]);
+    expect(shades.stops.map((stop) => stop.color)).toEqual(['#ff8000', '#ffdfbf']);
+    expect(round(shades.colorAt(0))).toEqual([255, 128, 0]);
     expect(rgbToHex([2, -1, 0.5])).toBe('#ff0080');
   });
 });

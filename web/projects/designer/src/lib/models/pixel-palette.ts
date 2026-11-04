@@ -85,16 +85,12 @@ export class PixelPalette {
     return hexToRgb(sorted[sorted.length - 1].color);
   }
 
-  // The shades of a color, for the palette which follows the color of the preset: from black up to the color and on to
-  // most of the way to white. The color as red, green and blue between 0 and 1.
+  // The shades of a color, for the palette which follows the color of the preset: from the color itself most of the way
+  // to white (the patterns make a pixel darker themselves). The color as red, green and blue between 0 and 1.
   public static shadesOf(color: number[]): PixelPaletteStop[] {
     const light = color.map((component) => component + (1 - component) * 0.75);
 
-    return [
-      new PixelPaletteStop({ position: 0, color: '#000000' }),
-      new PixelPaletteStop({ position: 0.62, color: rgbToHex(color) }),
-      new PixelPaletteStop({ position: 1, color: rgbToHex(light) }),
-    ];
+    return [new PixelPaletteStop({ position: 0, color: rgbToHex(color) }), new PixelPaletteStop({ position: 1, color: rgbToHex(light) })];
   }
 }
 

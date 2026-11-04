@@ -191,8 +191,9 @@ describe('PreviewService pixel effects', () => {
     ]);
     const colors = ['1', '2', '3'].map((pixelKey) => colorOf('bar-1', pixelKey, shades, 700));
 
-    expect(colors.every(([red, green]) => red === green)).toBe(true);
-    expect(new Set(colors.map((color) => color[2])).size).toBe(3);
+    // from the blue itself towards white
+    expect(colors.every(([red, green, blue]) => red === green && blue === 255)).toBe(true);
+    expect(new Set(colors.map((color) => color[0])).size).toBe(3);
     expect(new EffectPixel().palette.ref).toBe('preset');
   });
 

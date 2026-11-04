@@ -95,6 +95,9 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
       [FixtureCategory['Moving Head']]: MovingHead3d,
       [FixtureCategory['Color Changer']]: ColorChanger3d,
       [FixtureCategory['Blinder']]: ColorChanger3d,
+      // a bar or a matrix of pixels, which says nothing else about itself
+      [FixtureCategory['Pixel Bar']]: ColorChanger3d,
+      [FixtureCategory['Matrix']]: ColorChanger3d,
     };
 
     // TODO group fixtures of the same UUID but with differen pixels into the same fixture to ensure
@@ -117,7 +120,8 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
         const Fixture3dClass = fixture3dMap[category];
 
         if (Fixture3dClass === ColorChanger3d) {
-          const isPixelBar = fixture.profile.categories?.[0] === FixtureCategory['Pixel Bar'];
+          // the pixels of a bar or a matrix glow as bulbs, without a beam each (a matrix can bring hundreds of them)
+          const isPixelBar = [FixtureCategory['Pixel Bar'], FixtureCategory['Matrix']].indexOf(fixture.profile.categories?.[0]) >= 0;
 
           const fixture3d = new ColorChanger3d(
             this.fixtureService,

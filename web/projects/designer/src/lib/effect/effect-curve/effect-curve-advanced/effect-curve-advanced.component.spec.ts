@@ -12,6 +12,7 @@ import { ToastrModule } from 'ngx-toastr';
 import { EffectCurve } from '../../../models/effect-curve';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { EffectPanTilt } from '../../../models/effect-pan-tilt';
+import { EffectPixel } from '../../../models/effect-pixel';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced.component';
 
 // The settings of a curve which do not fit next to its grid: how long it runs, the part of
@@ -76,6 +77,14 @@ describe('EffectCurveAdvancedComponent', () => {
 
     expect(element.textContent).not.toContain('designer.effect.curve-duty');
     expect(element.textContent).toContain('designer.effect.curve-chase-group');
+  });
+
+  it('leaves it out for a pixel effect as well', () => {
+    component.curve = new EffectPixel({ uuid: 'pixels' });
+    fixture.detectChanges();
+
+    expect(element.textContent).not.toContain('designer.effect.curve-duty');
+    expect(element.textContent).toContain('designer.effect.curve-run');
   });
 
   it('runs forever, without asking what is left behind', () => {

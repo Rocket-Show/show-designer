@@ -217,6 +217,20 @@ describe('PreviewComponent', () => {
     expect((fixture3dOf('par')[0] as any).hasSpotLight).toBe(true);
   });
 
+  for (const categories of [['Pixel Bar'], ['Matrix'], ['Matrix', 'Color Changer']]) {
+    it(`shows the pixels of a fixture of the categories ${categories.join(', ')} as bulbs without a beam`, () => {
+      project.fixtureProfiles.find((profile) => profile.uuid === 'test/bar').categories = categories as any;
+      TestBed.inject(FixtureService).updateCachedFixtures();
+      open();
+
+      const pixels: any[] = fixture3dOf('bar');
+      expect(pixels.map((pixel) => [pixel.hasSpotLight, pixel.hasBulb])).toEqual([
+        [false, true],
+        [false, true],
+      ]);
+    });
+  }
+
   it('shows the fixtures again when the fixture setup changes', () => {
     open();
     const par = fixture3dOf('par')[0];

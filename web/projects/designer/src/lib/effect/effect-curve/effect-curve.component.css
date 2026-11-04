@@ -37,3 +37,14 @@
 .applying-to .form-check:last-child {
   margin-bottom: var(--sd-space-2);
 }
+
+/* a palette of a pixel effect, shown with its colors */
+.pixel-palette-swatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 10px;
+  margin-right: var(--sd-space-2);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
