@@ -68,7 +68,7 @@ describe('HardwarePromoService', () => {
     const service = new HardwarePromoService(configService);
 
     expect(service.link('preview bar')).toBe(
-      'https://rocketshow.net/products?utm_source=designer&utm_medium=app&utm_campaign=hardware&utm_content=preview%20bar'
+      'https://rocketshow.net/lp/hardware?utm_source=designer&utm_medium=app&utm_campaign=hardware&utm_content=preview%20bar'
     );
   });
 });
