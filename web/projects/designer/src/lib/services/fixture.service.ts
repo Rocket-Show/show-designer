@@ -19,6 +19,7 @@ import { parseProfileNumber } from '../models/profile-number';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
+import { PixelContext } from '../models/pixel-pattern';
 import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
 
 @Injectable({
@@ -479,6 +480,66 @@ export class FixtureService {
       return '(' + x + ', ' + y + ', ' + z + ')';
     }
     return String(Math.max(x, y, z));
+  }
+
+  // Where a part of a fixture is in it, for the pixel effects: a pixel in its column and row of the matrix (a bar has one
+  // row), a pixel group in the middle of its pixels, and a part without a pixel (a fixture without pixels, or the general
+  // channels of one with pixels) as the one pixel of the fixture. Rocket Show places them the very same way.
+  getPixelPlace(cachedFixture: CachedFixture): PixelContext {
+    if (cachedFixture.pixelPlace) {
+      return cachedFixture.pixelPlace;
+    }
+
+    const place = new PixelContext();
+    const pixel = cachedFixture.pixel;
+    const profile = cachedFixture.profile;
+
+    if (pixel && profile.matrix) {
+      const size = this.getMatrixSize(profile) || [];
+      const columns = Math.max(size[0] || 1, 1);
+      const rows = Math.max(size[1] || 1, 1);
+      let column = (columns - 1) / 2;
+      let row = (rows - 1) / 2;
+
+      if (pixel.x > 0) {
+        column = pixel.x - 1;
+        row = pixel.y - 1;
+      } else {
+        const groupPixels = this.fixturePixelGroupResolveService.getPixelsForKeyOrGroup(
+          profile.matrix,
+          this.getAllPixelKeys(profile),
+          pixel.key
+        );
+
+        if (groupPixels.length > 0) {
+          let columnSum = 0;
+          let rowSum = 0;
+
+          for (const groupPixel of groupPixels) {
+            columnSum += groupPixel.x - 1;
+            rowSum += groupPixel.y - 1;
+          }
+
+          column = columnSum / groupPixels.length;
+          row = rowSum / groupPixels.length;
+        }
+      }
+
+      const longest = Math.max(columns, rows);
+
+      place.x = (column + 0.5) / columns;
+      place.y = (row + 0.5) / rows;
+      place.column = Math.floor(column);
+      place.row = Math.floor(row);
+      place.columns = columns;
+      place.rows = rows;
+      place.aspectX = columns / longest;
+      place.aspectY = rows / longest;
+    }
+
+    cachedFixture.pixelPlace = place;
+
+    return place;
   }
 
   // the number of pixels the matrix has on each axis (X, Y, Z)

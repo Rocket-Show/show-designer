@@ -301,6 +301,12 @@ export class ProjectLoadService {
       migrated = true;
     }
 
+    // version 11 brought the pixel effects, which an older designer would drop when it saves the project (it refuses a
+    // newer one instead). Nothing changes, so nothing is said about it.
+    if (this.projectService.project.version < 11) {
+      this.projectService.project.version = 11;
+    }
+
     if (migrated) {
       this.warningDialogService.show('designer.project.migrated').subscribe();
     }

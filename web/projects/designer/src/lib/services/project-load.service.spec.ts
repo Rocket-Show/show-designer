@@ -86,7 +86,7 @@ describe('ProjectLoadService migrating the curves of a project to version 8', ()
     service.import(JSON.stringify(project));
 
     const effects = projectService.project.presets[0].effects as EffectCurve[];
-    expect(projectService.project.version).toBe(10);
+    expect(projectService.project.version).toBe(projectService.currentProjectVersion);
     expect(effects.map((effect) => effect.amplitude)).toEqual([0.5, 0.4, 1]);
   });
 
@@ -156,7 +156,7 @@ describe('ProjectLoadService migrating the pixel keys of a project to version 9'
 
     const project = projectService.project;
     const preset = project.presets[0];
-    expect(project.version).toBe(10);
+    expect(project.version).toBe(projectService.currentProjectVersion);
     expect(project.presetFixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '1', '12', '(2, 1)', '(1, 2)']);
     expect(preset.fixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '12', '(1, 2)']);
     expect(preset.steps[0].fixtureChannelValues.map((value) => value.channelName)).toEqual(['Red 12', 'Red 1']);
@@ -229,7 +229,7 @@ describe('ProjectLoadService migrating the timeline of a project to version 10',
     service.import(JSON.stringify(projectWithComposition(9)));
 
     const composition = projectService.project.compositions[0];
-    expect(projectService.project.version).toBe(10);
+    expect(projectService.project.version).toBe(projectService.currentProjectVersion);
     expect(composition.tracks.map((track) => track.name)).toEqual(['Chorus', 'Background']);
     expect(composition.scenePlaybackRegions.map((region) => region.trackUuid)).toEqual([
       composition.tracks[1].uuid,
@@ -368,6 +368,13 @@ describe('ProjectLoadService migrating a project of version 1', () => {
 
     warning.calls.reset();
     service.import(JSON.stringify(projectWithSelectedPreset()));
+    expect(warning).not.toHaveBeenCalled();
+  });
+
+  it('takes a project of version 10 to version 11 without saying so: only the pixel effects came with it', () => {
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 10 }));
+
+    expect(projectService.project.version).toBe(11);
     expect(warning).not.toHaveBeenCalled();
   });
 });

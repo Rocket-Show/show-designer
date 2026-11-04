@@ -109,14 +109,5 @@ export function hexToRgb(hex: string): number[] {
 
 // red, green and blue between 0 and 1 as a color like #ff8000, rounded to the nearest of the 256 steps
 export function rgbToHex(color: number[]): string {
-  return (
-    '#' +
-    color
-      .map((component) =>
-        Math.round(Math.max(Math.min(component, 1), 0) * 255)
-          .toString(16)
-          .padStart(2, '0')
-      )
-      .join('')
-  );
+  return '#' + color.map((component) => ('0' + Math.round(Math.max(Math.min(component, 1), 0) * 255).toString(16)).slice(-2)).join('');
 }

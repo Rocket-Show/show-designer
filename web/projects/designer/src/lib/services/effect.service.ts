@@ -3,6 +3,7 @@ import { Effect } from './../models/effect';
 import { Subject } from 'rxjs';
 import { EffectCurve } from '../models/effect-curve';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { EffectPixel } from '../models/effect-pixel';
 import { Preset } from '../models/preset';
 import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
 import { UuidService } from './uuid.service';
@@ -72,6 +73,8 @@ export class EffectService {
         return new EffectCurve(data);
       case 'pan-tilt':
         return new EffectPanTilt(data);
+      case 'pixel':
+        return new EffectPixel(data);
     }
 
     return undefined;

@@ -2320,6 +2320,134 @@ function pixelPatterns() {
   );
 }
 
+// The pixel effects on bars and matrices of all kinds: pixels given by their count and by their keys, a bar with a dimmer
+// of its own, pixels lit in thirds, groups of a matrix, RGBW pixels and a fixture without pixels. Each preset paints
+// one pattern with random settings, timing and palette over some of the fixtures (all of their pixels, or some),
+// blended with a color of its own.
+function channelValuesPixelEffects() {
+  const random = randomSource(12);
+  const bar = 'test/pixel-bar';
+  const band = 'chauvet-dj/colorband-pix';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  const fixtures = [
+    { ...edgeFixture('bar-1', bar, '9ch', 0), dmxFirstChannel: 0 },
+    { ...edgeFixture('bar-2', bar, '10ch', 0), dmxFirstChannel: 16 },
+    { ...edgeFixture('band-thirds', band, '9ch', 0), dmxFirstChannel: 32 },
+    { ...edgeFixture('band', band, '36ch', 0), dmxFirstChannel: 48 },
+    { ...edgeFixture('matrix', matrix, '36ch', 0), dmxFirstChannel: 96 },
+    { ...edgeFixture('matrix-rgbw', matrix, '48ch', 0), dmxFirstChannel: 144 },
+    { ...edgeFixture('matrix-groups', matrix, '6ch', 0), dmxFirstChannel: 200 },
+    { ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 216 },
+  ];
+  const presets = [];
+
+  for (const pattern of pixelPatternNames) {
+    for (let index = 0; index < 3; index++) {
+      const uuid = `${pattern}-${index}`;
+      const effect = { type: 'pixel', uuid: uuid + '-effect', pattern, capabilities: [], channels: [] };
+      random.maybe(effect, 'size', [0, 0.2, 0.5, 1, random.number(1)]);
+      random.maybe(effect, 'softness', [0, 0.5, 1, random.number(1)]);
+      random.maybe(effect, 'direction', ['right', 'left', 'out', 'in', 'up', 'down']);
+      random.maybe(effect, 'shape', ['circle', 'square', 'diamond', 'star', 'heart']);
+      random.maybe(effect, 'bounce', [true, false]);
+      random.maybe(effect, 'mirror', [true, false, false]);
+      random.maybe(effect, 'seed', [1, 2, random.int(5000)]);
+      random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+      random.maybe(effect, 'blend', ['replace', 'replace', 'mask', 'add', 'max']);
+      random.maybe(effect, 'lengthMode', ['millis', 'millis', 'beats']);
+      random.maybe(effect, 'lengthMillis', [500, 1000, 2500, 4000]);
+      random.maybe(effect, 'lengthBeats', [1, 2, 4]);
+      random.maybe(effect, 'phaseMillis', [0, 250, random.number(1000)]);
+      random.maybe(effect, 'phasingMode', ['millis', 'beats', 'spread']);
+      random.maybe(effect, 'phasingMillis', [0, 100, -250]);
+      random.maybe(effect, 'phasingBeats', [0, 0.5]);
+      random.maybe(effect, 'phasingCycles', [1, 0.5, -1, 2]);
+      random.maybe(effect, 'runMode', ['infinite', 'infinite', 'cycles', 'duration']);
+      random.maybe(effect, 'runCycles', [1, 2]);
+      random.maybe(effect, 'runDurationMillis', [700, 1500]);
+      random.maybe(effect, 'endMode', ['hold', 'base']);
+      random.maybe(effect, 'visible', [true, true, true, false], 0.3);
+
+      // all of the pixels of some fixtures, a few pixels of others
+      const presetFixturesOfPreset = [];
+
+      for (const fixture of fixtures) {
+        const entries = presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid));
+
+        if (random.chance(0.6)) {
+          presetFixturesOfPreset.push(...entries);
+        } else if (random.chance(0.4)) {
+          presetFixturesOfPreset.push(...entries.filter(() => random.chance(0.5)));
+        }
+      }
+
+      const values = {
+        fixtureCapabilityValues: [
+          capability('Intensity', random.pick([1, 0.5])),
+          ...rgb(random.number(1), random.number(1), random.number(1)),
+        ],
+      };
+      const preset = { ...edgePreset(uuid, presetFixturesOfPreset, values), effects: [effect] };
+
+      // a second step closing the effect halfway, or completely
+      if (random.chance(0.3)) {
+        preset.steps.push(
+          step(uuid + '-closing', 1000, values, { effectAmounts: [{ effectUuid: effect.uuid, amount: random.pick([0, 0.5]) }] })
+        );
+        preset.stepsLoop = true;
+      }
+
+      presets.push(preset);
+    }
+  }
+
+  const profiles = [bar, band, matrix, par];
+  const sceneOf = (preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] });
+  const times = [0, 250, 777, 1500, 2999, 5000, 12345.678];
+
+  // played on their own, where an effect which stops repeats its run
+  const cases = presets.map((preset) => ({
+    name: preset.uuid,
+    input: {
+      project: edgeProject(profiles, fixtures, [preset], [sceneOf(preset)]),
+      runs: previewScenes([preset.uuid]).map((run) => ({ ...run, times })),
+    },
+  }));
+
+  // and on a timeline, where an effect runs once from the start of its clip on, on the tempo of the composition
+  const played = presets.filter((preset, index) => index % 3 === 0);
+  const timeline = edgeProject(profiles, fixtures, played, played.map(sceneOf));
+  timeline.compositions.push({
+    uuid: 'song',
+    name: 'Song',
+    beatsPerMinute: 128,
+    tracks: [{ uuid: 'track', name: 'Track' }],
+    scenePlaybackRegions: played.map((preset, index) => ({
+      sceneUuid: preset.uuid,
+      startMillis: index * 3000,
+      endMillis: index * 3000 + 2900,
+      trackUuid: 'track',
+    })),
+  });
+  timeline.selectedCompositionUuid = 'song';
+
+  cases.push({
+    name: 'on the timeline',
+    input: {
+      project: timeline,
+      runs: [{ preview: { mode: 'timeline', composition: 'Song' }, times: [0, 499, 1250, 2950, 3100, 6500, 9001.5, 14000, 26500] }],
+    },
+  });
+
+  return write(
+    'channel-values-pixel-effects.json',
+    'channelValues',
+    'Pixel effects on bars, matrices and their groups, alone and on a timeline',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -2338,6 +2466,7 @@ export function generate() {
     migrations(),
     migrationEdges(),
     pixelPatterns(),
+    channelValuesPixelEffects(),
   ];
 }
 

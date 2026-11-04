@@ -11,6 +11,7 @@ import { caseFiles, profiles } from '../../conformance/index';
 import { CachedFixturePixel } from './models/cached-fixture-pixel';
 import { EffectCurve } from './models/effect-curve';
 import { EffectPanTilt } from './models/effect-pan-tilt';
+import { EffectPixel } from './models/effect-pixel';
 import { FixtureCapabilityValue } from './models/fixture-capability-value';
 import { FixtureChannel } from './models/fixture-channel';
 import { FixtureMatrixPixelGroup } from './models/fixture-matrix-pixel-group';
@@ -250,7 +251,7 @@ function migratedProjectOf(project: Project): any {
         effects: step.effectAmounts.map((effectAmount) => [effectAmount.effectUuid, effectAmount.amount]),
       })),
       effects: preset.effects.map((effect) =>
-        effect instanceof EffectCurve && !(effect instanceof EffectPanTilt)
+        effect instanceof EffectCurve && !(effect instanceof EffectPanTilt) && !(effect instanceof EffectPixel)
           ? {
               uuid: effect.uuid,
               type: effect.type,

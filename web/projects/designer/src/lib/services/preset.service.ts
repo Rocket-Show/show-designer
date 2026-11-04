@@ -9,6 +9,7 @@ import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureProfile } from '../models/fixture-profile';
 import { EffectCurve } from '../models/effect-curve';
+import { EffectPixel } from '../models/effect-pixel';
 import { Preset } from '../models/preset';
 import { PresetStep } from '../models/preset-step';
 import { EffectService } from './effect.service';
@@ -240,6 +241,42 @@ export class PresetService {
     }
 
     return indices;
+  }
+
+  // The place of each fixture of a preset in its chase by fixture uuid, a fixture with all of its pixels taking one step,
+  // and the number of steps: the pixel effects chase from one fixture to the next, not from pixel to pixel. Fixtures sharing
+  // a DMX universe and address are the same lamp and take one step only, like in getPresetFixtureIndices().
+  getPresetWholeFixtureChase(preset: Preset): { indices: Map<string, number>; count: number } {
+    const indices = new Map<string, number>();
+    const countedLamps = new Set<string>();
+    const lampKey = (presetFixture: PresetFixture) => {
+      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+      return fixture ? `${fixture.dmxUniverseUuid}\u0000${fixture.dmxFirstChannel}` : undefined;
+    };
+
+    for (const presetFixture of this.getOrderedPresetFixtures(preset)) {
+      if (!indices.has(presetFixture.fixtureUuid)) {
+        indices.set(presetFixture.fixtureUuid, countedLamps.size);
+      }
+
+      const lamp = lampKey(presetFixture);
+
+      if (lamp !== undefined) {
+        countedLamps.add(lamp);
+      }
+    }
+
+    const lamps = new Set<string>();
+
+    for (const presetFixture of preset.fixtures) {
+      const lamp = lampKey(presetFixture);
+
+      if (lamp !== undefined) {
+        lamps.add(lamp);
+      }
+    }
+
+    return { indices, count: lamps.size };
   }
 
   // the number of chase steps of a preset: fixtures sharing a DMX universe, address
@@ -879,6 +916,23 @@ export class PresetService {
   channelIsDrivenByEffect(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): boolean {
     for (const effect of preset.effects) {
       if (!effect.visible || !(effect instanceof EffectCurve)) {
+        continue;
+      }
+
+      // a pixel effect lights the red, green and blue of all the fixtures of the preset
+      if (effect instanceof EffectPixel) {
+        if (
+          channel.capabilities.some(
+            (channelCapability) =>
+              channelCapability.capability.type === FixtureCapabilityType.ColorIntensity &&
+              [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].indexOf(
+                channelCapability.capability.color
+              ) >= 0
+          )
+        ) {
+          return true;
+        }
+
         continue;
       }
 

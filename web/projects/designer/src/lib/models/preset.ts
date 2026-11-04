@@ -1,6 +1,7 @@
 import { Effect } from './effect';
 import { EffectCurve } from './effect-curve';
 import { EffectPanTilt } from './effect-pan-tilt';
+import { EffectPixel } from './effect-pixel';
 import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureChannelValue } from './fixture-channel-value';
@@ -159,6 +160,9 @@ export class Preset {
             break;
           case 'pan-tilt':
             this.effects.push(new EffectPanTilt(effect));
+            break;
+          case 'pixel':
+            this.effects.push(new EffectPixel(effect));
             break;
         }
       }

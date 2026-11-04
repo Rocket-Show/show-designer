@@ -35,13 +35,13 @@ test.describe('Errors', () => {
   });
 
   test('refuses a project saved by a newer version of the designer', async ({ designer, api, page }) => {
-    const id = api.addProject(jane.email, { ...templateProject(), name: 'From the future', version: 11 });
+    const id = api.addProject(jane.email, { ...templateProject(), name: 'From the future', version: 12 });
     await page.goto(`/?id=${id}&token=share-token-${id}`);
 
     const error = designer.dialog('Error');
     await expect(error).toContainText('The project could not be opened.');
     await expect(error).toContainText(
-      '(The project version 11 is created with a newer version of the designer. Please update your Rocket Show version to open this project.)'
+      '(The project version 12 is created with a newer version of the designer. Please update your Rocket Show version to open this project.)'
     );
   });
 

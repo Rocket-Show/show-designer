@@ -3,7 +3,7 @@ import { Subject, Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { CachedFixture } from '../models/cached-fixture';
 import { EffectCurve } from '../models/effect-curve';
-import { FixtureCapabilityType } from '../models/fixture-capability';
+import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
@@ -12,6 +12,11 @@ import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { EffectPixel } from '../models/effect-pixel';
+import { CachedFixtureChannel } from '../models/cached-fixture-channel';
+import { PixelPalette } from '../models/pixel-palette';
+import { PixelContext, samplePixelPattern } from '../models/pixel-pattern';
+import { toInt } from '../models/pixel-math';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
@@ -604,7 +609,9 @@ export class PreviewService implements OnDestroy {
     values: FixtureChannelValue[],
     intensityPercentage: number,
     state: PresetStepState,
-    context: PanTiltContext
+    context: PanTiltContext,
+    wholeFixtureIndex: number,
+    wholeFixtureCount: number
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -620,6 +627,21 @@ export class PreviewService implements OnDestroy {
       if (effect.visible && effectAmount > 0) {
         if (effect instanceof EffectPanTilt) {
           this.mixPanTiltEffect(effect, effectTimeMillis, preset, cachedFixture, values, effectIntensityPercentage, state, context);
+          continue;
+        }
+
+        // a pixel effect chases from one fixture to the next, with all of their pixels
+        if (effect instanceof EffectPixel) {
+          this.mixPixelEffect(
+            effect,
+            effectTimeMillis,
+            preset,
+            cachedFixture,
+            values,
+            effectIntensityPercentage,
+            wholeFixtureIndex,
+            wholeFixtureCount
+          );
           continue;
         }
 
@@ -691,6 +713,95 @@ export class PreviewService implements OnDestroy {
     }
   }
 
+  // A pixel effect on a part of a fixture (a pixel, or a fixture without pixels): the color of its pattern where the part
+  // is in its fixture, blended with the color the preset puts on it, on its red, green and blue. Its other channels keep
+  // what the preset puts on them, its dimmer as well. This follows the same rules as Rocket Show.
+  private mixPixelEffect(
+    effect: EffectPixel,
+    effectTimeMillis: number,
+    preset: PresetRegionScene,
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number,
+    fixtureIndex: number,
+    fixtureCount: number
+  ) {
+    const channels = [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].map((color) =>
+      this.getColorChannel(cachedFixture, color)
+    );
+
+    if (channels.every((channel) => !channel)) {
+      return;
+    }
+
+    const beatsPerMinute = this.getBeatsPerMinute();
+    const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
+    const cycles = effect.getCyclesAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+
+    // the effect does not apply anymore after it has finished running
+    if (cycles === undefined) {
+      return;
+    }
+
+    // the color the preset puts on the part, as red, green and blue between 0 and 1
+    const base = channels.map((channel) => {
+      const value = channel ? this.getChannelValue(values, channel.name, cachedFixture.profile.uuid) : undefined;
+      return value ? value.value / channel.maxValue : 0;
+    });
+
+    // where the part is in its fixture, every fixture starting the random looking patterns somewhere else
+    const context = Object.assign(new PixelContext(), this.fixtureService.getPixelPlace(cachedFixture));
+    context.seed = toInt(effect.seed * 7919 + fixtureIndex * 131);
+
+    if (effect.mirror) {
+      context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
+    }
+
+    const [place, level] = samplePixelPattern(effect, cycles, context);
+    const palette = effect.palette;
+    const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
+    const color = PixelPalette.colorOf(stops, palette.between, palette.repeat, place);
+
+    channels.forEach((channel, i) => {
+      if (!channel) {
+        return;
+      }
+
+      const lit = color[i] * level;
+      let target: number;
+
+      switch (effect.blend) {
+        case 'mask':
+          target = base[i] * level;
+          break;
+        case 'add':
+          target = Math.min(base[i] + lit, 1);
+          break;
+        case 'max':
+          target = Math.max(base[i], lit);
+          break;
+        default:
+          target = lit;
+      }
+
+      const fixtureChannelValue = new FixtureChannelValue();
+      fixtureChannelValue.channelName = channel.name;
+      fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+      fixtureChannelValue.value = channel.maxValue * target;
+      this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+    });
+  }
+
+  // the channel of a part of a fixture which lights in a color, the first one if there are several
+  private getColorChannel(cachedFixture: CachedFixture, color: FixtureCapabilityColor): CachedFixtureChannel {
+    return cachedFixture.channels.find((channel) =>
+      channel.capabilities.some(
+        (channelCapability) =>
+          channelCapability.capability.type === FixtureCapabilityType.ColorIntensity && channelCapability.capability.color === color
+      )
+    );
+  }
+
   // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),
   // mirrored with the preset. This follows the same rules as Rocket Show.
   private mixPanTiltEffect(
@@ -752,6 +863,9 @@ export class PreviewService implements OnDestroy {
     // dozen fixtures
     const fixtureIndices = new Map<Preset, Map<string, number>>();
 
+    // the same for the fixtures with all of their pixels, which the pixel effects chase over
+    const wholeFixtureChases = new Map<Preset, { indices: Map<string, number>; count: number }>();
+
     // which state each preset is in. The same preset can play in more than one region
     // at a time, each of them at a different point of its sequence, so the entry of the
     // playing preset is what this is keyed by.
@@ -766,6 +880,7 @@ export class PreviewService implements OnDestroy {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
         fixtureIndices.set(preset.preset, this.presetService.getPresetFixtureIndices(preset.preset));
+        wholeFixtureChases.set(preset.preset, this.presetService.getPresetWholeFixtureChase(preset.preset));
       }
 
       // a preset chasing its steps over its fixtures is at a different point of the
@@ -843,6 +958,8 @@ export class PreviewService implements OnDestroy {
 
             this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset, context);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
+            const wholeFixtureChase = wholeFixtureChases.get(preset.preset);
+
             this.mixEffects(
               timeMillis,
               fixtureIndex,
@@ -852,7 +969,9 @@ export class PreviewService implements OnDestroy {
               values,
               intensityPercentage,
               state,
-              context
+              context,
+              wholeFixtureChase.indices.get(cachedFixture.fixture.uuid) ?? 0,
+              wholeFixtureChase.count
             );
           }
         }
