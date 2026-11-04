@@ -16,7 +16,17 @@ import { ProjectService } from './project.service';
   providedIn: 'root',
 })
 export class FixtureOrderService {
+  // The fixtures whose pixels are shown in the fixture panel, by fixture and folder (see
+  // fixtureGroupKey). A fixture with pixels starts closed, and only stays open while the
+  // designer is: unlike a folder, it is not a part of the project the user made.
+  expandedFixtureGroups = new Set<string>();
+
   constructor(private projectService: ProjectService, private folderService: FolderService) {}
+
+  // a fixture shown with its pixels in a folder of the panel, to remember it is open
+  fixtureGroupKey(fixtureUuid: string, folderUuid: string): string {
+    return fixtureUuid + '/' + (folderUuid || '');
+  }
 
   // a fixture together with one of its pixels, the key an entry of a preset and the
   // project's own entry are matched by

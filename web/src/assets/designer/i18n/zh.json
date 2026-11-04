@@ -177,6 +177,8 @@
       "add-folder": "添加文件夹",
       "remove-folder": "删除文件夹",
       "new-folder": "新建文件夹",
+      "general-channels": "通用通道",
+      "pixel-count": "{{count}} 像素",
       "no-fixtures-selected": "请为此预设至少选择一个灯具",
       "no-capabilities-available": "所选灯具没有可用功能。请使用通道选项卡。",
       "no-fixtures-settings-selected": "请至少选择一个灯具",

@@ -177,6 +177,8 @@
       "add-folder": "Adicionar pasta",
       "remove-folder": "Eliminar pasta",
       "new-folder": "Nova pasta",
+      "general-channels": "Canais gerais",
+      "pixel-count": "{{count}} px",
       "no-fixtures-selected": "Selecione pelo menos um fixture para esta predefinição",
       "no-capabilities-available": "Não existem capacidades disponíveis para os fixtures selecionados. Por favor use o separador de canais.",
       "no-fixtures-settings-selected": "Selecione pelo menos um fixture",

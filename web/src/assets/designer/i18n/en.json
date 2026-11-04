@@ -177,6 +177,8 @@
       "add-folder": "Add folder",
       "remove-folder": "Delete folder",
       "new-folder": "New Folder",
+      "general-channels": "General channels",
+      "pixel-count": "{{count}} px",
       "no-fixtures-selected": "Select at least one fixture for this preset",
       "no-capabilities-available": "There are no capabilities available for the selected fixtures. Please use the channels-tab.",
       "no-fixtures-settings-selected": "Select at least one fixture",

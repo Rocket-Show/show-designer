@@ -177,6 +177,8 @@
       "add-folder": "Añadir carpeta",
       "remove-folder": "Eliminar carpeta",
       "new-folder": "Nueva carpeta",
+      "general-channels": "Canales generales",
+      "pixel-count": "{{count}} px",
       "no-fixtures-selected": "Selecciona al menos un fixture para este preajuste",
       "no-capabilities-available": "No hay capacidades disponibles para los fixtures seleccionados. Por favor usa la pestaña de canales.",
       "no-fixtures-settings-selected": "Selecciona al menos un fixture",
