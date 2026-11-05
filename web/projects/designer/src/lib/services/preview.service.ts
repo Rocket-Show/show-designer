@@ -117,23 +117,23 @@ export class PreviewService implements OnDestroy {
     });
   }
 
-  private getAlreadyCalculatedFixture(fixtures: CachedFixture[], fixtureIndex: number): CachedFixture {
-    // Has this fixture already been calculated (same universe and dmx start address as a fixture before)
-    // --> return it
-    for (let i = 0; i < fixtureIndex; i++) {
-      const calculatedFixture = fixtures[i];
+  // For each of the passed fixtures, the first one before it with the same universe, DMX address and pixel (the same
+  // lamp, which it takes the values of), or undefined. Looking each of them up among the ones before took longer than
+  // a frame with a few thousand pixels.
+  private getSameLamps(fixtures: CachedFixture[]): CachedFixture[] {
+    const firstOfLamp = new Map<string, CachedFixture>();
 
-      if (
-        calculatedFixture.fixture.dmxUniverseUuid === fixtures[fixtureIndex].fixture.dmxUniverseUuid &&
-        calculatedFixture.fixture.dmxFirstChannel === fixtures[fixtureIndex].fixture.dmxFirstChannel &&
-        ((!calculatedFixture.pixel?.key && !fixtures[fixtureIndex].pixel?.key) ||
-          calculatedFixture.pixel?.key === fixtures[fixtureIndex].pixel?.key)
-      ) {
-        return calculatedFixture;
+    return fixtures.map((cachedFixture) => {
+      const key =
+        cachedFixture.fixture.dmxUniverseUuid + '|' + cachedFixture.fixture.dmxFirstChannel + '|' + (cachedFixture.pixel?.key || '');
+      const first = firstOfLamp.get(key);
+
+      if (!first) {
+        firstOfLamp.set(key, cachedFixture);
       }
-    }
 
-    return undefined;
+      return first;
+    });
   }
 
   public getPresets(timeMillis: number): PresetRegionScene[] {
@@ -1014,6 +1014,7 @@ export class PreviewService implements OnDestroy {
     this.framePlacements = placements;
     this.frameFixtureIndices = fixtureIndices;
     this.frameStagePlaces = new Map();
+    const sameLamps = this.getSameLamps(this.fixtureService.cachedFixtures);
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
@@ -1021,7 +1022,7 @@ export class PreviewService implements OnDestroy {
       // all values of the current fixture channels
       let values: FixtureChannelValue[] = [];
 
-      const alreadyCalculatedFixture = this.getAlreadyCalculatedFixture(this.fixtureService.cachedFixtures, i);
+      const alreadyCalculatedFixture = sameLamps[i];
 
       if (alreadyCalculatedFixture) {
         // only relevant for the preview --> reuse all calculated values
