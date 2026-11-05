@@ -682,6 +682,30 @@ describe('EffectCurveComponent', () => {
     await select(pattern, 'sparkle');
     expect(element.textContent).toContain('designer.effect.pixel-fade');
     expect(previewLive).toHaveBeenCalled();
+
+    // a sweep turns either way: the direction it had runs as the first way it turns
+    await select(pattern, 'sweep');
+    const directions = () => Array.from(element.querySelectorAll('select[name="direction"] option')).map((option: any) => option.value);
+    expect(directions()).toEqual(['cw', 'ccw']);
+    expect((element.querySelector('select[name="direction"]') as HTMLSelectElement).value).toBe('cw');
+    await select(element.querySelector('select[name="direction"]'), 'ccw');
+    expect(pixels.direction).toBe('ccw');
+
+    // an orbit moves along a path and trails, a wave runs along a curve, a stack has no size
+    await select(pattern, 'orbit');
+    expect(element.textContent).toContain('designer.effect.pixel-path');
+    expect(element.textContent).toContain('designer.effect.pixel-trail');
+    expect((element.querySelector('select[name="pixelShape"]') as HTMLSelectElement).value).toBe('circle');
+    await select(element.querySelector('select[name="pixelShape"]'), 'figure8');
+    expect(pixels.shape).toBe('figure8');
+
+    await select(pattern, 'wave');
+    expect(element.textContent).toContain('designer.effect.pixel-curve');
+    expect((element.querySelector('select[name="pixelShape"]') as HTMLSelectElement).value).toBe('sine');
+
+    await select(pattern, 'stack');
+    expect(element.querySelector('input[name="pixelSize"]')).toBeNull();
+    expect(element.querySelector('input[name="pixelSoftness"]')).toBeNull();
   });
 
   it('picks the palette of a pixel effect and how it is blended with the color of the preset', async () => {

@@ -18,7 +18,14 @@ import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-cur
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
 import { hexToRgb, PixelPalette } from '../../models/pixel-palette';
-import { PixelContext, pixelPatternsForBars, pixelPatternsForMatrices, samplePixelPattern } from '../../models/pixel-pattern';
+import {
+  PixelContext,
+  PixelPatternOptions,
+  pixelPatternOptions,
+  pixelPatternsForBars,
+  pixelPatternsForMatrices,
+  samplePixelPattern,
+} from '../../models/pixel-pattern';
 import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf } from '../../models/pixel-palettes';
 import { toInt } from '../../models/pixel-math';
 import { ColorService } from '../../services/color.service';
@@ -153,8 +160,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   public readonly pixelPatternsForBars = pixelPatternsForBars;
   public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
-  public readonly pixelDirections = ['right', 'left', 'out', 'in', 'up', 'down'];
-  public readonly pixelShapes = ['circle', 'square', 'diamond', 'star', 'heart'];
   public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
   public readonly pixelPalettes = builtInPixelPalettes;
 
@@ -299,21 +304,47 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return this.curve as EffectPixel;
   }
 
-  // what the pattern of a pixel effect lets be set besides its size
+  // what the pattern of a pixel effect lets be set (see pixelPatternOptions)
+  private get patternOptions(): PixelPatternOptions {
+    return pixelPatternOptions[this.pixelEffect.pattern] || {};
+  }
+
+  usesSize(): boolean {
+    return !this.patternOptions.withoutSize;
+  }
+
   usesDirection(): boolean {
-    return ['chase', 'comet', 'wipe', 'flow'].indexOf(this.pixelEffect.pattern) >= 0;
+    return !!this.patternOptions.directions;
   }
 
   usesShape(): boolean {
-    return this.pixelEffect.pattern === 'shapes';
+    return !!this.patternOptions.shapes;
   }
 
   usesBounce(): boolean {
-    return this.pixelEffect.pattern === 'comet';
+    return !!this.patternOptions.bounce;
   }
 
   usesSoftness(): boolean {
-    return ['comet', 'flow', 'plasma', 'fire'].indexOf(this.pixelEffect.pattern) < 0;
+    return !!this.patternOptions.softness;
+  }
+
+  get pixelDirections(): string[] {
+    return this.patternOptions.directions || [];
+  }
+
+  get pixelShapes(): string[] {
+    return this.patternOptions.shapes || [];
+  }
+
+  // The direction and the shape the pattern runs in: one it does not know (e.g. the one of another pattern before) is
+  // played as its first one
+  get pixelDirection(): string {
+    return this.pixelDirections.indexOf(this.pixelEffect.direction) >= 0 ? this.pixelEffect.direction : this.pixelDirections[0];
+  }
+
+  get pixelShape(): string {
+    return this.pixelShapes.indexOf(this.pixelEffect.shape) >= 0 ? this.pixelEffect.shape : this.pixelShapes[0];
   }
 
   // the size means something else for each pattern (a tail, rings, a density, ...)
@@ -322,7 +353,26 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   pixelSoftnessLabel(): string {
-    return this.pixelEffect.pattern === 'sparkle' ? 'designer.effect.pixel-fade' : 'designer.effect.pixel-softness';
+    switch (this.patternOptions.softness) {
+      case 'fade':
+        return 'designer.effect.pixel-fade';
+      case 'trail':
+        return 'designer.effect.pixel-trail';
+      default:
+        return 'designer.effect.pixel-softness';
+    }
+  }
+
+  // what the shape is of: an outline, the path of a dot or a curve
+  pixelShapeLabel(): string {
+    switch (this.pixelEffect.pattern) {
+      case 'orbit':
+        return 'designer.effect.pixel-path';
+      case 'wave':
+        return 'designer.effect.pixel-curve';
+      default:
+        return 'designer.effect.pixel-shape';
+    }
   }
 
   setPattern(pattern: string) {

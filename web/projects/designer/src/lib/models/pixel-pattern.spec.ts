@@ -193,6 +193,165 @@ describe('pixel patterns', () => {
     expect(levels(fire, 0.4, 12)).not.toEqual(levels(fire, 0.9, 12));
   });
 
+  it('runs pulses from the middle out to the ends, or in from them', () => {
+    const out = (cycle: number) => levels(settings('center', { size: 0.3, direction: 'out' }), cycle);
+    const inwards = (cycle: number) => levels(settings('center', { size: 0.3, direction: 'in' }), cycle);
+
+    // the middle first, the ends later
+    expect(out(0.1)[4]).toBeGreaterThan(out(0.1)[0]);
+    expect(out(0.9)[0]).toBeGreaterThan(out(0.9)[4]);
+    expect(inwards(0.1)[0]).toBeGreaterThan(inwards(0.1)[4]);
+    // both halves alike
+    expect(out(0.4).slice(0, 5)).toEqual(out(0.4).slice(5).reverse());
+  });
+
+  it('marches stripes along, a pixel further after the time it takes', () => {
+    const stripes = settings('stripes', { size: 0.2 });
+    // a stripe and the gap after it take 0.18 of the bar, a pixel of 24 is 1/24 of it
+    const shift = 1 / (24 * 0.18);
+    const before = levels(stripes, 0.3, 24);
+    const after = levels(stripes, 0.3 + shift, 24);
+
+    expect(after.slice(1)).toEqual(before.slice(0, 23));
+    // several of them, each in a color of its own
+    expect(lit(stripes, 0.3, 24).length).toBeGreaterThan(6);
+    expect(samplePixelPattern(stripes, 0.3, pixel(0, 24))[0]).not.toBe(samplePixelPattern(stripes, 0.3, pixel(12, 24))[0]);
+  });
+
+  it('drops pixels one by one onto a stack at the far end, until all of them are there', () => {
+    const stack = settings('stack');
+
+    // the first one dropping from the near end
+    expect(lit(stack, 0.1, 4)).toEqual([1]);
+    // the first one piled up at the far end, the second one dropping
+    expect(lit(stack, 0.3, 4)).toEqual([1, 3]);
+    expect(lit(stack, 0.9, 4)).toEqual([0, 1, 2, 3]);
+    // piling up at the other end
+    expect(lit(settings('stack', { direction: 'left' }), 0.3, 4)).toEqual([0, 2]);
+  });
+
+  it('turns a beam around the middle of a matrix with a trail behind it, either way', () => {
+    // at a quarter of a turn the beam points down: the pixel below the middle just before it is lit, the one after it
+    // not yet
+    const before = pixel(4, 8, 7, 8);
+    const after = pixel(3, 8, 7, 8);
+
+    expect(samplePixelPattern(settings('sweep'), 0.25, before)[1]).toBeGreaterThan(0.5);
+    expect(samplePixelPattern(settings('sweep'), 0.25, after)[1]).toBe(0);
+    expect(samplePixelPattern(settings('sweep', { direction: 'ccw' }), -0.25, after)[1]).toBeGreaterThan(0.5);
+    expect(samplePixelPattern(settings('sweep', { direction: 'ccw' }), -0.25, before)[1]).toBe(0);
+  });
+
+  it('turns as many arms of a spiral as its size asks for', () => {
+    // the arms crossed on a ring around the middle
+    const arms = (size: number) => {
+      let crossed = 0;
+      let wasLit = false;
+
+      for (let step = 0; step <= 360; step++) {
+        const point = new PixelContext();
+        point.x = 0.5 + 0.35 * Math.cos((step / 360) * 2 * Math.PI);
+        point.y = 0.5 + 0.35 * Math.sin((step / 360) * 2 * Math.PI);
+        point.columns = 16;
+        point.rows = 16;
+        const isLit = samplePixelPattern(settings('spiral', { size }), 0.3, point)[1] >= 0.5;
+
+        if (isLit && !wasLit && step > 0) {
+          crossed++;
+        }
+        wasLit = isLit;
+      }
+
+      return crossed;
+    };
+
+    expect(arms(0)).toBe(1);
+    expect(arms(0.2)).toBe(2);
+    expect(arms(1)).toBe(6);
+  });
+
+  it('swaps the squares of a checkerboard every half period', () => {
+    const board = settings('checker', { size: 0 });
+    const square = (column: number, row: number, cycle: number) => samplePixelPattern(board, cycle, pixel(column, 4, row, 4))[1];
+
+    expect([square(0, 0, 0.25), square(1, 0, 0.25), square(1, 1, 0.25)]).toEqual([1, 0, 1]);
+    expect([square(0, 0, 0.75), square(1, 0, 0.75), square(1, 1, 0.75)]).toEqual([0, 1, 0]);
+    // larger squares of two pixels each
+    const large = (column: number) => samplePixelPattern(settings('checker', { size: 0.2 }), 0.25, pixel(column, 4, 0, 4))[1];
+    expect([large(0), large(1), large(2), large(3)]).toEqual([1, 1, 0, 0]);
+    // the two colors at the ends of the palette
+    expect(samplePixelPattern(board, 0.25, pixel(1, 4, 0, 4))[0]).toBe(1);
+  });
+
+  it('lets drops of rain fall down the columns', () => {
+    const rain = settings('rain', { size: 0.3 });
+    const column = 3;
+    const speed = 0.6 + hash(column, 0, 3) * 0.9;
+    // a row further down after the time the drop takes for it
+    const step = 1 / 16 / ((1 + 0.15 + 0.3 * 0.6) * speed);
+    const at = (row: number, cycle: number) => Math.round(samplePixelPattern(rain, cycle, pixel(column, 8, row, 16))[1] * 1e9) / 1e9;
+
+    for (const row of [4, 7, 10]) {
+      expect(at(row + 1, 0.4 + step)).toBeCloseTo(at(row, 0.4), 6);
+    }
+  });
+
+  it('flies the frames of a tunnel outwards', () => {
+    const tunnel = settings('tunnel', { size: 0.4 });
+    const depth = 0.25 + 0.4 * 0.75;
+    // two pixels right of the middle (a row through it), the frame at the inner one reaching the outer one later
+    const inner = pixel(12, 16, 7, 15);
+    const outer = pixel(14, 16, 7, 15);
+    const later = depth / (0.5625 + 0.15) - depth / (0.8125 + 0.15);
+
+    const [innerPlace, innerLevel] = samplePixelPattern(tunnel, 0.2, inner);
+    const [outerPlace, outerLevel] = samplePixelPattern(tunnel, 0.2 + later, outer);
+    expect(outerLevel).toBeCloseTo(innerLevel, 9);
+    expect(outerPlace).toBeCloseTo(innerPlace, 9);
+  });
+
+  it('moves the dot of an orbit along the path of a movement', () => {
+    // the brightest pixel of a matrix of 16 x 16
+    const brightest = (shape: string, cycle: number) => {
+      let best = [0, 0];
+      let level = -1;
+
+      for (let row = 0; row < 16; row++) {
+        for (let column = 0; column < 16; column++) {
+          const sampled = samplePixelPattern(settings('orbit', { shape }), cycle, pixel(column, 16, row, 16))[1];
+
+          if (sampled > level) {
+            level = sampled;
+            best = [column, row];
+          }
+        }
+      }
+
+      return best;
+    };
+
+    // a circle starts at the top and goes round to the right
+    expect(brightest('circle', 0)).toEqual([7, 2]);
+    expect(brightest('circle', 0.25)).toEqual([13, 7]);
+    // a figure 8 is up again a quarter of the way
+    expect(brightest('figure8', 0.125)[1]).toBe(2);
+  });
+
+  it('fills a matrix up to a curve running along it, and shows the curve on a bar', () => {
+    // a sawtooth, a quarter of a period across the bar
+    const sawtooth = settings('wave', { size: 1, shape: 'sawtooth' });
+    expect(samplePixelPattern(sawtooth, 0, pixel(0, 10))[1]).toBeCloseTo(0.08 + 0.84 * 0.02, 12);
+
+    // a square wave fills a column up to the top or leaves it nearly empty
+    const square = settings('wave', { size: 1, shape: 'square' });
+    const filled = (column: number, cycle: number) =>
+      Array.from({ length: 8 }, (_, row) => samplePixelPattern(square, cycle, pixel(column, 8, row, 8))[1] >= 0.5).filter((isLit) => isLit)
+        .length;
+
+    expect(filled(0, 0.7)).toBe(7);
+    expect(filled(0, 0.2)).toBe(1);
+  });
+
   it('leaves the pixels dark for a pattern of a newer designer', () => {
     expect(samplePixelPattern(settings('fireworks'), 0.5, pixel(3, 10))).toEqual([0, 0]);
     expect(pixelPatterns).toContain('fire');

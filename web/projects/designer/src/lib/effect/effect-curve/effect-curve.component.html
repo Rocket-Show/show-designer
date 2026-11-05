@@ -152,7 +152,8 @@
     <div class="my-auto ml-1">°</div>
   </div>
   } } @else if (isPixel) {
-  <!-- what the pattern lets be set: its size always, its softness, direction, shape and bounce if it has them -->
+  <!-- what the pattern lets be set: its size, softness, direction, shape and bounce if it has them -->
+  @if (usesSize()) {
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ pixelSizeLabel() | translate }}
@@ -172,8 +173,7 @@
       <input type="text" class="slider-input" name="pixelSize" [ngModel]="pixelEffect.size" (ngModelChange)="setPixelSize($event)" />
     </div>
   </div>
-
-  @if (usesSoftness()) {
+  } @if (usesSoftness()) {
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
       {{ pixelSoftnessLabel() | translate }}
@@ -205,7 +205,7 @@
       {{ 'designer.effect.pixel-direction' | translate }}
     </div>
     <div class="my-auto">
-      <select name="direction" [ngModel]="pixelEffect.direction" (ngModelChange)="setDirection($event)">
+      <select name="direction" [ngModel]="pixelDirection" (ngModelChange)="setDirection($event)">
         @for (direction of pixelDirections; track direction) {
         <option [value]="direction">{{ 'designer.effect.pixel-direction-' + direction | translate }}</option>
         }
@@ -227,10 +227,10 @@
   } @if (usesShape()) {
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">
-      {{ 'designer.effect.pixel-shape' | translate }}
+      {{ pixelShapeLabel() | translate }}
     </div>
     <div class="my-auto">
-      <select name="pixelShape" [ngModel]="pixelEffect.shape" (ngModelChange)="setPixelShape($event)">
+      <select name="pixelShape" [ngModel]="pixelShape" (ngModelChange)="setPixelShape($event)">
         @for (shape of pixelShapes; track shape) {
         <option [value]="shape">{{ 'designer.effect.pixel-shape-' + shape | translate }}</option>
         }

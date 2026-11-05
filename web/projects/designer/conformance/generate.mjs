@@ -2177,7 +2177,32 @@ function migrationEdges() {
 
 // ---- pixel patterns ---------------------------------------------------------------------------
 
-const pixelPatternNames = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'plasma', 'ripple', 'shapes', 'fire'];
+const firstPixelPatternNames = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'plasma', 'ripple', 'shapes', 'fire'];
+const pixelPatternNames = [
+  ...firstPixelPatternNames,
+  'center',
+  'stripes',
+  'stack',
+  'sweep',
+  'spiral',
+  'checker',
+  'rain',
+  'tunnel',
+  'orbit',
+  'wave',
+];
+
+// The directions and shapes a pattern is given. The first patterns are given the ones there were with them (which
+// keeps their cases as they were), the others also the ones of the patterns which came later: the way to turn, the
+// paths of the orbit and the curves of the wave.
+const pixelDirectionsOf = (pattern) =>
+  firstPixelPatternNames.includes(pattern)
+    ? ['right', 'left', 'out', 'in', 'up', 'down']
+    : ['right', 'left', 'out', 'in', 'up', 'down', 'cw', 'ccw'];
+const pixelShapesOf = (pattern) =>
+  firstPixelPatternNames.includes(pattern)
+    ? ['circle', 'square', 'diamond', 'star', 'heart']
+    : ['circle', 'square', 'diamond', 'star', 'heart', 'figure8', 'line', 'wave', 'sine', 'triangle', 'sawtooth'];
 
 // palettes of a few colors: smooth and in steps, mirrored and wrapping, a color twice on the same place, unsorted
 const pixelPalettes = [
@@ -2267,8 +2292,8 @@ function pixelPatterns() {
         pattern,
         size: random.pick([0, 1, random.number(1), random.number(1)]),
         softness: random.pick([0, 1, random.number(1), random.number(1)]),
-        direction: random.pick(['right', 'left', 'out', 'in', 'up', 'down']),
-        shape: random.pick(['circle', 'square', 'diamond', 'star', 'heart']),
+        direction: random.pick(pixelDirectionsOf(pattern)),
+        shape: random.pick(pixelShapesOf(pattern)),
         bounce: random.chance(0.5),
       };
       const input = { settings, palette: random.pick(pixelPalettes), samples: [] };
@@ -2348,8 +2373,8 @@ function channelValuesPixelEffects() {
       const effect = { type: 'pixel', uuid: uuid + '-effect', pattern, capabilities: [], channels: [] };
       random.maybe(effect, 'size', [0, 0.2, 0.5, 1, random.number(1)]);
       random.maybe(effect, 'softness', [0, 0.5, 1, random.number(1)]);
-      random.maybe(effect, 'direction', ['right', 'left', 'out', 'in', 'up', 'down']);
-      random.maybe(effect, 'shape', ['circle', 'square', 'diamond', 'star', 'heart']);
+      random.maybe(effect, 'direction', pixelDirectionsOf(pattern));
+      random.maybe(effect, 'shape', pixelShapesOf(pattern));
       random.maybe(effect, 'bounce', [true, false]);
       random.maybe(effect, 'mirror', [true, false, false]);
       random.maybe(effect, 'seed', [1, 2, random.int(5000)]);
