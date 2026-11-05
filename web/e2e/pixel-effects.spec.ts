@@ -98,10 +98,27 @@ test.describe('Pixel effects', () => {
     await expect(card.locator('.pixel-picker')).toBeHidden();
     await expect(card.locator('select[name="pattern"]')).toHaveValue('plasma');
 
-    // the colors of fire, the first one made green, saved under a name of its own
+    // the colors of fire, the first one made green, typed after a look at the color picker
     await card.getByLabel('Fire').check();
-    await card.locator('input[name="stopColor0"]').fill('#00ff00');
+    const stops = card.locator('.gradient-stop');
+    await expect(stops).toHaveCount(6);
+    await card.locator('.gradient-swatch').click();
+    await expect(card.locator('lib-app-color-picker')).toBeVisible();
+    await card.locator('input[name="gradientColor"]').fill('#00ff00');
     await expect(card.getByLabel('Fire')).not.toBeChecked();
+
+    // one more color where the bar is clicked, the last one dragged down off the bar
+    const bar = await card.locator('.gradient-bar').boundingBox();
+    await page.mouse.click(bar.x + bar.width * 0.1, bar.y + bar.height / 2);
+    await expect(stops).toHaveCount(7);
+    const last = await stops.nth(5).boundingBox();
+    await page.mouse.move(last.x + last.width / 2, last.y + last.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(last.x + last.width / 2, last.y + 80, { steps: 4 });
+    await page.mouse.up();
+    await expect(stops).toHaveCount(6);
+
+    // saved under a name of its own
     await card.locator('input[name="paletteName"]').fill('Toxic');
     await card.getByText('Save in the project').click();
     await expect(card.getByLabel('Toxic')).toBeChecked();
@@ -112,7 +129,7 @@ test.describe('Pixel effects', () => {
     // another effect can be painted in it as well, until it is deleted
     await card.getByLabel('Rainbow').check();
     await card.getByLabel('Toxic').check();
-    await expect(card.locator('input[name="stopColor0"]')).toHaveValue('#00ff00');
+    await expect(stops.first()).toHaveAttribute('aria-label', /#00ff00/);
     await card.locator('.pixel-project-palette .pixel-palette-delete').click();
     await expect(card.getByLabel('Toxic')).toHaveCount(0);
   });

@@ -341,14 +341,22 @@
       "lamp-on": "Lampe an",
       "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein"
     },
+    "gradient": {
+      "color": "Farbe als Hex-Wert",
+      "stop": "Farbe {{index}}: {{color}} bei {{position}} %",
+      "pick-color": "Farbe wählen",
+      "position": "Stelle in Prozent",
+      "remove": "Farbe entfernen",
+      "hint": "Klicke auf den Balken, um eine Farbe hinzuzufügen, ziehe eine Farbe nach unten weg, um sie zu entfernen."
+    },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",
       "duplicate": "Effekt duplizieren",
       "type-curve": "Kurve",
       "type-pan-tilt": "Pan-Tilt",
       "type-pixel": "Pixel-Effekt",
-      "pixel-patterns-bars": "Für Bars",
-      "pixel-patterns-matrices": "Für Matrizen",
+      "pixel-patterns-bars": "Bars",
+      "pixel-patterns-matrices": "Matrizen",
       "pixel-pattern-chase": "Lauflicht",
       "pixel-pattern-comet": "Komet",
       "pixel-pattern-wipe": "Wischen",

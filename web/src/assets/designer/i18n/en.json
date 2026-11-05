@@ -340,14 +340,22 @@
       "lamp-on": "Lamp on",
       "lamp-on-hint": "Switches the lamp of the fixture on stage on"
     },
+    "gradient": {
+      "color": "Color as a hex value",
+      "stop": "Color {{index}}: {{color}} at {{position}} %",
+      "pick-color": "Pick the color",
+      "position": "Place in percent",
+      "remove": "Remove the color",
+      "hint": "Click the bar to add a color, drag a color down off it to remove it."
+    },
     "effect": {
       "add-new": "Add new Effect",
       "duplicate": "Duplicate effect",
       "type-curve": "Curve",
       "type-pan-tilt": "Pan-Tilt",
       "type-pixel": "Pixel effect",
-      "pixel-patterns-bars": "Made for bars",
-      "pixel-patterns-matrices": "Made for matrices",
+      "pixel-patterns-bars": "Bars",
+      "pixel-patterns-matrices": "Matrices",
       "pixel-pattern-chase": "Chase",
       "pixel-pattern-comet": "Comet",
       "pixel-pattern-wipe": "Wipe",

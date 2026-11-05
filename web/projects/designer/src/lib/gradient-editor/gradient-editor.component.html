@@ -1,0 +1,93 @@
+<div class="gradient-editor">
+  <!-- the gradient, and below it each of its colors at its place: a click on either adds a
+       color, a stop is dragged along to move its color and down off it to take it away -->
+  <div
+    class="gradient-bar"
+    [style.background]="barBackground"
+    (pointerdown)="add($event)"
+    (pointermove)="drag($event)"
+    (pointerup)="endDrag()"
+    (pointercancel)="endDrag()"
+  ></div>
+  <div
+    #track
+    class="gradient-track"
+    (pointerdown)="add($event)"
+    (pointermove)="drag($event)"
+    (pointerup)="endDrag()"
+    (pointercancel)="endDrag()"
+  >
+    @for (stop of stops; track $index; let index = $index) {
+    <button
+      type="button"
+      class="gradient-stop"
+      [class.selected]="index === selected"
+      [class.leaving]="index === leaving"
+      [style.left.%]="stop.position * 100"
+      [attr.aria-pressed]="index === selected"
+      [attr.aria-label]="
+        'designer.gradient.stop' | translate : { index: index + 1, color: stop.color, position: (stop.position * 100).toFixed(0) }
+      "
+      (pointerdown)="startDrag(index, $event)"
+      (keydown)="onKey(index, $event)"
+      (dblclick)="pickingColor = true"
+    >
+      <i [style.background-color]="stop.color"></i>
+    </button>
+    }
+  </div>
+
+  <!-- the stop picked last: its color and its place -->
+  @if (selectedStop) {
+  <div class="gradient-selected">
+    <button
+      type="button"
+      class="gradient-swatch"
+      [style.background-color]="selectedStop.color"
+      [attr.aria-label]="'designer.gradient.pick-color' | translate"
+      [attr.aria-expanded]="pickingColor"
+      (click)="pickingColor = !pickingColor"
+    ></button>
+    <input
+      type="text"
+      class="sd-value-input sd-value-input-hex gradient-hex"
+      name="gradientColor"
+      [attr.aria-label]="'designer.gradient.color' | translate"
+      [ngModel]="hex"
+      (ngModelChange)="setHex($event)"
+      (blur)="resetHex()"
+    />
+    <input
+      type="text"
+      class="slider-input gradient-position"
+      name="gradientPosition"
+      [attr.aria-label]="'designer.gradient.position' | translate"
+      [ngModel]="percent"
+      (ngModelChange)="setPercent($event)"
+      (blur)="resetPercent()"
+    />
+    <span class="gradient-unit">%</span>
+    <a
+      href="#"
+      class="gradient-remove"
+      [class.disabled]="!canRemove()"
+      [attr.aria-disabled]="!canRemove()"
+      [attr.aria-label]="'designer.gradient.remove' | translate"
+      (click)="remove(selected); (false)"
+      ><i class="fa fa-trash" aria-hidden="true"></i
+    ></a>
+  </div>
+  @if (pickingColor) {
+  <lib-app-color-picker
+    class="gradient-color-picker"
+    [color]="selectedStop.color"
+    [auto]="false"
+    [palette]="pickerSwatches"
+    [wheelSize]="120"
+    [showHex]="false"
+    (colorChange)="setColor($event)"
+  ></lib-app-color-picker>
+  }
+  <div class="gradient-hint">{{ 'designer.gradient.hint' | translate }}</div>
+  }
+</div>

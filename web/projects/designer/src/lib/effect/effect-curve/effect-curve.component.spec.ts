@@ -31,6 +31,10 @@ import { EffectCurveComponent } from './effect-curve.component';
 import { EffectPanTilt } from '../../models/effect-pan-tilt';
 import { EffectPixel } from '../../models/effect-pixel';
 import { PixelContext } from '../../models/pixel-pattern';
+import { By } from '@angular/platform-browser';
+import { GradientEditorComponent } from '../../gradient-editor/gradient-editor.component';
+import { ColorPickerComponent } from '../../color-picker/color-picker.component';
+import { PixelPaletteStop } from '../../models/pixel-palette';
 
 // a canvas context that only counts what the grid draws on it: every mark of the chase
 // is a filled circle
@@ -515,7 +519,7 @@ describe('EffectCurveComponent', () => {
     modalService = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
-      declarations: [EffectCurveComponent],
+      declarations: [EffectCurveComponent, GradientEditorComponent, ColorPickerComponent],
       imports: [FormsModule, NgxBootstrapSliderModule, TranslateModule.forRoot(), ToastrModule.forRoot(), PopoverModule.forRoot()],
       providers: [
         provideHttpClient(),
@@ -733,25 +737,22 @@ describe('EffectCurveComponent', () => {
 
     (element.querySelector('#palette_pixels_red-blue') as HTMLInputElement).click();
     await update();
-    expect(element.querySelectorAll('.pixel-palette-stop').length).toBe(2);
+    expect(element.querySelectorAll('lib-app-gradient-editor .gradient-stop').length).toBe(2);
 
-    // a color changed, moved, added and removed: the effect's own colors from then on
-    const color = element.querySelector('input[name="stopColor0"]') as HTMLInputElement;
-    color.value = '#00ff00';
-    color.dispatchEvent(new Event('input'));
-    type(element.querySelector('input[name="stopPosition1"]'), '0.8');
-    type(element.querySelector('input[name="stopPosition1"]'), '2');
+    // the colors changed in the gradient editor: the effect's own colors from then on
+    const editor: GradientEditorComponent = fixture.debugElement.query(By.directive(GradientEditorComponent)).componentInstance;
+    editor.stopsChange.emit([
+      { position: 0, color: '#00ff00' },
+      { position: 0.8, color: '#1e4bff' },
+    ]);
+    await update();
     expect(pixels.palette.ref).toBe('custom');
     expect(pixels.palette.stops.map((stop) => [stop.position, stop.color])).toEqual([
       [0, '#00ff00'],
       [0.8, '#1e4bff'],
     ]);
-
-    (element.querySelector('.pixel-palette-add') as HTMLElement).click();
-    await update();
-    expect(pixels.palette.stops.length).toBe(3);
-    expect(pixels.palette.stops[2].position).toBe(0.4);
-    (element.querySelectorAll('.pixel-palette-remove')[2] as HTMLElement).click();
+    expect(pixels.palette.stops.every((stop) => stop instanceof PixelPaletteStop)).toBe(true);
+    expect(previewLive).toHaveBeenCalled();
     await select(element.querySelector('select[name="paletteBetween"]'), 'smooth');
     await select(element.querySelector('select[name="paletteRepeat"]'), 'wrap');
     expect([pixels.palette.stops.length, pixels.palette.between, pixels.palette.repeat]).toEqual([2, 'smooth', 'wrap']);

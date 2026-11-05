@@ -340,14 +340,22 @@
       "lamp-on": "开灯泡",
       "lamp-on-hint": "打开舞台上灯具的灯泡"
     },
+    "gradient": {
+      "color": "颜色的十六进制值",
+      "stop": "颜色 {{index}}：{{color}}，位于 {{position}} %",
+      "pick-color": "选择颜色",
+      "position": "位置（百分比）",
+      "remove": "移除颜色",
+      "hint": "点击色条添加颜色，将颜色向下拖出即可移除。"
+    },
     "effect": {
       "add-new": "添加新效果",
       "duplicate": "复制效果",
       "type-curve": "曲线",
       "type-pan-tilt": "水平/垂直",
       "type-pixel": "像素效果",
-      "pixel-patterns-bars": "适用于灯条",
-      "pixel-patterns-matrices": "适用于矩阵",
+      "pixel-patterns-bars": "灯条",
+      "pixel-patterns-matrices": "矩阵",
       "pixel-pattern-chase": "追逐",
       "pixel-pattern-comet": "彗星",
       "pixel-pattern-wipe": "擦除",

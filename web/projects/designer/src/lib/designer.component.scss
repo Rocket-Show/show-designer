@@ -93,6 +93,15 @@
     margin-left: auto;
   }
 
+  // ---- Dividers ----------------------------------------------------------
+
+  // a hairline between groups of controls, with room on both sides of it
+  hr {
+    margin: $sd-space-3 0;
+    border: 0;
+    border-top: 1px solid $sd-border;
+  }
+
   // ---- Buttons -----------------------------------------------------------
 
   .btn {

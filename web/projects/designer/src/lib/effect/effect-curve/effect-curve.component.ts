@@ -17,7 +17,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
-import { hexToRgb, PixelPalette, PixelPaletteStop, ProjectPixelPalette, rgbToHex } from '../../models/pixel-palette';
+import { hexToRgb, PixelPalette, PixelPaletteStop, ProjectPixelPalette } from '../../models/pixel-palette';
 import {
   PixelContext,
   PixelPatternOptions,
@@ -28,6 +28,7 @@ import {
 } from '../../models/pixel-pattern';
 import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf, pixelStopsCss } from '../../models/pixel-palettes';
 import { UuidService } from '../../services/uuid.service';
+import { GradientStop } from '../../gradient-editor/gradient-editor.component';
 import { toInt } from '../../models/pixel-math';
 import { ColorService } from '../../services/color.service';
 import { ProjectService } from '../../services/project.service';
@@ -229,8 +230,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
   public readonly pixelPatternGroups = [
-    { name: 'bars', patterns: pixelPatternsForBars },
-    { name: 'matrices', patterns: pixelPatternsForMatrices },
+    // with the icons of the fixtures in the fixture list
+    { name: 'bars', icon: 'icon-pixel-bar', patterns: pixelPatternsForBars },
+    { name: 'matrices', icon: 'icon-matrix', patterns: pixelPatternsForMatrices },
   ];
 
   // a text and an image to show the patterns with, where the effect has none of its own
@@ -700,43 +702,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
-  setStopColor(index: number, color: string) {
-    if (/^#[0-9a-fA-F]{6}$/.test(color)) {
-      this.pixelEffect.palette.stops[index].color = color.toLowerCase();
-      this.editedPalette();
-    }
-  }
-
-  setStopPosition(index: number, value: any) {
-    const position = Number(value);
-
-    if (value !== '' && value !== null && !isNaN(position) && position >= 0 && position <= 1) {
-      this.pixelEffect.palette.stops[index].position = position;
-      this.editedPalette();
-    }
-  }
-
-  // a color added in the widest gap between two, in the color the palette has there
-  addStop() {
-    const palette = this.pixelEffect.palette;
-    const positions = [0, ...palette.stops.map((stop) => stop.position).sort((a, b) => a - b), 1];
-    let at = 0.5;
-    let widest = -1;
-
-    for (let i = 1; i < positions.length; i++) {
-      if (positions[i] - positions[i - 1] > widest) {
-        widest = positions[i] - positions[i - 1];
-        at = (positions[i] + positions[i - 1]) / 2;
-      }
-    }
-
-    const color = palette.stops.length ? rgbToHex(PixelPalette.colorOf(palette.stops, palette.between, 'mirror', at)) : '#ffffff';
-    palette.stops.push(new PixelPaletteStop({ position: Math.round(at * 100) / 100, color }));
-    this.editedPalette();
-  }
-
-  removeStop(index: number) {
-    this.pixelEffect.palette.stops.splice(index, 1);
+  // the colors as the gradient editor left them: moved, added, taken away or picked anew
+  setStops(stops: GradientStop[]) {
+    this.pixelEffect.palette.stops = stops.map((stop) => new PixelPaletteStop({ position: stop.position, color: stop.color }));
     this.editedPalette();
   }
 

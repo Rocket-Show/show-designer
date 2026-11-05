@@ -11,8 +11,9 @@
   line-height: 0;
 }
 
+/* below the wheel, where they do not fit next to it */
 .color-picker-controls {
-  flex: 1 1 auto;
+  flex: 1 1 140px;
   display: flex;
   flex-direction: column;
   gap: var(--sd-space-3);

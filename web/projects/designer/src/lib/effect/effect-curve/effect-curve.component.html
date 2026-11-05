@@ -79,7 +79,10 @@
   <!-- the patterns, each in the colors of the effect, made for bars and made for matrices -->
   <div #picker class="pixel-picker">
     @for (group of pixelPatternGroups; track group.name) {
-    <div class="pixel-picker-group">{{ 'designer.effect.pixel-patterns-' + group.name | translate }}</div>
+    <div class="pixel-picker-group">
+      <i class="pixel-picker-group-icon" [class]="group.icon" aria-hidden="true"></i>
+      {{ 'designer.effect.pixel-patterns-' + group.name | translate }}
+    </div>
     <div class="pixel-picker-tiles">
       @for (pattern of group.patterns; track pattern) {
       <a href="#" class="pixel-picker-tile" [class.active]="pixelEffect.pattern === pattern" (click)="pickPattern(pattern); (false)">
@@ -644,35 +647,17 @@
     ></a>
   </div>
   } }
-  <hr class="my-1" style="border-color: white" />
+  <hr />
   @if (pixelEffect.palette.ref === 'preset') {
   <div class="text-muted pixel-palette-hint">{{ 'designer.effect.pixel-palette-follows-preset' | translate }}</div>
   } @else {
   <!-- the colors of the effect: each one at its place, how it runs from one to the next and beyond the ends -->
   <div class="pixel-palette-editor">
-    <div class="pixel-palette-edited" [style.background]="stopsCss(pixelEffect.palette.stops, pixelEffect.palette.between)"></div>
-    @for (stop of pixelEffect.palette.stops; track $index; let index = $index) {
-    <div class="d-flex align-items-center mt-1 pixel-palette-stop">
-      <input type="color" [attr.name]="'stopColor' + index" [value]="stop.color" (input)="setStopColor(index, $any($event.target).value)" />
-      <input
-        type="text"
-        class="slider-input ml-1"
-        [attr.name]="'stopPosition' + index"
-        [ngModel]="stop.position"
-        (ngModelChange)="setStopPosition(index, $event)"
-      />
-      <a
-        href="#"
-        class="ml-1 pixel-palette-remove"
-        [attr.aria-label]="'designer.effect.pixel-palette-remove-color' | translate"
-        (click)="removeStop(index); (false)"
-        ><i class="fa fa-times" aria-hidden="true"></i
-      ></a>
-    </div>
-    }
-    <a href="#" class="d-inline-block mt-1 pixel-palette-add" (click)="addStop(); (false)"
-      ><i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.effect.pixel-palette-add-color' | translate }}</a
-    >
+    <lib-app-gradient-editor
+      [stops]="pixelEffect.palette.stops"
+      [background]="stopsCss(pixelEffect.palette.stops, pixelEffect.palette.between)"
+      (stopsChange)="setStops($event)"
+    ></lib-app-gradient-editor>
     <div class="d-flex mt-1">
       <select name="paletteBetween" [ngModel]="pixelEffect.palette.between" (ngModelChange)="setPaletteBetween($event)">
         <option value="smooth">{{ 'designer.effect.pixel-palette-between-smooth' | translate }}</option>
@@ -808,7 +793,7 @@
     <label class="form-check-label" [for]="'view_' + curve.uuid + '_' + view">{{ 'designer.effect.pixel-view-' + view | translate }}</label>
   </div>
   } }
-  <hr class="my-1" style="border-color: white" />
+  <hr />
   <!-- the white part of the light on the white LEDs of the pixels which have them -->
   <div class="form-check">
     <input
@@ -837,7 +822,7 @@
     }}</label>
   </div>
   }
-  <hr class="my-1" style="border-color: white" />
+  <hr />
   <div class="form-check">
     <input
       type="checkbox"
@@ -929,7 +914,7 @@
           <label class="form-check-label" for="channel_profile_{{ curve?.uuid }}_{{ profile.uuid }}">{{ profile.name }}</label>
         </div>
         }
-        <hr class="my-1" style="border-color: white" />
+        <hr />
       </div>
       }
 
