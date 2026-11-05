@@ -655,6 +655,66 @@ describe('PreviewComponent', () => {
     expect(localStorage.getItem('previewGlow')).toBe('true');
   });
 
+  // the frames rendered with the passed time between them, as the clock of the page goes
+  function framesApart(count: number, millis: number, clock: { now: number }) {
+    for (let i = 0; i < count; i++) {
+      clock.now += millis;
+      frame(clock.now);
+    }
+  }
+
+  it('does without the glow while the preview is too slow with it, until it is switched on again', () => {
+    open();
+    spyOn((component as any).glowComposer, 'render');
+    const composer = spyOn((component as any).composer, 'render');
+    const clock = { now: 0 };
+    spyOn(performance, 'now').and.callFake(() => clock.now);
+    spyOn(console, 'info');
+
+    // 12 frames a second
+    framesApart(31, 80, clock);
+    fixture.detectChanges();
+
+    expect(previewService.glowSuspended).toBe(true);
+    expect(previewService.glow).toBe(true);
+    expect(console.info).toHaveBeenCalled();
+    expect(element('.preview-glow-button').classList).not.toContain('preview-chrome-button-on');
+
+    composer.calls.reset();
+    framesApart(1, 80, clock);
+    expect(composer).not.toHaveBeenCalled();
+
+    // switched on again, it stays on
+    element('.preview-glow-button').click();
+    fixture.detectChanges();
+    framesApart(40, 80, clock);
+
+    expect(previewService.glowing).toBe(true);
+    expect(previewService.glowKept).toBe(true);
+    expect(composer).toHaveBeenCalledTimes(40);
+    expect(localStorage.getItem('previewGlow')).toBe('true');
+  });
+
+  it('keeps the glow where the preview is fast enough with it, measured again after a pause', () => {
+    open();
+    spyOn((component as any).glowComposer, 'render');
+    spyOn((component as any).composer, 'render');
+    const clock = { now: 0 };
+    spyOn(performance, 'now').and.callFake(() => clock.now);
+
+    // slow while the shaders are compiled, then a pause (a hidden tab), then 40 frames a second
+    framesApart(15, 200, clock);
+    clock.now += 5000;
+    framesApart(31, 25, clock);
+
+    expect(previewService.glowSuspended).toBe(false);
+    expect((component as any).glowWatched).toBe(true);
+
+    // measured once
+    framesApart(30, 200, clock);
+    expect(previewService.glowSuspended).toBe(false);
+  });
+
   it('renders the stage without the glow where the browser can not let the lights glow', () => {
     spyOn<any>(PreviewComponent.prototype, 'glowTarget').and.throwError('no half floats');
     open();

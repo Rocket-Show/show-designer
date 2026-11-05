@@ -33,8 +33,8 @@
   <a
     href="#"
     class="preview-chrome-button preview-glow-button"
-    [class.preview-chrome-button-on]="previewService.glow"
-    popover="{{ (previewService.glow ? 'designer.preview.glow-off' : 'designer.preview.glow-on') | translate }}"
+    [class.preview-chrome-button-on]="previewService.glowing"
+    popover="{{ (previewService.glowing ? 'designer.preview.glow-off' : 'designer.preview.glow-on') | translate }}"
     container="body"
     placement="left"
     triggers="mouseenter:mouseleave"

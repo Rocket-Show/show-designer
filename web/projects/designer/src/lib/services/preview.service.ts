@@ -84,6 +84,18 @@ export class PreviewService implements OnDestroy {
   // it was turned off.
   public glow = localStorage.getItem(PREVIEW_GLOW_STORAGE_KEY) !== 'false';
 
+  // the glow left out while the designer is open, because the preview got too slow with it (see
+  // PreviewComponent.watchGlow), until it is switched on again
+  public glowSuspended = false;
+
+  // switched on again after that: it stays on, however slow the preview is
+  public glowKept = false;
+
+  // do the lights glow right now?
+  get glowing(): boolean {
+    return this.glow && !this.glowSuspended;
+  }
+
   private stageMeshes: THREE.Mesh[] = [];
 
   // a spot on the stage being picked with a click into the 3D preview (e.g. to aim the moving heads at), and the spot
@@ -95,6 +107,8 @@ export class PreviewService implements OnDestroy {
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
 
   public setGlow(glow: boolean) {
+    this.glowKept = glow && this.glowSuspended;
+    this.glowSuspended = false;
     this.glow = glow;
     localStorage.setItem(PREVIEW_GLOW_STORAGE_KEY, glow ? 'true' : 'false');
   }

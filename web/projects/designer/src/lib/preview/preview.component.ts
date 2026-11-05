@@ -27,6 +27,13 @@ import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
 // remembers whether the render is turned off, across sessions
 const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
 
+// how slow a frame of the preview may be with the glow on average (20 frames a second), measured over a number of
+// frames after the first ones, and how long a pause between two frames starts the measurement over (in ms)
+const GLOW_SLOW_FRAME_MILLIS = 50;
+const GLOW_SKIPPED_FRAMES = 10;
+const GLOW_MEASURED_FRAMES = 20;
+const GLOW_PAUSE_MILLIS = 1000;
+
 // The glow around the lights: how strong it is, how far it spreads (0 to 1), and how much each of the blurs adds to it,
 // from the narrowest to the widest. The wide ones add little, so the stage away from the lights stays dark.
 const GLOW_STRENGTH = 1.1;
@@ -79,6 +86,12 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   // what the stage is drawn with while only the lights are rendered for their glow
   private glowDarkMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
   private glowDarkened: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+
+  // how fast the preview is with the glow (see watchGlow)
+  private glowWatched = false;
+  private glowFrames = 0;
+  private glowMeasuredFrom: number;
+  private lastGlowFrameAt: number;
 
   // grouping fixture (pixels) into the same fixture to being able to properly rotate around the center
   private fixtureGroups = new Map<string, THREE.Group>();
@@ -205,10 +218,11 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   }
 
   private render() {
-    if (this.composer && this.previewService.glow) {
+    if (this.composer && this.previewService.glowing) {
       try {
         this.renderGlow();
         this.composer.render();
+        this.watchGlow(performance.now());
         return;
       } catch (error) {
         // the stage is still rendered, without the glow from now on
@@ -218,6 +232,34 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // The glow renders the stage twice: a computer without a graphics card of its own can't keep up with it. Once it
+  // has rendered a few frames (the first ones compile the shaders), the time a frame takes on average is measured, and
+  // the glow left out while the designer is open, where the preview gets slower than 20 frames a second with it. A
+  // pause in between (a hidden tab, the preview folded away) starts the measurement over.
+  private watchGlow(now: number) {
+    if (this.glowWatched || this.previewService.glowKept) {
+      return;
+    }
+
+    if (this.lastGlowFrameAt !== undefined && now - this.lastGlowFrameAt > GLOW_PAUSE_MILLIS) {
+      this.glowFrames = GLOW_SKIPPED_FRAMES;
+    }
+
+    this.lastGlowFrameAt = now;
+    this.glowFrames++;
+
+    if (this.glowFrames === GLOW_SKIPPED_FRAMES + 1) {
+      this.glowMeasuredFrom = now;
+    } else if (this.glowFrames === GLOW_SKIPPED_FRAMES + 1 + GLOW_MEASURED_FRAMES) {
+      this.glowWatched = true;
+
+      if ((now - this.glowMeasuredFrom) / GLOW_MEASURED_FRAMES > GLOW_SLOW_FRAME_MILLIS) {
+        console.info('The lights of the preview glow no more: the preview got too slow with it');
+        this.previewService.glowSuspended = true;
+      }
+    }
   }
 
   // The lights which glow (on the glow layer) alone, blurred: the rest of the stage black in front of them, so it
@@ -520,7 +562,7 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
 
   // the lights glow, or not (to save performance)
   switchGlow() {
-    this.previewService.setGlow(!this.previewService.glow);
+    this.previewService.setGlow(!this.previewService.glowing);
   }
 
   private setupCamera() {
