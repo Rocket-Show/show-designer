@@ -77,7 +77,7 @@
   </div>
   @if (isPixel && pickingPattern) {
   <!-- the patterns, each in the colors of the effect, made for bars and made for matrices -->
-  <div class="pixel-picker">
+  <div #picker class="pixel-picker">
     @for (group of pixelPatternGroups; track group.name) {
     <div class="pixel-picker-group">{{ 'designer.effect.pixel-patterns-' + group.name | translate }}</div>
     <div class="pixel-picker-tiles">

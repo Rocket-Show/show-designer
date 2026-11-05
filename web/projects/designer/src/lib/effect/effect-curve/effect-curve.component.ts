@@ -84,6 +84,9 @@ export interface CurveChannelOption {
   channel: CachedFixtureChannel;
 }
 
+// how tall the tiles to pick a pattern from are at least (two rows), in CSS pixels
+const PICKER_MIN_HEIGHT = 180;
+
 @Component({
   selector: 'lib-app-effect-curve',
   templateUrl: './effect-curve.component.html',
@@ -218,6 +221,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // the patterns to pick from, as they look (see drawPatternTiles)
   @ViewChildren('patternTile') patternTiles: QueryList<ElementRef<HTMLCanvasElement>>;
   public pickingPattern = false;
+
+  // the tiles, as tall as the panel shows them once they are open
+  @ViewChild('picker') set picker(picker: ElementRef<HTMLElement>) {
+    if (picker) {
+      this.fitPicker(picker.nativeElement);
+    }
+  }
   public readonly pixelPatternGroups = [
     { name: 'bars', patterns: pixelPatternsForBars },
     { name: 'matrices', patterns: pixelPatternsForMatrices },
@@ -433,6 +443,27 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     this.livePreviewService.previewLive();
+  }
+
+  // The tiles open over the card and scroll inside: as far down as the panels they are in
+  // show them, but no smaller than two rows. Where less is left, the panel scrolls to show
+  // them.
+  private fitPicker(picker: HTMLElement) {
+    let bottom = window.innerHeight;
+
+    for (let parent = picker.parentElement; parent; parent = parent.parentElement) {
+      if (getComputedStyle(parent).overflowY !== 'visible') {
+        bottom = Math.min(bottom, parent.getBoundingClientRect().bottom);
+      }
+    }
+
+    const room = Math.floor(bottom - picker.getBoundingClientRect().top - 8);
+
+    picker.style.maxHeight = Math.max(PICKER_MIN_HEIGHT, room) + 'px';
+
+    if (room < PICKER_MIN_HEIGHT) {
+      picker.scrollIntoView?.({ block: 'nearest' });
+    }
   }
 
   // a pattern picked from the tiles

@@ -811,6 +811,34 @@ describe('EffectCurveComponent', () => {
     expect(element.querySelector('.pixel-picker')).toBeNull();
   });
 
+  it('opens the tiles as tall as the panel shows them, and scrolls them into view where too little is left', async () => {
+    curve = new EffectPixel({ uuid: 'pixels' });
+    await render();
+
+    // the panel the card is in shows 300 pixels of it
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.overflow = 'hidden';
+    host.style.height = '300px';
+
+    const toggle = () => (element.querySelector('.pixel-picker-toggle') as HTMLElement).click();
+    const picker = () => element.querySelector('.pixel-picker') as HTMLElement;
+
+    toggle();
+    await update();
+    const room = Math.floor(Math.min(window.innerHeight, host.getBoundingClientRect().bottom) - picker().getBoundingClientRect().top - 8);
+    expect(picker().style.maxHeight).toBe(Math.max(180, room) + 'px');
+
+    toggle();
+    await update();
+    host.style.height = '60px';
+    const scrolled = spyOn(Element.prototype, 'scrollIntoView');
+    toggle();
+    await update();
+    expect(picker().style.maxHeight).toBe('180px');
+    expect(scrolled).toHaveBeenCalled();
+  });
+
   it('tells when the preset dims to 0, which keeps a pixel effect dark', async () => {
     curve = new EffectPixel({ uuid: 'pixels' });
     await render();
