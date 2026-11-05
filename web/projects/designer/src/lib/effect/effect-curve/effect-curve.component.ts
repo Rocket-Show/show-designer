@@ -29,6 +29,10 @@ import {
 import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf } from '../../models/pixel-palettes';
 import { toInt } from '../../models/pixel-math';
 import { ColorService } from '../../services/color.service';
+import { ProjectService } from '../../services/project.service';
+import { FixtureCapabilityColor as PixelColor } from '../../models/fixture-capability';
+import { getStagePlacements } from '../../models/pan-tilt';
+import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../../models/pixel-stage';
 
 // a fixture in the preview of a pixel effect: where each of its parts is, and the step of the chase it takes
 interface PixelPreviewFixture {
@@ -46,8 +50,10 @@ interface PixelPreviewFixture {
 const PIXEL_HOUSING_COLOR = '#08090b';
 const PIXEL_HOUSING_EDGE_COLOR = 'rgba(255, 255, 255, 0.07)';
 
-// the darkest a pixel is drawn in, so one which is off still shows where it is: a dark grey, like an LED in the dark
+// the darkest a pixel is drawn in, so one which is off still shows where it is: a dark grey, like an LED in the dark,
+// and a lighter one in the picture of the stage, where no housing is drawn around them
 const PIXEL_OFF_COLOR = [20, 23, 28];
+const STAGE_PIXEL_OFF_COLOR = [36, 40, 48];
 
 // how strong the glow around the lit pixels is, and how far it reaches (in pixels of the fixture)
 const PIXEL_GLOW_ALPHA = 0.8;
@@ -161,10 +167,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public readonly pixelPatternsForBars = pixelPatternsForBars;
   public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
   public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
+  public readonly pixelSpreads = ['fixture', 'stage'];
+  public readonly pixelViews = ['front', 'top'];
   public readonly pixelPalettes = builtInPixelPalettes;
 
   // the tab the panel on the right shows: the colors or how they are blended
   public pixelTab = 'colors';
+
+  // the parts of the preset in the picture of the stage, for an effect spread across it, and the view it is seen in
+  private stagePreview: { view: string; parts: { place: PixelContext; index: number }[]; count: number };
 
   // the fixtures of the preset the grid shows the pixel effect on, worked out when the selection changes
   private pixelPreviewFixtures: PixelPreviewFixture[];
@@ -195,10 +206,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     public livePreviewService: LivePreviewService,
     private modalService: BsModalService,
     private timelineService: TimelineService,
-    private colorService: ColorService
+    private colorService: ColorService,
+    private projectService?: ProjectService
   ) {
     this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.pixelPreviewFixtures = undefined;
+      this.stagePreview = undefined;
       this.updateCapabilitiesAndChannels();
 
       // the chase is spread over the fixtures of the preset
@@ -420,6 +433,22 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // paint each fixture on its own or one picture across the stage
+  setSpread(spread: string) {
+    this.pixelEffect.spread = spread;
+    this.livePreviewService.previewLive();
+  }
+
+  setView(view: string) {
+    this.pixelEffect.view = view;
+    this.livePreviewService.previewLive();
+  }
+
+  setWhiteLed(whiteLed: boolean) {
+    this.pixelEffect.whiteLed = whiteLed;
+    this.livePreviewService.previewLive();
+  }
+
   setMirror(mirror: boolean) {
     this.pixelEffect.mirror = mirror;
     this.livePreviewService.previewLive();
@@ -509,6 +538,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // The pixels of the fixtures of the preset as the pixel effect lights them now, in the color of the preset where the
   // palette follows it: the bars stacked on the left, the matrices next to them
   private drawPixels() {
+    if (this.pixelEffect.spread === 'stage') {
+      this.drawStagePixels();
+      return;
+    }
+
     const effect = this.pixelEffect;
     const fixtures = this.getPixelPreviewFixtures().slice(0, 8);
     const bars = fixtures.filter((fixture) => fixture.rows === 1).slice(0, 6);
@@ -593,15 +627,144 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  // The picture of the stage the parts of the preset make up, each part a pixel where it is in it (see pixel-stage),
+  // with the glow of the lit ones
+  private drawStagePixels() {
+    const effect = this.pixelEffect;
+    const stage = this.getStagePreview();
+    const first = stage.parts[0]?.place;
+
+    if (!first) {
+      return;
+    }
+
+    const preset = this.presetService.selectedPreset;
+    const base = hexToRgb(preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+    const loopMillis = effect.getRunLoopMillis(stage.count, this.beatsPerMinute);
+    const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
+
+    // the picture as large as it fits in its aspect, a picture of one row (or column) across the middle
+    const margin = 10;
+    const width = this.maxWidth - margin * 2;
+    const height = this.maxHeight - margin * 2;
+    const scale = Math.min(first.aspectX > 0 ? width / first.aspectX : Infinity, first.aspectY > 0 ? height / first.aspectY : Infinity);
+    const pictureWidth = first.aspectX * scale;
+    const pictureHeight = first.aspectY * scale;
+    const left = (this.maxWidth - pictureWidth) / 2;
+    const top = (this.maxHeight - pictureHeight) / 2;
+    const cell = Math.max(2, Math.min(pictureWidth / first.columns, first.rows > 1 ? pictureHeight / first.rows : height, 16) * 0.8);
+
+    for (const part of stage.parts) {
+      const cycles = effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
+      const [red, green, blue] = this.pixelColorOf(effect, part.place, cycles, part.index, base, true).map((component) =>
+        Math.round(Math.min(Math.max(component, 0), 1) * 255)
+      );
+      const x = left + part.place.x * pictureWidth - cell / 2;
+      const y = top + part.place.y * pictureHeight - cell / 2;
+
+      this.ctx.save();
+      // lit ones glow around them
+      this.ctx.shadowColor = `rgba(${red}, ${green}, ${blue}, ${PIXEL_GLOW_ALPHA})`;
+      this.ctx.shadowBlur = Math.max(red, green, blue) > 0 ? cell * PIXEL_GLOW_REACH * 2 * this.pixelRatio : 0;
+      this.ctx.fillStyle = `rgb(${Math.max(red, STAGE_PIXEL_OFF_COLOR[0])}, ${Math.max(green, STAGE_PIXEL_OFF_COLOR[1])}, ${Math.max(
+        blue,
+        STAGE_PIXEL_OFF_COLOR[2]
+      )})`;
+      this.roundedRect(x, y, cell, cell, cell * 0.2);
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+  }
+
+  // The parts of the preset lighting in colors where they are in the picture of the stage, like the preview of the
+  // designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with their places in the chase of the
+  // preset. None picked yet: three bars side by side.
+  private getStagePreview(): { view: string; parts: { place: PixelContext; index: number }[]; count: number } {
+    const view = this.pixelEffect.view;
+
+    if (this.stagePreview && this.stagePreview.view === view) {
+      return this.stagePreview;
+    }
+
+    const preset = this.presetService.selectedPreset;
+    const project = this.projectService?.project;
+    const parts: CachedFixture[] = [];
+    let indices = new Map<string, number>();
+    let count = 1;
+
+    if (preset && project) {
+      const chase = this.presetService.getPresetWholeFixtureChase(preset);
+      indices = chase.indices;
+      count = chase.count;
+
+      for (const cachedFixture of this.fixtureService.cachedFixtures) {
+        const lightsInColors = cachedFixture.channels.some((channel) =>
+          channel.capabilities.some(
+            (capability) =>
+              capability.capability.type === FixtureCapabilityType.ColorIntensity &&
+              [PixelColor.Red, PixelColor.Green, PixelColor.Blue].indexOf(capability.capability.color) >= 0
+          )
+        );
+
+        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+          parts.push(cachedFixture);
+        }
+      }
+    }
+
+    let positions: number[][];
+    let partIndices: number[];
+
+    if (parts.length > 0) {
+      const placements = getStagePlacements(project);
+      positions = parts.map((part) => {
+        const place = this.fixtureService.getPixelPlace(part);
+
+        return pixelStagePosition(
+          place,
+          pixelHousingSize(part.profile, place.columns, place.rows),
+          placements.get(part.fixture.uuid) || { position: [0, 0, 0], rotation: [0, 0, 0] },
+          part.fixture.positioning
+        );
+      });
+      partIndices = parts.map((part) => indices.get(part.fixture.uuid) ?? 0);
+    } else {
+      positions = [];
+      partIndices = [];
+
+      for (let bar = 0; bar < 3; bar++) {
+        for (let pixel = 0; pixel < 12; pixel++) {
+          positions.push([bar * 130 + (pixel + 0.5) * 8.8, 0, 0]);
+          partIndices.push(bar);
+        }
+      }
+
+      count = 3;
+    }
+
+    const places = stagePixelPlaces(positions, view);
+    this.stagePreview = { view, count, parts: places.map((place, i) => ({ place, index: partIndices[i] })) };
+
+    return this.stagePreview;
+  }
+
   // the color of a pixel of the preview, as red, green and blue between 0 and 1: what the effect lights it in, blended
-  // with the color of the preset, or that color alone before and after the effect runs on the fixture
-  private pixelColorOf(effect: EffectPixel, part: PixelContext, cycles: number, fixtureIndex: number, base: number[]): number[] {
+  // with the color of the preset, or that color alone before and after the effect runs on the fixture. Spread across
+  // the stage, all fixtures start the random looking patterns at the same place.
+  private pixelColorOf(
+    effect: EffectPixel,
+    part: PixelContext,
+    cycles: number,
+    fixtureIndex: number,
+    base: number[],
+    stage = false
+  ): number[] {
     if (cycles === undefined) {
       return base;
     }
 
     const context = Object.assign(new PixelContext(), part);
-    context.seed = toInt(effect.seed * 7919 + fixtureIndex * 131);
+    context.seed = toInt(effect.seed * 7919 + (stage ? 0 : fixtureIndex * 131));
 
     if (effect.mirror) {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;

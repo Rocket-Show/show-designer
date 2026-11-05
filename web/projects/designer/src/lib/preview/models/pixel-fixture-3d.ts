@@ -1,15 +1,11 @@
 import * as THREE from 'three';
 import { CachedFixture } from '../../models/cached-fixture';
 import { CachedFixturePixel } from '../../models/cached-fixture-pixel';
-import { Positioning } from '../../models/fixture';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { FixtureService } from '../../services/fixture.service';
 import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.service';
+import { isOnTheFloor, pixelHousingOffset, pixelHousingSize } from '../../models/pixel-stage';
 import { Fixture3d } from './fixture-3d';
-
-// the space a pixel takes on a fixture which does not say how large it is, and how deep such a fixture is (in cm)
-const DEFAULT_PIXEL_PITCH_CM = 8;
-const DEFAULT_DEPTH_CM = 7;
 
 // the share of its space an LED takes, the rest is the housing between them
 const LED_SIZE = 0.78;
@@ -59,11 +55,8 @@ export class PixelHousing3d {
     const columns = Math.max(1, ...this.pixels.map((pixel) => pixel.x));
     const rows = Math.max(1, ...this.pixels.map((pixel) => pixel.y));
 
-    // in mm, like in the fixture library
-    const dimensions = fixture.profile.physical?.dimensions || [];
-    this.width = dimensions[0] / 10 || columns * DEFAULT_PIXEL_PITCH_CM;
-    this.height = dimensions[1] / 10 || rows * DEFAULT_PIXEL_PITCH_CM;
-    this.depth = dimensions[2] / 10 || DEFAULT_DEPTH_CM;
+    // where the pixel effects spread across the stage see the LEDs as well (see pixel-stage)
+    [this.width, this.height, this.depth] = pixelHousingSize(fixture.profile, columns, rows);
 
     this.body = new THREE.Mesh(new THREE.BoxGeometry(this.width, this.height, this.depth), previewService.fixtureMaterial);
     this.object.add(this.body);
@@ -134,11 +127,10 @@ export class PixelHousing3d {
   // placed is centered on its place.
   public updatePosition() {
     const positioning = this.fixture.fixture.positioning;
-    const onTheFloor = positioning === Positioning.bottomFront || positioning === Positioning.bottomBack;
 
     // the group of the fixture is turned upside down on the floor (see Fixture3d.updatePosition), the housing not
-    this.object.rotation.x = onTheFloor ? Math.PI : 0;
-    this.object.position.set(0, positioning === Positioning.manual ? 0 : 8 - this.height / 2, 0);
+    this.object.rotation.x = isOnTheFloor(positioning) ? Math.PI : 0;
+    this.object.position.set(0, pixelHousingOffset(positioning, this.height), 0);
   }
 
   // shows the light the parts added in this frame, and starts the next one dark

@@ -17,6 +17,7 @@ import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { PixelPalette } from '../models/pixel-palette';
 import { PixelContext, samplePixelPattern } from '../models/pixel-pattern';
 import { toInt } from '../models/pixel-math';
+import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../models/pixel-stage';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
@@ -25,6 +26,7 @@ import {
   getStagePlacements,
   isPanTilt,
   PanTiltContext,
+  StagePlacement,
 } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { getIdentifyCapabilityValues } from '../models/identify';
@@ -61,6 +63,13 @@ export class PreviewService implements OnDestroy {
   public stageAndPositionsDirty: boolean = true;
 
   public scene: THREE.Scene;
+
+  // what a frame knows while it is worked out: where the fixtures hang, the place of each part in the chase of each
+  // preset and the places of the parts of a preset in a picture of the stage (for the pixel effects spread across it,
+  // worked out once in a frame for each preset and view)
+  private framePlacements = new Map<string, StagePlacement>();
+  private frameFixtureIndices = new Map<Preset, Map<string, number>>();
+  private frameStagePlaces = new Map<Preset, Map<string, Map<CachedFixture, PixelContext>>>();
 
   // Whether the lights glow in the 3d preview, the way they do in the dark (it costs a bit of performance). On unless
   // it was turned off.
@@ -764,9 +773,14 @@ export class PreviewService implements OnDestroy {
       return value ? value.value / channel.maxValue : 0;
     });
 
-    // where the part is in its fixture, every fixture starting the random looking patterns somewhere else
-    const context = Object.assign(new PixelContext(), this.fixtureService.getPixelPlace(cachedFixture));
-    context.seed = toInt(effect.seed * 7919 + fixtureIndex * 131);
+    // Where the part is in its fixture, every fixture starting the random looking patterns somewhere else. Spread
+    // across the stage, where it is in the picture of the stage, which is one for all of them.
+    const stage = effect.spread === 'stage';
+    const context = Object.assign(
+      new PixelContext(),
+      stage ? this.getStagePixelPlace(preset.preset, effect.view, cachedFixture) : this.fixtureService.getPixelPlace(cachedFixture)
+    );
+    context.seed = toInt(effect.seed * 7919 + (stage ? 0 : fixtureIndex * 131));
 
     if (effect.mirror) {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
@@ -776,35 +790,110 @@ export class PreviewService implements OnDestroy {
     const palette = effect.palette;
     const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
     const color = PixelPalette.colorOf(stops, palette.between, palette.repeat, place);
+    const lit = color.map((component) => component * level);
+
+    // the white part of the light on the white LED, if it is to light it
+    const white = effect.whiteLed ? this.getColorChannel(cachedFixture, FixtureCapabilityColor.White) : undefined;
+    let litWhite = 0;
+
+    if (white) {
+      litWhite = Math.min(Math.min(lit[0], lit[1]), lit[2]);
+
+      for (let i = 0; i < 3; i++) {
+        lit[i] = lit[i] - litWhite;
+      }
+    }
 
     channels.forEach((channel, i) => {
-      if (!channel) {
-        return;
+      if (channel) {
+        this.mixPixelValue(effect, cachedFixture, channel, base[i], lit[i], level, values, effectIntensityPercentage);
       }
-
-      const lit = color[i] * level;
-      let target: number;
-
-      switch (effect.blend) {
-        case 'mask':
-          target = base[i] * level;
-          break;
-        case 'add':
-          target = Math.min(base[i] + lit, 1);
-          break;
-        case 'max':
-          target = Math.max(base[i], lit);
-          break;
-        default:
-          target = lit;
-      }
-
-      const fixtureChannelValue = new FixtureChannelValue();
-      fixtureChannelValue.channelName = channel.name;
-      fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-      fixtureChannelValue.value = channel.maxValue * target;
-      this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
     });
+
+    if (white) {
+      const value = this.getChannelValue(values, white.name, cachedFixture.profile.uuid);
+      const baseWhite = value ? value.value / white.maxValue : 0;
+
+      this.mixPixelValue(effect, cachedFixture, white, baseWhite, litWhite, level, values, effectIntensityPercentage);
+    }
+  }
+
+  // A color of a pixel the effect lights, blended with the one the preset puts on it (base, between 0 and 1): the light
+  // of the pattern (lit) in place of it, the base as bright as the pattern makes it (mask), the light added to it or the
+  // brighter of both
+  private mixPixelValue(
+    effect: EffectPixel,
+    cachedFixture: CachedFixture,
+    channel: CachedFixtureChannel,
+    base: number,
+    lit: number,
+    level: number,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number
+  ) {
+    let target: number;
+
+    switch (effect.blend) {
+      case 'mask':
+        target = base * level;
+        break;
+      case 'add':
+        target = Math.min(base + lit, 1);
+        break;
+      case 'max':
+        target = Math.max(base, lit);
+        break;
+      default:
+        target = lit;
+    }
+
+    const fixtureChannelValue = new FixtureChannelValue();
+    fixtureChannelValue.channelName = channel.name;
+    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+    fixtureChannelValue.value = channel.maxValue * target;
+    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+  }
+
+  // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in
+  // colors, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
+  private getStagePixelPlace(preset: Preset, view: string, cachedFixture: CachedFixture): PixelContext {
+    let views = this.frameStagePlaces.get(preset);
+
+    if (!views) {
+      views = new Map();
+      this.frameStagePlaces.set(preset, views);
+    }
+
+    let places = views.get(view);
+
+    if (!places) {
+      places = new Map();
+      const indices = this.frameFixtureIndices.get(preset);
+      const parts = this.fixtureService.cachedFixtures.filter(
+        (part) =>
+          indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 &&
+          [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].some((color) =>
+            this.getColorChannel(part, color)
+          )
+      );
+      const positions = parts.map((part) => {
+        const partPlace = this.fixtureService.getPixelPlace(part);
+        const placement = this.framePlacements.get(part.fixture.uuid) || { position: [0, 0, 0], rotation: [0, 0, 0] };
+
+        return pixelStagePosition(
+          partPlace,
+          pixelHousingSize(part.profile, partPlace.columns, partPlace.rows),
+          placement,
+          part.fixture.positioning
+        );
+      });
+      const contexts = stagePixelPlaces(positions, view);
+
+      parts.forEach((part, i) => places.set(part, contexts[i]));
+      views.set(view, places);
+    }
+
+    return places.get(cachedFixture) || this.fixtureService.getPixelPlace(cachedFixture);
   }
 
   // the channel of a part of a fixture which lights in a color, the first one if there are several
@@ -920,8 +1009,11 @@ export class PreviewService implements OnDestroy {
       { action: 'lamp-on', fixtureUuids: this.projectService.project.lampOnFixtureUuids || [] },
     ];
 
-    // where the fixtures hang, to aim the moving heads at a spot
+    // where the fixtures hang, to aim the moving heads at a spot (and to spread the pixel effects across the stage)
     const placements = getStagePlacements(this.projectService.project);
+    this.framePlacements = placements;
+    this.frameFixtureIndices = fixtureIndices;
+    this.frameStagePlaces = new Map();
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];

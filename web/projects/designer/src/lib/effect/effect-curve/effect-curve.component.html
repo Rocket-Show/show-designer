@@ -411,6 +411,20 @@
     >
       <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
     </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'place'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'place'"
+      popover="{{ 'designer.effect.pixel-place' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'place'; (false)"
+    >
+      <i class="fa fa-th-large fa-fw" aria-hidden="true"></i>
+    </a>
   </div>
 </div>
 
@@ -432,7 +446,48 @@
       {{ 'designer.effect.pixel-palette-' + palette.id | translate }}
     </label>
   </div>
-  } } @else {
+  } } @else if (pixelTab === 'place') {
+  <!-- where the pattern is painted: on each fixture or across the stage, seen from the front or from above -->
+  @for (spread of pixelSpreads; track spread) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'spread_' + curve.uuid"
+      [id]="'spread_' + curve.uuid + '_' + spread"
+      [checked]="pixelEffect.spread === spread"
+      (change)="setSpread(spread)"
+    />
+    <label class="form-check-label" [for]="'spread_' + curve.uuid + '_' + spread">{{
+      'designer.effect.pixel-spread-' + spread | translate
+    }}</label>
+  </div>
+  } @if (pixelEffect.spread === 'stage') { @for (view of pixelViews; track view) {
+  <div class="form-check ml-3">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'view_' + curve.uuid"
+      [id]="'view_' + curve.uuid + '_' + view"
+      [checked]="pixelEffect.view === view"
+      (change)="setView(view)"
+    />
+    <label class="form-check-label" [for]="'view_' + curve.uuid + '_' + view">{{ 'designer.effect.pixel-view-' + view | translate }}</label>
+  </div>
+  } }
+  <hr class="my-1" style="border-color: white" />
+  <!-- the white part of the light on the white LEDs of the pixels which have them -->
+  <div class="form-check">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      [id]="'whiteLed_' + curve.uuid"
+      [ngModel]="pixelEffect.whiteLed"
+      (ngModelChange)="setWhiteLed($event)"
+    />
+    <label class="form-check-label" [for]="'whiteLed_' + curve.uuid">{{ 'designer.effect.pixel-white-led' | translate }}</label>
+  </div>
+  } @else {
   <!-- what the effect does with the color the preset puts on a pixel -->
   @for (blend of pixelBlends; track blend) {
   <div class="form-check">

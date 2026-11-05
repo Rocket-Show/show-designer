@@ -24,8 +24,15 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
   // the shades of the color the preset puts on each pixel, unless a palette of its own is picked
   palette = new PixelPalette({ ref: 'preset' });
 
-  // 'fixture' paints the pattern over each fixture on its own. ('stage' will spread one picture over all of them.)
+  // 'fixture' paints the pattern over each fixture on its own, 'stage' spreads one picture over all of them, as they
+  // hang on the stage: seen from the 'front' or from above ('top', e.g. for fixtures lying on the floor), framed around
+  // the pixels of the preset (see pixel-stage)
   spread = 'fixture';
+  view = 'front';
+
+  // a pixel with a white LED lights the white part of the color (the least of red, green and blue) with it, the rest
+  // with red, green and blue
+  whiteLed = false;
 
   // what it does with the color the preset puts on a pixel: 'replace' it, 'mask' it (the pattern only sets how bright
   // it is), 'add' to it or take the 'max' of both on each of red, green and blue
@@ -49,6 +56,8 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
     this.mirror = data.mirror === true;
     this.palette = data.palette ? new PixelPalette(data.palette) : new PixelPalette({ ref: 'preset' });
     this.spread = data.spread || 'fixture';
+    this.view = data.view || 'front';
+    this.whiteLed = data.whiteLed === true;
     this.blend = data.blend || 'replace';
   }
 }

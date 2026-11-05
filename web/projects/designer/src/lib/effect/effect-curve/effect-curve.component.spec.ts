@@ -410,6 +410,18 @@ describe('EffectCurveComponent pixel preview', () => {
     expect(context.cells.map((cell) => cell.color)).toEqual(['rgb(20, 23, 255)', 'rgb(20, 23, 255)', 'rgb(20, 23, 255)']);
   });
 
+  it('draws one picture of the stage for an effect spread across it, three bars side by side while there is none', () => {
+    const { component, context } = pixelPreview(chase({ spread: 'stage', size: 0.2 }), false);
+
+    component.redraw();
+
+    expect(context.cells.length).toBe(36);
+    // the block runs across all of them: halfway through, in the middle of the second bar
+    const lit = context.cells.map((cell, i) => (cell.color === 'rgb(255, 40, 48)' ? i : -1)).filter((i) => i >= 0);
+    expect(lit.length).toBeGreaterThan(0);
+    expect(lit.every((i) => i >= 12 && i < 24)).toBe(true);
+  });
+
   it('shows the pattern on a bar and a matrix while the preset has no fixture with pixels yet', () => {
     const { component, context } = pixelPreview(chase({ mirror: true }), false);
 
@@ -742,6 +754,28 @@ describe('EffectCurveComponent', () => {
     (element.querySelectorAll('.effect-tab-rail .nav-link')[0] as HTMLElement).click();
     await update();
     expect(element.querySelectorAll('.pixel-palette').length).toBe(15);
+  });
+
+  it('paints a pixel effect on each fixture or across the stage, and on the white LEDs', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // the third tab: where the pattern is painted
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[2] as HTMLElement).click();
+    await update();
+    expect((element.querySelector('#spread_pixels_fixture') as HTMLInputElement).checked).toBe(true);
+    expect(element.querySelector('#view_pixels_top')).toBeNull();
+
+    (element.querySelector('#spread_pixels_stage') as HTMLInputElement).click();
+    await update();
+    expect(pixels.spread).toBe('stage');
+
+    (element.querySelector('#view_pixels_top') as HTMLInputElement).click();
+    (element.querySelector('#whiteLed_pixels') as HTMLInputElement).click();
+    await update();
+    expect([pixels.view, pixels.whiteLed]).toEqual(['top', true]);
+    expect(previewLive).toHaveBeenCalled();
   });
 
   it('offers the capabilities of the fixtures of the preset', async () => {

@@ -2473,6 +2473,140 @@ function channelValuesPixelEffects() {
   );
 }
 
+// ---- pixel effects across the stage, and on white LEDs ------------------------------------------
+
+// A rig of bars and matrices hanging in front, standing on the floor, at the back and placed by hand (turned on all of
+// their axes), with a par and the thirds of a bar among them. Each preset spreads a pattern across the stage, seen
+// from the front or from above, over all of the fixtures or some of them, or paints it on each fixture with the white
+// part of its light on the white LEDs.
+function channelValuesPixelStage() {
+  const random = randomSource(13);
+  const bar = 'test/pixel-bar';
+  const band = 'chauvet-dj/colorband-pix';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  // a bar of four RGB pixels, as large as the fixture library gives some fixtures: in fractions of millimeters
+  const decimalBar = {
+    uuid: 'decimal-bar',
+    name: 'Decimal bar',
+    matrix: { pixelCount: [4, 1, 1] },
+    physical: { dimensions: [1000.5, 66.8, 82.3] },
+    templateChannels: {
+      'Red $pixelKey': { capability: { type: 'ColorIntensity', color: 'Red' } },
+      'Green $pixelKey': { capability: { type: 'ColorIntensity', color: 'Green' } },
+      'Blue $pixelKey': { capability: { type: 'ColorIntensity', color: 'Blue' } },
+    },
+    modes: [
+      {
+        name: '12-channel',
+        shortName: '12ch',
+        channels: [
+          {
+            insert: 'matrixChannels',
+            repeatFor: 'eachPixelXYZ',
+            channelOrder: 'perPixel',
+            templateChannels: ['Red $pixelKey', 'Green $pixelKey', 'Blue $pixelKey'],
+          },
+        ],
+      },
+    ],
+  };
+  const placed = (fixture, positioning, extra = {}) => ({ ...fixture, positioning, ...extra });
+  const fixtures = [
+    placed({ ...edgeFixture('band-left', band, '36ch', 0), dmxFirstChannel: 0 }, 'topFront'),
+    placed({ ...edgeFixture('band-right', band, '36ch', 0), dmxFirstChannel: 36 }, 'topFront'),
+    placed({ ...edgeFixture('floor-bar', bar, '10ch', 0), dmxFirstChannel: 72 }, 'bottomFront'),
+    placed({ ...edgeFixture('back-matrix', matrix, '48ch', 0), dmxFirstChannel: 84 }, 'topBack'),
+    placed({ ...edgeFixture('floor-matrix', matrix, '36ch', 0), dmxFirstChannel: 132 }, 'bottomBack'),
+    placed({ ...edgeFixture('turned', bar, '9ch', 0), dmxFirstChannel: 170 }, 'manual', {
+      positionX: -120,
+      positionY: 200,
+      positionZ: 50,
+      rotationX: 15,
+      rotationY: 30,
+      rotationZ: 90,
+    }),
+    placed({ ...edgeFixture('thirds', band, '9ch', 0), dmxFirstChannel: 180 }, 'bottomFront'),
+    placed({ ...edgeFixture('decimal-bar', 'decimal-bar', '12ch', 0), dmxFirstChannel: 190 }, 'topFront'),
+    placed({ ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 300 }, 'topFront'),
+  ];
+  const presets = [];
+
+  for (let index = 0; index < 24; index++) {
+    const uuid = `stage-${index}`;
+    const pattern = random.pick(pixelPatternNames);
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      pattern,
+      spread: index < 18 ? 'stage' : 'fixture',
+      view: random.pick(['front', 'front', 'top']),
+      whiteLed: random.chance(0.4),
+      capabilities: [],
+      channels: [],
+    };
+    random.maybe(effect, 'size', [0, 0.3, 1, random.number(1)]);
+    random.maybe(effect, 'softness', [0, 0.5, random.number(1)]);
+    random.maybe(effect, 'direction', pixelDirectionsOf(pattern));
+    random.maybe(effect, 'shape', pixelShapesOf(pattern));
+    random.maybe(effect, 'mirror', [true, false, false]);
+    random.maybe(effect, 'seed', [1, random.int(5000)]);
+    random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+    random.maybe(effect, 'blend', ['replace', 'replace', 'mask', 'add', 'max']);
+    random.maybe(effect, 'lengthMillis', [1000, 2500]);
+    random.maybe(effect, 'phasingMillis', [0, 0, 150]);
+
+    // all of the fixtures, or some of them
+    const presetFixturesOfPreset = fixtures
+      .filter(() => index % 3 === 0 || random.chance(0.6))
+      .flatMap((fixture) =>
+        presetFixtures(fixture.uuid, fixture.profileUuid === 'decimal-bar' ? decimalBar : libraryProfile(fixture.profileUuid))
+      );
+    const values = {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        ...rgb(random.number(1), random.number(1), random.number(1)),
+        capability('ColorIntensity', random.number(1), { color: 'White' }),
+      ],
+    };
+
+    presets.push({ ...edgePreset(uuid, presetFixturesOfPreset, values), effects: [effect] });
+  }
+
+  const times = [0, 333, 1250, 4321.5];
+  const cases = presets.map((preset, index) => {
+    const project = {
+      version: 11,
+      fixtureProfiles: [...[bar, band, matrix, par].map((name) => ({ $profile: name })), decimalBar],
+      fixtures,
+      presetFixtures: fixtures.flatMap((fixture) =>
+        presetFixtures(fixture.uuid, fixture.profileUuid === 'decimal-bar' ? decimalBar : libraryProfile(fixture.profileUuid))
+      ),
+      presets: [preset],
+      scenes: [{ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }],
+      compositions: [],
+    };
+
+    // a stage of another size moves the fixtures spread over it
+    if (index % 4 === 1) {
+      project.stageWidthCm = 900;
+      project.stageDepthCm = 450;
+    }
+
+    return {
+      name: `${preset.uuid} ${preset.effects[0].pattern} ${preset.effects[0].spread} ${preset.effects[0].view}`,
+      input: { project, runs: previewScenes([preset.uuid]).map((run) => ({ ...run, times })) },
+    };
+  });
+
+  return write(
+    'channel-values-pixel-stage.json',
+    'channelValues',
+    'Pixel effects spread across the stage, seen from the front and from above, and on the white LEDs of the pixels',
+    cases
+  );
+}
+
 // ---- the dimmers of the fixtures lighting in colors, at full -----------------------------------
 
 // A wash of LEDs with a dimmer which starts at 20 % by its profile, and a wash mixing its colors with filters, without
@@ -2608,6 +2742,7 @@ export function generate() {
     pixelPatterns(),
     channelValuesPixelEffects(),
     channelValuesColorDimmers(),
+    channelValuesPixelStage(),
   ];
 }
 

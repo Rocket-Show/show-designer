@@ -65,13 +65,21 @@ describe('PreviewService pixel effects', () => {
     // two bars of three pixels (the first in its 9-channel mode, the second with a dimmer of its own), a par, a matrix
     // and a COLORband PiX in its 9-channel mode, which lights its pixels in thirds
     TestBed.inject(ProjectService).project = new Project({
-      fixtureProfiles: [profile('test/pixel-bar'), profile('test/rgb-par'), profile('chauvet-dj/colorband-pix'), matrixProfile],
+      fixtureProfiles: [
+        profile('test/pixel-bar'),
+        profile('test/rgb-par'),
+        profile('chauvet-dj/colorband-pix'),
+        profile('test/pixel-matrix'),
+        matrixProfile,
+      ],
       fixtures: [
         { uuid: 'bar-1', profileUuid: 'test/pixel-bar', modeShortName: '9ch', dmxUniverseUuid: 'u', dmxFirstChannel: 0 },
         { uuid: 'bar-2', profileUuid: 'test/pixel-bar', modeShortName: '10ch', dmxUniverseUuid: 'u', dmxFirstChannel: 10 },
         { uuid: 'par', profileUuid: 'test/rgb-par', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 30 },
         { uuid: 'matrix', profileUuid: 'test/matrix', modeShortName: '24ch', dmxUniverseUuid: 'u', dmxFirstChannel: 40 },
         { uuid: 'band', profileUuid: 'chauvet-dj/colorband-pix', modeShortName: '9ch', dmxUniverseUuid: 'u', dmxFirstChannel: 70 },
+        // a matrix of RGBW pixels
+        { uuid: 'rgbw', profileUuid: 'test/pixel-matrix', modeShortName: '48ch', dmxUniverseUuid: 'u', dmxFirstChannel: 100 },
       ],
       presetFixtures: [],
     });
@@ -252,6 +260,55 @@ describe('PreviewService pixel effects', () => {
 
   it('leaves the pixels dark for a pattern of a newer designer', () => {
     expect(colorOf('bar-1', '2', presetWith(['bar-1'], pixelEffect({ pattern: 'fireworks' })), 1500)).toEqual([0, 0, 0]);
+  });
+
+  it('spreads one picture across the fixtures of the preset, as they hang on the stage', () => {
+    // how red the first or the last pixel of each of the two bars hanging side by side is
+    const reds = (spread: string, pixelKey: string, timeMillis: number) => {
+      const preset = presetWith(['bar-1', 'bar-2'], pixelEffect({ size: 0.3, spread }));
+
+      return [colorOf('bar-1', pixelKey, preset, timeMillis)[0], colorOf('bar-2', pixelKey, preset, timeMillis)[0]];
+    };
+
+    // a block of a third of the picture at its left end: on the first bar only
+    const [first, second] = reds('stage', '1', 300);
+    expect(first).toBeGreaterThan(200);
+    expect(second).toBe(0);
+
+    // each bar on its own has the block at its own start
+    const [own, alsoOwn] = reds('fixture', '1', 300);
+    expect(own).toBeGreaterThan(0);
+    expect(alsoOwn).toBe(own);
+
+    // and later at the right end of the picture, the far end of the second bar
+    const [firstEnd, secondEnd] = reds('stage', '3', 2700);
+    expect(firstEnd).toBe(0);
+    expect(secondEnd).toBeGreaterThan(200);
+  });
+
+  it('lights the white part of the light with the white LED of a pixel, if it is to', () => {
+    // the values of the first pixel of the RGBW matrix, from 0 to 255
+    const valuesOf = (effect: any) => {
+      const preset = presetWith(['rgbw'], effect, [{ type: 'ColorIntensity', color: 'White', valuePercentage: 0.4 }]);
+      const cachedFixture = fixtureService.cachedFixtures.find(
+        (candidate) => candidate.fixture.uuid === 'rgbw' && candidate.pixel?.key === '1'
+      );
+      const values = previewService.getChannelValues(0, [new PresetRegionScene(preset, undefined, undefined)]).get(cachedFixture);
+
+      return ['Red 1', 'Green 1', 'Blue 1', 'White 1'].map((name) =>
+        Math.round(values.find((value) => value.channelName === name)?.value ?? 0)
+      );
+    };
+    const light = (color: string, extra: any = {}) =>
+      pixelEffect({ pattern: 'flow', palette: { stops: [{ position: 0, color }] }, ...extra });
+
+    // white on the white LED, the rest on red, green and blue
+    expect(valuesOf(light('#ffffff', { whiteLed: true }))).toEqual([0, 0, 0, 255]);
+    expect(valuesOf(light('#ff8040', { whiteLed: true }))).toEqual([191, 64, 0, 64]);
+    // without, the white LED keeps what the preset puts on it
+    expect(valuesOf(light('#ffffff'))).toEqual([255, 255, 255, 102]);
+    // added to what the preset puts on it
+    expect(valuesOf(light('#ffffff', { whiteLed: true, blend: 'add' }))).toEqual([0, 0, 0, 255]);
   });
 
   it('places a pixel in its column and row, and a group of pixels in the middle of them', () => {

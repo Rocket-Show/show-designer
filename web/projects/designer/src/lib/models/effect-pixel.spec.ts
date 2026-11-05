@@ -10,6 +10,8 @@ describe('EffectPixel', () => {
     expect(effect.pattern).toBe('chase');
     expect(effect.palette.ref).toBe('preset');
     expect(effect.spread).toBe('fixture');
+    expect(effect.view).toBe('front');
+    expect(effect.whiteLed).toBe(false);
     expect(effect.blend).toBe('replace');
     expect(effect.seed).toBe(1);
   });
@@ -24,14 +26,18 @@ describe('EffectPixel', () => {
       seed: null,
       palette: null,
       spread: null,
+      view: null,
+      whiteLed: null,
       blend: null,
     });
 
     expect([effect.pattern, effect.size, effect.softness, effect.direction, effect.seed]).toEqual(['chase', 0.25, 0.3, 'right', 1]);
-    expect([effect.palette.ref, effect.spread, effect.blend, effect.bounce, effect.mirror]).toEqual([
+    expect([effect.palette.ref, effect.spread, effect.view, effect.blend, effect.bounce, effect.mirror, effect.whiteLed]).toEqual([
       'preset',
       'fixture',
+      'front',
       'replace',
+      false,
       false,
       false,
     ]);
