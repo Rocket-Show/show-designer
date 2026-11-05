@@ -371,11 +371,21 @@ describe('ProjectLoadService migrating a project of version 1', () => {
     expect(warning).not.toHaveBeenCalled();
   });
 
-  it('takes a project of version 10 to version 11 without saying so: only the pixel effects came with it', () => {
+  it('takes a project of version 10 to version 11 without saying so: it plays as it did', () => {
     service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 10 }));
 
     expect(projectService.project.version).toBe(11);
     expect(warning).not.toHaveBeenCalled();
+    // the dimmers of its fixtures lighting in colors stay off, like they were played then
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
+  });
+
+  it('keeps the dimmers of the fixtures lighting in colors of a current project as they are', () => {
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 11 }));
+    expect(projectService.project.colorDimmersAtFull).toBe(true);
+
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 11, colorDimmersAtFull: false }));
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
   });
 });
 
@@ -519,9 +529,28 @@ describe('ProjectLoadService opening projects', () => {
     expect(navigate.calls.mostRecent().args[1].queryParams).toEqual({ id: '', token: '' });
   });
 
+  it('starts a new show from a template of an older version, with the dimmers of the fixtures lighting in colors at full', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), id: 1, version: 10 })));
+
+    service.template();
+
+    expect(projectService.project.version).toBe(11);
+    expect(projectService.project.colorDimmersAtFull).toBe(true);
+  });
+
+  it('keeps the dimmers of a show of an older version off when it is opened', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), id: 7, version: 10 })));
+
+    service.load(7, 'Imported').subscribe();
+
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
+  });
+
   it('starts a new project with a preset played by a scene', () => {
     service.new();
     const project = projectService.project;
+
+    expect(project.colorDimmersAtFull).toBe(true);
 
     expect(project.version).toBe(projectService.currentProjectVersion);
     expect(project.uuid).toBeTruthy();

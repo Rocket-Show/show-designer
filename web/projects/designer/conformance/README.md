@@ -36,9 +36,12 @@ white on top of what the presets light them with.
 
 A project of a `channelValues` case names the profiles of `profiles` like the fixture library does (`"$profile":
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of
-`profiles/test`.
+`profiles/test`. It is a project of the current version: Rocket Show migrates a project of an older one when it loads
+it, the designer plays the case as it is. In a current project the dimmers of the fixtures lighting in colors only
+start at full (`colorDimmersAtFull`, see `channel-values-color-dimmers.json`).
 
-A `migration` case compares the version, the fixtures and pixels of the project and of each preset (in their order,
+A `migration` case compares the version, whether the dimmers of the fixtures lighting in colors start at full (not in a
+project of before version 11), the fixtures and pixels of the project and of each preset (in their order,
 with `useGlobalFixtureOrder`), the steps of each preset (times, transition, values and effect amounts), its curves
 (type, amplitude and the channels of each profile) and its other effects, the presets of each scene in their order and
 the tracks of each composition (their names) with the track of each clip, named by its place in the composition: the

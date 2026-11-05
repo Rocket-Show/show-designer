@@ -302,8 +302,10 @@ export class ProjectLoadService {
     }
 
     // version 11 brought the pixel effects, which an older designer would drop when it saves the project (it refuses a
-    // newer one instead). Nothing changes, so nothing is said about it.
+    // newer one instead), and the dimmers of the fixtures lighting in colors at full (see Project.colorDimmersAtFull).
+    // An older project keeps them off, so nothing changes and nothing is said about it.
     if (this.projectService.project.version < 11) {
+      this.projectService.project.colorDimmersAtFull = false;
       this.projectService.project.version = 11;
     }
 
@@ -340,8 +342,13 @@ export class ProjectLoadService {
     }
   }
 
-  private afterLoad() {
+  // a project starting anew from one of an older version (the template) is a new show: it plays like one
+  private afterLoad(startsNew = false) {
     this.migrateFromOldProject();
+
+    if (startsNew) {
+      this.projectService.project.colorDimmersAtFull = true;
+    }
     // the panels look the fixtures of the selected preset up in the cache as soon as they
     // hear of the new project or of its selected step -> it has to hold the fixtures of
     // the new project by then, not those of the one before it
@@ -413,9 +420,12 @@ export class ProjectLoadService {
           project.shareToken = undefined;
         }
 
+        // (the template, kept in the version it was saved with)
+        const startsNew = asTemplate && !(project.version >= 11);
+
         this.projectService.project = project;
         this.selectScenesPresetComposition();
-        this.afterLoad();
+        this.afterLoad(startsNew);
 
         const queryParams: Params = asTemplate ? { id: '', token: '' } : { id, token: project.shareToken };
         this.router.navigate([], {

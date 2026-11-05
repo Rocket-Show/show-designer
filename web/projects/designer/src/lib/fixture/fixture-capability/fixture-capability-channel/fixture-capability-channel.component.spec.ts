@@ -193,8 +193,9 @@ describe('FixtureCapabilityChannelComponent', () => {
   it('slides over the whole channel with a single capability', async () => {
     await render(par, 'Dimmer');
 
+    // where the dimmer of the par starts: at full, a color alone lights it
     expect(radios().length).toBe(0);
-    expect(input().value).toBe('0');
+    expect(input().value).toBe('255');
     expect(component.rangeMin).toBe(0);
     expect(component.rangeMax).toBe(255);
   });
@@ -290,7 +291,7 @@ describe('FixtureCapabilityChannelComponent', () => {
     presetService.capabilityValuesChanged.next();
     await afterUpdateDelay();
 
-    expect(component.templateValue).toBe(0);
+    expect(component.templateValue).toBe(255);
   });
 
   it('tells when an effect of the preset drives it', async () => {
@@ -383,9 +384,9 @@ describe('FixtureCapabilityChannelComponent', () => {
     await render(par, 'Dimmer');
     fixture.destroy();
 
-    presetService.setCapabilityValue(preset.steps[0], FixtureCapabilityType.Intensity, 1);
+    presetService.setCapabilityValue(preset.steps[0], FixtureCapabilityType.Intensity, 0.5);
     await afterUpdateDelay();
 
-    expect(component.templateValue).toBe(0);
+    expect(component.templateValue).toBe(255);
   });
 });

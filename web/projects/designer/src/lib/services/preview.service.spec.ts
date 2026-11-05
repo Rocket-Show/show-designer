@@ -246,13 +246,32 @@ describe('PreviewService dimmers and fades', () => {
     expect(values[virtualDimmer]).toBeUndefined();
   });
 
-  it('fades a fixture with a dimmer in its dimmer only', () => {
+  it('fades a fixture with a dimmer in its dimmer only, in a show keeping the dimmers off', () => {
+    TestBed.inject(ProjectService).project.colorDimmersAtFull = false;
+    fixtureService.updateCachedFixtures();
     const red = preset('par', [capability('Intensity', 1), capability('ColorIntensity', 1, 'Red')]);
     const values = channelValues('par', [new PresetRegionScene(red, undefined, scene(0.3))]);
 
     // the light is at 30 %, not at 30 % of 30 %
     expect(values['Dimmer']).toBeCloseTo(76.5, 5);
     expect(values['Red']).toBe(255);
+  });
+
+  it('fades the color of a fixture its dimmer is at full for already', () => {
+    const red = preset('par', [capability('Intensity', 1), capability('ColorIntensity', 1, 'Red')]);
+    const values = channelValues('par', [new PresetRegionScene(red, undefined, scene(0.3))]);
+
+    // the light is at 30 % again, the color coming up from the dark below it
+    expect(values['Dimmer']).toBe(255);
+    expect(values['Red']).toBeCloseTo(76.5, 5);
+  });
+
+  it('lights a fixture with a dimmer in a color alone', () => {
+    const values = channelValues('par', [
+      new PresetRegionScene(preset('par', [capability('ColorIntensity', 1, 'Red')]), undefined, undefined),
+    ]);
+
+    expect([values['Dimmer'], values['Red']]).toEqual([255, 255]);
   });
 
   it('fades a fixture without a dimmer once', () => {

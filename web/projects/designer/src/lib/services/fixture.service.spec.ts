@@ -312,6 +312,127 @@ describe('FixtureService pixels and pixel groups', () => {
 
 // What a preset of a brightness and a wheel slot drives the channels of a fixture to. These mirror
 // FixtureLibraryTest and DesignerDmxTest in Rocket Show (with real profiles of the library).
+// The dimmers of a fixture lighting in colors only start at full where its profile does not say where they start, the
+// others stay off (see Project.colorDimmersAtFull)
+describe('FixtureService dimmers of the fixtures lighting in colors', () => {
+  let service: FixtureService;
+  let project: Project;
+
+  const colors = {
+    Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+    Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+    Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+  };
+
+  function profile(uuid: string, availableChannels: any, channels: any[], extra: any = {}) {
+    return { uuid, name: uuid, availableChannels, modes: [{ name: 'Mode', shortName: 'mode', channels }], ...extra };
+  }
+
+  beforeEach(() => {
+    project = new Project({
+      fixtureProfiles: [
+        profile('par', { Dimmer: { capability: { type: 'Intensity' } }, ...colors }, ['Dimmer', 'Red', 'Green', 'Blue']),
+        // a dimmer sharing its channel with a strobe, above it
+        profile(
+          'strobe-par',
+          {
+            'Dimmer/Strobe': {
+              capabilities: [
+                { dmxRange: [0, 127], type: 'Intensity' },
+                { dmxRange: [128, 255], type: 'ShutterStrobe', shutterEffect: 'Strobe' },
+              ],
+            },
+            ...colors,
+          },
+          ['Dimmer/Strobe', 'Red', 'Green', 'Blue']
+        ),
+        // a dimmer running from bright to off, and one starting where its profile says
+        profile('inverted', { Dimmer: { capability: { type: 'Intensity', brightnessStart: 'bright', brightnessEnd: 'off' } }, ...colors }, [
+          'Dimmer',
+          'Red',
+          'Green',
+          'Blue',
+        ]),
+        profile('starting', { Dimmer: { defaultValue: '20%', capability: { type: 'Intensity' } }, ...colors }, [
+          'Dimmer',
+          'Red',
+          'Green',
+          'Blue',
+        ]),
+        // a master dimmer among the general channels, the colors with the pixels
+        profile(
+          'bar',
+          { Dimmer: { capability: { type: 'Intensity' } } },
+          [
+            'Dimmer',
+            { insert: 'matrixChannels', repeatFor: 'eachPixelXYZ', channelOrder: 'perPixel', templateChannels: ['Red $pixelKey'] },
+          ],
+          {
+            matrix: { pixelCount: [2, 1, 1] },
+            templateChannels: { 'Red $pixelKey': { capability: { type: 'ColorIntensity', color: 'Red' } } },
+          }
+        ),
+        // white through the open slot of its color wheel, whatever its colors
+        profile(
+          'wheel',
+          {
+            Dimmer: { capability: { type: 'Intensity' } },
+            ...colors,
+            'Color Wheel': {
+              capabilities: [
+                { dmxRange: [0, 127], type: 'WheelSlot', slotNumber: 1 },
+                { dmxRange: [128, 255], type: 'WheelSlot', slotNumber: 2 },
+              ],
+            },
+          },
+          ['Dimmer', 'Red', 'Green', 'Blue', 'Color Wheel'],
+          { wheels: { 'Color Wheel': { slots: [{ type: 'Open' }, { type: 'Color', colors: ['#ff0000'] }] } } }
+        ),
+        profile(
+          'filters',
+          {
+            Dimmer: { capability: { type: 'Intensity' } },
+            Cyan: { capability: { type: 'ColorIntensity', color: 'Cyan' } },
+            Magenta: { capability: { type: 'ColorIntensity', color: 'Magenta' } },
+            Yellow: { capability: { type: 'ColorIntensity', color: 'Yellow' } },
+          },
+          ['Dimmer', 'Cyan', 'Magenta', 'Yellow']
+        ),
+        profile('dimmer', { Dimmer: { capability: { type: 'Intensity' } } }, ['Dimmer']),
+      ],
+      fixtures: ['par', 'strobe-par', 'inverted', 'starting', 'bar', 'wheel', 'filters', 'dimmer'].map((uuid) => ({
+        uuid,
+        profileUuid: uuid,
+        modeShortName: 'mode',
+      })),
+    });
+    const projectService: any = { project };
+    service = new FixtureService(undefined, projectService, undefined, undefined, undefined, new FixturePixelGroupResolveService());
+  });
+
+  // the value the dimmer of a fixture starts at (of its general channels, for a fixture with pixels)
+  function dimmerDefault(uuid: string): number {
+    service.updateCachedFixtures();
+    const cachedFixture = service.cachedFixtures.find((candidate) => candidate.fixture.uuid === uuid && !candidate.pixel);
+
+    return cachedFixture.channels.find((channel) => channel.name.startsWith('Dimmer')).defaultValue;
+  }
+
+  it('starts the dimmers of the fixtures lighting in colors only at full, off a strobe sharing the channel', () => {
+    expect(['par', 'strobe-par', 'inverted', 'bar'].map(dimmerDefault)).toEqual([255, 127, 0, 255]);
+  });
+
+  it('keeps the dimmers where the profile starts them, and of the fixtures lighting white without colors', () => {
+    expect(['starting', 'wheel', 'filters', 'dimmer'].map(dimmerDefault)).toEqual([51, undefined, undefined, undefined]);
+  });
+
+  it('keeps all dimmers off in a project keeping them so', () => {
+    project.colorDimmersAtFull = false;
+
+    expect(['par', 'strobe-par', 'bar'].map(dimmerDefault)).toEqual([undefined, undefined, undefined]);
+  });
+});
+
 describe('FixtureService brightness and wheel slots', () => {
   let service: FixtureService;
   let presetService: PresetService;

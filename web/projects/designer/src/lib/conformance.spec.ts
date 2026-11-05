@@ -233,6 +233,7 @@ function presetFixtureOf(presetFixture: PresetFixture): any[] {
 function migratedProjectOf(project: Project): any {
   return {
     version: project.version,
+    colorDimmersAtFull: project.colorDimmersAtFull,
     presetFixtures: project.presetFixtures.map(presetFixtureOf),
     presets: project.presets.map((preset) => ({
       uuid: preset.uuid,

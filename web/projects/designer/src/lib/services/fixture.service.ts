@@ -21,6 +21,7 @@ import { UuidService } from './uuid.service';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
 import { PixelContext } from '../models/pixel-pattern';
 import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
+import { mixesSubtractively } from '../models/subtractive-color';
 
 @Injectable({
   providedIn: 'root',
@@ -897,6 +898,7 @@ export class FixtureService {
       }
 
       this.addVirtualDimmers(fixtureParts);
+      this.openColorDimmers(fixtureParts);
       this.cachedFixtures.push(...fixtureParts);
     }
   }
@@ -923,6 +925,43 @@ export class FixtureService {
         const channels = cachedFixture.channels.slice();
         this.addCachedChannel(channels, channel, FixtureService.virtualDimmerChannelName, null, cachedFixture.profile);
         cachedFixture.channels = channels;
+      }
+    }
+  }
+
+  // The dimmers of a fixture which lights in colors only start at full, where its profile does not say where they
+  // start (see Project.colorDimmersAtFull): at the brightest the channel lights steadily, so a dimmer sharing its
+  // channel with a strobe does not strobe. A color is all it takes to light the fixture then, it stays dark while its
+  // colors are off. A fixture with a color wheel (white through its open slot), one mixing its colors with filters
+  // (white without them) and one without colors (e.g. a halogen par) keeps its dimmers off. Like in Rocket Show.
+  private openColorDimmers(fixtureParts: CachedFixture[]) {
+    if (!this.projectService.project.colorDimmersAtFull) {
+      return;
+    }
+
+    const channels: CachedFixtureChannel[] = [].concat(...fixtureParts.map((cachedFixture) => cachedFixture.channels));
+    const lightsInColors = channels.some(
+      (channel) =>
+        channel.channel && channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
+    );
+
+    if (!lightsInColors || channels.some((channel) => channel.colorWheel) || mixesSubtractively(channels)) {
+      return;
+    }
+
+    for (const channel of channels) {
+      if (!channel.channel || channel.defaultValue !== undefined) {
+        continue;
+      }
+
+      const dimmers = channel.capabilities.filter((capability) => capability.capability.type === FixtureCapabilityType.Intensity);
+
+      if (dimmers.length > 0) {
+        const value = this.getBrightnessValue(channel, this.getBrightnessCapability(channel, dimmers, 1), 1);
+
+        if (value !== undefined) {
+          channel.defaultValue = value;
+        }
       }
     }
   }

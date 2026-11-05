@@ -392,7 +392,7 @@ function libraryModes() {
           name: `${name} ${modeName} ${look}`,
           input: {
             project: {
-              version: 10,
+              version: 11,
               fixtureProfiles: [{ $profile: name }],
               fixtures: [{ uuid: 'fixture', profileUuid: name, modeShortName: modeName, dmxUniverseUuid: 'u', dmxFirstChannel: 0 }],
               presetFixtures: presetFixtures('fixture', profile),
@@ -438,7 +438,7 @@ function scenarioProject(random) {
   );
 
   return {
-    version: 10,
+    version: 11,
     masterDimmerValue: random.pick([1, 1, 0.5]),
     fixtureProfiles: [...testProfiles, 'chauvet-dj/colorband-pix'].map((name) => ({ $profile: name })),
     fixtures: testFixtures,
@@ -787,7 +787,7 @@ function edgeProject(profiles, fixtures, presets, scenes) {
   const presetFixturesOfProject = fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid)));
 
   return {
-    version: 10,
+    version: 11,
     fixtureProfiles: profiles.map((name) => ({ $profile: name })),
     fixtures,
     presetFixtures: presetFixturesOfProject,
@@ -992,7 +992,7 @@ function channelValuesMixingEdges() {
   };
   const inlineProfiles = [dimmer, colorWheel];
   const project = (fixtures, presets, scenes, extra = {}) => ({
-    version: 10,
+    version: 11,
     fixtureProfiles: [...inlineProfiles, { $profile: 'test/pixel-bar' }, { $profile: 'test/rgb-par' }],
     fixtures,
     presetFixtures: fixtures.flatMap((fixture) =>
@@ -2448,6 +2448,121 @@ function channelValuesPixelEffects() {
   );
 }
 
+// ---- the dimmers of the fixtures lighting in colors, at full -----------------------------------
+
+// A wash of LEDs with a dimmer which starts at 20 % by its profile, and a wash mixing its colors with filters, without
+// a color wheel: neither gets its dimmer opened
+const startingWash = {
+  uuid: 'starting-wash',
+  name: 'Starting wash',
+  availableChannels: {
+    Dimmer: { defaultValue: '20%', capability: { type: 'Intensity' } },
+    Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+    Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+    Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+  },
+  modes: [{ name: '4-channel', shortName: '4ch', channels: ['Dimmer', 'Red', 'Green', 'Blue'] }],
+};
+
+const filterWash = {
+  uuid: 'filter-wash',
+  name: 'Filter wash',
+  availableChannels: {
+    Dimmer: { capability: { type: 'Intensity' } },
+    Cyan: { capability: { type: 'ColorIntensity', color: 'Cyan' } },
+    Magenta: { capability: { type: 'ColorIntensity', color: 'Magenta' } },
+    Yellow: { capability: { type: 'ColorIntensity', color: 'Yellow' } },
+  },
+  modes: [{ name: '4-channel', shortName: '4ch', channels: ['Dimmer', 'Cyan', 'Magenta', 'Yellow'] }],
+};
+
+// Each kind of fixture given a color only, in a current project (where the dimmers of the fixtures lighting in colors
+// only start at full) and in one of before (where they stay off): an RGB par, a par sharing its dimmer with a strobe,
+// a bar of pixels with a master dimmer, a wash starting its dimmer by its profile, a moving head with a color wheel, a
+// spot mixing with filters (and a wheel), a wash mixing with filters alone and a plain dimmer
+function channelValuesColorDimmers() {
+  const fixtures = [
+    edgeFixture('par', 'test/rgb-par', '6ch', 0),
+    edgeFixture('strobe-par', 'test/strobe-par', '8ch', 1),
+    edgeFixture('bar', 'test/pixel-bar', '10ch', 2),
+    edgeFixture('starting-wash', 'starting-wash', '4ch', 3),
+    edgeFixture('head', 'test/moving-head', '6ch', 4),
+    edgeFixture('cmy-spot', 'test/cmy-spot', '6ch', 5),
+    edgeFixture('filter-wash', 'filter-wash', '4ch', 6),
+    edgeFixture('dimmer', 'dimmer', '1ch', 7),
+  ];
+  const profiles = [
+    { $profile: 'test/rgb-par' },
+    { $profile: 'test/strobe-par' },
+    { $profile: 'test/pixel-bar' },
+    startingWash,
+    { $profile: 'test/moving-head' },
+    { $profile: 'test/cmy-spot' },
+    filterWash,
+    dimmerProfile,
+  ];
+  const libraryProfileOf = (uuid) => profiles.find((profile) => profile.uuid === uuid) || libraryProfile(uuid);
+  const allParts = fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfileOf(fixture.profileUuid)));
+  const colored = edgePreset('colored', allParts, { fixtureCapabilityValues: rgb(1, 0.5, 0) });
+  const dimmed = edgePreset('dimmed', allParts, { fixtureCapabilityValues: [capability('Intensity', 0.4), ...rgb(0, 0, 1)] });
+  const pixelEffect = {
+    ...edgePreset('pixels', allParts, { fixtureCapabilityValues: rgb(0, 1, 0) }),
+    effects: [
+      { type: 'pixel', uuid: 'chase', pattern: 'chase', size: 0.5, softness: 0, lengthMillis: 1000, capabilities: [], channels: [] },
+    ],
+  };
+  const project = (atFull, presets, scenes) => ({
+    version: 11,
+    colorDimmersAtFull: atFull,
+    fixtureProfiles: profiles,
+    fixtures,
+    presetFixtures: allParts,
+    presets,
+    scenes,
+    compositions: [],
+  });
+  const scene = (uuid, presetUuids, extra = {}) => ({ uuid, name: uuid, presetUuids, ...extra });
+  const cases = [];
+
+  for (const atFull of [true, false]) {
+    const when = atFull ? '' : ', in a project keeping them off';
+
+    cases.push({
+      name: 'nothing playing' + when,
+      input: { project: project(atFull, [colored], [scene('quiet', [])]), runs: previewScenes(['quiet']) },
+    });
+
+    cases.push({
+      name: 'a color alone' + when,
+      input: { project: project(atFull, [colored], [scene('colored', ['colored'])]), runs: previewScenes(['colored']) },
+    });
+
+    // fading in over the dimmers at full, and over a preset dimming them
+    cases.push({
+      name: 'a color fading in, and a dimmed color below it' + when,
+      input: {
+        project: project(atFull, [colored, dimmed], [scene('colored', ['colored'], { dimmer: 0.5 }), scene('dimmed', ['dimmed'])]),
+        runs: [...previewScenes(['colored']), ...previewScenes(['colored', 'dimmed'])],
+      },
+    });
+
+    cases.push({
+      name: 'a pixel effect' + when,
+      input: {
+        project: project(atFull, [pixelEffect], [scene('pixels', ['pixels'])]),
+        runs: previewScenes(['pixels']).map((run) => ({ ...run, times: [0, 250, 600] })),
+      },
+    });
+  }
+
+  return write(
+    'channel-values-color-dimmers.json',
+    'channelValues',
+    'The dimmers of the fixtures lighting in colors only, at full where their profiles do not say otherwise',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -2467,6 +2582,7 @@ export function generate() {
     migrationEdges(),
     pixelPatterns(),
     channelValuesPixelEffects(),
+    channelValuesColorDimmers(),
   ];
 }
 
