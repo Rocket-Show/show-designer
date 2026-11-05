@@ -56,6 +56,8 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings, Pi
   audioAttackMillis = 20;
   audioReleaseMillis = 300;
   audioFollows = 'brightness';
+  // the audio buses of Rocket Show it follows, added together, by their uuids: all of them, if none are named
+  audioBuses: string[] = [];
 
   // the text and its font (one of the pixel fonts, e.g. 'pixel-5x7', or of the browser) and how high it is drawn in
   // pixels with a font of the browser, the name of the image. Only the designer reads them.
@@ -102,6 +104,7 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings, Pi
     this.audioAttackMillis = data.audioAttackMillis ?? 20;
     this.audioReleaseMillis = data.audioReleaseMillis ?? 300;
     this.audioFollows = data.audioFollows || 'brightness';
+    this.audioBuses = Array.isArray(data.audioBuses) ? data.audioBuses.filter((bus: any) => typeof bus === 'string') : [];
     this.text = data.text ?? '';
     this.font = data.font || 'pixel-5x7';
     this.textHeight = data.textHeight ?? 8;

@@ -103,6 +103,44 @@ export interface AudioSamples {
   getChannelData(channel: number): Float32Array;
 }
 
+// a part of audio playing with others: its samples, each channel on its own, how many samples later than the others it
+// starts (earlier, if negative) and how loud it plays
+export interface AudioPart {
+  channels: Float32Array[];
+  offset: number;
+  volume: number;
+}
+
+// Parts of audio playing together, mixed into one channel: each part its channels on average, as loud as it plays, from
+// where it starts
+export function mixAudio(parts: AudioPart[]): Float32Array {
+  let length = 0;
+
+  for (const part of parts) {
+    if (part.channels.length > 0) {
+      length = Math.max(length, part.offset + part.channels[0].length);
+    }
+  }
+
+  const mixed = new Float32Array(Math.max(0, length));
+
+  for (const part of parts) {
+    const count = part.channels.length;
+
+    for (let i = Math.max(0, -part.offset); count > 0 && i < part.channels[0].length; i++) {
+      let sum = 0;
+
+      for (const channel of part.channels) {
+        sum += channel[i];
+      }
+
+      mixed[part.offset + i] += (sum / count) * part.volume;
+    }
+  }
+
+  return mixed;
+}
+
 // The frames of an audio (see PixelAudio), worked out a few hundred at a time so the designer keeps reacting while a
 // long song is analyzed
 export async function analyzeAudio(audio: AudioSamples): Promise<number[][]> {

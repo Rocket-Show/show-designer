@@ -44,7 +44,10 @@ A `channelValues` case with pixel effects following the audio (`channel-values-p
 an analysis of the audio as well (`audio`, see `models/pixel-audio.ts`): for each 20 ms, the RMS, the peak, the bass, the
 mids, the highs and 16 bands in dB, analyzed from a song. How the frames light the pixels is compared exactly, how they
 are measured is not: the designer analyzes the audio file of the composition (`models/pixel-audio-analysis.ts`), Rocket
-Show measures the audio while it plays (`AudioAnalysisService`, with the level and the spectrum of GStreamer).
+Show measures the audio while it plays (`AudioAnalysisService`, with the level and the spectrum of GStreamer). The
+frames stand for all the audio: the effects of the cases follow all buses. How the buses an effect picks are added
+together is a part of the measuring as well (`audioFramesFor` in the designer, `AudioAnalysisService.frame` in Rocket
+Show).
 
 A `migration` case compares the version, whether the dimmers of the fixtures lighting in colors start at full (not in a
 project of before version 11), the fixtures and pixels of the project and of each preset (in their order,

@@ -12,7 +12,7 @@ import { EffectPanTilt } from '../../models/effect-pan-tilt';
 import { AnimationService } from './../../services/animation.service';
 import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
-import { TimelineService } from '../../services/timeline.service';
+import { AudioBus, TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
@@ -791,6 +791,45 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   setAudioSource(source: string) {
     this.pixelEffect.audioSource = source;
     this.livePreviewService.previewLive();
+  }
+
+  // The buses to pick from: the ones of Rocket Show, and the ones the effect follows which are no longer there (none
+  // where the designer doesn't run in Rocket Show)
+  get audioBusChoices(): AudioBus[] {
+    const buses = this.timelineService.audioBuses;
+
+    if (buses.length === 0) {
+      return buses;
+    }
+
+    const gone = this.pixelEffect.audioBuses.filter((uuid) => !buses.some((bus) => bus.uuid === uuid)).map((uuid) => ({ uuid, name: '' }));
+
+    return gone.length ? [...buses, ...gone] : buses;
+  }
+
+  // following none of them by name is following all of them
+  followsAudioBus(uuid: string): boolean {
+    return this.pixelEffect.audioBuses.length === 0 || this.pixelEffect.audioBuses.includes(uuid);
+  }
+
+  // one bus is followed at least
+  isLastAudioBus(uuid: string): boolean {
+    const followed = this.audioBusChoices.filter((bus) => this.followsAudioBus(bus.uuid));
+
+    return followed.length === 1 && followed[0].uuid === uuid;
+  }
+
+  // a bus followed or not anymore: all of the ones of Rocket Show followed are all of them, also the ones added later
+  switchAudioBus(uuid: string) {
+    const followed = this.audioBusChoices.map((bus) => bus.uuid).filter((busUuid) => this.followsAudioBus(busUuid) !== (busUuid === uuid));
+    const all = this.timelineService.audioBuses.every((bus) => followed.includes(bus.uuid));
+
+    this.pixelEffect.audioBuses = all ? [] : followed;
+    this.livePreviewService.previewLive();
+  }
+
+  previewsAudioBuses(): boolean {
+    return this.timelineService.previewsAudioBuses();
   }
 
   setAudioBand(band: string) {

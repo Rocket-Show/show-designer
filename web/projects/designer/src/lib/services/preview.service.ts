@@ -881,7 +881,7 @@ export class PreviewService implements OnDestroy {
     let audio = this.frameAudio.get(effect);
 
     if (!audio) {
-      audio = new PixelAudio(this.getAudioFrames(), this.frameTimeMillis, effect);
+      audio = new PixelAudio(this.getAudioFrames(effect), this.frameTimeMillis, effect);
       this.frameAudio.set(effect, audio);
     }
 
@@ -900,16 +900,15 @@ export class PreviewService implements OnDestroy {
     return settings;
   }
 
-  private getAudioFrames(): AudioFrames {
+  // the audio of the buses the effect follows while the composition plays, a beat otherwise
+  private getAudioFrames(effect: EffectPixel): AudioFrames {
     if (this.audioFrames) {
       return this.audioFrames;
     }
 
-    if (this.timelineService.playState === 'playing' && this.timelineService.audioFrames) {
-      return this.timelineService.audioFrames;
-    }
+    const frames = this.timelineService.playState === 'playing' ? this.timelineService.audioFramesFor(effect.audioBuses) : undefined;
 
-    return demoAudioFrames;
+    return frames || demoAudioFrames;
   }
 
   // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in

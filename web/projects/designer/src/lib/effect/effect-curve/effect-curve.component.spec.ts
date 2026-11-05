@@ -983,6 +983,69 @@ describe('EffectCurveComponent', () => {
     expect(element.querySelector('select[name="audioFollows"]')).toBeNull();
   });
 
+  it('follows the buses of Rocket Show it picks, all of them at first', async () => {
+    const timelineService = TestBed.inject(TimelineService);
+    const buses = [
+      { uuid: 'music', name: 'Music' },
+      { uuid: 'click', name: 'Click' },
+      { uuid: 'drums', name: 'Drums' },
+    ];
+    spyOnProperty(timelineService, 'audioBuses').and.returnValue(buses);
+    const previews = spyOn(timelineService, 'previewsAudioBuses').and.returnValue(true);
+    const pixels = new EffectPixel({ uuid: 'pixels', audioSource: 'composition' });
+    curve = pixels;
+    await render();
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[3] as HTMLElement).click();
+    await update();
+
+    const bus = (uuid: string) => element.querySelector('#audioBus_pixels_' + uuid) as HTMLInputElement;
+    const click = async (uuid: string) => {
+      bus(uuid).click();
+      await update();
+    };
+
+    expect(buses.map((candidate) => bus(candidate.uuid).checked)).toEqual([true, true, true]);
+
+    // the click and the drums left out: the music alone, which stays
+    await click('click');
+    expect(pixels.audioBuses).toEqual(['music', 'drums']);
+    await click('drums');
+    expect(pixels.audioBuses).toEqual(['music']);
+    expect(bus('music').disabled).toBe(true);
+    expect(previewLive).toHaveBeenCalled();
+    expect(element.querySelector('.pixel-audio-buses-hint')).toBeNull();
+
+    // all of them again: all of them, also the ones added later
+    await click('click');
+    await click('drums');
+    expect(pixels.audioBuses).toEqual([]);
+
+    // a bus which is no longer there can be left out
+    pixels.audioBuses = ['gone', 'music'];
+    await update();
+    expect(element.querySelector('label[for="audioBus_pixels_gone"]').textContent.trim()).toBe('designer.effect.pixel-audio-bus-gone');
+    await click('gone');
+    expect(pixels.audioBuses).toEqual(['music']);
+
+    // where the preview can't tell the files of the buses, it says so
+    previews.and.returnValue(false);
+    await update();
+    expect(element.querySelector('.pixel-audio-buses-hint')).not.toBeNull();
+  });
+
+  it('tells which buses of Rocket Show an effect follows where the designer does not run in it', async () => {
+    curve = new EffectPixel({ uuid: 'pixels', audioSource: 'composition' });
+    await render();
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[3] as HTMLElement).click();
+    await update();
+
+    expect(element.querySelector('.pixel-audio-buses-picked').textContent.trim()).toBe('designer.effect.pixel-audio-buses-all');
+
+    (curve as EffectPixel).audioBuses = ['music', 'drums'];
+    await update();
+    expect(element.querySelector('.pixel-audio-buses-picked').textContent.trim()).toBe('designer.effect.pixel-audio-buses-some');
+  });
+
   it('paints a pixel effect on each fixture or across the stage, and on the white LEDs', async () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;

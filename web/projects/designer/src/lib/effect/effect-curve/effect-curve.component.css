@@ -190,3 +190,12 @@
   font-size: 0.75rem;
   line-height: 1.4;
 }
+
+/* the buses of Rocket Show, one below the other */
+.pixel-audio-bus-list {
+  min-width: 0;
+}
+
+.pixel-audio-buses-picked {
+  color: var(--sd-text-muted);
+}

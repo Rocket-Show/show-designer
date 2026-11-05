@@ -15,6 +15,7 @@ import { Project } from '../models/project';
 import { FixtureService } from './fixture.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
+import { TimelineService } from './timeline.service';
 
 // The pixel effects in the preview: a pattern painted over the pixels of the bars and matrices of a preset, in the
 // colors of a palette, blended with what the preset puts on them. Rocket Show plays them the same way, which the
@@ -358,6 +359,25 @@ describe('PreviewService pixel effects', () => {
     // the kick on the beat fills the bar, before the next one it has faded
     expect(colorOf('bar-1', '1', beat, 1000)[0]).toBe(255);
     expect(colorOf('bar-1', '3', beat, 1000)[0]).toBeGreaterThan(colorOf('bar-1', '3', beat, 1440)[0]);
+  });
+
+  it('follows the audio of the buses it picked while the composition plays', () => {
+    const timelineService = TestBed.inject(TimelineService);
+    const framesFor = spyOn(timelineService, 'audioFramesFor').and.callFake((buses: string[]) =>
+      buses.includes('drums') ? () => new Array(21).fill(0) : undefined
+    );
+    const meter = (audioBuses: string[]) =>
+      presetWith(['bar-1'], pixelEffect({ pattern: 'meter', audioSource: 'composition', audioAttackMillis: 0, audioBuses }));
+
+    timelineService.playState = 'playing';
+
+    // the drums at full scale fill the bar
+    expect(colorOf('bar-1', '3', meter(['drums']), 1000)[0]).toBe(255);
+    expect(framesFor).toHaveBeenCalledWith(['drums']);
+    // buses not analyzed yet follow the beat meanwhile
+    expect(colorOf('bar-1', '1', meter(['click']), 1000)[0]).toBe(255);
+    expect(colorOf('bar-1', '3', meter(['click']), 1440)[0]).toBeLessThan(255);
+    timelineService.playState = 'paused';
   });
 
   it('places a pixel in its column and row, and a group of pixels in the middle of them', () => {

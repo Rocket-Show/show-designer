@@ -7,6 +7,7 @@ import { ToastrModule } from 'ngx-toastr';
 import WaveSurfer from 'wavesurfer.js';
 
 import { Composition } from '../models/composition';
+import { ExternalComposition } from '../models/external-composition';
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { Scene } from '../models/scene';
@@ -434,6 +435,126 @@ describe('TimelineService analyzing the audio of a composition', () => {
 
     service.destroyWaveSurfer();
     expect(service.audioFrames).toBeUndefined();
+  });
+});
+
+// The audio buses of Rocket Show a pixel effect can follow, and the files of a composition playing on them, analyzed
+describe('TimelineService analyzing the audio buses of Rocket Show', () => {
+  let service: TimelineService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  // a WAV file of 16 bits in one channel
+  function wav(samples: Float32Array, sampleRate = 48000): ArrayBuffer {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+    const text = (offset: number, value: string) => value.split('').forEach((char, i) => view.setUint8(offset + i, char.charCodeAt(0)));
+
+    text(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    text(8, 'WAVE');
+    text(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    text(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+    samples.forEach((sample, i) => view.setInt16(44 + i * 2, Math.round(sample * 32767), true));
+
+    return buffer;
+  }
+
+  async function analyzed(buses: string[]) {
+    for (let attempt = 0; attempt < 100 && !service.audioFramesFor(buses); attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    return service.audioFramesFor(buses);
+  }
+
+  it('loads the buses once, when the designer runs in Rocket Show', () => {
+    expect(service.audioBuses).toEqual([]);
+    http.expectNone('audio-buses');
+
+    service.externalCompositionsAvailable = true;
+    expect(service.audioBuses).toEqual([]);
+    http.expectOne('audio-buses').flush([{ uuid: 'music', name: 'Music' }, { uuid: 'click' }]);
+
+    expect(service.audioBuses).toEqual([
+      { uuid: 'music', name: 'Music' },
+      { uuid: 'click', name: '' },
+    ]);
+    http.expectNone('audio-buses');
+  });
+
+  it('offers no buses where Rocket Show cannot tell them', () => {
+    spyOn(console, 'error');
+    service.externalCompositionsAvailable = true;
+    expect(service.audioBuses).toEqual([]);
+    http.expectOne('audio-buses').flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(service.audioBuses).toEqual([]);
+    http.expectNone('audio-buses');
+  });
+
+  it('analyzes the files of the composition playing on the buses an effect follows, mixed', async () => {
+    // all buses, or no files known, follow the audio file of the composition
+    expect(service.previewsAudioBuses()).toBe(false);
+    expect(service.audioFramesFor(['drums'])).toBe(service.audioFrames);
+
+    service.externalComposition = new ExternalComposition({
+      compositionFileList: [
+        { audioFile: { name: 'Drums.wav', outputBusUuid: 'drums', offsetMillis: 50, volume: 0.5 } },
+        { audioFile: { name: 'Click.wav', outputBusUuid: 'click' } },
+        // a file which loops or is switched off isn't analyzed in Rocket Show either
+        { audioFile: { name: 'Loop.wav', outputBusUuid: 'drums', loop: true } },
+        { audioFile: { name: 'Off.wav', outputBusUuid: 'drums', active: false } },
+        { midiFile: { name: 'Lights.mid' } },
+        null,
+      ],
+    });
+
+    expect(service.previewsAudioBuses()).toBe(true);
+    expect(service.externalComposition.audioFiles.map((file) => [file.name, file.busUuid, file.offsetMillis, file.volume])).toEqual([
+      ['Drums.wav', 'drums', 50, 0.5],
+      ['Click.wav', 'click', 0, 1],
+    ]);
+    expect(service.audioFramesFor([])).toBe(service.audioFrames);
+
+    // the drums: a tenth of a second of a loud sine, starting 50 ms in
+    expect(service.audioFramesFor(['drums'])).toBeUndefined();
+    expect(service.audioFramesFor(['drums'])).toBeUndefined();
+    http.expectOne('file/get?name=Drums.wav&type=AUDIO').flush(wav(new Float32Array(4800).map((_, i) => Math.sin(i / 10))));
+    const drums = await analyzed(['drums']);
+
+    expect(drums(0)[0]).toBe(-100);
+    expect(drums(4)[0]).toBeGreaterThan(-20);
+    expect(drums(99)).toBeUndefined();
+
+    // a bus without files is silent
+    const silent = await analyzed(['nothing']);
+    expect(silent(3)).toBeUndefined();
+
+    // a file Rocket Show can't hand over leaves nothing to follow
+    spyOn(console, 'error');
+    service.audioFramesFor(['click']);
+    http.expectOne('file/get?name=Click.wav&type=AUDIO').flush(null, { status: 404, statusText: 'Not Found' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(console.error).toHaveBeenCalled();
+    expect(service.audioFramesFor(['click'])).toBeUndefined();
   });
 });
 

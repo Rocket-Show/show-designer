@@ -1,5 +1,5 @@
 import { AUDIO_SILENCE_DB, audioLevelOf, PixelAudio, PixelAudioSettings } from './pixel-audio';
-import { analyzeAudio, audioBandEdges, demoAudioFrames } from './pixel-audio-analysis';
+import { analyzeAudio, audioBandEdges, demoAudioFrames, mixAudio } from './pixel-audio-analysis';
 
 function settings(extra: Partial<PixelAudioSettings> = {}): PixelAudioSettings {
   return { audioBand: 'full', audioGainDb: 0, audioFloorDb: -60, audioAttackMillis: 0, audioReleaseMillis: 0, ...extra };
@@ -89,5 +89,21 @@ describe('the analysis of the audio', () => {
     // a kick on the beat, quieter between
     expect(demoAudioFrames(0).length).toBe(21);
     expect(demoAudioFrames(25)[2]).toBeGreaterThan(demoAudioFrames(37)[2]);
+  });
+
+  it('mixes parts of audio playing together into one channel, each from where it starts and as loud as it plays', () => {
+    const mixed = mixAudio([
+      // two channels, on average
+      { channels: [new Float32Array([1, 1, 1]), new Float32Array([0, 0, 0])], offset: 0, volume: 1 },
+      // two samples later, half as loud
+      { channels: [new Float32Array([1, 1])], offset: 2, volume: 0.5 },
+      // a sample earlier: its first one is cut off
+      { channels: [new Float32Array([4, 0.25])], offset: -1, volume: 1 },
+      // nothing
+      { channels: [], offset: 9, volume: 1 },
+    ]);
+
+    expect(Array.from(mixed)).toEqual([0.75, 0.5, 1, 0.5]);
+    expect(mixAudio([]).length).toBe(0);
   });
 });

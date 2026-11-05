@@ -701,6 +701,38 @@
     }}</label>
   </div>
   } @if (pixelEffect.audioSource === 'composition') {
+  <!-- the buses of Rocket Show it follows, added together: all of them at first -->
+  <div class="d-flex mt-1 pixel-audio-row pixel-audio-buses">
+    <div class="pixel-audio-label">{{ 'designer.effect.pixel-audio-buses' | translate }}</div>
+    <div class="pixel-audio-bus-list">
+      @for (bus of audioBusChoices; track bus.uuid) {
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [id]="'audioBus_' + curve.uuid + '_' + bus.uuid"
+          [checked]="followsAudioBus(bus.uuid)"
+          [disabled]="isLastAudioBus(bus.uuid)"
+          (change)="switchAudioBus(bus.uuid)"
+        />
+        <label class="form-check-label" [for]="'audioBus_' + curve.uuid + '_' + bus.uuid">{{
+          bus.name || ('designer.effect.pixel-audio-bus-gone' | translate)
+        }}</label>
+      </div>
+      } @empty {
+      <div class="pixel-audio-buses-picked">
+        {{
+          pixelEffect.audioBuses.length
+            ? ('designer.effect.pixel-audio-buses-some' | translate : { count: pixelEffect.audioBuses.length })
+            : ('designer.effect.pixel-audio-buses-all' | translate)
+        }}
+      </div>
+      }
+    </div>
+  </div>
+  @if (pixelEffect.audioBuses.length && !previewsAudioBuses()) {
+  <div class="text-muted pixel-audio-hint pixel-audio-buses-hint">{{ 'designer.effect.pixel-audio-buses-preview' | translate }}</div>
+  }
   <div class="d-flex mt-1 pixel-audio-row">
     <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-band' | translate }}</div>
     <select name="audioBand" [ngModel]="pixelEffect.audioBand" (ngModelChange)="setAudioBand($event)">

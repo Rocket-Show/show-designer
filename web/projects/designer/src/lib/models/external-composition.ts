@@ -26,6 +26,26 @@ export class ExternalActionTrigger {
   }
 }
 
+// an audio file Rocket Show plays with a composition, on one of its audio buses
+export class ExternalAudioFile {
+  name = '';
+  busUuid: string;
+  // how much later than the composition it starts, and how loud it plays
+  offsetMillis = 0;
+  volume = 1;
+
+  constructor(data?: any) {
+    if (!data) {
+      return;
+    }
+
+    this.name = data.name || '';
+    this.busUuid = data.outputBusUuid;
+    this.offsetMillis = data.offsetMillis || 0;
+    this.volume = data.volume ?? 1;
+  }
+}
+
 // The composition as Rocket Show plays it, with the same name as the one in the designer.
 // The designer only shows it to line the scenes up with: it plays the files and fires the
 // actions, the designer plays the lights along.
@@ -35,6 +55,10 @@ export class ExternalComposition {
 
   // in the order they are fired
   actionTriggers: ExternalActionTrigger[] = [];
+
+  // the audio files it plays along the composition: the ones it analyzes for the pixel effects following its buses
+  // (a file which loops or is switched off isn't)
+  audioFiles: ExternalAudioFile[] = [];
 
   constructor(data?: any) {
     if (!data) {
@@ -48,6 +72,15 @@ export class ExternalComposition {
     }
 
     this.actionTriggers.sort((a, b) => a.positionMillis - b.positionMillis);
+
+    // each file comes wrapped in an object named after its kind, e.g. { audioFile: { name: 'Song.wav', ... } }
+    for (const wrapper of data.compositionFileList || []) {
+      const audioFile = wrapper && wrapper.audioFile;
+
+      if (audioFile && audioFile.active !== false && !audioFile.loop) {
+        this.audioFiles.push(new ExternalAudioFile(audioFile));
+      }
+    }
   }
 
   // where the last action is fired (0 without actions)
