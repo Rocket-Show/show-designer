@@ -6,10 +6,23 @@ import { EffectCurve } from '../models/effect-curve';
 import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { PresetRegionScene } from '../models/preset-region-scene';
+import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
+import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
+import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
+import {
+  getAxisChannelValue,
+  getAxisRange,
+  getPresetPanTiltDegrees,
+  getStagePlacements,
+  isPanTilt,
+  PanTiltContext,
+} from '../models/pan-tilt';
+import { getFixtureCapabilityValues } from '../models/subtractive-color';
+import { getIdentifyCapabilityValues } from '../models/identify';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { PresetStepService } from './preset-step.service';
@@ -39,6 +52,11 @@ export class PreviewService implements OnDestroy {
   public scene: THREE.Scene;
 
   private stageMeshes: THREE.Mesh[] = [];
+
+  // a spot on the stage being picked with a click into the 3D preview (e.g. to aim the moving heads at), and the spot
+  // picked, in cm
+  public pickingSpot = false;
+  public spotPicked = new Subject<number[]>();
   private stageMaterial: THREE.MeshStandardMaterial;
   fixtureMaterial: THREE.MeshStandardMaterial;
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
@@ -173,59 +191,6 @@ export class PreviewService implements OnDestroy {
     existingChannelValues.push(fixtureChannelValue);
   }
 
-  // Get the fixture index inside the passed preset (used for chasing)
-  private getFixtureIndex(preset: Preset, fixtureUuid: string, pixelKey: string): number {
-    let index = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
-
-    if (!this.presetService.getPresetFixture(preset, fixtureUuid, pixelKey)) {
-      // fixture is not in preset
-      return undefined;
-    }
-
-    // either the global fixture order of the project or the preset's own one defines
-    // the order to chase in (avoid building up a list here, this runs for every
-    // fixture of every active preset on every frame)
-    const orderedFixtures = preset.useGlobalFixtureOrder ? this.projectService.project.presetFixtures : preset.fixtures;
-
-    for (const orderedFixture of orderedFixtures) {
-      // when using the global order, skip all fixtures which are not in this preset
-      const presetFixture = preset.useGlobalFixtureOrder
-        ? this.presetService.getPresetFixture(preset, orderedFixture.fixtureUuid, orderedFixture.pixelKey)
-        : orderedFixture;
-
-      if (!presetFixture) {
-        continue;
-      }
-
-      if (this.presetService.fixtureUuidAndPixelKeyEquals(presetFixture.fixtureUuid, fixtureUuid, presetFixture.pixelKey, pixelKey)) {
-        return index;
-      }
-
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
-
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      // don't count fixtures on the same universe and channel as already counted ones
-      if (!exists) {
-        index++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
-      }
-    }
-
-    return undefined;
-  }
-
   // where the preset itself starts, which is what its steps are timed against. The
   // fades may reach outside it, but a step at 0 belongs to the preset's own start.
   private getPresetStartMillis(preset: PresetRegionScene): number {
@@ -249,6 +214,12 @@ export class PreviewService implements OnDestroy {
       return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.presetService.stepPreviewStartMillis);
     }
 
+    if (preset.preset.steps.length === 0) {
+      // an old project keeps its values on the preset itself (until it is given its first step),
+      // like on the timeline and in Rocket Show
+      return this.presetStepService.getStateAtMillis(preset.preset, 0);
+    }
+
     return this.presetStepService.getStepState(this.presetService.getEditStep(preset.preset));
   }
 
@@ -269,8 +240,9 @@ export class PreviewService implements OnDestroy {
       // Fade out is stronger than fade in (if they overlap)
 
       // Take away intensity for scene fading
-      const sceneStartMillis = preset.scene.fadeInPre ? preset.region.startMillis - preset.scene.fadeInMillis : preset.region.startMillis;
-      const sceneEndMillis = preset.scene.fadeOutPost ? preset.region.endMillis + preset.scene.fadeOutMillis : preset.region.endMillis;
+      const sceneTimes = getSceneTimes(preset.scene, preset.region);
+      const sceneStartMillis = sceneTimes.startMillis;
+      const sceneEndMillis = sceneTimes.endMillis;
 
       // the curve maps how far the fade has come to how much of the intensity it has
       // already handed over, which shapes a fade out just as well as a fade in
@@ -290,16 +262,11 @@ export class PreviewService implements OnDestroy {
     }
 
     if (preset.region && preset.preset) {
-      // Take away intensity for preset fading
-      let presetStartMillis =
-        preset.preset.startMillis === undefined ? preset.region.startMillis : preset.region.startMillis + preset.preset.startMillis;
-
-      let presetEndMillis =
-        preset.preset.endMillis === undefined ? preset.region.endMillis : preset.region.startMillis + preset.preset.endMillis;
-
-      // extend the running time, if fading is done outside the boundaries
-      presetStartMillis -= preset.preset.fadeInPre ? preset.preset.fadeInMillis : 0;
-      presetEndMillis += preset.preset.fadeOutPost ? preset.preset.fadeOutMillis : 0;
+      // Take away intensity for preset fading. Without times of its own, the preset plays
+      // as long as the scene, its fades outside the clip included.
+      const presetTimes = getPresetTimes(preset.preset, preset.region, preset.scene);
+      const presetStartMillis = presetTimes.startMillis;
+      const presetEndMillis = presetTimes.endMillis;
 
       if (timeMillis > presetEndMillis - preset.preset.fadeOutMillis && timeMillis < presetEndMillis) {
         // Preset fades out
@@ -319,19 +286,156 @@ export class PreviewService implements OnDestroy {
     return intensityPercentageScene * intensityPercentagePreset;
   }
 
+  private getChannelValue(values: FixtureChannelValue[], channelName: string, profileUuid: string): FixtureChannelValue {
+    return values.find((value) => value.channelName === channelName && value.profileUuid === profileUuid);
+  }
+
+  // how bright the dimmer of a fixture (its own or its virtual one) lights with the passed
+  // values, or undefined for a fixture without one (e.g. a pixel of a bar with a master dimmer)
+  private getDimmerBrightness(cachedFixture: CachedFixture, values: FixtureChannelValue[]): number {
+    for (const channel of cachedFixture.channels) {
+      if (channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)) {
+        const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
+        return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
+      }
+    }
+
+    return undefined;
+  }
+
+  // how bright a preset lets the dimmer of a fixture light: the dimmer it sets (a curve on the
+  // dimmer counts as lighting it), or the one below, if the preset leaves the dimmer alone
+  private getPresetDimmerBrightness(state: PresetStepState, cachedFixture: CachedFixture, preset: Preset, brightnessBelow: number): number {
+    let brightness: number;
+
+    for (const capabilityValue of state.fixtureCapabilityValues) {
+      if (
+        capabilityValue.type === FixtureCapabilityType.Intensity &&
+        capabilityValue.valuePercentage >= 0 &&
+        (!capabilityValue.profileUuid || capabilityValue.profileUuid === cachedFixture.profile.uuid)
+      ) {
+        // a later value overwrites an earlier one, like when they are mixed
+        brightness = capabilityValue.valuePercentage;
+      }
+    }
+
+    if (brightness !== undefined) {
+      return brightness;
+    }
+
+    for (const effect of preset.effects) {
+      if (
+        effect instanceof EffectCurve &&
+        effect.visible &&
+        state.getEffectAmount(effect.uuid) > 0 &&
+        effect.capabilities.some((capability) => capability.type === FixtureCapabilityType.Intensity)
+      ) {
+        return 1;
+      }
+    }
+
+    return brightnessBelow;
+  }
+
+  // A color of a fading preset on a fixture with a dimmer (its own or a virtual one) doesn't fade
+  // on its own: the dimmer carries the fade, or the fixture would get darker twice. The color
+  // blends with the one below instead, each of them weighted by how bright it lights, so the
+  // light is always the blend of the light below and the light of the preset. A color coming up
+  // on a dark fixture is there at once while the dimmer fades it in, and one going dark keeps its
+  // color. A fixture without a dimmer fades its colors, they are all there is to fade.
+  // This follows the same rules as mixColorValue() in Rocket Show.
+  private mixColorValue(
+    values: FixtureChannelValue[],
+    channelValue: FixtureChannelValue,
+    intensityPercentage: number,
+    brightnessBelow: number,
+    presetBrightness: number
+  ) {
+    const weightBelow = brightnessBelow === undefined ? 0 : (1 - intensityPercentage) * brightnessBelow;
+    const weight = intensityPercentage * presetBrightness;
+
+    if (brightnessBelow === undefined || weightBelow + weight <= 0) {
+      this.mixChannelValue(values, channelValue, intensityPercentage, 0);
+      return;
+    }
+
+    if (weightBelow === 0) {
+      // nothing to blend with (e.g. the preset doesn't fade)
+      this.mixChannelValue(values, channelValue, 1);
+      return;
+    }
+
+    const below = this.getChannelValue(values, channelValue.channelName, channelValue.profileUuid);
+    const valueBelow = below ? below.value : 0;
+
+    const blendedValue = new FixtureChannelValue();
+    blendedValue.channelName = channelValue.channelName;
+    blendedValue.profileUuid = channelValue.profileUuid;
+    blendedValue.value = (valueBelow * weightBelow + channelValue.value * weight) / (weightBelow + weight);
+    this.mixChannelValue(values, blendedValue, 1);
+  }
+
   private mixCapabilityValues(
     state: PresetStepState,
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number,
-    preset: Preset
+    preset: Preset,
+    context: PanTiltContext
   ) {
     let hasColor = false;
 
+    // how bright the fixture lights below this preset and how bright the preset lights it, to
+    // blend the colors while the preset fades (see mixColorValue)
+    const brightnessBelow = this.getDimmerBrightness(cachedFixture, values);
+    const presetBrightness =
+      brightnessBelow === undefined ? 0 : this.getPresetDimmerBrightness(state, cachedFixture, preset, brightnessBelow);
+
+    // a fixture mixing its colors with filters is given the colors the other way round (see subtractive-color)
+    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels);
+
     // mix the capability values of the state the preset is in
-    for (const presetCapabilityValue of state.fixtureCapabilityValues) {
+    for (const presetCapabilityValue of capabilityValues) {
       for (const cachedChannel of cachedFixture.channels) {
         if (cachedChannel.channel) {
+          if (isOverridingCapabilityType(presetCapabilityValue.type)) {
+            // played over the rest below
+            continue;
+          }
+
+          if (isPanTilt(presetCapabilityValue.type)) {
+            // a position of a moving head is played on the channel as a whole, by where the fixture is placed in its
+            // preset and on the stage (see pan-tilt)
+            const value = this.presetService.getPanTiltChannelValue(
+              presetCapabilityValue,
+              cachedChannel,
+              cachedFixture.profile.uuid,
+              preset,
+              context
+            );
+
+            if (value !== undefined) {
+              this.mixFixtureChannelValue(values, cachedFixture, cachedChannel.name, value);
+            }
+
+            continue;
+          }
+
+          if (isPositionedCapabilityType(presetCapabilityValue.type)) {
+            // a position is played on the channel as a whole, by the capability of it doing it
+            const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
+
+            if (value !== undefined) {
+              const fixtureChannelValue = new FixtureChannelValue();
+              fixtureChannelValue.channelName = cachedChannel.name;
+              fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+              fixtureChannelValue.value = value;
+              this.mixChannelValue(values, fixtureChannelValue, 1);
+            }
+
+            continue;
+          }
+
           for (const channelCapability of cachedChannel.capabilities) {
             if (
               this.fixtureService.capabilitiesMatch(
@@ -354,16 +458,12 @@ export class PreviewService implements OnDestroy {
                 fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
                 fixtureChannelValue.value = value;
 
-                if (
-                  presetCapabilityValue.type === FixtureCapabilityType.Intensity ||
-                  presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity
-                ) {
-                  // dimmer and color fade with the preset
+                if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
+                  this.mixColorValue(values, fixtureChannelValue, intensityPercentage, brightnessBelow, presetBrightness);
+                  hasColor = true;
+                } else if (presetCapabilityValue.type === FixtureCapabilityType.Intensity) {
+                  // the dimmer fades with the preset
                   this.mixChannelValue(values, fixtureChannelValue, intensityPercentage, 0);
-
-                  if (presetCapabilityValue.type === FixtureCapabilityType.ColorIntensity) {
-                    hasColor = true;
-                  }
                 } else {
                   this.mixChannelValue(values, fixtureChannelValue, 1);
 
@@ -376,22 +476,75 @@ export class PreviewService implements OnDestroy {
             }
           }
         }
+      }
+    }
 
-        // approximate the color from a color or a different color wheel, if necessary
-        if (!hasColor && cachedChannel.colorWheel) {
-          const capability = this.presetService.getApproximatedColorWheelCapability(state.fixtureCapabilityValues, cachedChannel);
+    // The pulse of an iris or a frost and the shake of a gobo play over what the rest puts on the same channel,
+    // whatever order they come in
+    for (const presetCapabilityValue of capabilityValues) {
+      if (isOverridingCapabilityType(presetCapabilityValue.type)) {
+        for (const cachedChannel of cachedFixture.channels) {
+          if (cachedChannel.channel) {
+            const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
 
-          if (capability) {
-            // we found an approximated color in the available wheel channel
-            const fixtureChannelValue = new FixtureChannelValue();
-            fixtureChannelValue.channelName = cachedChannel.name;
-            fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-            fixtureChannelValue.value = capability.centerValue;
-            this.mixChannelValue(values, fixtureChannelValue, 1);
+            if (value !== undefined) {
+              this.mixFixtureChannelValue(values, cachedFixture, cachedChannel.name, value);
+            }
           }
         }
       }
     }
+
+    // A fixture which lights no color of its own (with its color channels or a slot of its color wheel) shows the
+    // color on its color wheel, approximated from the colors set or from a slot of a different wheel. Only once all
+    // the values are mixed, so that the order they come in doesn't decide whether the wheel turns as well.
+    if (hasColor) {
+      return;
+    }
+
+    for (const cachedChannel of cachedFixture.channels) {
+      if (cachedChannel.colorWheel) {
+        const capability = this.presetService.getApproximatedColorWheelCapability(state.fixtureCapabilityValues, cachedChannel);
+
+        if (capability) {
+          // we found an approximated color in the available wheel channel
+          const fixtureChannelValue = new FixtureChannelValue();
+          fixtureChannelValue.channelName = cachedChannel.name;
+          fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+          fixtureChannelValue.value = capability.centerValue;
+          this.mixChannelValue(values, fixtureChannelValue, 1);
+        }
+      }
+    }
+
+    // A fixture without a color wheel either shows the color on its color presets (e.g. the color macros of a par
+    // lighting in nothing but them), approximated the same way. This follows the same rules as Rocket Show.
+    if (cachedFixture.channels.some((cachedChannel) => cachedChannel.colorWheel)) {
+      return;
+    }
+
+    for (const cachedChannel of cachedFixture.channels) {
+      if (cachedChannel.channel) {
+        const capability = this.presetService.getApproximatedColorPresetCapability(state.fixtureCapabilityValues, cachedChannel);
+
+        if (capability) {
+          const fixtureChannelValue = new FixtureChannelValue();
+          fixtureChannelValue.channelName = cachedChannel.name;
+          fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+          fixtureChannelValue.value = capability.centerValue;
+          this.mixChannelValue(values, fixtureChannelValue, 1);
+        }
+      }
+    }
+  }
+
+  // put a value on a channel of the fixture, over what is on it
+  private mixFixtureChannelValue(values: FixtureChannelValue[], cachedFixture: CachedFixture, channelName: string, value: number) {
+    const fixtureChannelValue = new FixtureChannelValue();
+    fixtureChannelValue.channelName = channelName;
+    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+    fixtureChannelValue.value = value;
+    this.mixChannelValue(values, fixtureChannelValue, 1);
   }
 
   private mixChannelValues(
@@ -450,7 +603,8 @@ export class PreviewService implements OnDestroy {
     cachedFixture: CachedFixture,
     values: FixtureChannelValue[],
     intensityPercentage: number,
-    state: PresetStepState
+    state: PresetStepState,
+    context: PanTiltContext
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -464,6 +618,11 @@ export class PreviewService implements OnDestroy {
       const effectIntensityPercentage = intensityPercentage * effectAmount;
 
       if (effect.visible && effectAmount > 0) {
+        if (effect instanceof EffectPanTilt) {
+          this.mixPanTiltEffect(effect, effectTimeMillis, preset, cachedFixture, values, effectIntensityPercentage, state, context);
+          continue;
+        }
+
         // EffectCurve
         if (effect instanceof EffectCurve) {
           const effectCurve = effect as EffectCurve;
@@ -528,8 +687,53 @@ export class PreviewService implements OnDestroy {
             }
           }
         }
+      }
+    }
+  }
 
-        // TODO other effects (PanTilt, etc.)
+  // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),
+  // mirrored with the preset. This follows the same rules as Rocket Show.
+  private mixPanTiltEffect(
+    effect: EffectPanTilt,
+    effectTimeMillis: number,
+    preset: PresetRegionScene,
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number,
+    state: PresetStepState,
+    context: PanTiltContext
+  ) {
+    const beatsPerMinute = this.getBeatsPerMinute();
+    const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, context.fixtureCount, beatsPerMinute);
+    const offset = effect.getOffsetAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute);
+
+    // the movement does not apply anymore after it has finished running
+    if (!offset) {
+      return;
+    }
+
+    for (const cachedChannel of cachedFixture.channels) {
+      if (!cachedChannel.channel) {
+        continue;
+      }
+
+      for (const type of [FixtureCapabilityType.Pan, FixtureCapabilityType.Tilt]) {
+        const range = getAxisRange(cachedChannel, type);
+
+        if (range === undefined) {
+          continue;
+        }
+
+        const mirror = preset.preset.mirrorsCapability(type);
+        const center =
+          getPresetPanTiltDegrees(state.fixtureCapabilityValues, type, cachedFixture.profile.uuid, range, mirror, context) ?? 0;
+        const move = type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
+
+        const fixtureChannelValue = new FixtureChannelValue();
+        fixtureChannelValue.channelName = cachedChannel.name;
+        fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+        fixtureChannelValue.value = getAxisChannelValue(cachedChannel, range, center + (mirror ? -move : move));
+        this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
       }
     }
   }
@@ -542,6 +746,11 @@ export class PreviewService implements OnDestroy {
     // the number of chase steps per preset (needed by the effects to spread themselves
     // over all fixtures of their preset)
     const fixtureCounts = new Map<Preset, number>();
+
+    // the place of each fixture in the chase of each preset, worked out once per frame and
+    // preset: looking it up for each fixture took most of the time of a frame with a few
+    // dozen fixtures
+    const fixtureIndices = new Map<Preset, Map<string, number>>();
 
     // which state each preset is in. The same preset can play in more than one region
     // at a time, each of them at a different point of its sequence, so the entry of the
@@ -556,6 +765,7 @@ export class PreviewService implements OnDestroy {
     for (const preset of presets) {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
+        fixtureIndices.set(preset.preset, this.presetService.getPresetFixtureIndices(preset.preset));
       }
 
       // a preset chasing its steps over its fixtures is at a different point of the
@@ -574,6 +784,15 @@ export class PreviewService implements OnDestroy {
     this.presetService.activeStep = activeStep;
     this.presetService.activeStepProgress = activeStepProgress;
 
+    const identifyFixtureUuids = this.projectService.project.identifyFixtureUuids || [];
+    const maintenance: { action: MaintenanceAction; fixtureUuids: string[] }[] = [
+      { action: 'reset', fixtureUuids: this.projectService.project.resetFixtureUuids || [] },
+      { action: 'lamp-on', fixtureUuids: this.projectService.project.lampOnFixtureUuids || [] },
+    ];
+
+    // where the fixtures hang, to aim the moving heads at a spot
+    const placements = getStagePlacements(this.projectService.project);
+
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
 
@@ -589,7 +808,7 @@ export class PreviewService implements OnDestroy {
         // apply the default values
         for (const cachedChannel of cachedFixture.channels) {
           if (cachedChannel.channel) {
-            if (cachedChannel.channel.defaultValue) {
+            if (cachedChannel.defaultValue !== undefined) {
               const fixtureChannelValue = new FixtureChannelValue();
               fixtureChannelValue.channelName = cachedChannel.name;
               fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
@@ -601,7 +820,9 @@ export class PreviewService implements OnDestroy {
 
         for (const preset of presets) {
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
-          const fixtureIndex = this.getFixtureIndex(preset.preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key);
+          const fixtureIndex = fixtureIndices
+            .get(preset.preset)
+            .get(this.presetService.getPresetFixtureKey(cachedFixture.fixture.uuid, cachedFixture.pixel?.key));
 
           if (fixtureIndex >= 0) {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,
@@ -614,7 +835,13 @@ export class PreviewService implements OnDestroy {
                 timeMillis - this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
               );
 
-            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset);
+            const context: PanTiltContext = {
+              fixtureIndex,
+              fixtureCount: fixtureCounts.get(preset.preset),
+              placement: placements.get(cachedFixture.fixture.uuid),
+            };
+
+            this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset, context);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
             this.mixEffects(
               timeMillis,
@@ -624,8 +851,26 @@ export class PreviewService implements OnDestroy {
               cachedFixture,
               values,
               intensityPercentage,
-              state
+              state,
+              context
             );
+          }
+        }
+      }
+
+      // a fixture being identified from the fixture pool blinks, whatever the presets light it with
+      if (identifyFixtureUuids.indexOf(cachedFixture.fixture.uuid) >= 0) {
+        values = this.getIdentifyValues(cachedFixture, values, timeMillis);
+      }
+
+      // a fixture asked to reset itself or to switch its lamp on does it, whatever the presets do with it
+      for (const entry of maintenance) {
+        if (entry.fixtureUuids.indexOf(cachedFixture.fixture.uuid) >= 0) {
+          const found = getMaintenanceCapability(cachedFixture.channels, entry.action);
+
+          if (found && found.capability.centerValue !== undefined) {
+            values = values.slice();
+            this.mixFixtureChannelValue(values, cachedFixture, found.channel.name, found.capability.centerValue);
           }
         }
       }
@@ -637,6 +882,17 @@ export class PreviewService implements OnDestroy {
     return calculatedFixtures;
   }
 
+  // the values of a fixture being identified: the ones the presets give it, with what identifies it on top (see
+  // identify). It keeps everything else, e.g. where it points to.
+  private getIdentifyValues(cachedFixture: CachedFixture, presetValues: FixtureChannelValue[], timeMillis: number): FixtureChannelValue[] {
+    const values = presetValues.slice();
+    const state = new PresetStepState();
+    state.fixtureCapabilityValues = getIdentifyCapabilityValues(cachedFixture, timeMillis);
+    this.mixCapabilityValues(state, cachedFixture, values, 1, new Preset(), { fixtureIndex: 0, fixtureCount: 1 });
+
+    return values;
+  }
+
   public fixtureIsSelected(uuid: string, pixelKey: string, presets: PresetRegionScene[]): boolean {
     for (const preset of presets) {
       if (this.presetService.getPresetFixture(preset.preset, uuid, pixelKey)) {
@@ -645,6 +901,24 @@ export class PreviewService implements OnDestroy {
     }
 
     return false;
+  }
+
+  // the spot on the stage (or on the ground around it) the passed ray hits first, in cm, or undefined if it misses
+  public getStageSpot(raycaster: THREE.Raycaster): number[] {
+    const hits = raycaster.intersectObjects(this.stageMeshes, false);
+
+    if (hits.length === 0) {
+      return undefined;
+    }
+
+    const point = hits[0].point;
+
+    return [Math.round(point.x), Math.round(point.y), Math.round(point.z)];
+  }
+
+  // pick a spot on the stage with the next click into the 3D preview, or stop picking it
+  public pickSpot(picking: boolean) {
+    this.pickingSpot = picking;
   }
 
   public updateFixtureSetup() {

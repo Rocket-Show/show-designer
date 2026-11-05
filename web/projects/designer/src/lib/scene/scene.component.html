@@ -6,7 +6,7 @@
     <div class="ml-auto">
       <a
         href="#"
-        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ (allScenesCollapsed() ? 'designer.scene.expand-all' : 'designer.scene.collapse-all') | translate }}"
         container="body"
         placement="bottom"
@@ -16,7 +16,7 @@
       ></a>
       <a
         href="#"
-        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ removeLabel() | translate }}"
         container="body"
         placement="bottom"
@@ -26,7 +26,7 @@
       ></a>
       <a
         href="#"
-        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ duplicateLabel() | translate }}"
         container="body"
         placement="bottom"
@@ -36,7 +36,7 @@
       ></a>
       <a
         href="#"
-        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ 'designer.scene.add-folder' | translate }}"
         container="body"
         placement="bottom"
@@ -46,7 +46,7 @@
       ></a>
       <a
         href="#"
-        class="d-none d-md-inline-block btn btn-secondary m-0 p-0"
+        class="btn btn-secondary m-0 p-0"
         popover="{{ 'designer.scene.add' | translate }}"
         container="body"
         placement="bottom"
@@ -58,11 +58,14 @@
   </div>
   <div class="card-body border-secondary p-0 overflow-auto">
     <!-- The scenes, grouped in folders, with their presets ordered as they are layered
-         in the scene -->
+         in the scene. The presets are dragged in here from the preset list, the scenes
+         are dragged out onto the tracks of the timeline. -->
     <lib-tree
       [nodes]="treeNodes"
       [selectedNodes]="selectedNodes"
       [focusedNode]="focusedNode"
+      [publishDrag]="true"
+      [acceptExternalDrag]="true"
       [allowDrop]="allowDrop"
       (selectedNodesChange)="onSelectedNodesChange($event)"
       (nodesChange)="onNodesChange($event)"
@@ -87,7 +90,7 @@
           @if (node.scene.dimmer < 1) {
           <div class="my-auto pl-2 scene-dimmer">{{ dimmerPercentage(node.scene) }}%</div>
           }
-          <div class="d-none d-md-flex my-auto ml-2 mr-2">
+          <div class="d-flex my-auto ml-2 mr-2">
             <button
               type="button"
               class="btn btn-secondary btn-sm py-0 px-1"

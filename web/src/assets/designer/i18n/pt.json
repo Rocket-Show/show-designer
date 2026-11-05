@@ -58,7 +58,8 @@
       "login": "Iniciar sessão",
       "logout": "Terminar sessão",
       "support": "Suporte",
-      "reset-intro": "Mostrar introdução"
+      "reset-intro": "Mostrar introdução",
+      "view": "Ver"
     },
     "user": {
       "register-title": "Registar",
@@ -95,6 +96,9 @@
       "share-no-save": "Por favor guarde o projeto antes de o partilhar.",
       "share-title": "Partilhar projeto",
       "share-link": "Link",
+      "share-copy": "Copiar link",
+      "share-copied": "Copiado",
+      "share-no-token": "Este projeto ainda não tem um link de partilha. Guarde-o uma vez para obter um.",
       "delete-warning": "Tem a certeza de que quer eliminar este projeto?",
       "save-title": "Guardar projeto",
       "name": "Nome",
@@ -160,7 +164,8 @@
       "steps-settings": "Definições da sequência",
       "steps-loop": "Repetir os passos",
       "steps-loop-length": "Duração do ciclo",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} valores só funcionam em: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
@@ -180,7 +185,6 @@
       "capability-color": "Cor",
       "capability-color-wheel": "Roda de cores",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Espelhar",
       "profiles": "Perfis",
       "setting-position-title": "Posição do fixture",
       "setting-position": "Posição",
@@ -199,7 +203,80 @@
       "setting-stage-pillar-width": "Largura do pilar",
       "capability-sound-controlled": "Controlado por som",
       "capability-random-timing": "Temporização aleatória",
-      "channel-effect-driven": "Um efeito controla este canal e substitui o valor apresentado aqui"
+      "channel-effect-driven": "Um efeito controla este canal e substitui o valor apresentado aqui",
+      "capability-gobo-wheel": "Roda de gobos",
+      "capability-position-low": {
+        "ShutterStrobe": "Desligado",
+        "Zoom": "Fechado",
+        "Focus": "Perto",
+        "Iris": "Fechada",
+        "Frost": "Nenhum",
+        "ColorTemperature": "Quente",
+        "Prism": "Fora",
+        "ColorIntensity": "Desligado",
+        "StrobeDuration": "Curto",
+        "PanTiltSpeed": "Lento",
+        "FogOutput": "Desligado",
+        "WheelSlotRotation": "Rápido anti-horário",
+        "PrismRotation": "Rápido anti-horário",
+        "Rotation": "Rápido anti-horário",
+        "BladeInsertion": "Fora",
+        "BladeRotation": "Anti-horário",
+        "BladeSystemRotation": "Anti-horário",
+        "IrisEffect": "Desligado",
+        "FrostEffect": "Desligado"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Rápido",
+        "Zoom": "Aberto",
+        "Focus": "Longe",
+        "Iris": "Aberta",
+        "Frost": "Cheio",
+        "ColorTemperature": "Frio",
+        "Prism": "Dentro",
+        "ColorIntensity": "Cheio",
+        "StrobeDuration": "Longo",
+        "PanTiltSpeed": "Rápido",
+        "FogOutput": "Cheio",
+        "WheelSlotRotation": "Rápido horário",
+        "PrismRotation": "Rápido horário",
+        "Rotation": "Rápido horário",
+        "BladeInsertion": "Dentro",
+        "BladeRotation": "Horário",
+        "BladeSystemRotation": "Horário",
+        "IrisEffect": "Rápido",
+        "FrostEffect": "Rápido"
+      },
+      "model-specific-title": "Só este modelo",
+      "model-specific-hint": "O que define nestes canais só funciona neste modelo de fixture. O dimmer, as cores, o strobe, o zoom, o foco, a íris e o frost das capacidades funcionam em todos os modelos, assim o espetáculo funciona também noutros fixtures.",
+      "capability-pan-tilt-pad": "Posição",
+      "capability-pan-tilt-pad-hint": "Arraste para apontar as cabeças móveis: na horizontal para o pan, na vertical para o tilt. As setas movem um grau (dez com Shift), um duplo clique centra.",
+      "capability-pan-tilt-mirror": "Espelhar",
+      "capability-pan-tilt-mirror-pan": "Espelhar pan",
+      "capability-pan-tilt-mirror-tilt": "Espelhar tilt",
+      "capability-pan-tilt-spread": "Em leque",
+      "capability-pan-tilt-spread-hint": "Distribui as cabeças uniformemente por estes graus, da primeira à última.",
+      "capability-pan-tilt-aim": "Ponto no palco",
+      "capability-pan-tilt-aim-hint": "Clique num ponto da pré-visualização 3D: cada cabeça aponta para ele de onde está pendurada, seja qual for o modelo.",
+      "capability-pan-tilt-aim-pick": "Escolher um ponto",
+      "capability-pan-tilt-aim-picking": "Clique no palco…",
+      "capability-pan-tilt-aim-stop": "Deixar de apontar",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Desligado",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Lâmina superior",
+          "Right": "Lâmina direita",
+          "Bottom": "Lâmina inferior",
+          "Left": "Lâmina esquerda"
+        },
+        "BladeRotation": {
+          "Top": "Ângulo da lâmina superior",
+          "Right": "Ângulo da lâmina direita",
+          "Bottom": "Ângulo da lâmina inferior",
+          "Left": "Ângulo da lâmina esquerda"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -231,7 +308,27 @@
       "create-fixture-from-profile-file-dialog-title": "Selecionar um ficheiro de perfil OFL",
       "invalid-fixture-profile-file": "Este não é um ficheiro de perfil OFL válido. Por favor selecione um ficheiro de perfil válido.",
       "edit-universes": "Editar universos",
-      "edit-universes-title": "Editar universos"
+      "edit-universes-title": "Editar universos",
+      "change-type": "Mudar os fixtures selecionados para este perfil",
+      "fixture-type": "Tipo de fixture",
+      "change-type-hint": "Outros fixtures no local? Selecione os fixtures e clique em ⇄ junto ao perfil deles à esquerda.",
+      "exchanged-from": "Mudado de {{from}}. Com OK, os presets recebem também para este modelo o que definem para o antigo:",
+      "exchange-carried": "{{count}} valores são transferidos",
+      "exchange-lost": "{{count}} valores não podem ser transferidos:",
+      "exchange-reason": {
+        "nothing": "o novo modelo não tem nada que o faça",
+        "gobo": "o novo modelo não tem este gobo",
+        "taken": "já definido em {{to}}"
+      },
+      "patch-in-a-row": "Fazer o patch dos {{count}} fixtures um a seguir ao outro",
+      "patch-in-a-row-full": "A partir daí os fixtures já não cabem no universo.",
+      "identify": "Identificar: fazer o fixture piscar a branco",
+      "model-specific": "Os presets definem {{count}} valores que só funcionam neste modelo.",
+      "add-fixture": "Adicionar um fixture deste perfil",
+      "reset": "Reset",
+      "reset-hint": "Pede ao aparelho no palco que se reinicie, p. ex. uma cabeça móvel que perdeu a posição",
+      "lamp-on": "Lâmpada acesa",
+      "lamp-on-hint": "Acende a lâmpada do aparelho no palco"
     },
     "effect": {
       "add-new": "Adicionar novo efeito",
@@ -258,15 +355,19 @@
       "curve-end-hold": "Manter o último valor",
       "curve-end-base": "Voltar ao valor base",
       "curve-duty": "Largura",
-      "curve-duty-hint": "A parte do período em que a curva está ligada. Num chase é a parte dos aparelhos ligados ao mesmo tempo: 10 % acende um em cada dez.",
-      "curve-duty-unsupported": "A largura não se aplica a esta curva. Um dente de serra já sobe ou desce ao longo de todo o período; use uma triangular para definir quanto dela sobe.",
+      "curve-duty-hint": "A parte do período em que a curva está ligada. A curva mantém a forma: mais estreita, fica em baixo no resto do período; mais larga, em cima. Num chase é a parte dos aparelhos ligados ao mesmo tempo: 10 % acende um em cada dez.",
       "curve-chase-group-hint": "Quantos aparelhos partilham o mesmo passo do chase. 1 percorre cada aparelho por si, 2 move-os aos pares.",
       "delete-warning": "Tem a certeza de que quer eliminar este efeito?",
       "curve-sine": "Sinusoide",
       "curve-square": "Quadrada",
       "curve-triangle": "Triangular",
       "curve-sawtooth": "Dente de serra",
-      "curve-reverse-sawtooth": "Dente de serra invertido"
+      "curve-reverse-sawtooth": "Dente de serra invertido",
+      "pan-tilt-shape-circle": "Círculo",
+      "pan-tilt-shape-figure8": "Oito",
+      "pan-tilt-shape-line": "Linha",
+      "pan-tilt-shape-wave": "Onda",
+      "pan-tilt-size": "Tamanho"
     },
     "composition": {
       "new": "Criar nova composição..."
@@ -291,10 +392,30 @@
       "composition-sync-type": "Sincronização",
       "composition-sync-type-none": "Nenhuma",
       "composition-sync-type-audio": "Ficheiro de áudio",
+      "composition-sync-type-none-hint": "As cenas seguem o seu próprio relógio. A composição dura até a sua última cena terminar: coloque uma cena depois do fim para a prolongar.",
       "composition-no-file-selected": "Nenhum ficheiro selecionado",
       "composition-file-upload": "Carregar",
       "composition-file-library": "Biblioteca de multimédia",
-      "warning-delete-composition": "Tem a certeza de que quer eliminar esta composição? Esta ação não pode ser desfeita."
+      "warning-delete-composition": "Tem a certeza de que quer eliminar esta composição? Esta ação não pode ser desfeita.",
+      "tracks": "Faixas",
+      "add-track": "Adicionar faixa",
+      "audio": "Áudio",
+      "remove-track": "Remover a faixa",
+      "warning-delete-track": "Deseja realmente remover esta faixa junto com as cenas reproduzidas nela?",
+      "hide-track": "Ocultar a faixa na pré-visualização",
+      "show-track": "Mostrar novamente a faixa na pré-visualização",
+      "solo-track": "Solo: reproduzir apenas as faixas em solo na pré-visualização",
+      "no-tracks": "Arraste uma cena para cá, ou desenhe a selecionada, para reproduzi-la numa faixa",
+      "actions": "Ações",
+      "action-type": {
+        "NULL": "Nulo",
+        "SYSTEM": "Sistema",
+        "TRANSPORT": "Transporte",
+        "MIDI": "MIDI",
+        "LIGHTING": "Iluminação",
+        "RASPBERRY_GPIO": "Controlo externo",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "Continuar",
@@ -391,6 +512,23 @@
       "UV": "UV",
       "Lime": "Lima",
       "Indigo": "Índigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Painéis",
+      "layout-default": "Padrão",
+      "layout-presets": "Predefinições",
+      "layout-show": "Show",
+      "layout-stage": "Palco",
+      "panel-scenes": "Cenas",
+      "panel-presets": "Predefinições",
+      "panel-preview": "Pré-visualização 3D",
+      "panel-editor": "Editor de predefinições",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Dimmer geral",
+      "panel-timeline": "Linha de tempo",
+      "fold": "Recolher: {{panels}}",
+      "open": "Abrir: {{panels}}"
     }
   }
 }

@@ -4,3 +4,15 @@
   height: 350px !important;
   z-index: 999999;
 }
+
+/* a phone has no room next to the panels: the intro stays at the bottom of the screen,
+   while the panel of the step is scrolled into view above it */
+:host-context(.designer-compact) .card {
+  position: fixed;
+  left: var(--sd-space-3);
+  right: var(--sd-space-3);
+  bottom: var(--sd-space-3);
+  width: auto;
+  height: auto !important;
+  max-height: 60vh;
+}

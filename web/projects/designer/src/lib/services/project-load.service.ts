@@ -20,6 +20,9 @@ import { LivePreviewService } from './live-preview.service';
 import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
 import { Composition } from '../models/composition';
+import { EffectCurve } from '../models/effect-curve';
+import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { assignTracks } from '../models/timeline-track';
 
 @Injectable({
   providedIn: 'root',
@@ -43,41 +46,40 @@ export class ProjectLoadService {
     private effectService: EffectService
   ) {}
 
-  private migrateToVersion2() {
-    for (let fixture of this.projectService.project.fixtures) {
-      if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-        const projectFixture = new PresetFixture();
-        projectFixture.fixtureUuid = fixture.uuid;
-        this.projectService.project.presetFixtures.push(projectFixture);
-      }
+  // the fixture itself (if it has a channel of its own) and its pixels, as a project of version 1
+  // meant them. A fixture without its profile or mode is left out, like in Rocket Show.
+  private getPresetFixturesOfVersion1(fixtureUuid: string): PresetFixture[] {
+    const presetFixtures: PresetFixture[] = [];
+    const fixture = this.fixtureService.getFixtureByUuid(fixtureUuid);
+    const profile = fixture ? this.fixtureService.getProfileByUuid(fixture.profileUuid) : undefined;
 
-      const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
-
-      for (let pixelKey of pixels) {
-        const projectFixture = new PresetFixture();
-        projectFixture.fixtureUuid = fixture.uuid;
-        projectFixture.pixelKey = pixelKey.key;
-        this.projectService.project.presetFixtures.push(projectFixture);
-      }
+    if (!profile || !this.fixtureService.getModeByFixture(profile, fixture)) {
+      return presetFixtures;
     }
-    for (let preset of this.projectService.project.presets) {
-      for (let fixtureUuid of preset.fixtureUuids) {
-        const fixture = this.fixtureService.getFixtureByUuid(fixtureUuid);
 
-        if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixtureUuid;
-          preset.fixtures.push(presetFixture);
-        }
+    if (this.fixtureService.fixtureHasGeneralChannel(fixture)) {
+      const presetFixture = new PresetFixture();
+      presetFixture.fixtureUuid = fixtureUuid;
+      presetFixtures.push(presetFixture);
+    }
 
-        const pixels = this.fixtureService.fixtureGetUniquePixels(fixture);
+    for (const pixel of this.fixtureService.fixtureGetUniquePixels(fixture)) {
+      const presetFixture = new PresetFixture();
+      presetFixture.fixtureUuid = fixtureUuid;
+      presetFixture.pixelKey = pixel.key;
+      presetFixtures.push(presetFixture);
+    }
 
-        for (let pixel of pixels) {
-          const presetFixture = new PresetFixture();
-          presetFixture.fixtureUuid = fixtureUuid;
-          presetFixture.pixelKey = pixel.key;
-          preset.fixtures.push(presetFixture);
-        }
+    return presetFixtures;
+  }
+
+  private migrateToVersion2() {
+    for (const fixture of this.projectService.project.fixtures) {
+      this.projectService.project.presetFixtures.push(...this.getPresetFixturesOfVersion1(fixture.uuid));
+    }
+    for (const preset of this.projectService.project.presets) {
+      for (const fixtureUuid of preset.fixtureUuids || []) {
+        preset.fixtures.push(...this.getPresetFixturesOfVersion1(fixtureUuid));
       }
       preset.fixtureUuids = undefined;
     }
@@ -148,6 +150,97 @@ export class ProjectLoadService {
     this.projectService.project.version = 7;
   }
 
+  private migrateToVersion8() {
+    // every curve swings over its whole amplitude now, like the square did already. the
+    // others swung over half of it -> halve their amplitude, so the show looks the same.
+    for (const preset of this.projectService.project.presets) {
+      for (const effect of preset.effects) {
+        // (a movement of the pan and the tilt runs on the timing of a curve, but swings over no amplitude)
+        if (effect instanceof EffectCurve && !(effect instanceof EffectPanTilt) && effect.curveType !== 'square') {
+          effect.amplitude /= 2;
+        }
+      }
+    }
+
+    this.projectService.project.version = 8;
+  }
+
+  private migrateToVersion9() {
+    // the pixels of a matrix given by its pixel count are named like in the fixture library now
+    // (e.g. "3" or "(2, 3)" instead of "Pixel 3-1-1") -> rename them in the presets and effects,
+    // so they still light the same pixels
+    const project = this.projectService.project;
+    const pixelCountByProfile = new Map<string, number[]>();
+    const pixelCountByFixture = new Map<string, number[]>();
+
+    for (const profile of project.fixtureProfiles) {
+      if (profile.matrix && !profile.matrix.pixelKeys && profile.matrix.pixelCount.length === 3) {
+        pixelCountByProfile.set(profile.uuid, profile.matrix.pixelCount);
+      }
+    }
+
+    for (const fixture of project.fixtures) {
+      if (pixelCountByProfile.has(fixture.profileUuid)) {
+        pixelCountByFixture.set(fixture.uuid, pixelCountByProfile.get(fixture.profileUuid));
+      }
+    }
+
+    // the pixel keys in a pixel key or a channel name (e.g. "Red Pixel 3-1-1")
+    const rename = (name: string, pixelCount: number[], pattern: RegExp) =>
+      name.replace(pattern, (key: string, x: string, y: string, z: string) =>
+        +x >= 1 && +x <= pixelCount[0] && +y >= 1 && +y <= pixelCount[1] && +z >= 1 && +z <= pixelCount[2]
+          ? FixtureService.getDefaultPixelKey(pixelCount, +x, +y, +z)
+          : key
+      );
+    const pixelKey = /^Pixel (\d+)-(\d+)-(\d+)$/;
+    const channelName = /Pixel (\d+)-(\d+)-(\d+)/g;
+
+    const renamePresetFixtures = (presetFixtures: PresetFixture[]) => {
+      for (const presetFixture of presetFixtures) {
+        if (presetFixture.pixelKey && pixelCountByFixture.has(presetFixture.fixtureUuid)) {
+          presetFixture.pixelKey = rename(presetFixture.pixelKey, pixelCountByFixture.get(presetFixture.fixtureUuid), pixelKey);
+        }
+      }
+    };
+
+    renamePresetFixtures(project.presetFixtures);
+
+    for (const preset of project.presets) {
+      renamePresetFixtures(preset.fixtures);
+
+      for (const step of preset.steps) {
+        for (const channelValue of step.fixtureChannelValues) {
+          if (channelValue.channelName && pixelCountByProfile.has(channelValue.profileUuid)) {
+            channelValue.channelName = rename(channelValue.channelName, pixelCountByProfile.get(channelValue.profileUuid), channelName);
+          }
+        }
+      }
+
+      for (const effect of preset.effects) {
+        if (effect instanceof EffectCurve) {
+          for (const profileChannels of effect.channels) {
+            if (pixelCountByProfile.has(profileChannels.profileUuid)) {
+              const pixelCount = pixelCountByProfile.get(profileChannels.profileUuid);
+              profileChannels.channels = profileChannels.channels.map((name) => rename(name, pixelCount, channelName));
+            }
+          }
+        }
+      }
+    }
+
+    project.version = 9;
+  }
+
+  private migrateToVersion10() {
+    // the timeline has tracks now. Before, all scenes played on one lane, layered in the
+    // order of the scenes -> one track per scene, in that order, plays the show the same way
+    for (const composition of this.projectService.project.compositions) {
+      assignTracks(composition, this.projectService.project.scenes, () => this.uuidService.getUuid());
+    }
+
+    this.projectService.project.version = 10;
+  }
+
   private globalFixtureIndex(presetFixture: PresetFixture): number {
     return this.projectService.project.presetFixtures.findIndex((projectFixture) =>
       this.presetService.fixtureUuidAndPixelKeyEquals(
@@ -162,8 +255,8 @@ export class ProjectLoadService {
   private migrateFromOldProject() {
     let migrated = false;
 
-    if (!this.projectService.project.version) {
-      // Migrate from version 1
+    if (!(this.projectService.project.version >= 2)) {
+      // Migrate from version 1, which a project of version 1 mostly doesn't say (like in Rocket Show)
       this.migrateToVersion2();
       migrated = true;
     }
@@ -190,6 +283,21 @@ export class ProjectLoadService {
 
     if (this.projectService.project.version < 7) {
       this.migrateToVersion7();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 8) {
+      this.migrateToVersion8();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 9) {
+      this.migrateToVersion9();
+      migrated = true;
+    }
+
+    if (this.projectService.project.version < 10) {
+      this.migrateToVersion10();
       migrated = true;
     }
 
@@ -228,10 +336,13 @@ export class ProjectLoadService {
 
   private afterLoad() {
     this.migrateFromOldProject();
+    // the panels look the fixtures of the selected preset up in the cache as soon as they
+    // hear of the new project or of its selected step -> it has to hold the fixtures of
+    // the new project by then, not those of the one before it
+    this.fixtureService.updateCachedFixtures();
     this.presetService.selectStepFromProject();
     this.projectService.projectChanged.next();
     this.setupUniverses();
-    this.fixtureService.updateCachedFixtures();
     this.presetService.removeDeletedFixtures();
     this.previewService.updateFixtureSetup();
     this.presetService.fixtureSelectionChanged.next();
@@ -276,7 +387,10 @@ export class ProjectLoadService {
     }
   }
 
-  load(id: number, name: string, shareToken?: string): Observable<void> {
+  // open a project of the server. The template is opened as a new project: it has no address of its own (an address
+  // naming the template opened the template itself again after a reload, and saving it was refused or, for an admin,
+  // overwrote the template of everyone) and gets its id and share token once it is saved.
+  load(id: number, name: string, shareToken?: string, asTemplate = false): Observable<void> {
     const ref = this.modalService.show(WaitDialogComponent, { keyboard: false, ignoreBackdropClick: true });
 
     return this.projectService.getProject(id, name, shareToken).pipe(
@@ -288,14 +402,16 @@ export class ProjectLoadService {
               ' is created with a newer version of the designer. Please update your Rocket Show version to open this project.'
           );
         }
+        if (asTemplate) {
+          project.id = undefined;
+          project.shareToken = undefined;
+        }
+
         this.projectService.project = project;
         this.selectScenesPresetComposition();
         this.afterLoad();
 
-        const queryParams: Params = {
-          id,
-          token: project.shareToken,
-        };
+        const queryParams: Params = asTemplate ? { id: '', token: '' } : { id, token: project.shareToken };
         this.router.navigate([], {
           relativeTo: this.activatedRoute,
           queryParams,
@@ -360,9 +476,7 @@ export class ProjectLoadService {
 
   template() {
     // load the template project with id 1
-    this.load(1, null).subscribe(() => {
-      this.projectService.project.id = undefined;
-    });
+    this.load(1, null, undefined, true).subscribe();
   }
 
   import(data: string) {
@@ -403,10 +517,11 @@ export class ProjectLoadService {
     if (
       previousComposition &&
       previousComposition.uuid === composition.uuid &&
+      previousComposition.syncType === composition.syncType &&
       previousComposition.audioFileName === composition.audioFileName
     ) {
-      // the same audio file is still the one to play -> keep it loaded and only point
-      // the timeline at the restored objects
+      // the same audio file (or none) is still the one to play -> keep it loaded and only
+      // point the timeline at the restored objects
       this.timelineService.selectedComposition = composition;
       this.timelineService.selectedCompositionIndex = index;
       this.timelineService.redrawAllRegions();

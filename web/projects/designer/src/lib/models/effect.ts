@@ -11,6 +11,7 @@ export abstract class Effect {
     }
 
     this.uuid = data.uuid;
-    this.visible = data.visible;
+    // an effect is shown, unless it was hidden (like in Rocket Show)
+    this.visible = data.visible !== false;
   }
 }

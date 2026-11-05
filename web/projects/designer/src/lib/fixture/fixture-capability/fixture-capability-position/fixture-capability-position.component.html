@@ -1,0 +1,64 @@
+<div class="card border-secondary h-100" [class.capability-deactivated]="getValue() == undefined" style="min-height: 200px">
+  <div class="card-header">
+    <div class="my-auto">
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [id]="id"
+          [ngModel]="getValue() != undefined"
+          (ngModelChange)="changeActive($event)"
+        />
+        <label class="form-check-label text-nowrap" [for]="id">
+          @if (isEmitter) {
+          <span class="emitter-swatch mr-1" [style.background-color]="emitterColor"></span>
+          }
+          {{ labelKey | translate }}
+        </label>
+      </div>
+    </div>
+  </div>
+
+  @if (isSwitch) {
+  <div class="card-body h-100 d-flex" style="flex-direction: column">
+    <div class="btn-group-vertical btn-group-toggle mx-auto" role="group">
+      <button type="button" class="btn btn-secondary btn-sm" [class.active]="getValue() > 0" (click)="setValue(1)">
+        {{ highKey | translate }}
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" [class.active]="getValue() === 0" (click)="setValue(0)">
+        {{ lowKey | translate }}
+      </button>
+    </div>
+  </div>
+  } @else {
+  <div class="card-body h-100 d-flex" style="flex-direction: column">
+    <div class="mb-2 w-100 d-flex">
+      <input
+        class="mx-auto sd-value-input"
+        type="text"
+        [ngModel]="getValueText() >= 0 ? getValueText() : 0"
+        (ngModelChange)="setValue($event / 100)"
+      />
+    </div>
+
+    <div class="position-end text-muted text-center">{{ highKey | translate }}</div>
+
+    <div class="h-100 w-100 d-flex">
+      <mv-slider
+        class="mx-auto"
+        [value]="getValue() >= 0 ? getValue() : 0"
+        (change)="setValue($event.newValue)"
+        [orientation]="'vertical'"
+        [reversed]="true"
+        style="height: 100%"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.001"
+      ></mv-slider>
+    </div>
+
+    <div class="position-end text-muted text-center">{{ lowKey | translate }}</div>
+  </div>
+  }
+</div>

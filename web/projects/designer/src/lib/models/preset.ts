@@ -145,11 +145,11 @@ export class Preset {
     }
 
     this.stepsLoop = data.stepsLoop === true;
-    this.stepsLoopMillis = data.stepsLoopMillis;
+    this.stepsLoopMillis = data.stepsLoopMillis ?? undefined;
     this.stepsPhasingMode = data.stepsPhasingMode || 'millis';
     this.stepsPhasingMillis = data.stepsPhasingMillis || 0;
-    this.stepsPhasingCycles = data.stepsPhasingCycles === undefined ? 1 : data.stepsPhasingCycles;
-    this.stepsPhasingGroupSize = data.stepsPhasingGroupSize === undefined ? 1 : data.stepsPhasingGroupSize;
+    this.stepsPhasingCycles = data.stepsPhasingCycles ?? 1;
+    this.stepsPhasingGroupSize = data.stepsPhasingGroupSize ?? 1;
 
     if (data.effects) {
       for (const effect of data.effects) {
@@ -168,16 +168,17 @@ export class Preset {
     this.mirrorPan = data.mirrorPan === true;
     this.mirrorTilt = data.mirrorTilt === true;
 
-    this.startMillis = data.startMillis;
-    this.endMillis = data.endMillis;
-    this.fadeInMillis = data.fadeInMillis;
-    this.fadeOutMillis = data.fadeOutMillis;
+    // a value missing or null keeps the default, like in Rocket Show
+    this.startMillis = data.startMillis ?? undefined;
+    this.endMillis = data.endMillis ?? undefined;
+    this.fadeInMillis = data.fadeInMillis ?? 0;
+    this.fadeOutMillis = data.fadeOutMillis ?? 0;
 
     // projects before version 7 only knew linear fades
     this.fadeInCurve = data.fadeInCurve || 'linear';
     this.fadeOutCurve = data.fadeOutCurve || 'linear';
-    this.fadeInPre = data.fadeInPre;
-    this.fadeOutPost = data.fadeOutPost;
+    this.fadeInPre = data.fadeInPre === true;
+    this.fadeOutPost = data.fadeOutPost === true;
 
     // projects before version 3 did not know a preset-specific fixture order
     this.useGlobalFixtureOrder = data.useGlobalFixtureOrder !== false;

@@ -39,6 +39,9 @@ export class UndoService implements OnDestroy {
     'previewPreset',
     'stepPreviewRunning',
     'stepPreviewStartMillis',
+    'identifyFixtureUuids',
+    'resetFixtureUuids',
+    'lampOnFixtureUuids',
   ];
 
   // a gesture of the pointer starts here. Everything it changes belongs to one step,

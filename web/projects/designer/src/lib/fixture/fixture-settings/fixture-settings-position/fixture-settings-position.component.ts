@@ -46,7 +46,8 @@ export class FixtureSettingsPositionComponent implements OnInit {
   }
 
   private updateSelection() {
-    // get all display values for the selected settings fixtures
+    // get all display values for the selected settings fixtures. A value is only shown,
+    // if all of them share it (0 is a value as well).
     this.selectedPositioning = undefined;
 
     this.positionX = undefined;
@@ -68,7 +69,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.positionX) {
+      if (this.positionX !== undefined) {
         if (this.positionX !== fixture.positionX) {
           this.positionX = undefined;
           break;
@@ -78,7 +79,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.positionY) {
+      if (this.positionY !== undefined) {
         if (this.positionY !== fixture.positionY) {
           this.positionY = undefined;
           break;
@@ -88,7 +89,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.positionZ) {
+      if (this.positionZ !== undefined) {
         if (this.positionZ !== fixture.positionZ) {
           this.positionZ = undefined;
           break;
@@ -98,7 +99,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.rotationX) {
+      if (this.rotationX !== undefined) {
         if (this.rotationX !== fixture.rotationX) {
           this.rotationX = undefined;
           break;
@@ -108,7 +109,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.rotationY) {
+      if (this.rotationY !== undefined) {
         if (this.rotationY !== fixture.rotationY) {
           this.rotationY = undefined;
           break;
@@ -118,7 +119,7 @@ export class FixtureSettingsPositionComponent implements OnInit {
       }
     }
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
-      if (this.rotationZ) {
+      if (this.rotationZ !== undefined) {
         if (this.rotationZ !== fixture.rotationZ) {
           this.rotationZ = undefined;
           break;
@@ -131,6 +132,11 @@ export class FixtureSettingsPositionComponent implements OnInit {
 
   changePosition(positioningStr: string) {
     const positioning: Positioning = Positioning[positioningStr];
+
+    // the empty entry only stands for fixtures hanging at different places
+    if (!positioning) {
+      return;
+    }
 
     for (const fixture of this.fixtureService.selectedSettingsFixtures) {
       fixture.positioning = positioning;

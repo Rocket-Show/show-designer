@@ -63,20 +63,27 @@ export class PresetStepSettingsComponent implements OnInit {
     this.step.transitionCurve = this.transitionCurve;
 
     // only the effects this step does not let through fully need to be written down
-    this.step.effectAmounts = [];
+    const effectAmounts: PresetStepEffectAmount[] = [];
 
     this.preset.effects.forEach((effect, index) => {
-      const percentage = this.effectAmounts[index];
+      let amount = +this.effectAmounts[index] / 100;
 
-      if (isNaN(percentage) || percentage < 0 || percentage >= 100) {
+      // anything which is no percentage keeps what the step let through so far
+      if (isNaN(amount) || amount < 0) {
+        amount = this.step.getEffectAmount(effect.uuid);
+      }
+
+      if (amount >= 1) {
         return;
       }
 
       const effectAmount = new PresetStepEffectAmount();
       effectAmount.effectUuid = effect.uuid;
-      effectAmount.amount = +percentage / 100;
-      this.step.effectAmounts.push(effectAmount);
+      effectAmount.amount = amount;
+      effectAmounts.push(effectAmount);
     });
+
+    this.step.effectAmounts = effectAmounts;
 
     // a step which was moved takes its new place in the sequence right away
     this.presetService.stepChanged();

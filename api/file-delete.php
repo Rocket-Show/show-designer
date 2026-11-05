@@ -9,6 +9,10 @@ if (!isset($compositionUuid)) {
     error('missing-parameters', 400);
 }
 
+if (!mayChangeCompositionFile($conn, getUserId($conn), $_GET['compositionUuid'], null)) {
+    errorUnauthorized();
+}
+
 // delete the file
 $result = mysqli_query($conn, "SELECT id FROM composition_file WHERE composition_uuid = '" . $compositionUuid . "'");
 if ($result->num_rows > 0) {

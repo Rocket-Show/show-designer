@@ -58,7 +58,8 @@
       "login": "Einloggen",
       "logout": "Ausloggen",
       "support": "Support",
-      "reset-intro": "Einführung anzeigen"
+      "reset-intro": "Einführung anzeigen",
+      "view": "Ansicht"
     },
     "user": {
       "register-title": "Registrieren",
@@ -95,6 +96,9 @@
       "share-no-save": "Bitte speichere das Projekt zuerst, bevor du es teilst.",
       "share-title": "Projekt teilen",
       "share-link": "Link",
+      "share-copy": "Link kopieren",
+      "share-copied": "Kopiert",
+      "share-no-token": "Dieses Projekt hat noch keinen Link zum Teilen. Speichere es einmal, um einen zu erhalten.",
       "delete-warning": "Möchtest du dieses Projekt wirklich löschen?",
       "save-title": "Projekt speichern",
       "name": "Name",
@@ -160,7 +164,8 @@
       "steps-settings": "Sequenz-Einstellungen",
       "steps-loop": "Schritte wiederholen",
       "steps-loop-length": "Schleifenlänge",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} Werte spielen nur auf: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
@@ -180,7 +185,6 @@
       "capability-color": "Farbe",
       "capability-color-wheel": "Farbrad",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Spiegeln",
       "profiles": "Profiles",
       "setting-position-title": "Fixture Position",
       "setting-position": "Position",
@@ -199,7 +203,80 @@
       "setting-stage-pillar-width": "Trägerdicke",
       "capability-sound-controlled": "Sound controlled",
       "capability-random-timing": "Zufallsgesteuert",
-      "channel-effect-driven": "Ein Effekt steuert diesen Kanal und überschreibt den hier angezeigten Wert"
+      "channel-effect-driven": "Ein Effekt steuert diesen Kanal und überschreibt den hier angezeigten Wert",
+      "capability-gobo-wheel": "Goborad",
+      "capability-position-low": {
+        "ShutterStrobe": "Aus",
+        "Zoom": "Eng",
+        "Focus": "Nah",
+        "Iris": "Zu",
+        "Frost": "Kein",
+        "ColorTemperature": "Warm",
+        "Prism": "Raus",
+        "ColorIntensity": "Aus",
+        "StrobeDuration": "Kurz",
+        "PanTiltSpeed": "Langsam",
+        "FogOutput": "Aus",
+        "WheelSlotRotation": "Schnell gegen den Uhrzeigersinn",
+        "PrismRotation": "Schnell gegen den Uhrzeigersinn",
+        "Rotation": "Schnell gegen den Uhrzeigersinn",
+        "BladeInsertion": "Draussen",
+        "BladeRotation": "Gegen den Uhrzeigersinn",
+        "BladeSystemRotation": "Gegen den Uhrzeigersinn",
+        "IrisEffect": "Aus",
+        "FrostEffect": "Aus"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Schnell",
+        "Zoom": "Weit",
+        "Focus": "Fern",
+        "Iris": "Offen",
+        "Frost": "Voll",
+        "ColorTemperature": "Kalt",
+        "Prism": "Rein",
+        "ColorIntensity": "Voll",
+        "StrobeDuration": "Lang",
+        "PanTiltSpeed": "Schnell",
+        "FogOutput": "Voll",
+        "WheelSlotRotation": "Schnell im Uhrzeigersinn",
+        "PrismRotation": "Schnell im Uhrzeigersinn",
+        "Rotation": "Schnell im Uhrzeigersinn",
+        "BladeInsertion": "Drin",
+        "BladeRotation": "Im Uhrzeigersinn",
+        "BladeSystemRotation": "Im Uhrzeigersinn",
+        "IrisEffect": "Schnell",
+        "FrostEffect": "Schnell"
+      },
+      "model-specific-title": "Nur dieses Modell",
+      "model-specific-hint": "Was du auf diesen Kanälen einstellst, spielt nur auf diesem Fixture-Modell. Dimmer, Farben, Strobe, Zoom, Fokus, Iris und Frost der Fähigkeiten spielen auf jedem Modell, so läuft die Show auch auf anderen Fixtures.",
+      "capability-pan-tilt-pad": "Position",
+      "capability-pan-tilt-pad-hint": "Ziehen, um die Moving Heads auszurichten: quer für Pan, hoch und runter für Tilt. Die Pfeiltasten bewegen um ein Grad (zehn mit Umschalt), ein Doppelklick zentriert.",
+      "capability-pan-tilt-mirror": "Spiegeln",
+      "capability-pan-tilt-mirror-pan": "Pan spiegeln",
+      "capability-pan-tilt-mirror-tilt": "Tilt spiegeln",
+      "capability-pan-tilt-spread": "Auffächern",
+      "capability-pan-tilt-spread-hint": "Verteilt die Köpfe gleichmässig über so viele Grad, vom ersten bis zum letzten.",
+      "capability-pan-tilt-aim": "Punkt auf der Bühne",
+      "capability-pan-tilt-aim-hint": "Einen Punkt in der 3D-Vorschau anklicken: Jeder Kopf zeigt darauf, wo immer er hängt und welches Modell er auch ist.",
+      "capability-pan-tilt-aim-pick": "Punkt wählen",
+      "capability-pan-tilt-aim-picking": "Bühne anklicken…",
+      "capability-pan-tilt-aim-stop": "Nicht mehr zielen",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Aus",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Blende oben",
+          "Right": "Blende rechts",
+          "Bottom": "Blende unten",
+          "Left": "Blende links"
+        },
+        "BladeRotation": {
+          "Top": "Blende oben Winkel",
+          "Right": "Blende rechts Winkel",
+          "Bottom": "Blende unten Winkel",
+          "Left": "Blende links Winkel"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Fixture Pool",
@@ -232,7 +309,27 @@
       "create-fixture-from-profile-file-dialog-title": "OFL Profil-Datei auswählen",
       "invalid-fixture-profile-file": "Das ist keine gültige OFL Profil-Datei. Bitte wähle eine gültige OFL Profil-Datei.",
       "edit-universes": "Universen bearbeiten",
-      "edit-universes-title": "Universen bearbeiten"
+      "edit-universes-title": "Universen bearbeiten",
+      "change-type": "Die ausgewählten Fixtures auf dieses Profil ändern",
+      "fixture-type": "Fixture-Typ",
+      "change-type-hint": "Andere Fixtures am Veranstaltungsort? Wähle die Fixtures aus und klicke links neben ihrem Profil auf ⇄.",
+      "exchanged-from": "Geändert von {{from}}. Mit OK erhalten die Presets, was sie für das alte Modell einstellen, auch für dieses:",
+      "exchange-carried": "{{count}} Werte werden übernommen",
+      "exchange-lost": "{{count}} Werte können nicht übernommen werden:",
+      "exchange-reason": {
+        "nothing": "das neue Modell hat nichts, was das macht",
+        "gobo": "das neue Modell hat dieses Gobo nicht",
+        "taken": "bereits auf {{to}} eingestellt"
+      },
+      "patch-in-a-row": "Die {{count}} Fixtures nacheinander patchen",
+      "patch-in-a-row-full": "Die Fixtures passen ab dort nicht mehr ins Universum.",
+      "identify": "Identifizieren: das Fixture weiss blinken lassen",
+      "model-specific": "Die Presets stellen {{count}} Werte ein, die nur dieses Modell spielt.",
+      "add-fixture": "Ein Fixture dieses Profils hinzufügen",
+      "reset": "Reset",
+      "reset-hint": "Lässt das Gerät auf der Bühne einen Reset machen, z. B. ein Moving Head, der seine Position verloren hat",
+      "lamp-on": "Lampe an",
+      "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein"
     },
     "effect": {
       "add-new": "Neuen Effekt hinzufügen",
@@ -259,15 +356,19 @@
       "curve-end-hold": "Letzten Wert halten",
       "curve-end-base": "Zurück zum Grundwert",
       "curve-duty": "Breite",
-      "curve-duty-hint": "Der Teil der Periode, in dem die Kurve an ist. Im Chase ist es der Anteil der Geräte, die gleichzeitig an sind: 10 % lässt eines von zehn leuchten.",
-      "curve-duty-unsupported": "Die Breite wirkt sich auf diese Kurve nicht aus. Ein Sägezahn steigt oder fällt bereits über die ganze Periode; mit einem Dreieck lässt sich einstellen, wie viel davon ansteigt.",
+      "curve-duty-hint": "Der Teil der Periode, in dem die Kurve an ist. Die Kurve behält ihre Form: schmaler ruht sie den Rest der Periode unten, breiter oben. Im Chase ist es der Anteil der Geräte, die gleichzeitig an sind: 10 % lässt eines von zehn leuchten.",
       "curve-chase-group-hint": "Wie viele Geräte sich einen Chase-Schritt teilen. 1 chased jedes Gerät für sich, 2 bewegt sie paarweise.",
       "delete-warning": "Möchtest du diesen Effekt wirklich löschen?",
       "curve-sine": "Sinus",
       "curve-square": "Rechteck",
       "curve-triangle": "Dreieck",
       "curve-sawtooth": "Sägezahn",
-      "curve-reverse-sawtooth": "Entgegengesetzter Sägezahn"
+      "curve-reverse-sawtooth": "Entgegengesetzter Sägezahn",
+      "pan-tilt-shape-circle": "Kreis",
+      "pan-tilt-shape-figure8": "Acht",
+      "pan-tilt-shape-line": "Linie",
+      "pan-tilt-shape-wave": "Welle",
+      "pan-tilt-size": "Grösse"
     },
     "composition": {
       "new": "Neue Komposition erstellen..."
@@ -292,10 +393,30 @@
       "composition-sync-type": "Synchronisierung",
       "composition-sync-type-none": "Keine",
       "composition-sync-type-audio": "Audiodatei",
+      "composition-sync-type-none-hint": "Die Szenen laufen mit einer eigenen Uhr. Die Komposition dauert, bis ihre letzte Szene zu Ende ist: Lege eine Szene hinter das Ende, um sie zu verlängern.",
       "composition-no-file-selected": "Keine Datei ausgewählt",
       "composition-file-upload": "Hochladen",
       "composition-file-library": "Mediathek",
-      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      "warning-delete-composition": "Möchtest du diese Komposition wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "tracks": "Spuren",
+      "add-track": "Spur hinzufügen",
+      "audio": "Audio",
+      "remove-track": "Spur entfernen",
+      "warning-delete-track": "Möchtest du diese Spur zusammen mit den darauf abgespielten Szenen wirklich entfernen?",
+      "hide-track": "Spur in der Vorschau ausblenden",
+      "show-track": "Spur in der Vorschau wieder einblenden",
+      "solo-track": "Solo: in der Vorschau nur die Solo-Spuren abspielen",
+      "no-tracks": "Ziehe eine Szene hierher oder zeichne die ausgewählte, um sie auf einer Spur abzuspielen",
+      "actions": "Aktionen",
+      "action-type": {
+        "NULL": "Null",
+        "SYSTEM": "System",
+        "TRANSPORT": "Transport",
+        "MIDI": "MIDI",
+        "LIGHTING": "Lichtsteuerung",
+        "RASPBERRY_GPIO": "Externe Steuerung",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "Weiter",
@@ -392,6 +513,23 @@
       "UV": "UV",
       "Lime": "Limette",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Bereiche",
+      "layout-default": "Standard",
+      "layout-presets": "Presets",
+      "layout-show": "Show",
+      "layout-stage": "Bühne",
+      "panel-scenes": "Szenen",
+      "panel-presets": "Presets",
+      "panel-preview": "3D-Vorschau",
+      "panel-editor": "Preset-Editor",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Master-Dimmer",
+      "panel-timeline": "Zeitleiste",
+      "fold": "Einklappen: {{panels}}",
+      "open": "Ausklappen: {{panels}}"
     }
   }
 }

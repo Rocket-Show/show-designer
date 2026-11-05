@@ -1,3 +1,5 @@
+import { readProjectNumber } from './project-number';
+
 export class FixtureChannelValue {
   channelName: string;
   profileUuid: string;
@@ -9,6 +11,6 @@ export class FixtureChannelValue {
     }
     this.channelName = data.channelName;
     this.profileUuid = data.profileUuid;
-    this.value = data.value;
+    this.value = readProjectNumber(data.value);
   }
 }

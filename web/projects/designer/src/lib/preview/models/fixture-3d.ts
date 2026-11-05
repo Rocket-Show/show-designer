@@ -2,10 +2,31 @@ import * as THREE from 'three';
 import { CachedFixture } from '../../models/cached-fixture';
 import { CachedFixtureCapability } from '../../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
+import { Color } from '../../models/color';
 import { Positioning } from '../../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
+import { getShutterOpening, ShutterSettings } from '../../models/shutter';
 import { FixtureService } from '../../services/fixture.service';
+import { mixesSubtractively } from '../../models/subtractive-color';
+
+// the light an emitter besides red, green and blue adds at full, in red, green and blue
+const emitterLights: { [color: string]: number[] } = {
+  White: [255, 255, 255],
+  'Warm White': [255, 214, 170],
+  'Cold White': [220, 235, 255],
+  Amber: [255, 191, 0],
+  UV: [100, 0, 255],
+  Lime: [191, 255, 0],
+  Indigo: [75, 0, 130],
+};
+
+// the part of the light (red, green or blue) a filter takes away
+const filteredLights: { [color: string]: number } = {
+  Cyan: 0,
+  Magenta: 1,
+  Yellow: 2,
+};
 import { PreviewService } from '../../services/preview.service';
 
 export abstract class Fixture3d {
@@ -19,8 +40,15 @@ export abstract class Fixture3d {
 
   public fixture: CachedFixture;
   private fixtureHasDimmer = false;
+
+  // how bright the dimmer lights while no value is set for it: as far as its default value lets
+  // it (a virtual dimmer is at full, see FixtureService.addVirtualDimmers)
+  private dimmerDefaultBrightness = 0;
   private fixtureHasColorWheel = false;
   private fixtureHasColor = false;
+
+  // a fixture mixing its colors with filters (cyan, magenta and yellow) is white until they take colors away
+  private fixtureMixesSubtractively = false;
 
   private colorRed: number;
   private colorGreen: number;
@@ -43,7 +71,6 @@ export abstract class Fixture3d {
   private bulbMaterial: THREE.MeshLambertMaterial;
   private bulbSphereRadius = 3;
   private bulbSphere: THREE.Mesh;
-  private blackColor = new THREE.Color(0x000000);
 
   constructor(
     public fixtureService: FixtureService,
@@ -67,6 +94,10 @@ export abstract class Fixture3d {
           switch (capability.capability.type) {
             case FixtureCapabilityType.Intensity:
               this.fixtureHasDimmer = true;
+              this.dimmerDefaultBrightness =
+                cachedChannel.defaultValue === undefined
+                  ? 0
+                  : this.fixtureService.getDimmerBrightnessOfValue(cachedChannel, cachedChannel.defaultValue);
               break;
             case FixtureCapabilityType.ColorIntensity:
               this.fixtureHasColor = true;
@@ -79,6 +110,8 @@ export abstract class Fixture3d {
         }
       }
     }
+
+    this.fixtureMixesSubtractively = mixesSubtractively(this.fixture.channels);
   }
 
   private createSpotlightMaterial() {
@@ -182,16 +215,7 @@ export abstract class Fixture3d {
   }
 
   protected getCapabilityInValue(channel: CachedFixtureChannel, value: number): CachedFixtureCapability {
-    for (const capability of channel.capabilities) {
-      if (
-        capability.capability.dmxRange.length === 0 ||
-        (value >= capability.capability.dmxRange[0] && value <= capability.capability.dmxRange[1])
-      ) {
-        return capability;
-      }
-    }
-
-    return undefined;
+    return this.fixtureService.getCapabilityInValue(channel, value);
   }
 
   updatePosition(object?: THREE.Object3D) {
@@ -245,10 +269,11 @@ export abstract class Fixture3d {
   }
 
   // Apply the properties of the base fixture to the preview
-  updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number) {
+  // the time (of the preview) lets the shutter flash while it strobes
+  updatePreview(channelValues: FixtureChannelValue[], masterDimmerValue: number, timeMillis = 0) {
     // Apply default settings
     if (this.fixtureHasDimmer) {
-      this.dimmer = 0;
+      this.dimmer = this.dimmerDefaultBrightness * masterDimmerValue;
     } else {
       this.dimmer = 1;
     }
@@ -257,28 +282,41 @@ export abstract class Fixture3d {
     this.colorGreen = 255;
     this.colorBlue = 255;
 
-    if (!this.fixtureHasColorWheel && this.fixtureHasColor) {
+    if (!this.fixtureHasColorWheel && this.fixtureHasColor && !this.fixtureMixesSubtractively) {
       this.colorRed = 0;
       this.colorGreen = 0;
       this.colorBlue = 0;
     }
+
+    // the color of a selected color preset (e.g. a color macro). It takes over from the color
+    // channels, whichever order they come in, the way a fixture disables them for its macros.
+    let presetColor: Color;
+
+    // the emitters besides red, green and blue and the filters, with how much they are in (0 to 1). They change the
+    // color once the colors themselves are set, whichever order they come in.
+    const emitters: [number[], number][] = [];
+    const filters: [number, number][] = [];
+
+    // the shutter, how fast it strobes and how long a flash takes (see shutter)
+    const shutter: ShutterSettings = {};
 
     for (const channelValue of channelValues) {
       const channel = this.fixtureService.getChannelByName(this.fixture, channelValue.channelName);
       const capability = this.getCapabilityInValue(channel, channelValue.value);
 
       if (capability) {
+        // another function sharing the channel of the dimmer (e.g. a strobe) lights the fixture, like on the stage
+        if (
+          capability.capability.type !== FixtureCapabilityType.Intensity &&
+          channel.capabilities.some((channelCapability) => channelCapability.capability.type === FixtureCapabilityType.Intensity)
+        ) {
+          this.dimmer = this.fixtureService.getDimmerBrightnessOfValue(channel, channelValue.value) * masterDimmerValue;
+        }
+
         switch (capability.capability.type) {
           case FixtureCapabilityType.Intensity: {
-            let valuePercentage: number;
-            if (capability.capability.dmxRange.length > 0) {
-              valuePercentage =
-                (channelValue.value - capability.capability.dmxRange[0]) /
-                (capability.capability.dmxRange[1] - capability.capability.dmxRange[0]);
-            } else {
-              valuePercentage = channelValue.value / channel.maxValue;
-            }
-            this.dimmer = valuePercentage * masterDimmerValue;
+            // as bright as the capability lights at this value (also from bright to off)
+            this.dimmer = this.fixtureService.getBrightnessOfValue(channel, capability, channelValue.value) * masterDimmerValue;
             break;
           }
           case FixtureCapabilityType.ColorIntensity: {
@@ -296,6 +334,12 @@ export abstract class Fixture3d {
                 // Round needed for threejs
                 this.colorBlue = Math.round(valuePercentage);
                 break;
+              default:
+                if (emitterLights[capability.capability.color]) {
+                  emitters.push([emitterLights[capability.capability.color], valuePercentage / 255]);
+                } else if (filteredLights[capability.capability.color] !== undefined) {
+                  filters.push([filteredLights[capability.capability.color], valuePercentage / 255]);
+                }
             }
             break;
           }
@@ -308,31 +352,81 @@ export abstract class Fixture3d {
             }
             break;
           }
+          case FixtureCapabilityType.ColorPreset: {
+            presetColor = this.fixtureService.getColorPresetColor(capability.capability) || presetColor;
+            break;
+          }
+          case FixtureCapabilityType.ShutterStrobe:
+            shutter.shutter = { channel, capability, value: channelValue.value };
+            break;
+          case FixtureCapabilityType.StrobeSpeed:
+            shutter.speed = { channel, capability, value: channelValue.value };
+            break;
+          case FixtureCapabilityType.StrobeDuration:
+            shutter.duration = { channel, capability, value: channelValue.value };
+            break;
         }
       }
     }
 
+    if (emitters.length > 0 || filters.length > 0) {
+      const light = [this.colorRed, this.colorGreen, this.colorBlue];
+
+      for (const [emitterLight, level] of emitters) {
+        for (let i = 0; i < 3; i++) {
+          light[i] = Math.min(255, light[i] + emitterLight[i] * level);
+        }
+      }
+
+      for (const [filtered, level] of filters) {
+        light[filtered] *= 1 - level;
+      }
+
+      // Round needed for threejs
+      this.colorRed = Math.round(light[0]);
+      this.colorGreen = Math.round(light[1]);
+      this.colorBlue = Math.round(light[2]);
+    }
+
+    if (presetColor) {
+      this.colorRed = Math.round(presetColor.red);
+      this.colorGreen = Math.round(presetColor.green);
+      this.colorBlue = Math.round(presetColor.blue);
+    }
+
+    // the shutter lets through all of the light, none of it, or flashes
+    this.dimmer *= getShutterOpening(shutter, timeMillis);
+
     // Apply the colors and intensities
     // Apply the dimmer value
-    // Take the color into account for the beam (don't show a black beam)
     const color = new THREE.Color('rgb(' + this.colorRed + ', ' + this.colorGreen + ', ' + this.colorBlue + ')');
-    const intensityColor = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
+
+    // how bright the color lights, e.g. less while a scene dimmer fades it
+    const colorMax = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
 
     if (this.hasSpotLight) {
       this.spotLight.color = color;
-      this.spotLightBeam.material.uniforms.lightColor.value = color;
 
-      this.spotLightBeam.material.uniforms.opacity.value = Math.min(intensityColor, this.dimmer);
+      // the beam shows the color at full and lets the brightness of the light make it
+      // fainter. A dark color drawn as it is covered the stage with a black beam.
+      const beamColor =
+        colorMax > 0
+          ? new THREE.Color().setRGB(this.colorRed / colorMax, this.colorGreen / colorMax, this.colorBlue / colorMax, THREE.SRGBColorSpace)
+          : color;
+      this.spotLightBeam.material.uniforms.lightColor.value = beamColor;
+
+      this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
     }
 
     if (this.hasBulb) {
-      // Normalize 0–255 → 0–1
-      const intensity = Math.max(this.colorRed, this.colorGreen, this.colorBlue) / 255;
+      // the color carries the brightness of the pixel already, the dimmer (if the fixture
+      // has one) scales it. Taking the brightness away again turned a fully lit pixel black.
+      const bulbColor = color.clone().multiplyScalar(this.dimmer);
 
-      this.bulbMaterial.color.copy(color.clone().lerp(this.blackColor, intensity));
-      this.bulbMaterial.emissive.copy(color.clone().lerp(this.blackColor, intensity));
+      this.bulbMaterial.color.copy(bulbColor);
+      this.bulbMaterial.emissive.copy(bulbColor);
     }
   }
 
@@ -352,11 +446,12 @@ export abstract class Fixture3d {
     this.spotLightBeam.rotation.x = Math.PI / 2;
   }
 
+  // the materials are only there once the objects have been created (a mesh may still be loading)
   destroy() {
-    if (this.hasSpotLight) {
+    if (this.spotlightMaterial) {
       this.spotlightMaterial.dispose();
     }
-    if (this.hasBulb) {
+    if (this.bulbMaterial) {
       this.bulbMaterial.dispose();
     }
   }

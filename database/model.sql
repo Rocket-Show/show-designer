@@ -24,7 +24,7 @@ CREATE TABLE fixture (
     name VARCHAR(200) NOT NULL,
     manufacturer_short_name VARCHAR(200) NOT NULL,
     main_category VARCHAR(200) NOT NULL,
-    object TEXT,
+    object MEDIUMTEXT,
 
     PRIMARY KEY(uuid),
     FOREIGN KEY(manufacturer_short_name) REFERENCES manufacturer(short_name)
@@ -79,12 +79,14 @@ CREATE TABLE project (
     created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(255) NOT NULL,
     share_token VARCHAR(255) NOT NULL,
-    object TEXT,
+    -- the project as JSON: TEXT holds only 64 KB, which a project with pixel fixtures
+    -- or many presets outgrows
+    object MEDIUMTEXT,
 
     PRIMARY KEY(id)
 );
 -- Insert the default project template
-INSERT INTO project(name) VALUES('New Project');
+INSERT INTO project(name, share_token) VALUES('New Project', '');
 
 CREATE TABLE project_role (
     id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,

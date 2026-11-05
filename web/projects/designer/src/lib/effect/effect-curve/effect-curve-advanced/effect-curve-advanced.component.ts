@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { EffectCurve } from '../../../models/effect-curve';
+import { EffectPanTilt } from '../../../models/effect-pan-tilt';
 import { LivePreviewService } from '../../../services/live-preview.service';
 
 // The settings of a curve that do not fit next to its grid anymore. They are applied
@@ -15,6 +16,11 @@ import { LivePreviewService } from '../../../services/live-preview.service';
 export class EffectCurveAdvancedComponent {
   curve: EffectCurve;
 
+  // a movement of the moving heads runs on the timing of a curve, but has no part of its period it is on
+  get isMovement(): boolean {
+    return this.curve instanceof EffectPanTilt;
+  }
+
   public runCyclesMin = 1;
   public runCyclesMax = 999;
   public runDurationMillisMin = 1;
@@ -23,6 +29,10 @@ export class EffectCurveAdvancedComponent {
   public dutyCyclePercentMax = 100;
   public phasingGroupSizeMin = 1;
   public phasingGroupSizeMax = 16;
+
+  // the slider covers the groups used most, the input box takes larger ones as well, for
+  // the pixels of a long strip
+  public phasingGroupSizeInputMax = 512;
 
   constructor(public bsModalRef: BsModalRef, public livePreviewService: LivePreviewService) {}
 
@@ -69,7 +79,7 @@ export class EffectCurveAdvancedComponent {
   }
 
   setPhasingGroupSize(value: any) {
-    if (isNaN(value) || value < this.phasingGroupSizeMin || value > this.phasingGroupSizeMax) {
+    if (isNaN(value) || value < this.phasingGroupSizeMin || value > this.phasingGroupSizeInputMax) {
       return;
     }
 

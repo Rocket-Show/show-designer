@@ -5,30 +5,52 @@
     anymore afterwards. -->
     @if (presetService.selectedPreset) {
     <div class="row m-0 pl-3" [class.h-100]="isChrome()">
+      <!-- a value set on a channel only plays on the model of fixture of the channel, which only matters while the
+           preset lights fixtures of several models -->
+      @if (channelCapabilities.size > 0 && profiles.length > 1) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <div class="card border-secondary h-100 model-specific-hint">
+          <div class="card-header">
+            <i class="fa fa-link fa-fw" aria-hidden="true"></i> {{ 'designer.fixture.model-specific-title' | translate }}
+          </div>
+          <div class="card-body overflow-auto text-muted">{{ 'designer.fixture.model-specific-hint' | translate }}</div>
+        </div>
+      </div>
+      }
       <!-- profile selection -->
       @if (profiles.length > 1) {
-      <div class="col col-auto p-3 my-3 mr-3" style="height: calc(100% - 2rem); border: solid 1px #444; border-right: none">
-        @for (profile of profiles; track profile; let i = $index) {
-        <div class="form-check">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            id="capabilityFilter{{ i }}"
-            [ngModel]="selectedProfiles.indexOf(profile) >= 0"
-            (ngModelChange)="changeProfileSelection($event, profile)"
-          />
-          <label class="form-check-label" for="capabilityFilter{{ i }}">
-            {{ profile.name }}
-          </label>
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <div class="card border-secondary h-100">
+          <div class="card-header">{{ 'designer.fixture.profiles' | translate }}</div>
+          <div class="card-body overflow-auto">
+            @for (profile of profiles; track profile; let i = $index) {
+            <div class="form-check">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="capabilityFilter{{ i }}"
+                [ngModel]="selectedProfiles.indexOf(profile) >= 0"
+                (ngModelChange)="changeProfileSelection($event, profile)"
+              />
+              <label class="form-check-label" for="capabilityFilter{{ i }}">
+                {{ profile.name }}
+              </label>
+            </div>
+            }
+          </div>
         </div>
-        }
       </div>
       }
       <!-- all channel capabilities -->
       @for (entry of channelCapabilities | keyvalue; track entry; let i = $index) { @for (capability of entry.value; track capability; let j
       = $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
-        <lib-app-fixture-capability-channel [profile]="entry.key" [channel]="capability" [capabilityIndex]="i * 10000 + j">
+        <lib-app-fixture-capability-channel
+          [profile]="entry.key"
+          [fixtureChannels]="entry.value"
+          [channel]="capability"
+          [capabilityIndex]="i * 10000 + j"
+        >
         </lib-app-fixture-capability-channel>
       </div>
       } }

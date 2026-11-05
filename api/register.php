@@ -1,6 +1,10 @@
 <?php
 include_once 'global.php';
 
+if (strlen($_GET['email'] ?? '') == 0 || strlen($_GET['username'] ?? '') == 0 || strlen($_GET['password'] ?? '') == 0) {
+    error('missing-parameters', 400);
+}
+
 $email = mysqli_real_escape_string($conn, $_GET['email']);
 $username = mysqli_real_escape_string($conn, $_GET['username']);
 // The user opted in to receive news and updates by email

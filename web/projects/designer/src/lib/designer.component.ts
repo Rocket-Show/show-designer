@@ -1,8 +1,18 @@
-import { AfterViewInit, Component, HostListener, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostBinding,
+  HostListener,
+  Input,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation,
+} from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { map } from 'rxjs/operators';
-import Split from 'split.js';
+import { DesignerLayout } from './designer-layout';
 import { PreviewComponent } from './preview/preview.component';
 import { ProjectBrowserComponent } from './project/project-browser/project-browser.component';
 import { ProjectImportComponent } from './project/project-import/project-import.component';
@@ -24,12 +34,13 @@ import { UserService } from './services/user.service';
 import { WarningDialogService } from './services/warning-dialog.service';
 import { TimelineComponent } from './timeline/timeline.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
-import { HttpErrorResponse } from '@angular/common/http';
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
+import { LayoutService } from './services/layout.service';
 
 @Component({
   selector: 'lib-designer',
@@ -123,6 +134,15 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   public totalMenuHeightPx = 0;
 
+  // the panels, split and folded
+  private layout: DesignerLayout;
+
+  // on a phone, the panels are stacked down the page (see LayoutService.compact)
+  @HostBinding('class.designer-compact')
+  get compact(): boolean {
+    return this.layoutService.compact;
+  }
+
   currentTab = 'properties';
 
   @ViewChild(PreviewComponent)
@@ -150,29 +170,24 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     public colorService: ColorService,
     private effectService: EffectService,
     private hardwarePromoService: HardwarePromoService,
-    public undoService: UndoService
+    public undoService: UndoService,
+    public layoutService: LayoutService,
+    private elementRef: ElementRef
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
       this.calcTotalMenuHeight();
     });
+
+    // the panels are laid out again when they are folded or opened, and in another
+    // language for the titles of the arrows
+    this.layoutService.changed.subscribe(() => this.layout?.build());
+    this.translateService.onLangChange.subscribe(() => this.layout?.build());
   }
 
   private loadError(response: any) {
     console.error(response);
-    let msg = 'designer.project.open-error';
-    let error: string;
-    if (response instanceof HttpErrorResponse) {
-      error = response && response.error ? response.error.error : 'unknown';
-      if (error === 'no-permission') {
-        msg = 'designer.project.open-no-permission-error';
-        error = undefined;
-      } else {
-        msg = 'designer.project.open-error';
-      }
-    } else {
-      error = response && response.message ? response.message : 'unknown';
-    }
-    this.errorDialogService.show(msg, error).subscribe(() => {
+    const error = getProjectLoadError(response);
+    this.errorDialogService.show(error.message, error.details).subscribe(() => {
       this.projectLoadService.new();
     });
   }
@@ -241,31 +256,14 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     // Set up the splitter
     setTimeout(() => {
-      Split(['#row1', '#row2', '#row3'], {
-        sizes: [42, 40, 18],
-        direction: 'vertical',
-        cursor: 'row-resize',
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-      });
-
-      Split(['#scenes', '#presets', '#preview'], {
-        sizes: [20, 20, 60],
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-      });
-
-      Split(['#capabilities', '#fixtures', '#masterDimmer'], {
-        sizes: [70, 24, 6],
-        snapOffset: 0,
-        gutterSize: this.splitGutterSizePx,
-        onDrag: this.onResize.bind(this),
-        minSize: 50,
-      });
-
-      this.onResize();
+      this.layout = new DesignerLayout(
+        this.elementRef.nativeElement,
+        this.layoutService,
+        this.translateService,
+        this.splitGutterSizePx,
+        this.onResize.bind(this)
+      );
+      this.layout.build();
     });
   }
 
@@ -372,7 +370,8 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   projectExport() {
     this.projectService.writeCompatibilityValues(this.projectService.project);
 
-    const json = JSON.stringify(this.projectService.project, null, 2);
+    // like it is saved, with the colors of the scenes, which Rocket Show shows them in on its Play screen
+    const json = this.projectService.getSavedJson(this.projectService.project, 2);
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=UTF-8,' + encodeURIComponent(json));
     element.setAttribute('download', this.projectService.project.name + '.rsd');

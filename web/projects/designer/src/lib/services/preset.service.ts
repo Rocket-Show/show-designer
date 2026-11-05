@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
+import { Color } from '../models/color';
 import { Fixture } from '../models/fixture';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
@@ -19,6 +20,15 @@ import { UuidService } from './uuid.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from './live-preview.service';
 import { AnimationService } from './animation.service';
+import {
+  getPositionedChannelValue,
+  getShakeChannelValue,
+  isOverridingCapabilityType,
+  isPositionedCapabilityType,
+} from '../models/capability-position';
+import { getPanTiltChannelValue, isPanTilt, PanTiltContext } from '../models/pan-tilt';
+import { getFixtureCapabilityValues } from '../models/subtractive-color';
+import { countModelSpecificValues } from '../models/model-specific';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +38,12 @@ export class PresetService {
 
   // the icon a preset is shown with, while none has been picked for it
   static readonly defaultIcon = 'fa-lightbulb-o';
+
+  // the model-specific values counted per preset (see getModelSpecificValues)
+  private modelSpecificValues = new WeakMap<
+    Preset,
+    { size: number; profiles: FixtureProfile[]; values: { profile: FixtureProfile; count: number }[] }
+  >();
 
   // the step of the selected preset the capability, channel and effect panels edit. It
   // is also what the preview shows while nothing is playing.
@@ -74,6 +90,52 @@ export class PresetService {
   // the icon of a preset: the one picked for it, or the default one
   getPresetIcon(preset: Preset): string {
     return preset.icon || PresetService.defaultIcon;
+  }
+
+  // The models of fixtures of the project the preset sets values for which only they play (see model-specific), with
+  // how many. The lists of presets ask for it on every change detection, so what was counted is kept as long as the
+  // preset holds as many values.
+  getModelSpecificValues(preset: Preset): { profile: FixtureProfile; count: number }[] {
+    const size = this.getValueCount(preset);
+    const counted = this.modelSpecificValues.get(preset);
+
+    if (counted && counted.size === size && counted.profiles === this.projectService.project.fixtureProfiles) {
+      return counted.values;
+    }
+
+    const values: { profile: FixtureProfile; count: number }[] = [];
+
+    for (const [profileUuid, count] of countModelSpecificValues(preset)) {
+      const profile = this.fixtureService.getProfileByUuid(profileUuid);
+
+      // the values of a model the project has no fixture of anymore play on nothing
+      if (profile) {
+        values.push({ profile, count });
+      }
+    }
+
+    this.modelSpecificValues.set(preset, { size, profiles: this.projectService.project.fixtureProfiles, values });
+
+    return values;
+  }
+
+  // how many values a preset holds, which tells whether it has to be counted again
+  private getValueCount(preset: Preset): number {
+    let size = preset.effects.length + preset.fixtureChannelValues.length + preset.fixtureCapabilityValues.length;
+
+    for (const step of preset.steps) {
+      size += step.fixtureChannelValues.length + step.fixtureCapabilityValues.length;
+    }
+
+    for (const effect of preset.effects) {
+      if (effect instanceof EffectCurve) {
+        for (const profileChannels of effect.channels) {
+          size += profileChannels.channels.length + 1;
+        }
+      }
+    }
+
+    return size;
   }
 
   getPresetByUuid(uuid: string): Preset {
@@ -140,39 +202,60 @@ export class PresetService {
     );
   }
 
-  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
-  // and pixel key are the same lamp and therefore count only once
-  getPresetFixtureCount(preset: Preset): number {
-    let count = 0;
-    const countedFirstDmxChannelPixelKey: any[] = [];
+  // a fixture or one of its pixels, as getPresetFixtureIndices() keys them
+  getPresetFixtureKey(fixtureUuid: string, pixelKey: string): string {
+    return fixtureUuid + '\u0000' + (pixelKey || '');
+  }
 
-    for (const presetFixture of preset.fixtures) {
-      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+  // fixtures sharing a DMX universe, address and pixel key are the same lamp
+  private getLampKey(presetFixture: PresetFixture): string {
+    const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
 
-      if (!fixture) {
-        continue;
+    if (!fixture) {
+      return undefined;
+    }
+
+    return `${fixture.dmxUniverseUuid}\u0000${fixture.dmxFirstChannel}\u0000${presetFixture.pixelKey || ''}`;
+  }
+
+  // the place of each fixture (or pixel) of a preset in its chase, by getPresetFixtureKey(). The
+  // fixtures of the same lamp take one step only, a fixture listed more than once chases at its
+  // first place.
+  getPresetFixtureIndices(preset: Preset): Map<string, number> {
+    const indices = new Map<string, number>();
+    const countedLamps = new Set<string>();
+
+    for (const presetFixture of this.getOrderedPresetFixtures(preset)) {
+      const key = this.getPresetFixtureKey(presetFixture.fixtureUuid, presetFixture.pixelKey);
+
+      if (!indices.has(key)) {
+        indices.set(key, countedLamps.size);
       }
 
-      const firstDmxChannelAndFixtureUuid = {
-        dmxUniverseUuid: fixture.dmxUniverseUuid,
-        firstDmxChannel: fixture.dmxFirstChannel,
-        pixelKey: presetFixture.pixelKey,
-      };
+      const lampKey = this.getLampKey(presetFixture);
 
-      const exists = countedFirstDmxChannelPixelKey.some(
-        (item) =>
-          item.dmxUniverseUuid === firstDmxChannelAndFixtureUuid.dmxUniverseUuid &&
-          item.firstDmxChannel === firstDmxChannelAndFixtureUuid.firstDmxChannel &&
-          ((!item.pixelKey && !firstDmxChannelAndFixtureUuid.pixelKey) || item.pixelKey === firstDmxChannelAndFixtureUuid.pixelKey)
-      );
-
-      if (!exists) {
-        count++;
-        countedFirstDmxChannelPixelKey.push(firstDmxChannelAndFixtureUuid);
+      if (lampKey !== undefined) {
+        countedLamps.add(lampKey);
       }
     }
 
-    return count;
+    return indices;
+  }
+
+  // the number of chase steps of a preset: fixtures sharing a DMX universe, address
+  // and pixel key are the same lamp and therefore count only once
+  getPresetFixtureCount(preset: Preset): number {
+    const countedLamps = new Set<string>();
+
+    for (const presetFixture of preset.fixtures) {
+      const lampKey = this.getLampKey(presetFixture);
+
+      if (lampKey !== undefined) {
+        countedLamps.add(lampKey);
+      }
+    }
+
+    return countedLamps.size;
   }
 
   setUseGlobalFixtureOrder(preset: Preset, useGlobalFixtureOrder: boolean) {
@@ -330,9 +413,25 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
-    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
+    this.capabilityValuesChanged.next();
+  }
+
+  // put a capability value on the step as it is, in place of the one it had of the same kind (e.g. a position of a
+  // moving head with all it says: its degrees, its fan and the spot it aims at)
+  putCapabilityValue(step: PresetStep, capabilityValue: FixtureCapabilityValue) {
+    this.removeCapabilityValue(
+      step,
+      capabilityValue.type,
+      capabilityValue.color,
+      capabilityValue.wheel,
+      capabilityValue.profileUuid,
+      capabilityValue.blade
+    );
+    step.fixtureCapabilityValues.push(capabilityValue);
     this.capabilityValuesChanged.next();
   }
 
@@ -341,10 +440,12 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
     for (let i = 0; i < step.fixtureCapabilityValues.length; i++) {
       if (
+        (step.fixtureCapabilityValues[i].blade ?? undefined) === (blade ?? undefined) &&
         this.fixtureService.capabilitiesMatch(
           step.fixtureCapabilityValues[i].type,
           capabilityType,
@@ -369,10 +470,11 @@ export class PresetService {
     slotNumber?: number,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ) {
     // Delete existant properties with this type and set the new value
-    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid);
+    this.removeCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
 
     const fixtureCapabilityValue = new FixtureCapabilityValue();
     fixtureCapabilityValue.type = capabilityType;
@@ -381,6 +483,7 @@ export class PresetService {
     fixtureCapabilityValue.valuePercentage = valuePercentage;
     fixtureCapabilityValue.slotNumber = slotNumber;
     fixtureCapabilityValue.profileUuid = profileUuid;
+    fixtureCapabilityValue.blade = blade;
 
     step.fixtureCapabilityValues.push(fixtureCapabilityValue);
     this.capabilityValuesChanged.next();
@@ -391,13 +494,14 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ): FixtureCapabilityValue {
     if (!step) {
       return undefined;
     }
 
-    return this.getCapabilityValueOf(step.fixtureCapabilityValues, capabilityType, color, wheel, profileUuid);
+    return this.getCapabilityValueOf(step.fixtureCapabilityValues, capabilityType, color, wheel, profileUuid, blade);
   }
 
   // the same lookup on a set of values which is not stored on a step: while a
@@ -407,10 +511,12 @@ export class PresetService {
     capabilityType: FixtureCapabilityType,
     color?: FixtureCapabilityColor,
     wheel?: string,
-    profileUuid?: string
+    profileUuid?: string,
+    blade?: string
   ): FixtureCapabilityValue {
     for (const capabilityValue of capabilityValues) {
       if (
+        (capabilityValue.blade ?? undefined) === (blade ?? undefined) &&
         this.fixtureService.capabilitiesMatch(
           capabilityValue.type,
           capabilityType,
@@ -472,55 +578,94 @@ export class PresetService {
     }
   }
 
+  // the color the capability values light (0 to 255 for each of red, green and blue), which a color wheel or the color
+  // presets of a fixture show approximated, or undefined, if they don't name all three
+  private getApproximatedColor(capabilityValues: FixtureCapabilityValue[]): { red: number; green: number; blue: number } {
+    const red = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
+    const green = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
+    const blue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
+
+    if (!red || !green || !blue) {
+      return undefined;
+    }
+
+    return { red: 255 * red.valuePercentage, green: 255 * green.valuePercentage, blue: 255 * blue.valuePercentage };
+  }
+
+  // the capability of the channel closest to the color the capability values light, of the passed colors
+  private getClosestColorCapability(
+    capabilityValues: FixtureCapabilityValue[],
+    cachedChannel: CachedFixtureChannel,
+    colorOf: (capability: CachedFixtureCapability) => Color
+  ): CachedFixtureCapability {
+    const color = this.getApproximatedColor(capabilityValues);
+    let lowestDiff = Number.MAX_VALUE;
+    let lowestDiffCapability: CachedFixtureCapability;
+
+    if (!color) {
+      return undefined;
+    }
+
+    for (const capability of cachedChannel.capabilities) {
+      const mixedColor = colorOf(capability);
+
+      if (mixedColor) {
+        const diff =
+          Math.abs(mixedColor.red - color.red) + Math.abs(mixedColor.green - color.green) + Math.abs(mixedColor.blue - color.blue);
+
+        if (diff < lowestDiff) {
+          lowestDiff = diff;
+          lowestDiffCapability = capability;
+        }
+      }
+    }
+
+    return lowestDiffCapability;
+  }
+
   getApproximatedColorWheelCapability(
     capabilityValues: FixtureCapabilityValue[],
     cachedChannel: CachedFixtureChannel
   ): CachedFixtureCapability {
     // return an approximated wheel slot channel capability, if a color or a slot on a different
     // wheel has been selected
-    let colorRed: number;
-    let colorGreen: number;
-    let colorBlue: number;
-    let lowestDiff = Number.MAX_VALUE;
-    let lowestDiffCapability: CachedFixtureCapability;
-    let capabilityValue: FixtureCapabilityValue;
+    return this.getClosestColorCapability(capabilityValues, cachedChannel, (capability) =>
+      capability.capability.slotNumber !== undefined
+        ? this.fixtureService.getMixedWheelSlotColor(capability.wheel, capability.capability.slotNumber)
+        : undefined
+    );
+  }
 
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red);
-    if (capabilityValue) {
-      colorRed = 255 * capabilityValue.valuePercentage;
-    }
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Green);
-    if (capabilityValue) {
-      colorGreen = 255 * capabilityValue.valuePercentage;
-    }
-    capabilityValue = this.getCapabilityValueOf(capabilityValues, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue);
-    if (capabilityValue) {
-      colorBlue = 255 * capabilityValue.valuePercentage;
-    }
+  // The color preset (e.g. a color macro) of the channel closest to the color the capability values light, which a
+  // fixture without colors and without a color wheel of its own shows (see PreviewService.mixCapabilityValues), or
+  // undefined, if the channel has no preset showing a color
+  getApproximatedColorPresetCapability(
+    capabilityValues: FixtureCapabilityValue[],
+    cachedChannel: CachedFixtureChannel
+  ): CachedFixtureCapability {
+    return this.getClosestColorCapability(capabilityValues, cachedChannel, (capability) =>
+      capability.capability.type === FixtureCapabilityType.ColorPreset && capability.capability.dmxRange?.length === 2
+        ? this.fixtureService.getColorPresetColor(capability.capability)
+        : undefined
+    );
+  }
 
-    if (!colorRed && !colorGreen && !colorBlue) {
-      // no color found -> search the first color wheel
-      // TODO
-    }
-
-    if (colorRed !== undefined && colorGreen !== undefined && colorBlue !== undefined) {
-      for (const capability of cachedChannel.capabilities) {
-        if (capability.capability.slotNumber) {
-          const mixedColor = this.fixtureService.getMixedWheelSlotColor(capability.wheel, capability.capability.slotNumber);
-          if (mixedColor) {
-            const diff =
-              Math.abs(mixedColor.red - colorRed) + Math.abs(mixedColor.green - colorGreen) + Math.abs(mixedColor.blue - colorBlue);
-
-            if (diff < lowestDiff) {
-              lowestDiff = diff;
-              lowestDiffCapability = capability;
-            }
-          }
-        }
-      }
-    }
-
-    return lowestDiffCapability;
+  // does a fixture of the passed channels show colors on its color presets (e.g. color macros), having no colors and
+  // no color wheel of its own?
+  showsColorPresets(channels: CachedFixtureChannel[]): boolean {
+    return (
+      !channels.some((channel) => channel.colorWheel) &&
+      !channels.some((channel) =>
+        channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
+      ) &&
+      channels.some((channel) =>
+        channel.capabilities.some(
+          (capability) =>
+            capability.capability.type === FixtureCapabilityType.ColorPreset &&
+            this.fixtureService.getColorPresetColor(capability.capability)
+        )
+      )
+    );
   }
 
   // the value a single capability value of a preset produces on a channel capability, or
@@ -536,40 +681,28 @@ export class PresetService {
       (capabilityValue.type === FixtureCapabilityType.Intensity || capabilityValue.type === FixtureCapabilityType.ColorIntensity) &&
       capabilityValue.valuePercentage >= 0
     ) {
-      // intensity and colorIntensity (dimmer and color)
-      if (channel.capabilities.length === 1) {
-        // the only capability in this channel -> it takes the whole channel
-        return channel.maxValue * capabilityValue.valuePercentage;
-      }
-
-      // more than one capability in the channel -> only a brightness capability can be dimmed
-      if (channelCapability.capability.brightness === 'off' && capabilityValue.valuePercentage === 0) {
-        return channelCapability.centerValue;
-      }
+      // intensity and colorIntensity (dimmer and color): only one capability of the channel gives
+      // the brightness, e.g. of a dimmer sharing its channel with a strobe
+      const brightnessCapabilities = channel.capabilities.filter(
+        (capability) =>
+          capability.capability.type === capabilityValue.type &&
+          (!capabilityValue.color || capabilityValue.color === capability.capability.color) &&
+          (!capabilityValue.wheel || capabilityValue.wheel === capability.wheelName)
+      );
 
       if (
-        (channelCapability.capability.brightnessStart === 'dark' || channelCapability.capability.brightnessStart === 'off') &&
-        channelCapability.capability.brightnessEnd === 'bright'
+        this.fixtureService.getBrightnessCapability(channel, brightnessCapabilities, capabilityValue.valuePercentage) !== channelCapability
       ) {
-        return (
-          (channelCapability.capability.dmxRange[1] - channelCapability.capability.dmxRange[0]) * capabilityValue.valuePercentage +
-          channelCapability.capability.dmxRange[0]
-        );
+        return undefined;
       }
 
-      return undefined;
+      return this.fixtureService.getBrightnessValue(channel, channelCapability, capabilityValue.valuePercentage);
     }
 
-    if (
-      (capabilityValue.type === FixtureCapabilityType.Pan || capabilityValue.type === FixtureCapabilityType.Tilt) &&
-      capabilityValue.valuePercentage >= 0
-    ) {
-      // a preset which mirrors this axis points its fixtures at the mirrored position
-      const valuePercentage = preset
-        ? preset.getMirroredValuePercentage(capabilityValue.type, capabilityValue.valuePercentage)
-        : capabilityValue.valuePercentage;
-
-      return channel.maxValue * valuePercentage;
+    if (isPanTilt(capabilityValue.type)) {
+      // a preset which mirrors this axis points its fixtures at the mirrored position. Without a fixture to place, the
+      // fixtures aren't fanned out, and a spot to aim at points nowhere.
+      return getPanTiltChannelValue(capabilityValue, channel, preset ? preset.mirrorsCapability(capabilityValue.type) : false, undefined);
     }
 
     if (
@@ -583,17 +716,101 @@ export class PresetService {
     return undefined;
   }
 
+  // Do the capability values light a color through the passed channels of a fixture, with its color channels or a
+  // slot of its color wheel? Such a fixture shows no color approximated on its color wheel, like on the stage (see
+  // PreviewService.mixCapabilityValues).
+  lightsColorOfItsOwn(
+    capabilityValues: FixtureCapabilityValue[],
+    channels: CachedFixtureChannel[],
+    profileUuid: string,
+    preset?: Preset
+  ): boolean {
+    return getFixtureCapabilityValues(capabilityValues, channels).some((capabilityValue) =>
+      channels.some(
+        (channel) =>
+          channel.channel &&
+          channel.capabilities.some(
+            (channelCapability) =>
+              (capabilityValue.type === FixtureCapabilityType.ColorIntensity ||
+                (capabilityValue.type === FixtureCapabilityType.WheelSlot && channelCapability.wheelIsColor)) &&
+              this.fixtureService.capabilitiesMatch(
+                capabilityValue.type,
+                channelCapability.capability.type,
+                capabilityValue.color,
+                channelCapability.capability.color,
+                capabilityValue.wheel,
+                channelCapability.wheelName,
+                capabilityValue.profileUuid,
+                profileUuid
+              ) &&
+              this.getCapabilityChannelValue(capabilityValue, channel, channelCapability, preset) !== undefined
+          )
+      )
+    );
+  }
+
+  // the value a positioned capability value (see capability-position) drives a channel of a fixture of the passed
+  // profile to, or undefined, if the channel doesn't do it
+  getPositionedChannelValue(capabilityValue: FixtureCapabilityValue, channel: CachedFixtureChannel, profileUuid: string): number {
+    if (!(capabilityValue.valuePercentage >= 0) || (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid)) {
+      return undefined;
+    }
+
+    if (capabilityValue.type === FixtureCapabilityType.WheelShake) {
+      return getShakeChannelValue(channel, capabilityValue.wheel, capabilityValue.slotNumber, capabilityValue.valuePercentage);
+    }
+
+    return getPositionedChannelValue(channel, capabilityValue.type, capabilityValue.valuePercentage, capabilityValue.blade);
+  }
+
+  // the value a pan or tilt value points a fixture of the passed profile at with a channel, or undefined, if the channel
+  // doesn't turn it on that axis (see pan-tilt). The context places the fixture within its preset and on the stage.
+  getPanTiltChannelValue(
+    capabilityValue: FixtureCapabilityValue,
+    channel: CachedFixtureChannel,
+    profileUuid: string,
+    preset: Preset,
+    context: PanTiltContext
+  ): number {
+    if (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid) {
+      return undefined;
+    }
+
+    return getPanTiltChannelValue(capabilityValue, channel, preset.mirrorsCapability(capabilityValue.type), context);
+  }
+
   // the value a channel is driven to by the capability values of a preset, or undefined, if no
-  // capability touches it. A channel value set on the channel itself wins over this one.
+  // capability touches it. A channel value set on the channel itself wins over this one. The
+  // passed channels of the fixture tell whether it lights a color of its own (see lightsColorOfItsOwn)
+  // and whether it mixes its colors with filters (see subtractive-color).
   getChannelValueFromCapabilities(
     capabilityValues: FixtureCapabilityValue[],
     channel: CachedFixtureChannel,
     profileUuid: string,
-    preset?: Preset
+    preset?: Preset,
+    fixtureChannels: CachedFixtureChannel[] = []
   ): number {
     let value: number;
 
-    for (const capabilityValue of capabilityValues) {
+    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels);
+
+    for (const capabilityValue of fixtureCapabilityValues) {
+      if (isOverridingCapabilityType(capabilityValue.type)) {
+        // played over the rest below
+        continue;
+      }
+
+      if (isPositionedCapabilityType(capabilityValue.type)) {
+        // a position drives the channel as a whole, like in the preview
+        const positionedValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
+
+        if (positionedValue !== undefined) {
+          value = positionedValue;
+        }
+
+        continue;
+      }
+
       for (const channelCapability of channel.capabilities) {
         if (
           this.fixtureService.capabilitiesMatch(
@@ -617,10 +834,34 @@ export class PresetService {
       }
     }
 
-    if (value === undefined && channel.colorWheel) {
+    // the pulse of an iris or a frost and the shake of a gobo play over the rest, like in the preview
+    for (const capabilityValue of fixtureCapabilityValues) {
+      if (isOverridingCapabilityType(capabilityValue.type)) {
+        const overridingValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
+
+        if (overridingValue !== undefined) {
+          value = overridingValue;
+        }
+      }
+    }
+
+    if (value === undefined && channel.colorWheel && !this.lightsColorOfItsOwn(capabilityValues, fixtureChannels, profileUuid, preset)) {
       // no slot has been picked on this wheel -> it shows the color approximated from a color
       // or from a slot on a different wheel
       const approximatedCapability = this.getApproximatedColorWheelCapability(capabilityValues, channel);
+
+      if (approximatedCapability) {
+        value = approximatedCapability.centerValue;
+      }
+    }
+
+    if (
+      value === undefined &&
+      !fixtureChannels.some((fixtureChannel) => fixtureChannel.colorWheel) &&
+      !this.lightsColorOfItsOwn(capabilityValues, fixtureChannels, profileUuid, preset)
+    ) {
+      // a fixture without colors and without a color wheel of its own shows the color on its color presets
+      const approximatedCapability = this.getApproximatedColorPresetCapability(capabilityValues, channel);
 
       if (approximatedCapability) {
         value = approximatedCapability.centerValue;
@@ -672,20 +913,21 @@ export class PresetService {
     return false;
   }
 
-  private hasCapabilityType(type: FixtureCapabilityType): boolean {
+  // does a fixture of the preset being edited have a channel with the passed capability (of the passed color, if any)?
+  hasCapabilityType(type: FixtureCapabilityType, color?: FixtureCapabilityColor): boolean {
     // nothing is being edited yet: the panels are asked while the project is still
     // being loaded, before a preset has been picked
     if (!this.selectedPreset) {
       return false;
     }
 
-    // there is at least one channel with at least one intensity capability
+    // there is at least one channel with at least one such capability
     for (const presetFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
       for (const channel of fixture.channels) {
         if (channel.channel) {
           for (const capability of channel.capabilities) {
-            if (capability.capability.type === type) {
+            if (capability.capability.type === type && (!color || capability.capability.color === color)) {
               return true;
             }
           }
@@ -722,13 +964,17 @@ export class PresetService {
       return false;
     }
 
-    // a color wheel is involved
+    // a color wheel is involved, or color presets (e.g. color macros) which show the color
     for (const projectFixture of this.selectedPreset.fixtures) {
       const fixture = this.fixtureService.getCachedFixtureByUuid(projectFixture.fixtureUuid, projectFixture.pixelKey);
       for (const channel of fixture.channels) {
         if (channel.colorWheel) {
           return true;
         }
+      }
+
+      if (this.showsColorPresets(fixture.channels)) {
+        return true;
       }
     }
 

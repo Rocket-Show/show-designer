@@ -38,10 +38,18 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
       accept: (file: any, done: any) => {
         const reader = new FileReader();
         reader.addEventListener('loadend', (event: any) => {
-          // validate the file
+          // validate the file (one which is no json or has no schema is no profile either)
           const text = event.target.result;
-          const json = JSON.parse(text);
-          if (json['$schema'].match(/open-fixture-library\/(?:schema-(.*?)|master)\/schemas\/fixture\.json/)) {
+          let json: any;
+          try {
+            json = JSON.parse(text);
+          } catch (error) {
+            json = undefined;
+          }
+          if (
+            typeof json?.['$schema'] === 'string' &&
+            json['$schema'].match(/open-fixture-library\/(?:schema-(.*?)|master)\/schemas\/fixture\.json/)
+          ) {
             // create the metadata from the file. we don't have the corresponding
             // manufacturer-file, therefore we just assume the attributes from the
             // fixture-file.

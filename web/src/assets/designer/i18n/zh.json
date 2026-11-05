@@ -58,7 +58,8 @@
       "login": "登录",
       "logout": "退出登录",
       "support": "技术支持",
-      "reset-intro": "显示介绍"
+      "reset-intro": "显示介绍",
+      "view": "视图"
     },
     "user": {
       "register-title": "注册",
@@ -95,6 +96,9 @@
       "share-no-save": "请在分享之前先保存项目。",
       "share-title": "分享项目",
       "share-link": "链接",
+      "share-copy": "复制链接",
+      "share-copied": "已复制",
+      "share-no-token": "该项目还没有分享链接。请先保存一次以获取链接。",
       "delete-warning": "您真的要删除此项目吗？",
       "save-title": "保存项目",
       "name": "名称",
@@ -160,7 +164,8 @@
       "steps-settings": "序列设置",
       "steps-loop": "循环步骤",
       "steps-loop-length": "循环长度",
-      "steps-chase": "追逐"
+      "steps-chase": "追逐",
+      "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}"
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
@@ -180,7 +185,6 @@
       "capability-color": "颜色",
       "capability-color-wheel": "色轮",
       "capability-pan-tilt": "水平/垂直",
-      "capability-pan-tilt-mirror": "镜像",
       "profiles": "配置文件",
       "setting-position-title": "灯具位置",
       "setting-position": "位置",
@@ -199,7 +203,80 @@
       "setting-stage-pillar-width": "柱子宽度",
       "capability-sound-controlled": "声控",
       "capability-random-timing": "随机定时",
-      "channel-effect-driven": "该通道由效果控制，此处显示的值会被覆盖"
+      "channel-effect-driven": "该通道由效果控制，此处显示的值会被覆盖",
+      "capability-gobo-wheel": "图案轮",
+      "capability-position-low": {
+        "ShutterStrobe": "关",
+        "Zoom": "窄",
+        "Focus": "近",
+        "Iris": "关",
+        "Frost": "无",
+        "ColorTemperature": "暖",
+        "Prism": "出",
+        "ColorIntensity": "关",
+        "StrobeDuration": "短",
+        "PanTiltSpeed": "慢",
+        "FogOutput": "关",
+        "WheelSlotRotation": "快速逆时针",
+        "PrismRotation": "快速逆时针",
+        "Rotation": "快速逆时针",
+        "BladeInsertion": "移出",
+        "BladeRotation": "逆时针",
+        "BladeSystemRotation": "逆时针",
+        "IrisEffect": "关",
+        "FrostEffect": "关"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "快",
+        "Zoom": "宽",
+        "Focus": "远",
+        "Iris": "开",
+        "Frost": "满",
+        "ColorTemperature": "冷",
+        "Prism": "入",
+        "ColorIntensity": "满",
+        "StrobeDuration": "长",
+        "PanTiltSpeed": "快",
+        "FogOutput": "满",
+        "WheelSlotRotation": "快速顺时针",
+        "PrismRotation": "快速顺时针",
+        "Rotation": "快速顺时针",
+        "BladeInsertion": "切入",
+        "BladeRotation": "顺时针",
+        "BladeSystemRotation": "顺时针",
+        "IrisEffect": "快",
+        "FrostEffect": "快"
+      },
+      "model-specific-title": "仅此型号",
+      "model-specific-hint": "在这些通道上设置的内容只在此灯具型号上播放。功能中的调光器、颜色、频闪、变焦、对焦、光圈和雾化在每个型号上都会播放，因此演出在其他灯具上也能播放。",
+      "capability-pan-tilt-pad": "位置",
+      "capability-pan-tilt-pad-hint": "拖动来调整摇头灯的方向：左右为水平（Pan），上下为俯仰（Tilt）。方向键移动一度（按住 Shift 移动十度），双击回到中心。",
+      "capability-pan-tilt-mirror": "镜像",
+      "capability-pan-tilt-mirror-pan": "镜像水平",
+      "capability-pan-tilt-mirror-tilt": "镜像俯仰",
+      "capability-pan-tilt-spread": "扇形展开",
+      "capability-pan-tilt-spread-hint": "将灯头从第一台到最后一台均匀展开到这么多度。",
+      "capability-pan-tilt-aim": "舞台上的点",
+      "capability-pan-tilt-aim-hint": "在 3D 预览中点击一个点：每个灯头无论悬挂在何处、无论型号，都会指向它。",
+      "capability-pan-tilt-aim-pick": "选择一个点",
+      "capability-pan-tilt-aim-picking": "点击舞台…",
+      "capability-pan-tilt-aim-stop": "停止瞄准",
+      "capability-gobo-shake": "抖动",
+      "capability-gobo-shake-off": "关",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "上切光片",
+          "Right": "右切光片",
+          "Bottom": "下切光片",
+          "Left": "左切光片"
+        },
+        "BladeRotation": {
+          "Top": "上切光片角度",
+          "Right": "右切光片角度",
+          "Bottom": "下切光片角度",
+          "Left": "左切光片角度"
+        }
+      }
     },
     "fixture-pool": {
       "title": "灯具库",
@@ -231,7 +308,27 @@
       "create-fixture-from-profile-file-dialog-title": "选择 OFL 配置文件",
       "invalid-fixture-profile-file": "这不是有效的 OFL 灯具配置文件。请选择有效的配置文件。",
       "edit-universes": "编辑宇宙",
-      "edit-universes-title": "编辑宇宙"
+      "edit-universes-title": "编辑宇宙",
+      "change-type": "将所选灯具更改为此配置文件",
+      "fixture-type": "灯具类型",
+      "change-type-hint": "场地有其他灯具？选择灯具，然后点击左侧其配置文件旁的 ⇄。",
+      "exchanged-from": "已从 {{from}} 更改。点击确定后，预设为旧型号设置的内容也会用于此型号：",
+      "exchange-carried": "{{count}} 个值会被沿用",
+      "exchange-lost": "{{count}} 个值无法沿用：",
+      "exchange-reason": {
+        "nothing": "新型号没有对应的功能",
+        "gobo": "新型号没有此图案",
+        "taken": "已在 {{to}} 上设置"
+      },
+      "patch-in-a-row": "依次配接这 {{count}} 个灯具",
+      "patch-in-a-row-full": "从那里开始，灯具已放不进该域。",
+      "identify": "识别：让灯具以白光闪烁",
+      "model-specific": "预设设置了 {{count}} 个仅此型号播放的值。",
+      "add-fixture": "添加此配置文件的灯具",
+      "reset": "复位",
+      "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
+      "lamp-on": "开灯泡",
+      "lamp-on-hint": "打开舞台上灯具的灯泡"
     },
     "effect": {
       "add-new": "添加新效果",
@@ -258,15 +355,19 @@
       "curve-end-hold": "保持最后的数值",
       "curve-end-base": "回到基准值",
       "curve-duty": "宽度",
-      "curve-duty-hint": "曲线在一个周期中处于开启状态的比例。在追逐中，它就是同时点亮的灯具比例：10 % 表示十个灯中亮一个。",
-      "curve-duty-unsupported": "宽度对这条曲线没有作用。锯齿波已经在整个周期内上升或下降；如需设置上升所占的比例，请改用三角波。",
+      "curve-duty-hint": "曲线在一个周期中处于开启状态的比例。曲线保持原有形状：变窄时，其余时间停在底部；变宽时，停在顶部。在追逐中，它就是同时点亮的灯具比例：10 % 表示十个灯中亮一个。",
       "curve-chase-group-hint": "有多少灯具共用同一个追逐步。1 表示每个灯具各走各的，2 表示两个一组一起移动。",
       "delete-warning": "您真的要删除此效果吗？",
       "curve-sine": "正弦波",
       "curve-square": "方波",
       "curve-triangle": "三角波",
       "curve-sawtooth": "锯齿波",
-      "curve-reverse-sawtooth": "反向锯齿波"
+      "curve-reverse-sawtooth": "反向锯齿波",
+      "pan-tilt-shape-circle": "圆形",
+      "pan-tilt-shape-figure8": "8 字形",
+      "pan-tilt-shape-line": "直线",
+      "pan-tilt-shape-wave": "波浪",
+      "pan-tilt-size": "幅度"
     },
     "composition": {
       "new": "创建新合成..."
@@ -291,10 +392,30 @@
       "composition-sync-type": "同步",
       "composition-sync-type-none": "无",
       "composition-sync-type-audio": "音频文件",
+      "composition-sync-type-none-hint": "场景按自己的时钟播放。作品持续到最后一个场景结束：把场景放到结尾之后即可延长作品。",
       "composition-no-file-selected": "未选择文件",
       "composition-file-upload": "上传",
       "composition-file-library": "媒体库",
-      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。"
+      "warning-delete-composition": "您真的要删除此合成吗？此操作无法撤销。",
+      "tracks": "轨道",
+      "add-track": "添加轨道",
+      "audio": "音频",
+      "remove-track": "删除轨道",
+      "warning-delete-track": "确定要删除此轨道及其上播放的场景吗？",
+      "hide-track": "在预览中隐藏此轨道",
+      "show-track": "在预览中重新显示此轨道",
+      "solo-track": "独奏：预览中只播放独奏的轨道",
+      "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放",
+      "actions": "动作",
+      "action-type": {
+        "NULL": "空",
+        "SYSTEM": "系统",
+        "TRANSPORT": "传输",
+        "MIDI": "MIDI",
+        "LIGHTING": "灯光",
+        "RASPBERRY_GPIO": "外部控制",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "继续",
@@ -391,6 +512,23 @@
       "UV": "紫外线",
       "Lime": "柠檬绿",
       "Indigo": "靛蓝"
+    },
+    "layout": {
+      "layouts": "布局",
+      "panels": "面板",
+      "layout-default": "默认",
+      "layout-presets": "预设",
+      "layout-show": "演出",
+      "layout-stage": "舞台",
+      "panel-scenes": "场景",
+      "panel-presets": "预设",
+      "panel-preview": "3D 预览",
+      "panel-editor": "预设编辑器",
+      "panel-fixtures": "灯具",
+      "panel-master": "总调光",
+      "panel-timeline": "时间轴",
+      "fold": "折叠：{{panels}}",
+      "open": "展开：{{panels}}"
     }
   }
 }

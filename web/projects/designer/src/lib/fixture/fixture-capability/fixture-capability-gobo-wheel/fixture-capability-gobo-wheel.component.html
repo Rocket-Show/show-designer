@@ -1,0 +1,46 @@
+<div class="card border-secondary h-100" [class.capability-deactivated]="getCurrentSlotNumber() == undefined" style="min-height: 200px">
+  <div class="card-header">
+    <div class="my-auto">
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="capabilityGoboWheel{{ _fixtureProfile?.uuid }}{{ _channel?.name }}"
+          [ngModel]="getCurrentSlotNumber() != undefined"
+          (ngModelChange)="changeActive($event)"
+        />
+        <label class="form-check-label" for="capabilityGoboWheel{{ _fixtureProfile?.uuid }}{{ _channel?.name }}">
+          {{ 'designer.fixture.capability-gobo-wheel' | translate }}
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body h-100 overflow-auto">
+    <div class="text-muted text-truncate mb-1 gobo-profile">{{ _fixtureProfile?.name }} - {{ _channel?.name }}</div>
+    <div class="list-group gobo-slots">
+      @for (slot of slotCapabilities; track $index) {
+      <button
+        type="button"
+        class="list-group-item list-group-item-action py-1 px-2 text-truncate"
+        [class.active]="getCurrentSlotNumber() === slot.capability.slotNumber"
+        (click)="selectSlotNumber(slot.capability.slotNumber)"
+      >
+        {{ getSlotName(slot) }}
+      </button>
+      }
+    </div>
+
+    @if (canShake()) {
+    <div class="gobo-shake mt-2">
+      <div class="d-flex justify-content-between text-muted">
+        <span>{{ 'designer.fixture.capability-gobo-shake' | translate }}</span>
+        <span>{{
+          getShake() > 0 ? (getShake() * 100 | number : '1.0-0') + ' %' : ('designer.fixture.capability-gobo-shake-off' | translate)
+        }}</span>
+      </div>
+      <mv-slider [value]="getShake()" (change)="setShake($event.newValue)" [tooltip]="'hide'" [min]="0" [max]="1" [step]="0.01"></mv-slider>
+    </div>
+    }
+  </div>
+</div>

@@ -36,6 +36,16 @@ export class Project {
   public stepPreviewRunning = false;
   public stepPreviewStartMillis = 0;
 
+  // the fixtures being identified from the fixture pool: they blink at full, whatever the
+  // presets do with them (see PreviewService.getIdentifyValues). Only travels to the live
+  // preview as well, it is never loaded back from a project.
+  public identifyFixtureUuids: string[] = [];
+
+  // the fixtures the fixture pool asks to reset themselves or to switch their lamp on, over what the presets do with
+  // them (see maintenance). Like the identified fixtures, they only travel to the live preview.
+  public resetFixtureUuids: string[] = [];
+  public lampOnFixtureUuids: string[] = [];
+
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
 
@@ -73,18 +83,19 @@ export class Project {
     this.name = data.name;
     this.shareToken = data.shareToken;
 
-    this.stageWidthCm = data.stageWidthCm;
-    this.stageHeightCm = data.stageHeightCm;
-    this.stageDepthCm = data.stageDepthCm;
+    // the stage of a project which does not describe it is the default one, not one without a size
+    this.stageWidthCm = data.stageWidthCm ?? this.stageWidthCm;
+    this.stageHeightCm = data.stageHeightCm ?? this.stageHeightCm;
+    this.stageDepthCm = data.stageDepthCm ?? this.stageDepthCm;
 
-    this.stageFloorHeightCm = data.stageFloorHeightCm;
-    this.stageCeilingHeightCm = data.stageCeilingHeightCm;
-    this.stagePillarWidthCm = data.stagePillarWidthCm;
+    this.stageFloorHeightCm = data.stageFloorHeightCm ?? this.stageFloorHeightCm;
+    this.stageCeilingHeightCm = data.stageCeilingHeightCm ?? this.stageCeilingHeightCm;
+    this.stagePillarWidthCm = data.stagePillarWidthCm ?? this.stagePillarWidthCm;
 
-    this.masterDimmerValue = data.masterDimmerValue;
+    this.masterDimmerValue = data.masterDimmerValue ?? 1;
 
     this.selectedPresetUuid = data.selectedPresetUuid;
-    this.selectedSceneUuids = data.selectedSceneUuids;
+    this.selectedSceneUuids = data.selectedSceneUuids ?? [];
     this.selectedStepUuid = data.selectedStepUuid;
 
     // never open a project watching the steps run (see stepPreviewRunning)

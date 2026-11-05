@@ -58,7 +58,8 @@
       "login": "Sign in",
       "logout": "Log out",
       "support": "Support",
-      "reset-intro": "Show intro"
+      "reset-intro": "Show intro",
+      "view": "View"
     },
     "user": {
       "register-title": "Register",
@@ -95,6 +96,9 @@
       "share-no-save": "Please save the project before sharing it.",
       "share-title": "Share project",
       "share-link": "Link",
+      "share-copy": "Copy link",
+      "share-copied": "Copied",
+      "share-no-token": "This project has no share link yet. Save it once to get one.",
       "delete-warning": "Do you really want to delete this project?",
       "save-title": "Save project",
       "name": "Name",
@@ -160,7 +164,8 @@
       "steps-settings": "Sequence settings",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
-      "steps-chase": "Chase"
+      "steps-chase": "Chase",
+      "model-specific": "{{count}} values only play on: {{models}}"
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
@@ -180,7 +185,6 @@
       "capability-color": "Color",
       "capability-color-wheel": "Color wheel",
       "capability-pan-tilt": "Pan/Tilt",
-      "capability-pan-tilt-mirror": "Mirror",
       "profiles": "Profiles",
       "setting-position-title": "Fixture position",
       "setting-position": "Position",
@@ -199,7 +203,80 @@
       "setting-stage-pillar-width": "Pillar width",
       "capability-sound-controlled": "Sound controlled",
       "capability-random-timing": "Random timing",
-      "channel-effect-driven": "An effect drives this channel and overrides the value shown here"
+      "channel-effect-driven": "An effect drives this channel and overrides the value shown here",
+      "capability-gobo-wheel": "Gobo wheel",
+      "capability-position-low": {
+        "ShutterStrobe": "Off",
+        "Zoom": "Narrow",
+        "Focus": "Near",
+        "Iris": "Closed",
+        "Frost": "None",
+        "ColorTemperature": "Warm",
+        "Prism": "Out",
+        "ColorIntensity": "Off",
+        "StrobeDuration": "Short",
+        "PanTiltSpeed": "Slow",
+        "FogOutput": "Off",
+        "WheelSlotRotation": "Fast anticlockwise",
+        "PrismRotation": "Fast anticlockwise",
+        "Rotation": "Fast anticlockwise",
+        "BladeInsertion": "Out",
+        "BladeRotation": "Anticlockwise",
+        "BladeSystemRotation": "Anticlockwise",
+        "IrisEffect": "Off",
+        "FrostEffect": "Off"
+      },
+      "capability-position-high": {
+        "ShutterStrobe": "Fast",
+        "Zoom": "Wide",
+        "Focus": "Far",
+        "Iris": "Open",
+        "Frost": "Full",
+        "ColorTemperature": "Cold",
+        "Prism": "In",
+        "ColorIntensity": "Full",
+        "StrobeDuration": "Long",
+        "PanTiltSpeed": "Fast",
+        "FogOutput": "Full",
+        "WheelSlotRotation": "Fast clockwise",
+        "PrismRotation": "Fast clockwise",
+        "Rotation": "Fast clockwise",
+        "BladeInsertion": "In",
+        "BladeRotation": "Clockwise",
+        "BladeSystemRotation": "Clockwise",
+        "IrisEffect": "Fast",
+        "FrostEffect": "Fast"
+      },
+      "model-specific-title": "This model only",
+      "model-specific-hint": "What you set on these channels only plays on this model of fixture. The dimmer, the colors, the strobe, the zoom, the focus, the iris and the frost of the capabilities play on every model, so the show plays on other fixtures as well.",
+      "capability-pan-tilt-pad": "Position",
+      "capability-pan-tilt-pad-hint": "Drag to point the moving heads: across for the pan, up and down for the tilt. The arrow keys move a degree (ten with Shift), a double click centres them.",
+      "capability-pan-tilt-mirror": "Mirror",
+      "capability-pan-tilt-mirror-pan": "Mirror pan",
+      "capability-pan-tilt-mirror-tilt": "Mirror tilt",
+      "capability-pan-tilt-spread": "Fan out",
+      "capability-pan-tilt-spread-hint": "Spreads the heads evenly over this many degrees, from the first to the last.",
+      "capability-pan-tilt-aim": "Spot on stage",
+      "capability-pan-tilt-aim-hint": "Click a spot in the 3D preview: every head points at it from wherever it hangs, whatever its model.",
+      "capability-pan-tilt-aim-pick": "Pick a spot",
+      "capability-pan-tilt-aim-picking": "Click the stage…",
+      "capability-pan-tilt-aim-stop": "Stop aiming",
+      "capability-gobo-shake": "Shake",
+      "capability-gobo-shake-off": "Off",
+      "capability-blade": {
+        "BladeInsertion": {
+          "Top": "Blade top",
+          "Right": "Blade right",
+          "Bottom": "Blade bottom",
+          "Left": "Blade left"
+        },
+        "BladeRotation": {
+          "Top": "Blade top angle",
+          "Right": "Blade right angle",
+          "Bottom": "Blade bottom angle",
+          "Left": "Blade left angle"
+        }
+      }
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -231,7 +308,27 @@
       "create-fixture-from-profile-file-dialog-title": "Select an OFL profile file",
       "invalid-fixture-profile-file": "This is not a valid OFL fixture profile file. Please select a valid profile file.",
       "edit-universes": "Edit universes",
-      "edit-universes-title": "Edit universes"
+      "edit-universes-title": "Edit universes",
+      "change-type": "Change the selected fixtures to this profile",
+      "fixture-type": "Fixture type",
+      "change-type-hint": "Other fixtures at the venue? Select the fixtures and click ⇄ next to their profile on the left.",
+      "exchanged-from": "Changed from {{from}}. On OK, the presets get what they set for the old model for this one as well:",
+      "exchange-carried": "{{count}} values carry over",
+      "exchange-lost": "{{count}} values cannot be carried over:",
+      "exchange-reason": {
+        "nothing": "the new model has nothing doing it",
+        "gobo": "the new model does not have this gobo",
+        "taken": "already set on {{to}}"
+      },
+      "patch-in-a-row": "Patch the {{count}} fixtures one after another",
+      "patch-in-a-row-full": "The fixtures do not fit into the universe from there on.",
+      "identify": "Identify: let the fixture blink at full white",
+      "model-specific": "The presets set {{count}} values only this model plays.",
+      "add-fixture": "Add a fixture of this profile",
+      "reset": "Reset",
+      "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
+      "lamp-on": "Lamp on",
+      "lamp-on-hint": "Switches the lamp of the fixture on stage on"
     },
     "effect": {
       "add-new": "Add new Effect",
@@ -258,15 +355,19 @@
       "curve-end-hold": "Hold the last value",
       "curve-end-base": "Return to the base value",
       "curve-duty": "Width",
-      "curve-duty-hint": "The part of the period the curve is on. In a chase, it is the part of the fixtures that are on at the same time: 10 % lights one fixture out of ten.",
-      "curve-duty-unsupported": "The width does not apply to this curve. A sawtooth already rises or falls over the whole period; use a triangle to set how much of it goes up.",
+      "curve-duty-hint": "The part of the period the curve is on. The curve keeps its shape: narrower, it rests at the bottom for the rest of the period, wider, at the top. In a chase, it is the part of the fixtures that are on at the same time: 10 % lights one fixture out of ten.",
       "curve-chase-group-hint": "How many fixtures share the same chase step. 1 chases every fixture on its own, 2 moves them in pairs.",
       "delete-warning": "Do you really want to delete this effect?",
       "curve-sine": "Sine",
       "curve-square": "Square",
       "curve-triangle": "Triangle",
       "curve-sawtooth": "Sawtooth",
-      "curve-reverse-sawtooth": "Reverse sawtooth"
+      "curve-reverse-sawtooth": "Reverse sawtooth",
+      "pan-tilt-shape-circle": "Circle",
+      "pan-tilt-shape-figure8": "Figure 8",
+      "pan-tilt-shape-line": "Line",
+      "pan-tilt-shape-wave": "Wave",
+      "pan-tilt-size": "Size"
     },
     "composition": {
       "new": "Create new composition..."
@@ -291,10 +392,30 @@
       "composition-sync-type": "Synchronization",
       "composition-sync-type-none": "None",
       "composition-sync-type-audio": "Audio file",
+      "composition-sync-type-none-hint": "The scenes play on their own clock. The composition lasts until its last scene has ended: put a scene past the end to make it longer.",
       "composition-no-file-selected": "No file selected",
       "composition-file-upload": "Upload",
       "composition-file-library": "Media library",
-      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone."
+      "warning-delete-composition": "Do you really want to delete this composition? This action cannot be undone.",
+      "tracks": "Tracks",
+      "add-track": "Add track",
+      "audio": "Audio",
+      "remove-track": "Remove the track",
+      "warning-delete-track": "Do you really want to remove this track together with the scenes played on it?",
+      "hide-track": "Hide the track in the preview",
+      "show-track": "Show the track in the preview again",
+      "solo-track": "Solo: play only the soloed tracks in the preview",
+      "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track",
+      "actions": "Actions",
+      "action-type": {
+        "NULL": "Null",
+        "SYSTEM": "System",
+        "TRANSPORT": "Transport",
+        "MIDI": "MIDI",
+        "LIGHTING": "Lighting",
+        "RASPBERRY_GPIO": "External control",
+        "HTTP": "HTTP"
+      }
     },
     "intro": {
       "next": "Continue",
@@ -391,6 +512,23 @@
       "UV": "UV",
       "Lime": "Lime",
       "Indigo": "Indigo"
+    },
+    "layout": {
+      "layouts": "Layout",
+      "panels": "Panels",
+      "layout-default": "Default",
+      "layout-presets": "Presets",
+      "layout-show": "Show",
+      "layout-stage": "Stage",
+      "panel-scenes": "Scenes",
+      "panel-presets": "Presets",
+      "panel-preview": "3D preview",
+      "panel-editor": "Preset editor",
+      "panel-fixtures": "Fixtures",
+      "panel-master": "Master dimmer",
+      "panel-timeline": "Timeline",
+      "fold": "Fold: {{panels}}",
+      "open": "Open: {{panels}}"
     }
   }
 }

@@ -16,7 +16,6 @@ import { ColorPickerComponent } from './color-picker/color-picker.component';
 import { DesignerComponent } from './designer.component';
 import { EffectCurveAdvancedComponent } from './effect/effect-curve/effect-curve-advanced/effect-curve-advanced.component';
 import { EffectCurveComponent } from './effect/effect-curve/effect-curve.component';
-import { EffectPanTiltComponent } from './effect/effect-pan-tilt/effect-pan-tilt.component';
 import { EffectComponent } from './effect/effect.component';
 import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
@@ -27,6 +26,8 @@ import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capabili
 import { FixtureCapabilityColorComponent } from './fixture/fixture-capability/fixture-capability-color/fixture-capability-color.component';
 import { FixtureCapabilityDimmerComponent } from './fixture/fixture-capability/fixture-capability-dimmer/fixture-capability-dimmer.component';
 import { FixtureCapabilityPanTiltComponent } from './fixture/fixture-capability/fixture-capability-pan-tilt/fixture-capability-pan-tilt.component';
+import { FixtureCapabilityPositionComponent } from './fixture/fixture-capability/fixture-capability-position/fixture-capability-position.component';
+import { FixtureCapabilityGoboWheelComponent } from './fixture/fixture-capability/fixture-capability-gobo-wheel/fixture-capability-gobo-wheel.component';
 import { FixtureCapabilityComponent } from './fixture/fixture-capability/fixture-capability.component';
 import { FixtureChannelComponent } from './fixture/fixture-channel/fixture-channel.component';
 import { FixtureSettingsPositionComponent } from './fixture/fixture-settings/fixture-settings-position/fixture-settings-position.component';
@@ -61,6 +62,9 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
+import { ColorService } from './services/color.service';
+import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
+import { keepSliderValues } from './slider-value';
 
 @NgModule({
   declarations: [
@@ -69,7 +73,6 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     PreviewComponent,
     EffectCurveComponent,
     EffectCurveAdvancedComponent,
-    EffectPanTiltComponent,
     SceneComponent,
     TimelineComponent,
     FixtureCapabilityColorComponent,
@@ -86,6 +89,8 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
     CompositionSettingsComponent,
     ArraySortPipe,
     FixtureCapabilityPanTiltComponent,
+    FixtureCapabilityPositionComponent,
+    FixtureCapabilityGoboWheelComponent,
     FixtureCapabilityChannelComponent,
     FixtureChannelComponent,
     FixtureCapabilityColorWheelComponent,
@@ -131,6 +136,14 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
       newestOnTop: true,
     }),
   ],
-  providers: [provideHttpClient(withInterceptorsFromDi())],
+  providers: [
+    provideHttpClient(withInterceptorsFromDi()),
+    // the colors of the scenes, saved with the project (see ProjectService.getSavedJson)
+    { provide: SCENE_COLOR_SOURCE, useExisting: ColorService },
+  ],
 })
-export class DesignerModule {}
+export class DesignerModule {
+  constructor() {
+    keepSliderValues();
+  }
+}

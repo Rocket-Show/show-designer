@@ -38,4 +38,22 @@ describe('HotkeyTargetExcludeService', () => {
       expect(service.excludeTyping({ target: undefined })).toBe(false);
     }
   ));
+
+  it('leaves the keys of the designer to the fields handling them themselves', inject(
+    [HotkeyTargetExcludeService],
+    (service: HotkeyTargetExcludeService) => {
+      for (const name of ['input', 'select', 'textarea']) {
+        expect(service.exclude({ target: document.createElement(name) })).toBe(true);
+      }
+
+      const editable = document.createElement('div');
+      editable.contentEditable = 'true';
+      document.body.appendChild(editable);
+      expect(service.exclude({ target: editable })).toBe(true);
+      editable.remove();
+
+      expect(service.exclude({ target: document.createElement('button') })).toBe(false);
+      expect(service.exclude({ target: undefined })).toBe(false);
+    }
+  ));
 });

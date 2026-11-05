@@ -15,7 +15,8 @@ if (!$result) {
     error();
 }
 
+// nothing (null) for a fixture which is not in the library
 $row = mysqli_fetch_assoc($result);
-echo $row["object"];
+echo $row ? $row["object"] : 'null';
 
 mysqli_close($conn);

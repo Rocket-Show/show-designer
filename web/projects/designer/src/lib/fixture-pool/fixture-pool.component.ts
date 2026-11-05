@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, 
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrService } from 'ngx-toastr';
-import { Subject } from 'rxjs';
+import { EMPTY, Subject } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
@@ -23,6 +23,9 @@ import { HotkeyTargetExcludeService } from '../services/hotkey-target-exclude.se
 import { LivePreviewService } from '../services/live-preview.service';
 import { UniverseConfig } from '../models/universe-config';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
+import { FixtureExchangeReport, FixtureExchangeService } from '../services/fixture-exchange.service';
+import { FixtureMode } from '../models/fixture-mode';
+import { getMaintenanceCapability, getMaintenanceHoldMillis, MaintenanceAction } from '../models/maintenance';
 
 // One row of the fixture tree: a fixture of the pool and the folder it is in. The
 // fixture panel shows a fixture with all its pixels, here it is a single row which
@@ -103,6 +106,20 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public promoLink: string;
 
+  // The fixtures of the project changed to another model (profile) here, with the profile and the mode they were of.
+  // What the presets set for the old model is carried over to the new one on OK (see FixtureExchangeService).
+  private exchanges = new Map<string, { profileUuid: string; modeShortName: string }>();
+
+  // what becomes of the values of the old model of the fixture edited, if it was changed to another one
+  public exchangeReport: FixtureExchangeReport;
+  public exchangedFrom: FixtureProfile;
+
+  // the fixtures blinking to be told apart on the stage (see identify), while this dialog is open
+  public identifiedFixtureUuids: string[] = [];
+
+  // how many values the presets set which only the model of the fixture edited plays (see model-specific)
+  public modelSpecificCount = 0;
+
   // The fixture library holds thousands of profiles, of which a list this size shows a
   // handful. Building a row for every one of them costs seconds and makes everything
   // the pool does afterwards slow, so the search shows the first matches and says how
@@ -151,7 +168,8 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     private ngZone: NgZone,
     private hotkeyTargetExcludeService: HotkeyTargetExcludeService,
     private livePreviewService: LivePreviewService,
-    public hardwarePromoService: HardwarePromoService
+    public hardwarePromoService: HardwarePromoService,
+    private fixtureExchangeService: FixtureExchangeService
   ) {
     this.promoLink = this.hardwarePromoService.link('dmx-overview');
 
@@ -226,13 +244,17 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dmxMap.nativeElement.addEventListener('mousemove', this.channelHovered);
       this.dmxMap.nativeElement.addEventListener('mouseleave', this.channelLeft);
 
-      // the map lays its channels out over the width it is given
-      this.mapResized = new ResizeObserver(() => this.drawChannelMap());
+      // The map lays its channels out over the width it is given. Drawing it sets its
+      // height, which must not happen while the browser is still telling about the size
+      // (it reports that as an error of the page).
+      this.mapResized = new ResizeObserver(() => requestAnimationFrame(() => this.drawChannelMap()));
       this.mapResized.observe(this.dmxMap.nativeElement);
     });
   }
 
   ngOnDestroy() {
+    this.endMaintenance();
+    this.endIdentify();
     this.mapResized?.disconnect();
     this.dmxMap?.nativeElement.removeEventListener('mousemove', this.channelHovered);
     this.dmxMap?.nativeElement.removeEventListener('mouseleave', this.channelLeft);
@@ -446,6 +468,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.updateChannelMap();
     this.updateSelection();
+    this.updateExchangeReport();
   }
 
   // ---- the fixture tree ----------------------------------------------------
@@ -674,9 +697,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // The end of a folder's content. The rows inherit their position from the fixture
   // panel, where a fixture with pixels takes several places, so counting the rows here
-  // would land in the middle of the folder.
-  private nextSortIndex(parentUuid: string): number {
-    const children = this.folderService.getChildren(this.fixtureFolders, this.fixtureItems, parentUuid);
+  // would land in the middle of the folder. The same goes for the panel's own rows, once
+  // a removed fixture left a gap in them.
+  private nextSortIndex(parentUuid: string, folders: Folder[] = this.fixtureFolders, items: FolderItem[] = this.fixtureItems): number {
+    const children = this.folderService.getChildren(folders, items, parentUuid);
 
     return children.reduce((last, child) => Math.max(last, child.sortIndex), -1) + 1;
   }
@@ -762,21 +786,8 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.updateChannelMap();
     this.buildTree();
 
-    // remove unused profiles
-    for (let i = 0; i < this.projectService.project.fixtureProfiles.length; i++) {
-      let profileUsed = false;
-
-      for (const fixtureInPool of this.fixturePool) {
-        if (fixtureInPool.profileUuid === this.projectService.project.fixtureProfiles[i].uuid) {
-          profileUsed = true;
-          break;
-        }
-      }
-
-      if (!profileUsed) {
-        this.projectService.project.fixtureProfiles.splice(i, 1);
-      }
-    }
+    // the profiles no fixture uses anymore are only removed on OK: the project still has
+    // the fixture until then
   }
 
   // What the DMX map draws: the channels every fixture of the universe occupies, where
@@ -792,7 +803,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // fixtures may share their channels while they are the same lamp: same address,
-    // same mode and same universe. Anything else on a channel is a collision.
+    // same profile and mode and same universe. Anything else on a channel is a collision.
     const lampOf: string[] = [];
 
     for (const fixture of this.channelFixtures) {
@@ -829,11 +840,334 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.drawChannelMap();
+
+    // the fixtures being identified are found on their new channels right away
+    this.livePreviewIdentify();
   }
 
-  // the same lamp patched twice is not a collision, see updateChannelMap
+  // the same lamp patched twice is not a collision, see updateChannelMap. Two profiles
+  // can name their modes the same, so the profile is part of what makes it the same lamp.
   private lampKey(fixture: Fixture): string {
-    return fixture.dmxFirstChannel + '/' + fixture.modeShortName + '/' + fixture.dmxUniverseUuid;
+    return fixture.dmxFirstChannel + '/' + fixture.profileUuid + '/' + fixture.modeShortName + '/' + fixture.dmxUniverseUuid;
+  }
+
+  // ---- changing fixtures to another model --------------------------------------
+
+  // what a profile is called: its manufacturer and its name, as far as it knows them
+  profileName(profile: FixtureProfile): string {
+    return [profile.manufacturerName, profile.name].filter((part) => part).join(' - ');
+  }
+
+  // the fixtures the buttons act on: the ones selected in the tree, or else the one edited
+  get actedOnFixtures(): Fixture[] {
+    const selected = this.selectedNodes.filter((node) => node.fixture).map((node) => node.fixture as Fixture);
+
+    return selected.length > 0 ? selected : this.selectedFixture ? [this.selectedFixture] : [];
+  }
+
+  // The mode of the new model a fixture is given: the one with as many channels as the mode it was in (so it fits its
+  // address), else the one the other fixtures of the profile are in, else the first one
+  private getExchangeMode(profile: FixtureProfile, channelCount: number): FixtureMode {
+    const sameSize = profile.modes.find((mode) => this.fixtureService.getModeChannelCount(profile, mode) === channelCount);
+    const others = this.fixturePool.find((fixture) => fixture.profileUuid === profile.uuid);
+    const ofOthers = others && this.fixtureService.getModeByFixture(profile, others);
+
+    return sameSize || ofOthers || profile.modes[0];
+  }
+
+  // change the fixtures acted on to the passed profile from the library, e.g. the model the venue has
+  exchangeProfile(searchProfile: FixtureProfile) {
+    const fixtures = this.actedOnFixtures;
+
+    if (fixtures.length === 0) {
+      return;
+    }
+
+    this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe(() => {
+      const profile = this.fixtureService.getProfileByUuid(searchProfile.uuid);
+
+      for (const fixture of fixtures) {
+        const oldProfile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+
+        if (!profile || !profile.modes.length || oldProfile === profile) {
+          continue;
+        }
+
+        // a fixture of the project remembers what it was, one added here has nothing to carry over
+        const projectFixture = this.projectService.project.fixtures.find((candidate) => candidate.uuid === fixture.uuid);
+
+        if (projectFixture && !this.exchanges.has(fixture.uuid)) {
+          this.exchanges.set(fixture.uuid, { profileUuid: projectFixture.profileUuid, modeShortName: projectFixture.modeShortName });
+        }
+
+        const mode = this.getExchangeMode(profile, oldProfile ? this.fixtureChannelCount(fixture) : 0);
+
+        // a fixture still named after its model is named after the new one
+        if (oldProfile && fixture.name === oldProfile.name) {
+          fixture.name = profile.name;
+        }
+
+        fixture.profileUuid = profile.uuid;
+        fixture.modeShortName = mode.shortName || mode.name;
+
+        // changed back to what it was
+        const origin = this.exchanges.get(fixture.uuid);
+
+        if (origin && origin.profileUuid === fixture.profileUuid) {
+          this.exchanges.delete(fixture.uuid);
+        }
+      }
+
+      this.buildTree();
+      this.selectFixture(this.selectedFixture);
+      this.livePreviewIdentify();
+    });
+  }
+
+  // the mode of the fixture edited, which also decides what its old values are carried to
+  selectMode(modeShortName: string) {
+    this.selectedFixture.modeShortName = modeShortName;
+    this.updateChannelMap();
+    this.updateExchangeReport();
+  }
+
+  private updateExchangeReport() {
+    this.exchangeReport = undefined;
+    this.exchangedFrom = undefined;
+    this.modelSpecificCount = 0;
+
+    for (const preset of this.projectService.project.presets) {
+      for (const value of this.presetService.getModelSpecificValues(preset)) {
+        if (value.profile === this.selectedFixtureProfile) {
+          this.modelSpecificCount += value.count;
+        }
+      }
+    }
+
+    const origin = this.selectedFixture && this.exchanges.get(this.selectedFixture.uuid);
+
+    if (!origin || !this.selectedFixtureProfile) {
+      return;
+    }
+
+    const fromProfile = this.fixtureService.getProfileByUuid(origin.profileUuid);
+
+    if (!fromProfile) {
+      return;
+    }
+
+    this.exchangedFrom = fromProfile;
+    this.exchangeReport = this.fixtureExchangeService.exchange(
+      this.projectService.project.presets,
+      fromProfile,
+      this.fixtureService.getModeByFixture(fromProfile, new Fixture({ modeShortName: origin.modeShortName })),
+      this.selectedFixtureProfile,
+      this.fixtureService.getModeByFixture(this.selectedFixtureProfile, this.selectedFixture),
+      false
+    );
+  }
+
+  // What the presets set for the old models of the fixtures changed to another one goes over to the new models, once
+  // for each pair of them, and the pixels of the fixtures in the presets become the ones at the same place
+  private applyExchanges() {
+    const applied: string[] = [];
+
+    for (const [fixtureUuid, origin] of this.exchanges) {
+      const fixture = this.fixturePool.find((candidate) => candidate.uuid === fixtureUuid);
+      const fromProfile = this.fixtureService.getProfileByUuid(origin.profileUuid);
+      const toProfile = fixture && this.fixtureService.getProfileByUuid(fixture.profileUuid);
+
+      if (!fixture || !fromProfile || !toProfile) {
+        continue;
+      }
+
+      const fromMode = this.fixtureService.getModeByFixture(fromProfile, new Fixture({ modeShortName: origin.modeShortName }));
+      const toMode = this.fixtureService.getModeByFixture(toProfile, fixture);
+      const pair = [fromProfile.uuid, origin.modeShortName, toProfile.uuid, fixture.modeShortName].join('/');
+
+      if (applied.indexOf(pair) < 0) {
+        applied.push(pair);
+        this.fixtureExchangeService.exchange(this.projectService.project.presets, fromProfile, fromMode, toProfile, toMode, true);
+      }
+
+      const pixelKeys = this.fixtureExchangeService.getPixelKeyMap(fromProfile, fromMode, toProfile, toMode);
+
+      for (const preset of this.projectService.project.presets) {
+        for (const presetFixture of preset.fixtures) {
+          if (presetFixture.fixtureUuid === fixtureUuid && presetFixture.pixelKey && pixelKeys.has(presetFixture.pixelKey)) {
+            presetFixture.pixelKey = pixelKeys.get(presetFixture.pixelKey);
+          }
+        }
+      }
+    }
+  }
+
+  // Patch the fixtures acted on one after another, in the order of the tree, from the lowest address among them on
+  patchInARow() {
+    const order = this.fixtureItems.map((item) => item.fixture);
+    const fixtures = this.actedOnFixtures.slice().sort((fixture1, fixture2) => order.indexOf(fixture1) - order.indexOf(fixture2));
+
+    if (fixtures.length < 2) {
+      return;
+    }
+
+    let channel = Math.min(...fixtures.map((fixture) => fixture.dmxFirstChannel));
+    const total = fixtures.reduce((sum, fixture) => sum + this.fixtureChannelCount(fixture), 0);
+
+    if (channel + total > this.dmxChannels.length) {
+      const msg = 'designer.fixture-pool.patch-in-a-row-full';
+      const title = 'designer.fixture-pool.channel-occupied-title';
+
+      this.translateService.get([msg, title]).subscribe((result) => {
+        this.toastrService.error(result[msg], result[title]);
+      });
+
+      return;
+    }
+
+    for (const fixture of fixtures) {
+      fixture.dmxFirstChannel = channel;
+      channel += this.fixtureChannelCount(fixture);
+    }
+
+    this.updateChannelMap();
+  }
+
+  // ---- identifying fixtures on the stage ------------------------------------
+
+  isIdentified(fixture: Fixture): boolean {
+    return this.identifiedFixtureUuids.indexOf(fixture.uuid) >= 0;
+  }
+
+  // let a fixture blink at full white in the preview and on the stage, or stop it
+  switchIdentify(fixture: Fixture) {
+    if (this.isIdentified(fixture)) {
+      this.identifiedFixtureUuids = this.identifiedFixtureUuids.filter((uuid) => uuid !== fixture.uuid);
+    } else {
+      this.identifiedFixtureUuids = [...this.identifiedFixtureUuids, fixture.uuid];
+    }
+
+    this.projectService.project.identifyFixtureUuids = this.identifiedFixtureUuids;
+
+    if (this.identifiedFixtureUuids.length > 0) {
+      this.livePreviewIdentify();
+    } else {
+      this.endIdentify();
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  // The stage shows the patch edited here while fixtures are identified, e.g. a fixture just moved to its address
+  private livePreviewIdentify() {
+    if (this.identifiedFixtureUuids.length > 0) {
+      this.livePreviewService.previewPatch(this.fixturePool);
+    }
+  }
+
+  // nothing is identified anymore: the stage shows the patch of the project again
+  private endIdentify() {
+    this.identifiedFixtureUuids = [];
+
+    if (this.projectService.project) {
+      this.projectService.project.identifyFixtureUuids = [];
+    }
+
+    if (this.maintenanceTimers.size === 0) {
+      this.livePreviewService.endPatchPreview();
+    }
+  }
+
+  // ---- asking fixtures to reset themselves or to switch their lamp on -------
+
+  // the fixtures doing it right now, until they have held it for as long as they ask for (see maintenance)
+  private maintenanceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // how long the maintenance capabilities of each mode of a profile are held, undefined if it has none
+  private maintenanceHolds = new Map<string, number>();
+
+  private maintenanceKey(fixture: Fixture, action: MaintenanceAction): string {
+    return action + ':' + fixture.uuid;
+  }
+
+  // how long the fixture has to be asked to do the passed action, or undefined if it can't (e.g. an LED par has no
+  // lamp to switch on)
+  getMaintenanceHold(fixture: Fixture, action: MaintenanceAction): number {
+    const key = action + ':' + fixture.profileUuid + ':' + fixture.modeShortName;
+
+    if (!this.maintenanceHolds.has(key)) {
+      const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+      const mode = profile ? this.fixtureService.getModeByFixture(profile, fixture) : undefined;
+      const found = mode ? getMaintenanceCapability(this.fixtureService.getCachedChannels(profile, mode, null), action) : undefined;
+
+      this.maintenanceHolds.set(
+        key,
+        found && found.capability.centerValue !== undefined ? getMaintenanceHoldMillis(found.capability) : undefined
+      );
+    }
+
+    return this.maintenanceHolds.get(key);
+  }
+
+  canMaintain(fixture: Fixture, action: MaintenanceAction): boolean {
+    return this.getMaintenanceHold(fixture, action) !== undefined;
+  }
+
+  isMaintaining(fixture: Fixture, action: MaintenanceAction): boolean {
+    return this.maintenanceTimers.has(this.maintenanceKey(fixture, action));
+  }
+
+  // ask the fixture on the stage to reset itself or to switch its lamp on: the value is held for as long as the
+  // fixture asks for (three seconds at least), then the fixture plays the presets again
+  maintain(fixture: Fixture, action: MaintenanceAction) {
+    const hold = this.getMaintenanceHold(fixture, action);
+    const key = this.maintenanceKey(fixture, action);
+
+    if (hold === undefined || this.maintenanceTimers.has(key)) {
+      return;
+    }
+
+    this.maintenanceTimers.set(
+      key,
+      setTimeout(() => {
+        this.maintenanceTimers.delete(key);
+        this.updateMaintenance();
+      }, Math.max(hold, 3000) + 500)
+    );
+    this.updateMaintenance();
+  }
+
+  // tell the stage which fixtures do what
+  private updateMaintenance() {
+    const project = this.projectService.project;
+
+    if (!project) {
+      return;
+    }
+
+    const fixturesOf = (action: MaintenanceAction) =>
+      Array.from(this.maintenanceTimers.keys())
+        .filter((key) => key.startsWith(action + ':'))
+        .map((key) => key.substring(action.length + 1));
+
+    project.resetFixtureUuids = fixturesOf('reset');
+    project.lampOnFixtureUuids = fixturesOf('lamp-on');
+
+    if (this.maintenanceTimers.size > 0 || this.identifiedFixtureUuids.length > 0) {
+      this.livePreviewService.previewPatch(this.fixturePool);
+    } else {
+      this.livePreviewService.endPatchPreview();
+    }
+  }
+
+  // the dialog closes: nothing is asked of the fixtures anymore
+  private endMaintenance() {
+    this.maintenanceTimers.forEach((timer) => clearTimeout(timer));
+    this.maintenanceTimers.clear();
+
+    if (this.projectService.project) {
+      this.projectService.project.resetFixtureUuids = [];
+      this.projectService.project.lampOnFixtureUuids = [];
+    }
   }
 
   private fixtureChannelCount(fixture: Fixture): number {
@@ -953,11 +1287,17 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // If a mode is changed, we need to re-add the fixture to make sure, all pixel keys
+    // what the presets set for the old models of the fixtures changed to another one goes over to the new ones
+    this.applyExchanges();
+
+    // If a mode (or the model) is changed, we need to re-add the fixture to make sure, all pixel keys
     // are removed/added
     for (let projectFixture of this.projectService.project.fixtures) {
       for (let poolFixture of this.fixturePool) {
-        if (poolFixture.profileUuid === projectFixture.profileUuid && poolFixture.modeShortName != projectFixture.modeShortName) {
+        if (
+          poolFixture.uuid === projectFixture.uuid &&
+          (poolFixture.modeShortName != projectFixture.modeShortName || poolFixture.profileUuid !== projectFixture.profileUuid)
+        ) {
           // the mode has changed -> remove it from the presetfixtures
           for (let i = this.projectService.project.presetFixtures.length - 1; i >= 0; i--) {
             const presetFixture = this.projectService.project.presetFixtures[i];
@@ -1002,6 +1342,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.projectService.project.fixtures = this.fixturePool;
 
+    // remove the profiles no fixture uses anymore
+    this.projectService.project.fixtureProfiles = this.projectService.project.fixtureProfiles.filter((profile) =>
+      this.fixturePool.some((fixture) => fixture.profileUuid === profile.uuid)
+    );
+
     // Persist any locally edited universes back to the config when the
     // host application has opted in to free editing.
     if (this.configService.freeUniverseEdit) {
@@ -1013,6 +1358,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.previewService.updateFixtureSetup();
     this.presetService.updateFixtureSelection();
     this.presetService.fixtureSelectionChanged.next();
+    this.endIdentify();
     this.livePreviewService.previewLive();
 
     this.onClose.next(1);
@@ -1024,13 +1370,13 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     const presetFixture = new PresetFixture();
     presetFixture.fixtureUuid = fixtureUuid;
     presetFixture.pixelKey = pixelKey;
-
-    this.folderService.placeLast(
+    presetFixture.folderUuid = folderUuid;
+    presetFixture.sortIndex = this.nextSortIndex(
+      folderUuid,
       this.projectService.project.fixtureFolders,
-      this.projectService.project.presetFixtures,
-      presetFixture,
-      folderUuid
+      this.projectService.project.presetFixtures
     );
+
     this.projectService.project.presetFixtures.push(presetFixture);
   }
 
@@ -1083,6 +1429,10 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       for (const folder of [undefined, ...this.fixtureFolders.map((candidate) => candidate.uuid)]) {
         this.folderService.renumber(this.fixtureFolders, this.projectService.project.presetFixtures, folder);
       }
+
+      // the rows of the new fixtures were added at the end of the list, the order the
+      // presets chase in has them in their folder
+      this.fixtureOrderService.sortProjectFixtures();
     }
 
     // the flat fixture list of the pool follows the tree as well
@@ -1094,6 +1444,12 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   cancel() {
+    // the stage shows the patch of the project again, if it showed the one edited here
+    if (this.identifiedFixtureUuids.length > 0) {
+      this.endIdentify();
+      this.livePreviewService.previewLive();
+    }
+
     this.onClose.next(2);
     this.bsModalRef.hide();
   }
@@ -1116,7 +1472,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
             this.toastrService.error(result[msg], result[title]);
           });
 
-          return undefined;
+          return EMPTY;
         })
       )
       .subscribe(() => {
@@ -1170,6 +1526,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   createFixtureFromProfileFile() {
     const bsModalRef = this.modalService.show(FixturePoolCreateFromFileComponent, { keyboard: true, ignoreBackdropClick: false });
     (bsModalRef.content as FixturePoolCreateFromFileComponent).onClose.subscribe((profile: FixtureProfile) => {
+      // closed without a file
+      if (!profile) {
+        return;
+      }
+
       const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
       if (newFixture) {
         newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
@@ -1183,6 +1544,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   handleKeyboardEvent(event: any) {
     // enter confirms the name being typed (a folder, a fixture), not the whole dialog
     if (this.hotkeyTargetExcludeService.exclude(event)) {
+      return;
+    }
+
+    // nor a dialog opened on top of this one (the universes, a profile file)
+    if (this.modalService.getModalsCount() > 1) {
       return;
     }
 

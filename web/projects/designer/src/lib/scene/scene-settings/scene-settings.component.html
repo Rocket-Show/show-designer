@@ -59,7 +59,7 @@
 
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-in' | translate }}</label>
-    <div class="col-lg-8 d-flex align-items-center">
+    <div class="col-lg-8 d-flex flex-wrap align-items-center">
       <input type="text" class="form-control sd-time-field" [ngModel]="fadeInMillis" (ngModelChange)="fadeInMillis = $event" />
 
       <div class="ml-2">
@@ -84,7 +84,7 @@
 
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.scene.settings-fade-out' | translate }}</label>
-    <div class="col-lg-8 d-flex align-items-center">
+    <div class="col-lg-8 d-flex flex-wrap align-items-center">
       <input type="text" class="form-control sd-time-field" [ngModel]="fadeOutMillis" (ngModelChange)="fadeOutMillis = $event" />
 
       <div class="ml-2">

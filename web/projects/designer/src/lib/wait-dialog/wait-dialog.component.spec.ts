@@ -1,24 +1,20 @@
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { WaitDialogComponent } from './wait-dialog.component';
 
+// The wait dialog covers the designer while a project is being loaded.
 describe('WaitDialogComponent', () => {
-  let component: WaitDialogComponent;
-  let fixture: ComponentFixture<WaitDialogComponent>;
-
-  beforeEach(waitForAsync(() => {
+  it('asks to wait, with a running progress bar', () => {
     TestBed.configureTestingModule({
       declarations: [WaitDialogComponent],
-    }).compileComponents();
-  }));
+      imports: [TranslateModule.forRoot()],
+    });
 
-  beforeEach(() => {
-    fixture = TestBed.createComponent(WaitDialogComponent);
-    component = fixture.componentInstance;
+    const fixture = TestBed.createComponent(WaitDialogComponent);
     fixture.detectChanges();
-  });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.card-text').textContent).toBe('designer.misc.please-wait');
+    expect(fixture.nativeElement.querySelector('.progress-bar').classList).toContain('progress-bar-animated');
   });
 });

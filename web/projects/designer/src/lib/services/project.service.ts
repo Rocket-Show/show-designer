@@ -1,13 +1,15 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
+import { Scene } from '../models/scene';
 import { UserService } from './user.service';
 import { ConfigService } from './config.service';
+import { SCENE_COLOR_SOURCE } from './scene-color-source';
 
 @Injectable({
   providedIn: 'root',
@@ -17,7 +19,7 @@ export class ProjectService {
   public project: Project;
 
   // the project-file versions used in this version of the designer (older ones will be migrated, newer ones are not supported)
-  public currentProjectVersion = 7;
+  public currentProjectVersion = 10;
 
   // fires, when another project has been loaded, created or imported
   public projectChanged: Subject<void> = new Subject<void>();
@@ -29,11 +31,29 @@ export class ProjectService {
     private activatedRoute: ActivatedRoute,
     private translateService: TranslateService,
     private toastrService: ToastrService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private injector: Injector
   ) {}
 
+  // The project as it is saved. Each scene carries the color it is marked with as well, which
+  // Rocket Show shows it with on its Play screen: a color decided by the presets of a scene can
+  // only be read with the presets and the fixtures, which the Play screen does not load. Only
+  // written into what is saved, the project itself stays as it is (and nothing is left to undo).
+  // Indented by the passed number of spaces, for a file to be read by people as well.
+  getSavedJson(project: Project, indent?: number): string {
+    // taken when it is needed: the colors are read through the presets, which need this service
+    const sceneColorSource = this.injector.get(SCENE_COLOR_SOURCE, null);
+
+    return JSON.stringify(
+      project,
+      (key, value) =>
+        value instanceof Scene && sceneColorSource ? { ...value, displayColor: sceneColorSource.getSceneColor(value) } : value,
+      indent
+    );
+  }
+
   private saveApi(project: Project): Observable<object> {
-    return this.http.post('project', JSON.stringify(project), { headers: this.userService.getHeaders() }).pipe(
+    return this.http.post('project', this.getSavedJson(project), { headers: this.userService.getHeaders() }).pipe(
       map((response: any) => {
         if (response) {
           project.id = response.id;
@@ -115,11 +135,17 @@ export class ProjectService {
   }
 
   deleteProject(project: Project): Observable<any> {
-    return this.http.delete('project?id=' + project.id + '&name=' + project.name, { headers: this.userService.getHeaders() });
+    // a project may be named with characters which mean something in an address (e.g. "Rock & Roll")
+    return this.http.delete('project?id=' + project.id + '&name=' + encodeURIComponent(project.name), {
+      headers: this.userService.getHeaders(),
+    });
   }
 
   getProject(id: number, name: string, shareToken?: string): Observable<Project> {
-    return this.http.get('project?id=' + id + '&name=' + name + '&token=' + shareToken, { headers: this.userService.getHeaders() }).pipe(
+    // the template is asked for without a name, a project which is not shared without a token
+    const query = 'project?id=' + id + '&name=' + encodeURIComponent(name ?? '') + '&token=' + encodeURIComponent(shareToken ?? '');
+
+    return this.http.get(query, { headers: this.userService.getHeaders() }).pipe(
       map((response: any) => {
         const project = new Project(response);
         project.id = id;

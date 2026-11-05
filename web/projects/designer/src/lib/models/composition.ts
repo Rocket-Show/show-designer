@@ -1,10 +1,13 @@
+import { readProjectNumber } from './project-number';
 import { ScenePlaybackRegion } from './scene-playback-region';
+import { Track } from './track';
 
 export class Composition {
   public uuid: string;
   public name: string;
 
-  // none or audio
+  // audio: the timeline runs along the audio file. none: it runs on its own clock, and the
+  // composition lasts until its last scene has ended (see getClipsEndMillis).
   public syncType = 'audio';
 
   public audioFileName: string;
@@ -25,10 +28,14 @@ export class Composition {
   // 1/1, 1/2, 1/4, 1/8, etc.
   public gridResolution = 1;
 
-  // if no sync
+  // not used anymore: without an audio file, the composition lasts as long as its scenes
   public durationMillis = 0;
 
-  // Regions, where the scene will be played
+  // the lanes of the timeline, the topmost first. Where the clips of two tracks overlap,
+  // the one higher up is on top.
+  public tracks: Track[] = [];
+
+  // Regions, where the scene will be played (the clips on the tracks)
   public scenePlaybackRegions: ScenePlaybackRegion[] = [];
 
   constructor(data?: any) {
@@ -38,21 +45,28 @@ export class Composition {
 
     this.uuid = data.uuid;
     this.name = data.name;
-    this.syncType = data.syncType;
+    // the compositions saved before there was a choice all played along an audio file
+    this.syncType = data.syncType || 'audio';
     this.audioFileName = data.audioFileName;
     this.audioFileInLibrary = data.audioFileInLibrary;
-    this.beatsPerMinute = data.beatsPerMinute;
-    this.timeSignatureUpper = data.timeSignatureUpper;
-    this.timeSignatureLower = data.timeSignatureLower;
+    this.beatsPerMinute = readProjectNumber(data.beatsPerMinute);
+    this.timeSignatureUpper = readProjectNumber(data.timeSignatureUpper);
+    this.timeSignatureLower = readProjectNumber(data.timeSignatureLower);
     this.snapToGrid = data.snapToGrid;
 
     // never guess again (and overwrite), when a composition is loaded
     this.tempoGuessed = true;
 
     this.gridType = data.gridType;
-    this.gridOffsetMillis = data.gridOffsetMillis;
-    this.gridResolution = data.gridResolution;
-    this.durationMillis = data.durationMillis;
+    this.gridOffsetMillis = readProjectNumber(data.gridOffsetMillis);
+    this.gridResolution = readProjectNumber(data.gridResolution);
+    this.durationMillis = readProjectNumber(data.durationMillis);
+
+    if (data.tracks) {
+      for (const track of data.tracks) {
+        this.tracks.push(new Track(track));
+      }
+    }
 
     if (data.scenePlaybackRegions) {
       for (const scenePlaybackRegion of data.scenePlaybackRegions) {

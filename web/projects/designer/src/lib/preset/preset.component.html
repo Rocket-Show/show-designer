@@ -110,6 +110,12 @@
             {{ node.preset.name }}
           </div>
           <div class="my-auto ml-auto mr-2 d-flex">
+            <!-- the preset sets values only one model of fixture plays (e.g. the channel of its strobe) -->
+            @if (presetService.getModelSpecificValues(node.preset).length > 0) {
+            <span class="model-specific my-auto mr-1" [attr.title]="modelSpecificTitle(node.preset)"
+              ><i class="fa fa-link fa-fw" aria-hidden="true"></i
+            ></span>
+            }
             <button
               type="button"
               class="btn btn-secondary btn-sm py-0 px-1"

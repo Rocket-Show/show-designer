@@ -1,0 +1,13 @@
+.emitter-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  vertical-align: middle;
+}
+
+.position-end {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}

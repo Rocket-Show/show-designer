@@ -12,6 +12,6 @@ export class PresetStepEffectAmount {
     }
 
     this.effectUuid = data.effectUuid;
-    this.amount = data.amount === undefined ? 1 : data.amount;
+    this.amount = data.amount ?? 1;
   }
 }

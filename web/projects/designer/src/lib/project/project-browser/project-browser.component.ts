@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { map } from 'rxjs/operators';
 import { Project } from '../../models/project';
+import { getProjectLoadError } from '../../models/project-load-error';
 import { ConfigService } from '../../services/config.service';
+import { ErrorDialogService } from '../../services/error-dialog.service';
 import { ProjectLoadService } from '../../services/project-load.service';
 import { ProjectService } from '../../services/project.service';
 import { UserService } from '../../services/user.service';
@@ -24,6 +26,7 @@ export class ProjectBrowserComponent implements OnInit {
     private projectLoadService: ProjectLoadService,
     private userService: UserService,
     private warningDialogService: WarningDialogService,
+    private errorDialogService: ErrorDialogService,
     private configService: ConfigService
   ) {
     this.loadProjects();
@@ -44,9 +47,16 @@ export class ProjectBrowserComponent implements OnInit {
 
   openProject(project: Project) {
     this.bsModalRef.hide();
-    this.projectLoadService.load(project.id, project.name).subscribe(() => {
-      this.userService.setAutoLoadProject(project);
-    });
+    this.projectLoadService.load(project.id, project.name).subscribe(
+      () => {
+        this.userService.setAutoLoadProject(project);
+      },
+      (response) => {
+        // the project open before stays open
+        const error = getProjectLoadError(response);
+        this.errorDialogService.show(error.message, error.details).subscribe();
+      }
+    );
   }
 
   deleteProject(project: Project) {

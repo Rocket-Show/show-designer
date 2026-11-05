@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Designer unit tests and build
+    # Pull requests from branches of this repository are already tested by the push
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the dependencies
+        # The builder of the library (@angular-devkit/build-ng-packagr) still asks for an old ng-packagr
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Run the unit tests
+        # fails below the minimum coverage of the library (check in projects/designer/karma.conf.js)
+        run: npx ng test designer --watch=false --browsers=ChromeHeadlessCI --code-coverage
+      - name: Summarize the coverage
+        if: always()
+        run: |
+          node -e '
+            const total = require("./coverage/designer/coverage-summary.json").total;
+            const line = (name) => `| ${name} | ${total[name].pct} % | ${total[name].covered} of ${total[name].total} |`;
+            console.log(["| Coverage of the unit tests | | |", "| --- | --- | --- |", ...["lines", "statements", "branches", "functions"].map(line)].join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+      - name: Check that the minimum coverage keeps up
+        # a warning only: raise it with npm run coverage:ratchet
+        run: node projects/designer/coverage-ratchet.mjs --check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: web/coverage/designer
+          retention-days: 14
+      - name: Build the library like for publishing
+        run: npx ng build --configuration production designer
+
+  e2e:
+    name: End-to-end tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run the end-to-end tests
+        # starts the dev server and fakes the API, see web/e2e/README.md
+        run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/e2e/playwright-report
+            web/e2e/test-results
+          retention-days: 14
+
+  api:
+    name: API tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: designer_test
+          MARIADB_USER: designer
+          MARIADB_PASSWORD: designer
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mysqli
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the API tests
+        # see api-test/README.md
+        run: node --test --test-reporter=spec 'api-test/*.test.mjs'

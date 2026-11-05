@@ -309,6 +309,168 @@ describe('PresetStepService', () => {
     expect(service.getStateAtMillis(preset(from, to), 1500).getEffectAmount('effect')).toBeCloseTo(0.5, 10);
   });
 
+  it('should not fill the only step of a preset, which is a look standing still', () => {
+    expect(service.getStateAtMillis(preset(step(0, 100)), 500).currentStepProgress).toBe(0);
+  });
+
+  it('should be all through a step which lasts no time at all', () => {
+    // both steps start at once, so a pass and with it the last step lasts nothing
+    const sequence = preset(step(0, 100), step(0, 200));
+
+    expect(service.getStateAtMillis(sequence, 0).currentStepProgress).toBe(1);
+  });
+
+  it('should fall back to no values for a preset without steps and without values of its own', () => {
+    const empty = new Preset();
+    empty.fixtureChannelValues = undefined;
+    empty.fixtureCapabilityValues = undefined;
+
+    const state = service.getStateAtMillis(empty, 0);
+
+    expect(state.fixtureChannelValues).toEqual([]);
+    expect(state.fixtureCapabilityValues).toEqual([]);
+  });
+
+  it('should give no step no values', () => {
+    const state = service.getStepState(undefined);
+
+    expect(state.currentStep).toBeUndefined();
+    expect(state.fixtureChannelValues).toEqual([]);
+  });
+
+  describe('the steps of a preset', () => {
+    function capability(valuePercentage: number): FixtureCapabilityValue {
+      const capabilityValue = new FixtureCapabilityValue();
+      capabilityValue.type = FixtureCapabilityType.Intensity;
+      capabilityValue.valuePercentage = valuePercentage;
+
+      return capabilityValue;
+    }
+
+    it('should give an old preset its values as its first step, which keeps lists of its own', () => {
+      const old = new Preset();
+      old.fixtureChannelValues = step(0, 42).fixtureChannelValues;
+      old.fixtureCapabilityValues = [capability(0.5)];
+
+      const first = service.ensureStep(old);
+
+      expect(old.steps).toEqual([first]);
+      expect(first.uuid).toBeTruthy();
+      expect(first.fixtureChannelValues).toEqual(old.fixtureChannelValues);
+      expect(first.fixtureCapabilityValues).toEqual(old.fixtureCapabilityValues);
+      // editing the step leaves what an older Rocket Show reads alone
+      expect(first.fixtureChannelValues).not.toBe(old.fixtureChannelValues);
+      expect(first.fixtureCapabilityValues).not.toBe(old.fixtureCapabilityValues);
+    });
+
+    it('should give a preset without any values an empty first step', () => {
+      const empty = new Preset();
+      empty.fixtureChannelValues = undefined;
+      empty.fixtureCapabilityValues = undefined;
+
+      const first = service.ensureStep(empty);
+
+      expect(first.fixtureChannelValues).toEqual([]);
+      expect(first.fixtureCapabilityValues).toEqual([]);
+    });
+
+    it('should keep the steps a preset has', () => {
+      const sequence = preset(step(0, 100), step(1000, 200));
+
+      expect(service.ensureStep(sequence)).toBe(sequence.steps[0]);
+      expect(sequence.steps.length).toBe(2);
+    });
+
+    it('should add a copy of the last step, as far behind it as the step before it was', () => {
+      const sequence = preset(step(1000, 100), step(1400, 200, 300));
+
+      const added = service.addStep(sequence);
+
+      expect(sequence.steps.length).toBe(3);
+      expect(sequence.steps[2]).toBe(added);
+      expect(added.startMillis).toBe(1800);
+      expect(added.uuid).not.toBe('step-1400');
+      expect(added.transitionMillis).toBe(300);
+      expect(added.fixtureChannelValues[0].value).toBe(200);
+      expect(added.fixtureChannelValues[0]).not.toBe(sequence.steps[1].fixtureChannelValues[0]);
+    });
+
+    it('should add a copy of the step it is asked to copy', () => {
+      const sequence = preset(step(0, 100, 250), step(1000, 200));
+
+      const added = service.addStep(sequence, sequence.steps[0]);
+
+      expect(added.startMillis).toBe(2000);
+      expect(added.transitionMillis).toBe(250);
+      expect(added.fixtureChannelValues[0].value).toBe(100);
+    });
+
+    it('should add a step a second behind the only one', () => {
+      const sequence = preset(step(500, 100));
+
+      expect(service.addStep(sequence).startMillis).toBe(1500);
+    });
+
+    it('should add the first step of a preset at its start, jumping into it', () => {
+      const added = service.addStep(new Preset());
+
+      expect(added.startMillis).toBe(0);
+      expect(added.transitionMillis).toBe(0);
+      expect(added.fixtureChannelValues).toEqual([]);
+    });
+
+    it('should add a step at least a millisecond behind the last one', () => {
+      const sequence = preset(step(0, 100), step(0, 200));
+
+      expect(service.addStep(sequence).startMillis).toBe(1);
+    });
+
+    it('should keep the steps in the order they are reached after adding one', () => {
+      // e.g. a project written by hand, its steps out of order
+      const sequence = preset(step(0, 100), step(2000, 200), step(1000, 300));
+
+      service.addStep(sequence);
+
+      expect(sequence.steps.map((presetStep) => presetStep.startMillis)).toEqual([0, 1000, 1001, 2000]);
+    });
+
+    it('should keep the only step of a preset, which is the preset itself', () => {
+      const single = preset(step(0, 100));
+
+      service.deleteStep(single, single.steps[0]);
+
+      expect(single.steps.length).toBe(1);
+    });
+
+    it('should delete a step', () => {
+      const sequence = preset(step(0, 100), step(1000, 200), step(2000, 300));
+
+      service.deleteStep(sequence, sequence.steps[1]);
+
+      expect(sequence.steps.map((presetStep) => presetStep.startMillis)).toEqual([0, 2000]);
+    });
+
+    it('should leave the steps alone when asked to delete one which is not in the preset', () => {
+      const sequence = preset(step(0, 100), step(1000, 200));
+
+      service.deleteStep(sequence, step(1000, 200));
+
+      expect(sequence.steps.length).toBe(2);
+    });
+
+    it('should say how long the transition into a step runs', () => {
+      const sequence = preset(step(1000, 100), step(2000, 200, 300), step(2500, 300, 5000));
+      sequence.steps[0].transitionMillis = undefined;
+
+      // the whole time the first step lasts, the time the second one brings, and no longer than
+      // the last one lasts (as long as the one before it)
+      expect(service.getStepTransitionMillis(sequence, sequence.steps[0])).toBe(1000);
+      expect(service.getStepTransitionMillis(sequence, sequence.steps[1])).toBe(300);
+      expect(service.getStepTransitionMillis(sequence, sequence.steps[2])).toBe(500);
+      expect(service.getStepTransitionMillis(sequence, step(2000, 200, 300))).toBe(0);
+    });
+  });
+
   describe('chasing the steps over the fixtures', () => {
     it('should not chase a preset which was not asked to', () => {
       const sequence = preset(step(0, 100), step(1000, 200));

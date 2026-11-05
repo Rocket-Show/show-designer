@@ -1,8 +1,9 @@
 <!-- Wrap the whole component inside a div to encapsulate the CSS -->
 
-<!-- 100 % height minus the menu bar above and the gutter size of 13 px -->
+<!-- 100 % height minus the menu bar above and the gutter size of 13 px. On a phone, the
+     panels stacked one below the other make the page as high as they need. -->
 <!-- <div style="height: calc(100% - 33px)"> -->
-<div id="designer" [ngStyle]="{ height: 'calc(100% - ' + totalMenuHeightPx + 'px)' }">
+<div id="designer" [ngStyle]="{ height: layoutService.compact ? 'auto' : 'calc(100% - ' + totalMenuHeightPx + 'px)' }">
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <!-- Menu buttons -->
@@ -12,27 +13,27 @@
           {{ 'designer.navigation.project' | translate }}
         </a>
         <div class="dropdown-menu" aria-labelledby="fileDropdown">
-          <a class="dropdown-item d-none d-md-block" href="#" (click)="projectNew(); (false)"
+          <a class="dropdown-item" href="#" (click)="projectNew(); (false)"
             ><i class="fa fa-fw fa-file-o" aria-hidden="true"></i> {{ 'designer.navigation.project-new' | translate }}</a
           >
           <a class="dropdown-item" href="#" (click)="projectOpen(); (false)"
             ><i class="fa fa-fw fa-folder-open-o" aria-hidden="true"></i> {{ 'designer.navigation.project-open' | translate }}</a
           >
-          <a class="dropdown-item d-none d-md-block" href="#" (click)="projectSave(); (false)"
+          <a class="dropdown-item" href="#" (click)="projectSave(); (false)"
             ><i class="fa fa-fw fa-floppy-o" aria-hidden="true"></i> {{ 'designer.navigation.project-save' | translate }}</a
           >
-          <a class="dropdown-item d-none d-md-block" href="#" (click)="projectSaveAs(); (false)"
+          <a class="dropdown-item" href="#" (click)="projectSaveAs(); (false)"
             ><i class="fa fa-fw fa-floppy-o" aria-hidden="true"></i> {{ 'designer.navigation.project-save-as' | translate }}</a
           >
-          <a class="dropdown-item d-none d-md-block" href="#" (click)="projectImport(); (false)"
+          <a class="dropdown-item" href="#" (click)="projectImport(); (false)"
             ><i class="fa fa-fw fa-download" aria-hidden="true"></i> {{ 'designer.navigation.project-import' | translate }}</a
           >
-          <a class="dropdown-item d-none d-md-block" href="#" (click)="projectExport(); (false)"
+          <a class="dropdown-item" href="#" (click)="projectExport(); (false)"
             ><i class="fa fa-fw fa-external-link" aria-hidden="true"></i> {{ 'designer.navigation.project-export' | translate }}</a
           >
         </div>
       </li>
-      <li class="nav-item dropdown d-none d-md-block">
+      <li class="nav-item dropdown">
         <!-- collect what has been changed so far before showing whether there is anything to undo -->
         <a
           class="nav-link dropdown-toggle"
@@ -54,7 +55,37 @@
           >
         </div>
       </li>
-      <li class="nav-item dropdown d-none d-md-block">
+      <!-- the layouts for the ways of working on a show, and the panels to fold or open -->
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="viewDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {{ 'designer.navigation.view' | translate }}
+        </a>
+        <div class="dropdown-menu view-menu" aria-labelledby="viewDropdown">
+          <h6 class="dropdown-header">{{ 'designer.layout.layouts' | translate }}</h6>
+          @for (layout of layoutService.layouts; track layout) {
+          <a class="dropdown-item" href="#" (click)="layoutService.applyLayout(layout); (false)"
+            ><i
+              class="fa fa-fw view-menu-check"
+              [class.fa-dot-circle-o]="layoutService.layout === layout"
+              [class.fa-circle-o]="layoutService.layout !== layout"
+              aria-hidden="true"
+            ></i>
+            {{ 'designer.layout.layout-' + layout | translate }}</a
+          >
+          }
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ 'designer.layout.panels' | translate }}</h6>
+          <!-- (a phone has no 3D preview to open) -->
+          @for (panel of layoutService.panels; track panel) { @if (!layoutService.compact || panel !== 'preview') {
+          <a class="dropdown-item" href="#" (click)="layoutService.toggle(panel); (false)"
+            ><i class="fa fa-fw view-menu-check" [class.fa-check]="!layoutService.isFolded(panel)" aria-hidden="true"></i>
+            <i class="fa-fw view-menu-icon {{ layoutService.icons[panel] }}" aria-hidden="true"></i>
+            {{ 'designer.layout.panel-' + panel | translate }}</a
+          >
+          } }
+        </div>
+      </li>
+      <li class="nav-item dropdown">
         <a
           class="nav-link dropdown-toggle"
           href="#"
@@ -70,7 +101,7 @@
           <!-- <a class="dropdown-item" href="#">{{ 'designer.navigation.stage' | translate }}</a> -->
         </div>
       </li>
-      <li class="nav-item dropdown d-none d-md-block">
+      <li class="nav-item dropdown">
         <a
           class="nav-link dropdown-toggle"
           href="#"
@@ -93,7 +124,7 @@
     <!-- Project name shown in the middle, editable inline -->
     @if (projectService.project) {
     <lib-app-inline-edit
-      class="project-name d-none d-md-inline-flex"
+      class="project-name"
       [value]="projectService.project.name"
       [placeholder]="'designer.project.name' | translate"
       (valueChange)="setProjectName($event)"
@@ -102,7 +133,7 @@
 
     <ul class="navbar-nav">
       @if (configService.shareAvailable) {
-      <li class="nav-item d-none d-md-flex" data-toggle="collapse">
+      <li class="nav-item d-flex" data-toggle="collapse">
         <a class="nav-link text-primary" (click)="projectShare(); (false)" routerLinkActive="active"
           ><i class="fa fa-share-alt" aria-hidden="true"></i> {{ 'designer.navigation.project-share' | translate }}</a
         >
@@ -145,9 +176,9 @@
     </ul>
   </nav>
 
-  <!-- The main content for larger screens -->
-  <div class="h-100 d-none d-md-block">
-    <div id="row1" class="split split-vertical clearfix pt-3 pl-3">
+  <!-- the rows, split and folded by DesignerLayout. On a phone, the open panels are stacked. -->
+  <div class="h-100 d-flex designer-rows">
+    <div id="row1" class="split split-vertical designer-row d-flex pt-3 px-3">
       <!-- Scenes -->
       <div id="scenes" class="split split-horizontal h-100">
         @if (projectService.project) {
@@ -163,7 +194,7 @@
       </div>
 
       <!-- 3D preview -->
-      <div id="preview" class="split split-horizontal h-100 pr-3">
+      <div id="preview" class="split split-horizontal h-100">
         @if (projectService.project) {
         <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('preview')">
           <div class="card-body p-0 h-100">
@@ -174,7 +205,7 @@
       </div>
     </div>
 
-    <div id="row2" class="split split-vertical clearfix px-3 d-flex" style="flex-direction: row">
+    <div id="row2" class="split split-vertical designer-row d-flex px-3">
       <!-- Menu for the capabilities, channels, effects and settings -->
       @if (projectService.project) {
       <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
@@ -319,29 +350,14 @@
     </div>
 
     <!-- Timeline -->
-    <div id="row3" class="split split-vertical clearfix px-3 pb-3">
+    <div id="row3" class="split split-vertical px-3 pb-3">
       @if (projectService.project) {
       <lib-app-timeline></lib-app-timeline>
       }
     </div>
   </div>
-
-  <!-- The components for small screens -->
-  <div class="d-md-none p-3">
-    <div>
-      @if (projectService.project) {
-      <lib-app-master-dimmer></lib-app-master-dimmer>
-      }
-    </div>
-
-    <div class="mt-3">
-      @if (projectService.project) {
-      <lib-app-scene></lib-app-scene>
-      }
-    </div>
-  </div>
 </div>
 
-<lib-app-intro class="d-none d-md-flex"></lib-app-intro>
+<lib-app-intro class="d-flex"></lib-app-intro>
 
-<lib-app-hardware-promo-bar class="d-none d-md-block"></lib-app-hardware-promo-bar>
+<lib-app-hardware-promo-bar class="d-block"></lib-app-hardware-promo-bar>

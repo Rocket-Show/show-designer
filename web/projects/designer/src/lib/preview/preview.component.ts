@@ -1,10 +1,12 @@
-import { AfterViewInit, Component, ElementRef, HostListener, NgZone, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FixtureCategory } from '../models/fixture-profile';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
+import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
 import { PREVIEW_BACKGROUND_COLOR, PreviewService } from '../services/preview.service';
 import { ProjectService } from '../services/project.service';
@@ -25,7 +27,7 @@ const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
   styleUrls: ['./preview.component.css'],
   standalone: false,
 })
-export class PreviewComponent implements AfterViewInit {
+export class PreviewComponent implements AfterViewInit, OnDestroy {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
@@ -45,21 +47,26 @@ export class PreviewComponent implements AfterViewInit {
 
   public promoLink: string;
 
+  // the frame rendered next, and the rebuilding of the fixtures: both stop with the preview
+  private animationFrame: number;
+  private fixtureSetupSubscription: Subscription;
+
   constructor(
     private fixtureService: FixtureService,
     private previewMeshService: PreviewMeshService,
     private animationService: AnimationService,
-    private previewService: PreviewService,
+    public previewService: PreviewService,
     private timelineService: TimelineService,
     public projectService: ProjectService,
     private presetService: PresetService,
     private sceneService: SceneService,
     private ngZone: NgZone,
-    public hardwarePromoService: HardwarePromoService
+    public hardwarePromoService: HardwarePromoService,
+    private layoutService: LayoutService
   ) {
     this.promoLink = this.hardwarePromoService.link('preview-badge');
 
-    this.previewService.doUpdateFixtureSetup.subscribe(() => {
+    this.fixtureSetupSubscription = this.previewService.doUpdateFixtureSetup.subscribe(() => {
       this.syncFixtures();
     });
     this.syncFixtures();
@@ -241,7 +248,7 @@ export class PreviewComponent implements AfterViewInit {
       }
 
       // Update the fixture properties
-      fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue);
+      fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue, timeMillis);
 
       // Select the fixture, if required
       if (this.fixtureService.settingsSelection) {
@@ -255,15 +262,16 @@ export class PreviewComponent implements AfterViewInit {
   private animate(timeMillis: number) {
     if (this.timelineService.playState === 'playing') {
       // Overwrite the current time with the playing time, if we're in playback mode
-      timeMillis = this.timelineService.waveSurfer.getCurrentTime() * 1000;
+      timeMillis = this.timelineService.getCurrentMillis();
     }
 
     this.animationService.timeMillis = timeMillis;
 
     // While the preview is hidden, only the clock above keeps running: the effect
     // curves and the live preview still read it. The rest of the frame is what
-    // hiding the preview is meant to save.
-    if (!this.previewHidden) {
+    // hiding the preview is meant to save. Its panel folded away, or left out on a
+    // phone, nobody sees it either.
+    if (!this.previewHidden && !this.layoutService.compact && !this.layoutService.isFolded('preview')) {
       // Update the controls
       if (this.controls) {
         this.controls.update();
@@ -277,7 +285,7 @@ export class PreviewComponent implements AfterViewInit {
       this.previewService.stageAndPositionsDirty = false;
     }
 
-    requestAnimationFrame(this.animate.bind(this));
+    this.animationFrame = requestAnimationFrame(this.animate.bind(this));
   }
 
   private getAspectRatio(): number {
@@ -288,6 +296,47 @@ export class PreviewComponent implements AfterViewInit {
     }
 
     return this.canvas.clientWidth / this.canvas.clientHeight;
+  }
+
+  // where a click into the preview started: turning the view around is no click picking a spot
+  private pointerDownAt: { x: number; y: number };
+
+  pointerDown(event: PointerEvent) {
+    this.pointerDownAt = { x: event.clientX, y: event.clientY };
+  }
+
+  // a click into the preview while a spot is being picked picks the spot on the stage below the pointer
+  pointerUp(event: PointerEvent) {
+    const downAt = this.pointerDownAt;
+    this.pointerDownAt = undefined;
+
+    if (!this.previewService.pickingSpot || !downAt || !this.camera) {
+      return;
+    }
+
+    if (Math.abs(event.clientX - downAt.x) > 4 || Math.abs(event.clientY - downAt.y) > 4) {
+      return;
+    }
+
+    const bounds = this.canvas.getBoundingClientRect();
+
+    if (bounds.width === 0 || bounds.height === 0) {
+      return;
+    }
+
+    const pointer = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(pointer, this.camera);
+
+    const spot = this.previewService.getStageSpot(raycaster);
+
+    if (spot) {
+      this.previewService.pickSpot(false);
+      this.previewService.spotPicked.next(spot);
+    }
   }
 
   @HostListener('window:resize')
@@ -410,5 +459,16 @@ export class PreviewComponent implements AfterViewInit {
     this.ngZone.runOutsideAngular(() => {
       this.animate(null);
     });
+  }
+
+  // The designer has been left (e.g. for another page of Rocket Show): stop rendering, and
+  // give back the WebGL context, of which a browser only hands out a few
+  ngOnDestroy() {
+    cancelAnimationFrame(this.animationFrame);
+    this.fixtureSetupSubscription.unsubscribe();
+
+    this.controls?.dispose();
+    this.renderer?.dispose();
+    this.renderer?.forceContextLoss();
   }
 }

@@ -39,6 +39,11 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
   @Input()
   wheelIndex: number;
 
+  // the channels of the fixture the wheel belongs to: a fixture lighting a color of its own shows no color
+  // approximated on its color wheel
+  @Input()
+  fixtureChannels: CachedFixtureChannel[] = [];
+
   @Input()
   showContainer = false;
 
@@ -149,11 +154,22 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       return selectedSlotNumber === slotNumber;
     } else {
       // no slot is selected and the capability is inactive
-      // -> show the approx. color, if a color or a similar slot from a different wheel has been selected
-      const approximatedCapability = this.presetService.getApproximatedColorWheelCapability(
-        this.presetService.selectedStep.fixtureCapabilityValues,
-        this._channel
-      );
+      // -> show the approx. color, if a color or a similar slot from a different wheel has been selected,
+      // unless the fixture lights the color itself
+      const capabilityValues = this.presetService.selectedStep.fixtureCapabilityValues;
+
+      if (
+        this.presetService.lightsColorOfItsOwn(
+          capabilityValues,
+          this.fixtureChannels,
+          this._fixtureProfile.uuid,
+          this.presetService.selectedPreset
+        )
+      ) {
+        return false;
+      }
+
+      const approximatedCapability = this.presetService.getApproximatedColorWheelCapability(capabilityValues, this._channel);
 
       if (approximatedCapability) {
         return slotNumber === approximatedCapability.capability.slotNumber;

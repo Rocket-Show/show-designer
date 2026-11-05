@@ -1,24 +1,381 @@
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { ToastrModule } from 'ngx-toastr';
 
+import { profiles } from '../../../../conformance/index';
+import { Preset } from '../../models/preset';
+import { PresetFixture } from '../../models/preset-fixture';
+import { Project } from '../../models/project';
+import { FixtureService } from '../../services/fixture.service';
+import { IntroService } from '../../services/intro.service';
+import { PresetService } from '../../services/preset.service';
+import { ProjectService } from '../../services/project.service';
 import { FixtureCapabilityComponent } from './fixture-capability.component';
 
-describe('PropertyComponent', () => {
-  let component: FixtureCapabilityComponent;
+// The capabilities the fixtures of the preset being edited have in common: the dimmer, the
+// color, their color wheels, pan/tilt, the emitters besides red, green and blue, the
+// capabilities set as a position (the strobe, the zoom, ...) and their gobo wheels, each set in
+// a panel of its own (not rendered here). Without anything to set, it says what is missing.
+describe('FixtureCapabilityComponent', () => {
   let fixture: ComponentFixture<FixtureCapabilityComponent>;
+  let element: HTMLElement;
+  let project: Project;
+  let presetService: PresetService;
+  let preset: Preset;
 
-  beforeEach(waitForAsync(() => {
-    TestBed.configureTestingModule({
+  // a fixture with nothing but a dimmer, one with nothing but a strobe, one with nothing but
+  // a gobo wheel and one with two color wheels
+  const dimmer = {
+    uuid: 'dimmer',
+    name: 'Dimmer',
+    availableChannels: { Dimmer: { capability: { type: 'Intensity' } } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Dimmer'] }],
+  };
+  const strobe = {
+    uuid: 'strobe',
+    name: 'Strobe',
+    availableChannels: { Strobe: { capability: { type: 'ShutterStrobe', shutterEffect: 'Strobe' } } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Strobe'] }],
+  };
+  const wheelSlots = {
+    capabilities: [0, 1].map((slot) => ({ dmxRange: [slot * 128, slot * 128 + 127], type: 'WheelSlot', slotNumber: slot + 1 })),
+  };
+  const gobo = {
+    uuid: 'gobo',
+    name: 'Gobo',
+    availableChannels: { 'Gobo Wheel': wheelSlots },
+    wheels: { 'Gobo Wheel': { slots: [{ type: 'Open' }, { type: 'Gobo', name: 'Star' }] } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Gobo Wheel'] }],
+  };
+  const twoWheels = {
+    uuid: 'two-wheels',
+    name: 'Two wheels',
+    availableChannels: { 'Color Wheel 1': wheelSlots, 'Color Wheel 2': wheelSlots },
+    wheels: {
+      'Color Wheel 1': {
+        slots: [
+          { type: 'Color', colors: ['#ff0000'] },
+          { type: 'Color', colors: ['#00ff00'] },
+        ],
+      },
+      'Color Wheel 2': {
+        slots: [
+          { type: 'Color', colors: ['#0000ff'] },
+          { type: 'Color', colors: ['#ffff00'] },
+        ],
+      },
+    },
+    modes: [{ name: '2-channel', shortName: '2ch', channels: ['Color Wheel 1', 'Color Wheel 2'] }],
+  };
+
+  // a fixture with nothing but a channel for the speed of its strobe and one with nothing to set but a fan
+  const strobeSpeed = {
+    uuid: 'strobe-speed',
+    name: 'Strobe speed',
+    availableChannels: { Speed: { capability: { type: 'StrobeSpeed' } } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Speed'] }],
+  };
+  const fan = {
+    uuid: 'fan',
+    name: 'Fan',
+    availableChannels: { Fan: { capability: { type: 'Maintenance' } } },
+    modes: [{ name: '1-channel', shortName: '1ch', channels: ['Fan'] }],
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
       declarations: [FixtureCapabilityComponent],
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
-  }));
 
-  beforeEach(() => {
+    project = new Project({
+      fixtureProfiles: [
+        ...['test/rgb-par', 'test/moving-head'].map((name) => ({ ...JSON.parse(JSON.stringify(profiles[name])), uuid: name })),
+        dimmer,
+        strobe,
+        gobo,
+        twoWheels,
+        strobeSpeed,
+        fan,
+        ...['test/beam', 'test/strobe-par', 'test/mover', 'test/hazer', 'test/macro-par', 'test/effects-spot'].map((name) => ({
+          ...JSON.parse(JSON.stringify(profiles[name])),
+          uuid: name,
+        })),
+      ],
+      fixtures: [
+        { uuid: 'par', profileUuid: 'test/rgb-par', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 0 },
+        { uuid: 'head', profileUuid: 'test/moving-head', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 10 },
+        { uuid: 'head-2', profileUuid: 'test/moving-head', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 50 },
+        { uuid: 'dimmer', profileUuid: 'dimmer', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 20 },
+        { uuid: 'strobe', profileUuid: 'strobe', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 30 },
+        { uuid: 'gobo', profileUuid: 'gobo', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 35 },
+        { uuid: 'two-wheels', profileUuid: 'two-wheels', modeShortName: '2ch', dmxUniverseUuid: 'u', dmxFirstChannel: 40 },
+        { uuid: 'gobo-2', profileUuid: 'gobo', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 36 },
+        { uuid: 'strobe-speed', profileUuid: 'strobe-speed', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 60 },
+        { uuid: 'fan', profileUuid: 'fan', modeShortName: '1ch', dmxUniverseUuid: 'u', dmxFirstChannel: 61 },
+        { uuid: 'beam', profileUuid: 'test/beam', modeShortName: '11ch', dmxUniverseUuid: 'u', dmxFirstChannel: 70 },
+        { uuid: 'strobe-par', profileUuid: 'test/strobe-par', modeShortName: '8ch', dmxUniverseUuid: 'u', dmxFirstChannel: 90 },
+        { uuid: 'mover', profileUuid: 'test/mover', modeShortName: 'beam', dmxUniverseUuid: 'u', dmxFirstChannel: 100 },
+        { uuid: 'hazer', profileUuid: 'test/hazer', modeShortName: '4ch', dmxUniverseUuid: 'u', dmxFirstChannel: 110 },
+        { uuid: 'macro-par', profileUuid: 'test/macro-par', modeShortName: 'macros', dmxUniverseUuid: 'u', dmxFirstChannel: 120 },
+        { uuid: 'effects-spot', profileUuid: 'test/effects-spot', modeShortName: 'full', dmxUniverseUuid: 'u', dmxFirstChannel: 130 },
+      ],
+      presetFixtures: [
+        'par',
+        'head',
+        'head-2',
+        'dimmer',
+        'strobe',
+        'gobo',
+        'two-wheels',
+        'gobo-2',
+        'strobe-speed',
+        'fan',
+        'beam',
+        'strobe-par',
+        'mover',
+        'hazer',
+        'macro-par',
+        'effects-spot',
+      ].map((fixtureUuid) => ({ fixtureUuid })),
+      presets: [{ uuid: 'look', steps: [{ uuid: 'step' }] }],
+    });
+    TestBed.inject(ProjectService).project = project;
+    TestBed.inject(FixtureService).updateCachedFixtures();
+
+    preset = project.presets[0];
+    presetService = TestBed.inject(PresetService);
+    presetService.selectedPreset = preset;
+    presetService.selectedStep = preset.steps[0];
+
     fixture = TestBed.createComponent(FixtureCapabilityComponent);
-    component = fixture.componentInstance;
+    element = fixture.nativeElement;
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  afterEach(() => fixture.destroy());
+
+  // the preset lights the passed fixtures now
+  function light(...fixtureUuids: string[]) {
+    preset.fixtures = fixtureUuids.map((fixtureUuid) => new PresetFixture({ fixtureUuid }));
+    presetService.fixtureSelectionChanged.next();
+  }
+
+  function panels(): string[] {
+    return Array.from(element.querySelectorAll('.row > .col > *')).map((panel) =>
+      panel.tagName.toLowerCase().replace('lib-app-fixture-capability-', '')
+    );
+  }
+
+  function message(): string {
+    return element.querySelector('p.text-muted')?.textContent.trim();
+  }
+
+  // the color wheel panels, with what they are handed
+  function wheels(): any[] {
+    return Array.from(element.querySelectorAll('lib-app-fixture-capability-color-wheel'));
+  }
+
+  // what the panels of the capabilities set as a position and of the emitters are handed
+  function positions(): string[] {
+    return (Array.from(element.querySelectorAll('lib-app-fixture-capability-position')) as any[])
+      .filter((panel) => panel.type !== 'ColorIntensity')
+      .map((panel) => panel.type);
+  }
+
+  function emitters(): string[] {
+    return (Array.from(element.querySelectorAll('lib-app-fixture-capability-position')) as any[])
+      .filter((panel) => panel.type === 'ColorIntensity')
+      .map((panel) => panel.color);
+  }
+
+  it('asks for fixtures while the project has none', () => {
+    project.fixtures = [];
+    fixture.destroy();
+    fixture = TestBed.createComponent(FixtureCapabilityComponent);
+    element = fixture.nativeElement;
+    fixture.detectChanges();
+
+    expect(message()).toBe('designer.fixture.no-fixtures');
+  });
+
+  it('asks for the fixtures of the preset while it has none', () => {
+    expect(panels()).toEqual([]);
+    expect(message()).toBe('designer.fixture.no-fixtures-selected');
+  });
+
+  it('shows nothing to set while no preset is being edited', () => {
+    presetService.selectedPreset = undefined;
+    light();
+
+    expect(element.querySelector('.row')).toBeNull();
+    expect(message()).toBeUndefined();
+  });
+
+  it('sets the dimmer, the color and the strobe of a par', () => {
+    light('par');
+
+    expect(panels()).toEqual(['dimmer', 'color', 'position']);
+    expect(positions()).toEqual(['ShutterStrobe']);
+    expect(message()).toBeUndefined();
+  });
+
+  it('sets the dimmer, the color, the color wheel, the position and the strobe of a moving head', () => {
+    light('head');
+
+    expect(panels()).toEqual(['dimmer', 'color', 'color-wheel', 'pan-tilt', 'position']);
+
+    const [wheel] = wheels();
+
+    expect(wheel.profile.uuid).toBe('test/moving-head');
+    expect(wheel.channel.name).toBe('Color Wheel');
+    expect(wheel.wheelIndex).toBe(0);
+    expect(wheel.showContainer).toBe(false);
+  });
+
+  it('shows a color wheel of a profile once, however many fixtures of it the preset lights', () => {
+    light('head', 'head-2');
+
+    expect(wheels().length).toBe(1);
+  });
+
+  it('shows each color wheel of a profile, naming them', () => {
+    light('head', 'two-wheels');
+
+    expect(wheels().map((wheel) => wheel.profile.uuid + '/' + wheel.channel.name)).toEqual([
+      'test/moving-head/Color Wheel',
+      'two-wheels/Color Wheel 1',
+      'two-wheels/Color Wheel 2',
+    ]);
+    expect(wheels().map((wheel) => wheel.wheelIndex)).toEqual([0, 1, 2]);
+    expect(wheels().every((wheel) => wheel.showContainer)).toBe(true);
+  });
+
+  it('sets the strobe of a fixture with nothing but a strobe', () => {
+    light('strobe');
+
+    expect(panels()).toEqual(['position']);
+    expect(positions()).toEqual(['ShutterStrobe']);
+    expect(message()).toBeUndefined();
+  });
+
+  it('sets the strobe of a fixture with a channel for its speed only', () => {
+    light('strobe-speed');
+
+    expect(positions()).toEqual(['ShutterStrobe']);
+  });
+
+  it('sets a gobo wheel of a profile once, however many fixtures of it the preset lights', () => {
+    light('gobo', 'gobo-2');
+
+    expect(panels()).toEqual(['gobo-wheel']);
+
+    const [wheel] = Array.from(element.querySelectorAll('lib-app-fixture-capability-gobo-wheel')) as any[];
+    expect(wheel.profile.uuid).toBe('gobo');
+    expect(wheel.channel.name).toBe('Gobo Wheel');
+  });
+
+  it('only sends to the channels a fixture which has nothing else to set', () => {
+    light('fan');
+
+    expect(panels()).toEqual([]);
+    expect(message()).toBe('designer.fixture.no-capabilities-available');
+  });
+
+  it('sets the emitters besides red, green and blue and the beam, in their order', () => {
+    light('beam', 'strobe-par');
+
+    expect(panels()).toEqual(['dimmer', 'color', 'color-wheel', ...Array(11).fill('position')]);
+    expect(emitters()).toEqual(['White', 'Amber', 'UV']);
+    expect(positions()).toEqual(['ShutterStrobe', 'Zoom', 'Focus', 'Iris', 'Frost', 'ColorTemperature', 'Prism', 'IrisEffect']);
+  });
+
+  it('turns, pulses and frames a spot which can, blade by blade', () => {
+    light('effects-spot');
+
+    expect(positions()).toEqual([
+      'Iris',
+      'Frost',
+      'WheelSlotRotation',
+      'PrismRotation',
+      'Rotation',
+      'IrisEffect',
+      'FrostEffect',
+      'BladeSystemRotation',
+      'BladeInsertion',
+      'BladeInsertion',
+      'BladeRotation',
+    ]);
+
+    const blades = (Array.from(element.querySelectorAll('lib-app-fixture-capability-position')) as any[])
+      .filter((panel) => panel.blade)
+      .map((panel) => panel.type + ' ' + panel.blade);
+    expect(blades).toEqual(['BladeInsertion Top', 'BladeInsertion Bottom', 'BladeRotation Top']);
+    expect(panels()).toContain('gobo-wheel');
+  });
+
+  it('sets the movement speed, the flash duration and the zoom of a mover, which has a beam angle', () => {
+    light('mover');
+
+    expect(positions()).toEqual(['ShutterStrobe', 'StrobeDuration', 'Zoom', 'PanTiltSpeed']);
+  });
+
+  it('sets the fog of a hazer, whichever kind of fog its channels name', () => {
+    light('hazer');
+
+    expect(panels()).toEqual(['position']);
+    expect(positions()).toEqual(['FogOutput']);
+  });
+
+  it('sets the color of a par lighting in nothing but its color macros', () => {
+    light('macro-par');
+
+    expect(panels()).toEqual(['dimmer', 'color']);
+  });
+
+  it('follows the preset and the step being picked', () => {
+    preset.fixtures = [new PresetFixture({ fixtureUuid: 'par' })];
+    presetService.previewSelectionChanged.next();
+    expect(panels()).toEqual(['dimmer', 'color', 'position']);
+
+    preset.fixtures = [new PresetFixture({ fixtureUuid: 'dimmer' })];
+    presetService.stepsChanged.next();
+    expect(panels()).toEqual(['dimmer']);
+  });
+
+  it('stretches the panels to its height in Chrome only', () => {
+    light('par');
+    expect(element.querySelector('.row').classList).toContain('h-100');
+
+    spyOnProperty(Navigator.prototype, 'appVersion', 'get').and.returnValue('5.0 (Macintosh) Version/17.0 Safari/605.1.15');
+    light('par');
+
+    expect(element.querySelector('.row').classList).not.toContain('h-100');
+  });
+
+  it('highlights itself on its step of the intro', () => {
+    const introService = TestBed.inject(IntroService);
+    introService.showIntro = true;
+    introService.activeStep = 'capabilities';
+    introService.stepChanged.next();
+
+    expect(element.querySelector('.card').classList).toContain('card-intro-active');
+  });
+
+  it('stops following the preset once it is gone', () => {
+    fixture.destroy();
+
+    light('par');
+    presetService.previewSelectionChanged.next();
+    presetService.stepsChanged.next();
+
+    expect(fixture.componentInstance.hasCapabilityDimmer).toBe(false);
   });
 });

@@ -13,7 +13,7 @@
       </div>
     </div>
     <div class="pull-right">
-      <input type="text" [(ngModel)]="color" class="sd-value-input sd-value-input-hex" />
+      <input type="text" [ngModel]="color" (ngModelChange)="typeColor($event)" class="sd-value-input sd-value-input-hex" />
     </div>
   </div>
 

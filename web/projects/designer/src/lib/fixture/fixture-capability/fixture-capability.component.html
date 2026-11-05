@@ -21,13 +21,14 @@
       </div>
       }
       <!-- Color wheels -->
-      @for (entry of colorWheelChannels | keyvalue; track $index; let i = $index) {
+      @for (entry of colorWheelChannels; track $index; let i = $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-color-wheel
-          [profile]="entry.key"
-          [channel]="entry.value"
+          [profile]="entry.profile"
+          [channel]="entry.channel"
+          [fixtureChannels]="entry.fixtureChannels"
           [wheelIndex]="i"
-          [showContainer]="colorWheelChannels.size > 1"
+          [showContainer]="colorWheelChannels.length > 1"
         ></lib-app-fixture-capability-color-wheel>
       </div>
       }
@@ -35,6 +36,30 @@
       @if (hasCapabilityPanTilt) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
         <lib-app-fixture-capability-pan-tilt></lib-app-fixture-capability-pan-tilt>
+      </div>
+      }
+      <!-- The emitters besides red, green and blue (e.g. white, amber or UV) -->
+      @for (color of emitterColors; track color) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="'ColorIntensity'" [color]="color"></lib-app-fixture-capability-position>
+      </div>
+      }
+      <!-- Strobe, zoom, focus, iris, frost, color temperature and prism, which play the same on every model -->
+      @for (type of positionedTypes; track type) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="type"></lib-app-fixture-capability-position>
+      </div>
+      }
+      <!-- The blades of a framing shutter -->
+      @for (panel of bladePanels; track panel.type + panel.blade) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-position [type]="panel.type" [blade]="panel.blade"></lib-app-fixture-capability-position>
+      </div>
+      }
+      <!-- Gobo wheels -->
+      @for (entry of goboWheelChannels; track $index) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-gobo-wheel [profile]="entry.profile" [channel]="entry.channel"></lib-app-fixture-capability-gobo-wheel>
       </div>
       }
       <!-- Fix spacing at the end -->
@@ -50,7 +75,7 @@
       <p class="m-auto text-muted">{{ 'designer.fixture.no-fixtures-selected' | translate }}</p>
     </div>
     } @if ( projectService.project.fixtures.length > 0 && presetService.selectedPreset && presetService.selectedPreset.fixtures.length > 0
-    && !hasCapabilityColorOrColorWheel && !hasCapabilityPanTilt ) {
+    && !hasCapabilities ) {
     <div class="m-auto">
       <p class="m-auto text-muted">{{ 'designer.fixture.no-capabilities-available' | translate }}</p>
     </div>

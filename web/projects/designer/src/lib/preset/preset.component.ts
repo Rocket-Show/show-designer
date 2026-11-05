@@ -337,6 +337,16 @@ export class PresetComponent implements OnInit, OnDestroy {
     this.buildTree();
   }
 
+  // what the mark of a preset setting values only one model of fixture plays says: how many, for which models
+  modelSpecificTitle(preset: Preset): string {
+    const values = this.presetService.getModelSpecificValues(preset);
+
+    return this.translateService.instant('designer.preset.model-specific', {
+      count: values.reduce((sum, value) => sum + value.count, 0),
+      models: values.map((value) => value.profile.name).join(', '),
+    });
+  }
+
   // the name a copy is given, so it can be told apart from the preset it was copied from
   private copyName(name: string): string {
     return this.translateService.instant('designer.misc.copy-name', { name });
