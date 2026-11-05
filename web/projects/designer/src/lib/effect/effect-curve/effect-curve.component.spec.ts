@@ -821,6 +821,36 @@ describe('EffectCurveComponent', () => {
     expect(pixels.imageName).toBe('red.png');
   });
 
+  it('follows the audio of the composition, in a band and with its brightness or its size', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // the fourth tab: the audio it follows
+    (element.querySelectorAll('.effect-tab-rail .nav-link')[3] as HTMLElement).click();
+    await update();
+    expect(element.querySelector('select[name="audioBand"]')).toBeNull();
+
+    (element.querySelector('#audioSource_pixels_composition') as HTMLInputElement).click();
+    await update();
+    await select(element.querySelector('select[name="audioBand"]'), 'bass');
+    await select(element.querySelector('select[name="audioFollows"]'), 'size');
+    type(element.querySelector('input[name="audioGainDb"]'), '6');
+    type(element.querySelector('input[name="audioFloorDb"]'), '-40');
+    type(element.querySelector('input[name="audioAttackMillis"]'), '50');
+    type(element.querySelector('input[name="audioReleaseMillis"]'), '800');
+    // beyond what it takes
+    type(element.querySelector('input[name="audioFloorDb"]'), '0');
+    type(element.querySelector('input[name="audioReleaseMillis"]'), 'slow');
+
+    expect([pixels.audioSource, pixels.audioBand, pixels.audioFollows]).toEqual(['composition', 'bass', 'size']);
+    expect([pixels.audioGainDb, pixels.audioFloorDb, pixels.audioAttackMillis, pixels.audioReleaseMillis]).toEqual([6, -40, 50, 800]);
+
+    // the level meter shows the audio itself
+    await select(element.querySelector('select[name="pattern"]'), 'meter');
+    expect(element.querySelector('select[name="audioFollows"]')).toBeNull();
+  });
+
   it('paints a pixel effect on each fixture or across the stage, and on the white LEDs', async () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;

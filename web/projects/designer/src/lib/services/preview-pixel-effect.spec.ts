@@ -311,6 +311,55 @@ describe('PreviewService pixel effects', () => {
     expect(valuesOf(light('#ffffff', { whiteLed: true, blend: 'add' }))).toEqual([0, 0, 0, 255]);
   });
 
+  it('follows the audio of the composition with its brightness or its size', () => {
+    // loud from the start, silent from a second on
+    previewService.audioFrames = (index: number) => new Array(21).fill(index < 50 ? 0 : -100);
+    const flow = (extra: any) =>
+      presetWith(
+        ['bar-1'],
+        pixelEffect({ pattern: 'flow', audioSource: 'composition', audioAttackMillis: 0, audioReleaseMillis: 0, ...extra })
+      );
+
+    expect(colorOf('bar-1', '2', flow({}), 500)).toEqual([255, 0, 0]);
+    expect(colorOf('bar-1', '2', flow({}), 1500)).toEqual([0, 0, 0]);
+    // its size: as loud as it gets, as large as without the audio, silent of no size (the flow runs longer then)
+    const gradient = {
+      palette: {
+        stops: [
+          { position: 0, color: '#000000' },
+          { position: 1, color: '#ffffff' },
+        ],
+      },
+    };
+    const sized = flow({ audioFollows: 'size', ...gradient });
+    const unsized = flow({ audioSource: 'off', ...gradient });
+    expect(colorOf('bar-1', '3', sized, 500)).toEqual(colorOf('bar-1', '3', unsized, 500));
+    expect(colorOf('bar-1', '3', sized, 1500)).not.toEqual(colorOf('bar-1', '3', unsized, 1500));
+    // none without following it
+    expect(colorOf('bar-1', '2', flow({ audioSource: 'off' }), 1500)).toEqual([255, 0, 0]);
+    previewService.audioFrames = undefined;
+  });
+
+  it('fills a level meter up to how loud the audio is', () => {
+    // a bar of three pixels, half way up
+    previewService.audioFrames = () => new Array(21).fill(-30);
+    const meter = presetWith(['bar-1'], pixelEffect({ pattern: 'meter', audioSource: 'composition', audioAttackMillis: 0 }));
+
+    expect([colorOf('bar-1', '1', meter, 1000)[0], colorOf('bar-1', '3', meter, 1000)[0]]).toEqual([255, 0]);
+    previewService.audioFrames = undefined;
+  });
+
+  it('follows a beat while the timeline does not play a composition', () => {
+    const beat = presetWith(
+      ['bar-1'],
+      pixelEffect({ pattern: 'meter', audioSource: 'composition', audioAttackMillis: 0, audioReleaseMillis: 0 })
+    );
+
+    // the kick on the beat fills the bar, before the next one it has faded
+    expect(colorOf('bar-1', '1', beat, 1000)[0]).toBe(255);
+    expect(colorOf('bar-1', '3', beat, 1000)[0]).toBeGreaterThan(colorOf('bar-1', '3', beat, 1440)[0]);
+  });
+
   it('places a pixel in its column and row, and a group of pixels in the middle of them', () => {
     const place = (fixtureUuid: string, pixelKey: string) => {
       const cachedFixture = fixtureService.cachedFixtures.find(

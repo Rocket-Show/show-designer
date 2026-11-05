@@ -67,3 +67,15 @@
 .pixel-image-failed {
   font-size: 0.75rem;
 }
+
+/* the settings of the audio a pixel effect follows: a label in front of each */
+.pixel-audio-label {
+  width: 90px;
+}
+
+.pixel-audio-hint {
+  max-width: 280px;
+  margin-top: var(--sd-space-1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

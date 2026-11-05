@@ -2192,6 +2192,8 @@ const pixelPatternNames = [
   'wave',
   'text',
   'image',
+  'meter',
+  'scope',
 ];
 
 // The picture of a text (a brightness for each pixel, mostly on or off, with the columns its letters start at) or of
@@ -2617,7 +2619,7 @@ function channelValuesPixelStage() {
   for (let index = 0; index < 24; index++) {
     const uuid = `stage-${index}`;
     // (the patterns there were when these cases were made, so they stay as they were)
-    const pattern = random.pick(pixelPatternNames.filter((name) => name !== 'text' && name !== 'image'));
+    const pattern = random.pick(pixelPatternNames.filter((name) => !['text', 'image', 'meter', 'scope'].includes(name)));
     const effect = {
       type: 'pixel',
       uuid: uuid + '-effect',
@@ -2686,6 +2688,99 @@ function channelValuesPixelStage() {
     'channel-values-pixel-stage.json',
     'channelValues',
     'Pixel effects spread across the stage, seen from the front and from above, and on the white LEDs of the pixels',
+    cases
+  );
+}
+
+// ---- pixel effects following the audio -----------------------------------------------------------
+
+// A recorded analysis of 5 seconds of audio (see PixelAudio): a kick on each beat at 120 bpm, a hi-hat between them,
+// mids moving about and a break of silence in the middle, each frame its RMS, peak, bass, mids, highs and 16 bands in
+// dB, rounded to a hundredth like the analyses
+function recordedAudio(random) {
+  const frames = [];
+
+  for (let index = 0; index < 250; index++) {
+    const silent = index >= 120 && index < 160;
+    const sinceKick = (index % 25) / 25;
+    const sinceHat = ((index + 12) % 25) / 25;
+    const bass = silent ? -100 : -50 + 46 * (1 - sinceKick) ** 3 + random.number(3);
+    const mids = silent ? -100 : -40 + random.number(25);
+    const highs = silent ? -100 : -55 + 40 * (1 - sinceHat) ** 6 + random.number(4);
+    const rms = silent ? -100 : Math.max(bass, mids, highs) - 3;
+    const frame = [rms, silent ? -100 : rms + 5, bass, mids, highs];
+
+    for (let band = 0; band < 16; band++) {
+      frame.push(silent ? -100 : (band < 4 ? bass : band < 11 ? mids : highs) - random.number(12));
+    }
+
+    frames.push(frame.map((db) => Math.round(db * 100) / 100));
+  }
+
+  return { frames };
+}
+
+// Bars, a matrix and a par following the recorded audio: the level meter (with the columns of the matrix as bands),
+// the wave of the audio and patterns following it with their brightness or their size, in each band, with gains,
+// floors, attacks and releases. Sampled while it plays, in its silence and after its end.
+function channelValuesPixelAudio() {
+  const random = randomSource(14);
+  const audio = recordedAudio(random);
+  const bar = 'test/pixel-bar';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  const fixtures = [
+    { ...edgeFixture('bar', bar, '9ch', 0), dmxFirstChannel: 0 },
+    { ...edgeFixture('matrix', matrix, '36ch', 0), dmxFirstChannel: 16 },
+    { ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 60 },
+  ];
+  const patterns = ['meter', 'meter', 'scope', 'scope', 'chase', 'plasma', 'sparkle', 'flow', 'ripple', 'meter'];
+  const cases = [];
+
+  patterns.forEach((pattern, index) => {
+    const uuid = `audio-${index}`;
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      pattern,
+      audioSource: index === patterns.length - 1 ? 'off' : 'composition',
+      capabilities: [],
+      channels: [],
+    };
+    random.maybe(effect, 'audioBand', ['full', 'bass', 'mid', 'high']);
+    random.maybe(effect, 'audioGainDb', [0, 6, -10]);
+    random.maybe(effect, 'audioFloorDb', [-60, -40, -80]);
+    random.maybe(effect, 'audioAttackMillis', [0, 20, 100]);
+    random.maybe(effect, 'audioReleaseMillis', [0, 300, 1000]);
+    random.maybe(effect, 'audioFollows', ['brightness', 'size']);
+    random.maybe(effect, 'size', [0, 0.4, 1]);
+    random.maybe(effect, 'direction', ['right', 'left', 'up']);
+    random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+    random.maybe(effect, 'lengthMillis', [1000, 2000]);
+
+    const preset = {
+      ...edgePreset(
+        uuid,
+        fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid))),
+        { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.5, 0.2)] }
+      ),
+      effects: [effect],
+    };
+
+    cases.push({
+      name: `${uuid} ${pattern} following ${effect.audioSource === 'off' ? 'no audio' : effect.audioBand || 'full'}`,
+      input: {
+        project: edgeProject([bar, matrix, par], fixtures, [preset], [{ uuid, name: uuid, presetUuids: [uuid] }]),
+        runs: previewScenes([uuid]).map((run) => ({ ...run, times: [0, 19.9, 260, 1000.5, 2450, 2900, 3300, 4990, 6200] })),
+        audio,
+      },
+    });
+  });
+
+  return write(
+    'channel-values-pixel-audio.json',
+    'channelValues',
+    'Pixel effects following a recorded analysis of audio: level meters, waves and patterns following its bands',
     cases
   );
 }
@@ -2826,6 +2921,7 @@ export function generate() {
     channelValuesPixelEffects(),
     channelValuesColorDimmers(),
     channelValuesPixelStage(),
+    channelValuesPixelAudio(),
   ];
 }
 

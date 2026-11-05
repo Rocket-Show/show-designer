@@ -1,4 +1,5 @@
 import { EffectCurve } from './effect-curve';
+import { PixelAudioSettings } from './pixel-audio';
 import { PixelBitmap } from './pixel-bitmap';
 import { PixelPalette } from './pixel-palette';
 import { PixelPatternSettings } from './pixel-pattern';
@@ -7,7 +8,7 @@ import { PixelPatternSettings } from './pixel-pattern';
 // each of them one pixel), in the colors of a palette. Each pixel takes the color of the pattern where it is in its
 // fixture. It runs on the timing of a curve: its period, its phase, the chase from one fixture to the next (a fixture
 // with all its pixels takes one step) and how long it runs. Rocket Show plays it the very same way (EffectPixel).
-export class EffectPixel extends EffectCurve implements PixelPatternSettings {
+export class EffectPixel extends EffectCurve implements PixelPatternSettings, PixelAudioSettings {
   // see pixel-pattern
   pattern = 'chase';
   size = 0.25;
@@ -45,6 +46,16 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
   fit = 'contain';
   textColors = 'along';
   imageColors = 'own';
+
+  // The audio it follows: none ('off') or the one of the composition playing, and how (see PixelAudio). The level meter
+  // and the wave of the audio show it, any other pattern follows it with its brightness or with its size.
+  audioSource = 'off';
+  audioBand = 'full';
+  audioGainDb = 0;
+  audioFloorDb = -60;
+  audioAttackMillis = 20;
+  audioReleaseMillis = 300;
+  audioFollows = 'brightness';
 
   // the text and its font (one of the pixel fonts, e.g. 'pixel-5x7', or of the browser) and how high it is drawn in
   // pixels with a font of the browser, the name of the image. Only the designer reads them.
@@ -84,6 +95,13 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
     this.fit = data.fit || 'contain';
     this.textColors = data.textColors || 'along';
     this.imageColors = data.imageColors || 'own';
+    this.audioSource = data.audioSource || 'off';
+    this.audioBand = data.audioBand || 'full';
+    this.audioGainDb = data.audioGainDb ?? 0;
+    this.audioFloorDb = data.audioFloorDb ?? -60;
+    this.audioAttackMillis = data.audioAttackMillis ?? 20;
+    this.audioReleaseMillis = data.audioReleaseMillis ?? 300;
+    this.audioFollows = data.audioFollows || 'brightness';
     this.text = data.text ?? '';
     this.font = data.font || 'pixel-5x7';
     this.textHeight = data.textHeight ?? 8;

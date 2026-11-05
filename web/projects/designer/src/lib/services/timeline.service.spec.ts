@@ -404,6 +404,39 @@ describe('TimelineService without an audio file', () => {
   });
 });
 
+// The analysis of the audio of the composition the pixel effects follow: worked out the first time one asks for it
+describe('TimelineService analyzing the audio of a composition', () => {
+  let service: TimelineService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+  });
+
+  it('analyzes the audio once a pixel effect asks for it, and forgets it with the composition', async () => {
+    // a tenth of a second of a loud sine
+    const samples = new Float32Array(4800).map((_, i) => Math.sin(i / 10));
+    (service as any).waveSurfer = {
+      backend: { buffer: { sampleRate: 48000, numberOfChannels: 1, length: samples.length, getChannelData: () => samples } },
+      destroy: () => {},
+    };
+
+    // nothing yet, while it is analyzed
+    expect(service.audioFrames).toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(service.audioFrames(2)[0]).toBeGreaterThan(-10);
+    expect(service.audioFrames(99)).toBeUndefined();
+
+    service.destroyWaveSurfer();
+    expect(service.audioFrames).toBeUndefined();
+  });
+});
+
 describe('TimelineService showing times', () => {
   let service: TimelineService;
 

@@ -1,5 +1,6 @@
 import { arcTangent2 } from './arc-tangent';
 import { cycleSine } from './cycle-sine';
+import { AUDIO_BANDS, PixelAudio } from './pixel-audio';
 import { PixelBitmap } from './pixel-bitmap';
 import { band, clamp01, fract, fractalNoise, hash, smoothStep, toInt, triangle } from './pixel-math';
 
@@ -56,7 +57,7 @@ export class PixelContext {
 }
 
 // the patterns a pixel effect can show, made for bars and made for matrices (each of them plays on both)
-export const pixelPatternsForBars = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'center', 'stripes', 'stack'];
+export const pixelPatternsForBars = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'center', 'stripes', 'stack', 'meter'];
 export const pixelPatternsForMatrices = [
   'plasma',
   'ripple',
@@ -69,6 +70,7 @@ export const pixelPatternsForMatrices = [
   'tunnel',
   'orbit',
   'wave',
+  'scope',
   'text',
   'image',
 ];
@@ -109,6 +111,8 @@ export const pixelPatternOptions: { [pattern: string]: PixelPatternOptions } = {
   tunnel: { shapes: outlines, softness: 'softness' },
   orbit: { shapes: ['circle', 'figure8', 'line', 'wave'], softness: 'trail' },
   wave: { directions: ['right', 'left'], shapes: ['sine', 'triangle', 'square', 'sawtooth'] },
+  meter: { withoutSize: true, directions: runs },
+  scope: { directions: ['right', 'left'] },
   text: { withoutSize: true },
   image: { withoutSize: true },
 };
@@ -330,7 +334,7 @@ function imagePosition(settings: PixelPatternSettings, cycle: number, context: P
 // bright the pixel is, between 0 and 1. An image showing its own colors gives the color of the pixel as well (red,
 // green and blue, between 0 and 1), in place of the palette. The moment is counted in periods of the effect since it
 // started. Rocket Show does the very same (PixelPatterns).
-export function samplePixelPattern(settings: PixelPatternSettings, cycle: number, context: PixelContext): number[] {
+export function samplePixelPattern(settings: PixelPatternSettings, cycle: number, context: PixelContext, audio?: PixelAudio): number[] {
   const size = settings.size;
   const softness = settings.softness;
   const direction = settings.direction;
@@ -596,6 +600,40 @@ export function samplePixelPattern(settings: PixelPatternSettings, cycle: number
       const edge = 0.5 / context.rows;
 
       return [height, 1 - smoothStep(value - edge, value + edge, height)];
+    }
+    case 'meter': {
+      // A bar filled up to how loud the audio is, a matrix with a column for each band from the lowest to the highest,
+      // like an equalizer. Without audio, a curve going up and down fills it.
+      if (!isMatrix(context)) {
+        const position = along(context, direction);
+        const edge = 0.5 / pixelsAlong(context, direction);
+        const level = audio ? audio.level() : triangle(cycle);
+
+        return [position, 1 - smoothStep(level - edge, level + edge, position)];
+      }
+
+      const band = Math.min(AUDIO_BANDS - 1, Math.floor(((context.column + 0.5) / context.columns) * AUDIO_BANDS));
+      const level = audio ? audio.band(band) : triangle(cycle + hash(context.column, 0, 4) * 0.5);
+      const height = 1 - context.y;
+      const edge = 0.5 / context.rows;
+
+      return [height, 1 - smoothStep(level - edge, level + edge, height)];
+    }
+    case 'scope': {
+      // How loud the audio was, scrolling along: the newest at the end it runs to, a matrix filled up to it. Across
+      // the pixels from half a second up to five. Without audio, a curve running along.
+      const frames = 25 + Math.floor(size * 225);
+      const back = Math.floor((1 - along(context, direction === 'left' ? 'left' : 'right')) * frames);
+      const level = audio ? audio.levelAgo(back) : triangle(cycle - back / frames);
+
+      if (!isMatrix(context)) {
+        return [level, level];
+      }
+
+      const height = 1 - context.y;
+      const edge = 0.5 / context.rows;
+
+      return [height, 1 - smoothStep(level - edge, level + edge, height)];
     }
     case 'text': {
       // a text of a pixel for each pixel, scrolling through the picture

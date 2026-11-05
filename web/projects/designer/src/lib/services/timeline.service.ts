@@ -13,6 +13,8 @@ import { getClipsEndMillis } from '../models/timeline-length';
 import { assignTracks, createTrack, getFreeGap, getPreviewTracks, getTrackRegions } from '../models/timeline-track';
 import { Track } from '../models/track';
 import { computePeaks } from '../models/waveform-peaks';
+import { AudioFrames } from '../models/pixel-audio';
+import { analyzeAudio } from '../models/pixel-audio-analysis';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
@@ -42,6 +44,10 @@ export class TimelineService {
 
   // the loudness of the audio file over time, see computePeaks
   public peaks: Float32Array = new Float32Array(0);
+
+  // the analysis of the audio of the composition the pixel effects follow, worked out the first time one asks for it
+  private analyzedAudioFrames: AudioFrames;
+  private analyzingAudio = false;
 
   // 0 = the whole song fits the width, otherwise pixels per second
   public zoom = 0;
@@ -681,6 +687,8 @@ export class TimelineService {
     this.clockStartedAt = undefined;
     this.audioDurationMillis = 0;
     this.peaks = new Float32Array(0);
+    this.analyzedAudioFrames = undefined;
+    this.analyzingAudio = false;
     this.loadingAudioFile = false;
     this.audioFileError = false;
 
@@ -688,6 +696,28 @@ export class TimelineService {
       this.waveSurfer.destroy();
       this.waveSurfer = undefined;
     }
+  }
+
+  // The frames of the analysis of the audio of the composition (see PixelAudio), none until it has been analyzed: the
+  // first time a pixel effect asks for them, in the background.
+  get audioFrames(): AudioFrames {
+    const buffer = this.waveSurfer?.backend?.buffer;
+
+    if (!this.analyzedAudioFrames && !this.analyzingAudio && buffer) {
+      this.analyzingAudio = true;
+      const waveSurfer = this.waveSurfer;
+
+      analyzeAudio(buffer)
+        .then((frames) => {
+          // unless another composition has been opened meanwhile
+          if (this.waveSurfer === waveSurfer) {
+            this.analyzedAudioFrames = (index: number) => frames[index];
+          }
+        })
+        .catch((error) => console.error('Could not analyze the audio of the composition', error));
+    }
+
+    return this.analyzedAudioFrames;
   }
 
   createWaveSurfer() {

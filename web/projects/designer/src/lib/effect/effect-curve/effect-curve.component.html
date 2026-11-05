@@ -543,6 +543,20 @@
     >
       <i class="fa fa-th-large fa-fw" aria-hidden="true"></i>
     </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'audio'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'audio'"
+      popover="{{ 'designer.effect.pixel-audio' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'audio'; (false)"
+    >
+      <i class="fa fa-volume-up fa-fw" aria-hidden="true"></i>
+    </a>
   </div>
 </div>
 
@@ -564,6 +578,86 @@
       {{ 'designer.effect.pixel-palette-' + palette.id | translate }}
     </label>
   </div>
+  } } @else if (pixelTab === 'audio') {
+  <!-- the audio it follows: none or the one of the composition, which band and how -->
+  @for (source of pixelAudioSources; track source) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'audioSource_' + curve.uuid"
+      [id]="'audioSource_' + curve.uuid + '_' + source"
+      [checked]="pixelEffect.audioSource === source"
+      (change)="setAudioSource(source)"
+    />
+    <label class="form-check-label" [for]="'audioSource_' + curve.uuid + '_' + source">{{
+      'designer.effect.pixel-audio-source-' + source | translate
+    }}</label>
+  </div>
+  } @if (pixelEffect.audioSource === 'composition') {
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-band' | translate }}</div>
+    <select name="audioBand" [ngModel]="pixelEffect.audioBand" (ngModelChange)="setAudioBand($event)">
+      @for (band of pixelAudioBands; track band) {
+      <option [value]="band">{{ 'designer.effect.pixel-audio-band-' + band | translate }}</option>
+      }
+    </select>
+  </div>
+  @if (!showsAudio()) {
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-follows' | translate }}</div>
+    <select name="audioFollows" [ngModel]="pixelEffect.audioFollows" (ngModelChange)="setAudioFollows($event)">
+      @for (follows of pixelAudioFollows; track follows) {
+      <option [value]="follows">{{ 'designer.effect.pixel-audio-follows-' + follows | translate }}</option>
+      }
+    </select>
+  </div>
+  }
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-gain' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioGainDb"
+      [ngModel]="pixelEffect.audioGainDb"
+      (ngModelChange)="setAudioNumber('audioGainDb', $event)"
+    />
+    <div class="my-auto ml-1">dB</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-floor' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioFloorDb"
+      [ngModel]="pixelEffect.audioFloorDb"
+      (ngModelChange)="setAudioNumber('audioFloorDb', $event)"
+    />
+    <div class="my-auto ml-1">dB</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-attack' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioAttackMillis"
+      [ngModel]="pixelEffect.audioAttackMillis"
+      (ngModelChange)="setAudioNumber('audioAttackMillis', $event)"
+    />
+    <div class="my-auto ml-1">ms</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-release' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioReleaseMillis"
+      [ngModel]="pixelEffect.audioReleaseMillis"
+      (ngModelChange)="setAudioNumber('audioReleaseMillis', $event)"
+    />
+    <div class="my-auto ml-1">ms</div>
+  </div>
+  <div class="text-muted pixel-audio-hint">{{ 'designer.effect.pixel-audio-hint' | translate }}</div>
   } } @else if (pixelTab === 'place') {
   <!-- where the pattern is painted: on each fixture or across the stage, seen from the front or from above -->
   @for (spread of pixelSpreads; track spread) {

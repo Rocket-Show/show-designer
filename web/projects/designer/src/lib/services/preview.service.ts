@@ -15,9 +15,11 @@ import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { EffectPixel } from '../models/effect-pixel';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { PixelPalette } from '../models/pixel-palette';
-import { PixelContext, samplePixelPattern } from '../models/pixel-pattern';
+import { PixelContext, PixelPatternSettings, samplePixelPattern } from '../models/pixel-pattern';
 import { toInt } from '../models/pixel-math';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../models/pixel-stage';
+import { AudioFrames, PixelAudio } from '../models/pixel-audio';
+import { demoAudioFrames } from '../models/pixel-audio-analysis';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
@@ -70,6 +72,13 @@ export class PreviewService implements OnDestroy {
   private framePlacements = new Map<string, StagePlacement>();
   private frameFixtureIndices = new Map<Preset, Map<string, number>>();
   private frameStagePlaces = new Map<Preset, Map<string, Map<CachedFixture, PixelContext>>>();
+  private frameTimeMillis = 0;
+  private frameAudio = new Map<EffectPixel, PixelAudio>();
+  private frameSizedSettings = new Map<EffectPixel, PixelPatternSettings>();
+
+  // The frames of the audio the pixel effects follow, if they are given (e.g. by a test). Otherwise the ones of the
+  // composition while the timeline plays it, and a beat to show what they do while it doesn't.
+  public audioFrames: AudioFrames;
 
   // Whether the lights glow in the 3d preview, the way they do in the dark (it costs a bit of performance). On unless
   // it was turned off.
@@ -786,9 +795,16 @@ export class PreviewService implements OnDestroy {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
     }
 
+    // The audio it follows: shown by the level meter and the wave of the audio, followed with its brightness or its size
+    // by the other patterns
+    const audio = this.getPixelAudio(effect);
+    const showsAudio = effect.pattern === 'meter' || effect.pattern === 'scope';
+    const audioLevel = audio && !showsAudio ? audio.level() : 1;
+    const settings = audio && !showsAudio && effect.audioFollows === 'size' ? this.getSizedSettings(effect, audioLevel) : effect;
+
     // the color of the pixel through the palette, or the own one of an image
-    const sample = samplePixelPattern(effect, cycles, context);
-    const level = sample[1];
+    const sample = samplePixelPattern(settings, cycles, context, audio);
+    const level = sample[1] * (effect.audioFollows === 'size' ? 1 : audioLevel);
     const palette = effect.palette;
     const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
     const color = sample.length > 2 ? sample.slice(2, 5) : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0]);
@@ -854,6 +870,46 @@ export class PreviewService implements OnDestroy {
     fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
     fixtureChannelValue.value = channel.maxValue * target;
     this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+  }
+
+  // the audio a pixel effect follows at the moment of the frame, none for one which follows none
+  private getPixelAudio(effect: EffectPixel): PixelAudio {
+    if (effect.audioSource !== 'composition') {
+      return undefined;
+    }
+
+    let audio = this.frameAudio.get(effect);
+
+    if (!audio) {
+      audio = new PixelAudio(this.getAudioFrames(), this.frameTimeMillis, effect);
+      this.frameAudio.set(effect, audio);
+    }
+
+    return audio;
+  }
+
+  // the settings of a pixel effect with its size following the audio, once in a frame
+  private getSizedSettings(effect: EffectPixel, audioLevel: number): PixelPatternSettings {
+    let settings = this.frameSizedSettings.get(effect);
+
+    if (!settings) {
+      settings = { ...effect, size: effect.size * audioLevel };
+      this.frameSizedSettings.set(effect, settings);
+    }
+
+    return settings;
+  }
+
+  private getAudioFrames(): AudioFrames {
+    if (this.audioFrames) {
+      return this.audioFrames;
+    }
+
+    if (this.timelineService.playState === 'playing' && this.timelineService.audioFrames) {
+      return this.timelineService.audioFrames;
+    }
+
+    return demoAudioFrames;
   }
 
   // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in
@@ -1016,6 +1072,9 @@ export class PreviewService implements OnDestroy {
     this.framePlacements = placements;
     this.frameFixtureIndices = fixtureIndices;
     this.frameStagePlaces = new Map();
+    this.frameTimeMillis = timeMillis;
+    this.frameAudio = new Map();
+    this.frameSizedSettings = new Map();
     const sameLamps = this.getSameLamps(this.fixtureService.cachedFixtures);
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {

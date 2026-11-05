@@ -143,9 +143,13 @@ function frameServices() {
 
 // the values the preview gives every fixture (and pixel) of a project at the passed times, the way
 // it plays the timeline of a composition, the selected preset or the selected scenes
-function channelValues(projectData: any, preview: any, times: number[]): any[] {
+function channelValues(projectData: any, preview: any, times: number[], audio?: any): any[] {
   const services = frameServices();
   const project = new Project(resolveProfiles(projectData));
+
+  // the analysis of the audio the pixel effects follow, recorded (none: silence)
+  const audioFrames: number[][] = audio?.frames ?? [];
+  services.previewService.audioFrames = (index: number) => audioFrames[index];
 
   services.projectService.project = project;
   services.fixtureService.updateCachedFixtures();
@@ -387,7 +391,7 @@ const kinds: { [kind: string]: (input: any) => any } = {
     });
   },
 
-  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times)),
+  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times, input.audio)),
 
   migration: (input) => migratedProjectOf(migrate(input.project)),
 };

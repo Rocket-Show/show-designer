@@ -35,6 +35,8 @@ import { getStagePlacements } from '../../models/pan-tilt';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../../models/pixel-stage';
 import { PIXEL_FONT, textBitmap } from '../../models/pixel-text';
 import { animationMillis, DEFAULT_PIXEL_IMAGE_SIZE, imageBitmapOf, PIXEL_IMAGE_SIZES } from '../../models/pixel-image';
+import { PixelAudio } from '../../models/pixel-audio';
+import { demoAudioFrames } from '../../models/pixel-audio-analysis';
 
 // a fixture in the preview of a pixel effect: where each of its parts is, and the step of the chase it takes
 interface PixelPreviewFixture {
@@ -176,6 +178,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public readonly pixelTextColors = ['along', 'letters', 'one'];
   public readonly pixelImageColors = ['own', 'palette'];
   public readonly pixelImageSizes = PIXEL_IMAGE_SIZES;
+  public readonly pixelAudioSources = ['off', 'composition'];
+  public readonly pixelAudioBands = ['full', 'bass', 'mid', 'high'];
+  public readonly pixelAudioFollows = ['brightness', 'size'];
 
   // how large an image is made when it is picked, and whether the last one could not be read
   public pixelImageSize = DEFAULT_PIXEL_IMAGE_SIZE;
@@ -581,6 +586,44 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // ---- the audio it follows
+
+  // the level meter and the wave of the audio show it, the other patterns follow it
+  showsAudio(): boolean {
+    return this.pixelEffect.pattern === 'meter' || this.pixelEffect.pattern === 'scope';
+  }
+
+  setAudioSource(source: string) {
+    this.pixelEffect.audioSource = source;
+    this.livePreviewService.previewLive();
+  }
+
+  setAudioBand(band: string) {
+    this.pixelEffect.audioBand = band;
+    this.livePreviewService.previewLive();
+  }
+
+  setAudioFollows(follows: string) {
+    this.pixelEffect.audioFollows = follows;
+    this.livePreviewService.previewLive();
+  }
+
+  // the gain and the floor in dB, the attack and the release in ms
+  setAudioNumber(key: 'audioGainDb' | 'audioFloorDb' | 'audioAttackMillis' | 'audioReleaseMillis', value: any) {
+    const number = Number(value);
+    const allowed = {
+      audioGainDb: [-40, 40],
+      audioFloorDb: [-100, -6],
+      audioAttackMillis: [0, 5000],
+      audioReleaseMillis: [0, 10000],
+    }[key];
+
+    if (value !== '' && value !== null && !isNaN(number) && number >= allowed[0] && number <= allowed[1]) {
+      this.pixelEffect[key] = number;
+      this.livePreviewService.previewLive();
+    }
+  }
+
   setMirror(mirror: boolean) {
     this.pixelEffect.mirror = mirror;
     this.livePreviewService.previewLive();
@@ -902,7 +945,18 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
     }
 
-    const sample = samplePixelPattern(effect, cycles, context);
+    // following a beat, like the preview does while no composition plays (see PreviewService.getPixelAudio)
+    const audio =
+      effect.audioSource === 'composition' ? new PixelAudio(demoAudioFrames, this.animationService.timeMillis, effect) : undefined;
+    const showsAudio = effect.pattern === 'meter' || effect.pattern === 'scope';
+    const audioLevel = audio && !showsAudio ? audio.level() : 1;
+    const followsSize = audio && !showsAudio && effect.audioFollows === 'size';
+    const sample = samplePixelPattern(followsSize ? { ...effect, size: effect.size * audioLevel } : effect, cycles, context, audio);
+
+    if (!followsSize) {
+      sample[1] *= audioLevel;
+    }
+
     const stops = effect.palette.ref === 'preset' ? PixelPalette.shadesOf(base) : effect.palette.stops;
     const color =
       sample.length > 2 ? sample.slice(2, 5) : PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, sample[0]);
