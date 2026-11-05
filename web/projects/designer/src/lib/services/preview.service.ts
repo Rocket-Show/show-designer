@@ -786,10 +786,12 @@ export class PreviewService implements OnDestroy {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
     }
 
-    const [place, level] = samplePixelPattern(effect, cycles, context);
+    // the color of the pixel through the palette, or the own one of an image
+    const sample = samplePixelPattern(effect, cycles, context);
+    const level = sample[1];
     const palette = effect.palette;
     const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
-    const color = PixelPalette.colorOf(stops, palette.between, palette.repeat, place);
+    const color = sample.length > 2 ? sample.slice(2, 5) : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0]);
     const lit = color.map((component) => component * level);
 
     // the white part of the light on the white LED, if it is to light it

@@ -50,3 +50,20 @@
   border-radius: 3px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
+
+/* the text a pixel effect shows */
+.pixel-text-input {
+  width: 180px;
+}
+
+/* the button picking the image of a pixel effect, with the name of the image picked */
+.pixel-image-pick {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pixel-image-failed {
+  font-size: 0.75rem;
+}

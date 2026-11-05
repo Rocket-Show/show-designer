@@ -756,6 +756,71 @@ describe('EffectCurveComponent', () => {
     expect(element.querySelectorAll('.pixel-palette').length).toBe(15);
   });
 
+  it('writes a text in the pixel font or a font of the browser, scrolling or standing', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // a text to start with, in the pixel font
+    await select(element.querySelector('select[name="pattern"]'), 'text');
+    expect(pixels.text).toBe('Rocket Show');
+    expect(pixels.bitmap.height).toBe(7);
+    expect(element.querySelector('input[name="pixelSize"]')).toBeNull();
+
+    type(element.querySelector('input[name="pixelText"]'), 'Hi');
+    expect(pixels.bitmap.width).toBe(9);
+
+    // a font of the browser, as high as asked
+    await select(element.querySelector('select[name="pixelFont"]'), 'serif');
+    type(element.querySelector('input[name="pixelTextHeight"]'), '12');
+    type(element.querySelector('input[name="pixelTextHeight"]'), '200');
+    expect([pixels.font, pixels.textHeight, pixels.bitmap.height]).toEqual(['serif', 12, 12]);
+
+    // scrolling to the left, or standing where it is aligned
+    expect((element.querySelector('select[name="pixelScroll"]') as HTMLSelectElement).value).toBe('left');
+    expect(element.querySelector('select[name="pixelAlign"]')).toBeNull();
+    await select(element.querySelector('select[name="pixelScroll"]'), 'none');
+    await select(element.querySelector('select[name="pixelAlign"]'), 'right');
+    await select(element.querySelector('select[name="pixelTextColors"]'), 'letters');
+    type(element.querySelector('input[name="pixelOffsetY"]'), '2');
+    expect([pixels.scroll, pixels.align, pixels.textColors, pixels.offsetY]).toEqual(['none', 'right', 'letters', 2]);
+  });
+
+  it('makes an image picked into its pixels, an animation running in a period as long as it takes', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+    await select(element.querySelector('select[name="pattern"]'), 'image');
+
+    // an image of 4 x 2 pixels
+    const canvas = document.createElement('canvas');
+    canvas.width = 4;
+    canvas.height = 2;
+    canvas.getContext('2d').fillStyle = '#ff0000';
+    canvas.getContext('2d').fillRect(0, 0, 4, 2);
+    const blob: Blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], 'red.png', { type: 'image/png' });
+
+    await component.pickImage({ target: { files: [file], value: 'red.png' } } as any);
+    await update();
+
+    expect([pixels.bitmap.width, pixels.bitmap.height, pixels.bitmap.channels, pixels.imageName]).toEqual([4, 2, 3, 'red.png']);
+    expect(pixels.bitmap.value(pixels.bitmap.frame(0), 3, 1, 0)).toBe(255);
+    expect(element.querySelector('.pixel-image-pick').textContent).toContain('red.png');
+
+    // fitted, scrolling and in its own colors or through the palette
+    expect((element.querySelector('select[name="pixelScroll"]') as HTMLSelectElement).value).toBe('none');
+    await select(element.querySelector('select[name="pixelFit"]'), 'cover');
+    await select(element.querySelector('select[name="pixelImageColors"]'), 'palette');
+    expect([pixels.fit, pixels.imageColors]).toEqual(['cover', 'palette']);
+
+    // something which is no image
+    await component.pickImage({ target: { files: [new File(['no image'], 'notes.txt', { type: 'text/plain' })], value: '' } } as any);
+    await update();
+    expect(element.querySelector('.pixel-image-failed')).not.toBeNull();
+    expect(pixels.imageName).toBe('red.png');
+  });
+
   it('paints a pixel effect on each fixture or across the stage, and on the white LEDs', async () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;

@@ -1,4 +1,5 @@
 import { EffectCurve } from './effect-curve';
+import { PixelBitmap } from './pixel-bitmap';
 import { PixelPalette } from './pixel-palette';
 import { PixelPatternSettings } from './pixel-pattern';
 
@@ -34,6 +35,24 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
   // with red, green and blue
   whiteLed = false;
 
+  // The picture of a text or an image and how it is shown (see PixelPatternSettings). The designer makes the picture
+  // of a text from the text and its font, and the one of an image when it is picked: Rocket Show only reads the
+  // picture.
+  bitmap: PixelBitmap;
+  scroll = 'auto';
+  align = 'center';
+  offsetY = 0;
+  fit = 'contain';
+  textColors = 'along';
+  imageColors = 'own';
+
+  // the text and its font (one of the pixel fonts, e.g. 'pixel-5x7', or of the browser) and how high it is drawn in
+  // pixels with a font of the browser, the name of the image. Only the designer reads them.
+  text = '';
+  font = 'pixel-5x7';
+  textHeight = 8;
+  imageName = '';
+
   // what it does with the color the preset puts on a pixel: 'replace' it, 'mask' it (the pattern only sets how bright
   // it is), 'add' to it or take the 'max' of both on each of red, green and blue
   blend = 'replace';
@@ -58,6 +77,17 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings {
     this.spread = data.spread || 'fixture';
     this.view = data.view || 'front';
     this.whiteLed = data.whiteLed === true;
+    this.bitmap = data.bitmap ? new PixelBitmap(data.bitmap) : undefined;
+    this.scroll = data.scroll || 'auto';
+    this.align = data.align || 'center';
+    this.offsetY = data.offsetY ?? 0;
+    this.fit = data.fit || 'contain';
+    this.textColors = data.textColors || 'along';
+    this.imageColors = data.imageColors || 'own';
+    this.text = data.text ?? '';
+    this.font = data.font || 'pixel-5x7';
+    this.textHeight = data.textHeight ?? 8;
+    this.imageName = data.imageName ?? '';
     this.blend = data.blend || 'replace';
   }
 }

@@ -2190,7 +2190,51 @@ const pixelPatternNames = [
   'tunnel',
   'orbit',
   'wave',
+  'text',
+  'image',
 ];
+
+// The picture of a text (a brightness for each pixel, mostly on or off, with the columns its letters start at) or of
+// an image (red, green and blue, in one frame or a few of an animation, some of them without a length), as the
+// designer makes it
+function randomBitmap(random, pattern) {
+  const text = pattern === 'text';
+  const width = text ? 4 + random.int(30) : 2 + random.int(12);
+  const height = text ? 5 + random.int(4) : 1 + random.int(8);
+  const channels = text ? 1 : 3;
+  const frameCount = text ? 1 : random.pick([1, 1, 2, 3]);
+  const frames = [];
+
+  for (let frame = 0; frame < frameCount; frame++) {
+    const bytes = new Uint8Array(width * height * channels);
+
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = text ? (random.chance(0.45) ? random.pick([255, 255, 255, 128]) : 0) : random.int(256);
+    }
+
+    frames.push(Buffer.from(bytes).toString('base64'));
+  }
+
+  const bitmap = { width, height, channels, frames };
+
+  if (text) {
+    bitmap.letterStarts = [0, 6, 12, 18, 24].filter((start) => start < width);
+  } else if (frameCount > 1) {
+    bitmap.durations = frames.map(() => random.pick([40, 100, 250, 0, null]));
+  }
+
+  return bitmap;
+}
+
+// how a text or an image is shown, some of it left out like an effect of an older designer does
+function bitmapSettings(random, settings) {
+  random.maybe(settings, 'scroll', ['auto', 'left', 'right', 'up', 'down', 'none']);
+  random.maybe(settings, 'align', ['left', 'center', 'right']);
+  random.maybe(settings, 'offsetY', [0, 1, -2]);
+  random.maybe(settings, 'fit', ['contain', 'cover', 'stretch', 'pixels']);
+  random.maybe(settings, 'textColors', ['along', 'letters', 'one']);
+  random.maybe(settings, 'imageColors', ['own', 'palette']);
+}
 
 // The directions and shapes a pattern is given. The first patterns are given the ones there were with them (which
 // keeps their cases as they were), the others also the ones of the patterns which came later: the way to turn, the
@@ -2296,6 +2340,12 @@ function pixelPatterns() {
         shape: random.pick(pixelShapesOf(pattern)),
         bounce: random.chance(0.5),
       };
+
+      if (pattern === 'text' || pattern === 'image') {
+        settings.bitmap = randomBitmap(random, pattern);
+        bitmapSettings(random, settings);
+      }
+
       const input = { settings, palette: random.pick(pixelPalettes), samples: [] };
 
       for (let sample = 0; sample < 20; sample++) {
@@ -2315,6 +2365,33 @@ function pixelPatterns() {
       samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
     },
   });
+  // a picture which can't be read, one with less bytes than pixels and one of no size
+  const unreadable = (bitmap) => ({ pattern: 'image', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false, bitmap });
+  cases.push({
+    name: 'pictures which can not be read',
+    input: {
+      settings: unreadable({ width: 3, height: 2, channels: 3, frames: ['!!!'] }),
+      palette: pixelPalettes[0],
+      samples: [0.1, 0.6].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+  cases.push({
+    name: 'a picture with less bytes than pixels',
+    input: {
+      settings: unreadable({ width: 4, height: 4, channels: 3, frames: [Buffer.from([255, 128, 0, 10]).toString('base64')] }),
+      palette: pixelPalettes[0],
+      samples: [0, 0.3, 0.7].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+  cases.push({
+    name: 'a picture of no size',
+    input: {
+      settings: { ...unreadable({ width: 0, height: 5, channels: 1, frames: [] }), pattern: 'text' },
+      palette: pixelPalettes[0],
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+
   cases.push({
     name: 'a palette without colors',
     input: {
@@ -2393,6 +2470,11 @@ function channelValuesPixelEffects() {
       random.maybe(effect, 'runDurationMillis', [700, 1500]);
       random.maybe(effect, 'endMode', ['hold', 'base']);
       random.maybe(effect, 'visible', [true, true, true, false], 0.3);
+
+      if (pattern === 'text' || pattern === 'image') {
+        effect.bitmap = randomBitmap(random, pattern);
+        bitmapSettings(random, effect);
+      }
 
       // all of the pixels of some fixtures, a few pixels of others
       const presetFixturesOfPreset = [];
@@ -2534,7 +2616,8 @@ function channelValuesPixelStage() {
 
   for (let index = 0; index < 24; index++) {
     const uuid = `stage-${index}`;
-    const pattern = random.pick(pixelPatternNames);
+    // (the patterns there were when these cases were made, so they stay as they were)
+    const pattern = random.pick(pixelPatternNames.filter((name) => name !== 'text' && name !== 'image'));
     const effect = {
       type: 'pixel',
       uuid: uuid + '-effect',

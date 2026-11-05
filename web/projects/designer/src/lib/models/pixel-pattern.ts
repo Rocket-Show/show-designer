@@ -1,5 +1,6 @@
 import { arcTangent2 } from './arc-tangent';
 import { cycleSine } from './cycle-sine';
+import { PixelBitmap } from './pixel-bitmap';
 import { band, clamp01, fract, fractalNoise, hash, smoothStep, toInt, triangle } from './pixel-math';
 
 // What a pixel effect sets for its pattern (see EffectPixel)
@@ -22,6 +23,19 @@ export interface PixelPatternSettings {
 
   // whether a comet runs back and forth instead of starting over
   bounce: boolean;
+
+  // the picture of a text or an image (see PixelBitmap), and how it is shown: how it scrolls ('left', 'right', 'up',
+  // 'down' or 'none', 'auto' for the way of the pattern: a text to the left, an image not), where a text which does
+  // not scroll is aligned ('left', 'center' or 'right'), how many pixels a text is moved up, how an image is fitted
+  // into the pixels ('contain', 'cover', 'stretch' or 'pixels', one of the image for each) and their colors: of a
+  // text 'along' it, of its 'letters' or 'one', of an image its 'own' or its brightness through the 'palette'
+  bitmap?: PixelBitmap;
+  scroll?: string;
+  align?: string;
+  offsetY?: number;
+  fit?: string;
+  textColors?: string;
+  imageColors?: string;
 }
 
 // Where a pixel is: its place in the picture (x from the left to the right, y from the top to the bottom, both from 0 to
@@ -55,6 +69,8 @@ export const pixelPatternsForMatrices = [
   'tunnel',
   'orbit',
   'wave',
+  'text',
+  'image',
 ];
 export const pixelPatterns = [...pixelPatternsForBars, ...pixelPatternsForMatrices];
 
@@ -93,6 +109,8 @@ export const pixelPatternOptions: { [pattern: string]: PixelPatternOptions } = {
   tunnel: { shapes: outlines, softness: 'softness' },
   orbit: { shapes: ['circle', 'figure8', 'line', 'wave'], softness: 'trail' },
   wave: { directions: ['right', 'left'], shapes: ['sine', 'triangle', 'square', 'sawtooth'] },
+  text: { withoutSize: true },
+  image: { withoutSize: true },
 };
 
 const fullCycle = 2 * Math.PI;
@@ -228,9 +246,90 @@ const heartOutline = ((): number[] => {
   return outline.map((distance) => distance / longest);
 })();
 
+// Where a pixel shows a text: the column and the row of the text in the picture. The text moves a pixel at a time,
+// through the whole picture in a period, or stands aligned in it.
+function textPosition(settings: PixelPatternSettings, cycle: number, context: PixelContext, bitmap: PixelBitmap): number[] {
+  const scroll = !settings.scroll || settings.scroll === 'auto' ? 'left' : settings.scroll;
+  const across = Math.floor(fract(cycle) * (bitmap.width + context.columns));
+  const down = Math.floor(fract(cycle) * (bitmap.height + context.rows));
+  const top = Math.floor((context.rows - bitmap.height) / 2) - toInt(settings.offsetY || 0);
+  let x: number;
+
+  switch (settings.align) {
+    case 'left':
+      x = context.column;
+      break;
+    case 'right':
+      x = context.column - (context.columns - bitmap.width);
+      break;
+    default:
+      x = context.column - Math.floor((context.columns - bitmap.width) / 2);
+  }
+
+  switch (scroll) {
+    case 'right':
+      return [context.column - across + bitmap.width, context.row - top];
+    case 'up':
+      return [x, context.row + down - context.rows];
+    case 'down':
+      return [x, context.row - down + bitmap.height];
+    case 'none':
+      return [x, context.row - top];
+    default:
+      return [context.column + across - context.columns, context.row - top];
+  }
+}
+
+// Where a pixel shows an image, from 0 to 1 on each axis (outside of it beyond): fitted into the picture whole
+// ('contain', with dark edges where it is narrower), filling it ('cover'), stretched over it or one pixel of the
+// image for each pixel ('pixels', in the middle), scrolling around (an image which leaves the picture on one side
+// comes in on the other)
+function imagePosition(settings: PixelPatternSettings, cycle: number, context: PixelContext, bitmap: PixelBitmap): number[] {
+  let u = context.x;
+  let v = context.y;
+  const pictureRatio = context.aspectY > 0 ? context.aspectX / context.aspectY : context.columns;
+  const imageRatio = bitmap.width / bitmap.height;
+
+  switch (settings.fit) {
+    case 'cover':
+      if (imageRatio > pictureRatio) {
+        u = (u - 0.5) * (pictureRatio / imageRatio) + 0.5;
+      } else {
+        v = (v - 0.5) * (imageRatio / pictureRatio) + 0.5;
+      }
+      break;
+    case 'stretch':
+      break;
+    case 'pixels':
+      u = (context.column - Math.floor((context.columns - bitmap.width) / 2) + 0.5) / bitmap.width;
+      v = (context.row - Math.floor((context.rows - bitmap.height) / 2) + 0.5) / bitmap.height;
+      break;
+    default:
+      if (imageRatio > pictureRatio) {
+        v = (v - 0.5) * (imageRatio / pictureRatio) + 0.5;
+      } else {
+        u = (u - 0.5) * (pictureRatio / imageRatio) + 0.5;
+      }
+  }
+
+  switch (settings.scroll) {
+    case 'left':
+      return [fract(u + cycle), v];
+    case 'right':
+      return [fract(u - cycle), v];
+    case 'up':
+      return [u, fract(v + cycle)];
+    case 'down':
+      return [u, fract(v - cycle)];
+    default:
+      return [u, v];
+  }
+}
+
 // A pattern at a pixel and a moment: where it puts the pixel in the palette (any number, the palette repeats) and how
-// bright the pixel is, between 0 and 1. The moment is counted in periods of the effect since it started. Rocket Show
-// does the very same (PixelPatterns).
+// bright the pixel is, between 0 and 1. An image showing its own colors gives the color of the pixel as well (red,
+// green and blue, between 0 and 1), in place of the palette. The moment is counted in periods of the effect since it
+// started. Rocket Show does the very same (PixelPatterns).
 export function samplePixelPattern(settings: PixelPatternSettings, cycle: number, context: PixelContext): number[] {
   const size = settings.size;
   const softness = settings.softness;
@@ -497,6 +596,73 @@ export function samplePixelPattern(settings: PixelPatternSettings, cycle: number
       const edge = 0.5 / context.rows;
 
       return [height, 1 - smoothStep(value - edge, value + edge, height)];
+    }
+    case 'text': {
+      // a text of a pixel for each pixel, scrolling through the picture
+      const bitmap = settings.bitmap;
+
+      if (!bitmap || bitmap.width <= 0 || bitmap.height <= 0) {
+        return [0, 0];
+      }
+
+      const [x, y] = textPosition(settings, cycle, context, bitmap);
+      const value = bitmap.value(bitmap.frame(0), x, y, 0);
+
+      if (value <= 0) {
+        return [0, 0];
+      }
+
+      let place: number;
+
+      switch (settings.textColors) {
+        case 'letters': {
+          let letter = 0;
+
+          for (const start of bitmap.letterStarts) {
+            if (start <= x) {
+              letter++;
+            }
+          }
+
+          place = letter * 0.17;
+          break;
+        }
+        case 'one':
+          place = 0;
+          break;
+        default:
+          place = x / bitmap.width;
+      }
+
+      return [place, value / 255];
+    }
+    case 'image': {
+      // an image or an animation, fitted into the picture
+      const bitmap = settings.bitmap;
+
+      if (!bitmap || bitmap.width <= 0 || bitmap.height <= 0) {
+        return [0, 0];
+      }
+
+      const [u, v] = imagePosition(settings, cycle, context, bitmap);
+
+      if (u < 0 || u >= 1 || v < 0 || v >= 1) {
+        return [0, 0];
+      }
+
+      const frame = bitmap.frame(bitmap.frameAt(fract(cycle)));
+      const x = Math.min(Math.floor(u * bitmap.width), bitmap.width - 1);
+      const y = Math.min(Math.floor(v * bitmap.height), bitmap.height - 1);
+      const red = bitmap.value(frame, x, y, 0);
+      const green = bitmap.channels === 3 ? bitmap.value(frame, x, y, 1) : red;
+      const blue = bitmap.channels === 3 ? bitmap.value(frame, x, y, 2) : red;
+
+      if (settings.imageColors === 'palette') {
+        // how bright it is, through the palette
+        return [(red * 299 + green * 587 + blue * 114) / 255000, 1];
+      }
+
+      return [0, 1, red / 255, green / 255, blue / 255];
     }
     default:
       // a pattern of a newer designer

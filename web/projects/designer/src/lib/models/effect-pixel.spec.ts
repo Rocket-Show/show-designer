@@ -12,6 +12,16 @@ describe('EffectPixel', () => {
     expect(effect.spread).toBe('fixture');
     expect(effect.view).toBe('front');
     expect(effect.whiteLed).toBe(false);
+    expect([effect.bitmap, effect.scroll, effect.align, effect.offsetY, effect.fit, effect.textColors, effect.imageColors]).toEqual([
+      undefined,
+      'auto',
+      'center',
+      0,
+      'contain',
+      'along',
+      'own',
+    ]);
+    expect([effect.text, effect.font, effect.textHeight]).toEqual(['', 'pixel-5x7', 8]);
     expect(effect.blend).toBe('replace');
     expect(effect.seed).toBe(1);
   });

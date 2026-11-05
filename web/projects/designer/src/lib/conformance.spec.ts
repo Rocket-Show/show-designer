@@ -20,6 +20,7 @@ import { Preset } from './models/preset';
 import { PresetFixture } from './models/preset-fixture';
 import { PresetRegionScene } from './models/preset-region-scene';
 import { PresetStepState } from './models/preset-step-state';
+import { PixelBitmap } from './models/pixel-bitmap';
 import { PixelPalette } from './models/pixel-palette';
 import { PixelContext, samplePixelPattern } from './models/pixel-pattern';
 import { parseProfileNumber } from './models/profile-number';
@@ -374,10 +375,13 @@ const kinds: { [kind: string]: (input: any) => any } = {
 
   pixelPattern: (input) => {
     const palette = new PixelPalette(input.palette);
+    // the picture of a text or an image, read like the one of an effect
+    const settings = { ...input.settings, bitmap: input.settings.bitmap ? new PixelBitmap(input.settings.bitmap) : undefined };
 
     return input.samples.map((sample: any) => {
-      const [place, level] = samplePixelPattern(input.settings, sample.cycle, Object.assign(new PixelContext(), sample.pixel));
-      const color = palette.colorAt(place);
+      const [place, level, ...ownColor] = samplePixelPattern(settings, sample.cycle, Object.assign(new PixelContext(), sample.pixel));
+      // the color of the palette, or the own one of an image
+      const color = ownColor.length > 0 ? ownColor : palette.colorAt(place);
 
       return [place, level, ...color];
     });

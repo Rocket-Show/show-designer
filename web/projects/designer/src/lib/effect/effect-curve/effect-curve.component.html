@@ -237,6 +237,124 @@
       </select>
     </div>
   </div>
+  } @if (pixelEffect.pattern === 'text') {
+  <!-- the text, its font and how it scrolls -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-text' | translate }}
+    </div>
+    <div class="my-auto">
+      <input type="text" class="pixel-text-input" name="pixelText" [ngModel]="pixelEffect.text" (ngModelChange)="setText($event)" />
+    </div>
+  </div>
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-font' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelFont" [ngModel]="pixelEffect.font" (ngModelChange)="setFont($event)">
+        @for (font of pixelFonts; track font) {
+        <option [value]="font">{{ 'designer.effect.pixel-font-' + font | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (pixelEffect.font !== pixelFonts[0]) {
+    <div class="my-auto ml-2">
+      <input
+        type="text"
+        class="slider-input"
+        name="pixelTextHeight"
+        [ngModel]="pixelEffect.textHeight"
+        (ngModelChange)="setTextHeight($event)"
+      />
+    </div>
+    <div class="my-auto ml-1">px</div>
+    }
+  </div>
+  } @if (pixelEffect.pattern === 'image') {
+  <!-- the image, made into pixels when it is picked -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-image' | translate }}
+    </div>
+    <div class="my-auto">
+      <label class="btn btn-default btn-sm mb-0 pixel-image-pick">
+        <i class="fa fa-picture-o" aria-hidden="true"></i>
+        {{ pixelEffect.imageName || 'designer.effect.pixel-image-pick' | translate }}
+        <input type="file" accept="image/*" name="pixelImage" class="d-none" (change)="pickImage($event)" />
+      </label>
+    </div>
+    <div class="my-auto ml-2">
+      <select name="pixelImageSize" [(ngModel)]="pixelImageSize">
+        @for (size of pixelImageSizes; track size) {
+        <option [ngValue]="size">{{ size }} px</option>
+        }
+      </select>
+    </div>
+  </div>
+  @if (pixelImageFailed) {
+  <div class="text-danger pixel-image-failed">{{ 'designer.effect.pixel-image-failed' | translate }}</div>
+  }
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-fit' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelFit" [ngModel]="pixelEffect.fit" (ngModelChange)="setFit($event)">
+        @for (fit of pixelFits; track fit) {
+        <option [value]="fit">{{ 'designer.effect.pixel-fit-' + fit | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  } @if (pixelEffect.pattern === 'text' || pixelEffect.pattern === 'image') {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-scroll' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelScroll" [ngModel]="pixelScroll" (ngModelChange)="setScroll($event)">
+        @for (scroll of pixelScrolls; track scroll) {
+        <option [value]="scroll">{{ 'designer.effect.pixel-scroll-' + scroll | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (usesAlign()) {
+    <div class="my-auto ml-2">
+      <select name="pixelAlign" [ngModel]="pixelEffect.align" (ngModelChange)="setAlign($event)">
+        @for (align of pixelAligns; track align) {
+        <option [value]="align">{{ 'designer.effect.pixel-align-' + align | translate }}</option>
+        }
+      </select>
+    </div>
+    }
+  </div>
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-bitmap-colors' | translate }}
+    </div>
+    <div class="my-auto">
+      @if (pixelEffect.pattern === 'text') {
+      <select name="pixelTextColors" [ngModel]="pixelEffect.textColors" (ngModelChange)="setTextColors($event)">
+        @for (colors of pixelTextColors; track colors) {
+        <option [value]="colors">{{ 'designer.effect.pixel-text-colors-' + colors | translate }}</option>
+        }
+      </select>
+      } @else {
+      <select name="pixelImageColors" [ngModel]="pixelEffect.imageColors" (ngModelChange)="setImageColors($event)">
+        @for (colors of pixelImageColors; track colors) {
+        <option [value]="colors">{{ 'designer.effect.pixel-image-colors-' + colors | translate }}</option>
+        }
+      </select>
+      }
+    </div>
+    @if (pixelEffect.pattern === 'text') {
+    <div class="my-auto ml-2">{{ 'designer.effect.pixel-offset-y' | translate }}</div>
+    <div class="my-auto ml-1">
+      <input type="text" class="slider-input" name="pixelOffsetY" [ngModel]="pixelEffect.offsetY" (ngModelChange)="setOffsetY($event)" />
+    </div>
+    }
+  </div>
   } } @else {
   <div class="d-flex">
     <div class="my-auto" style="width: 100px; float: left">

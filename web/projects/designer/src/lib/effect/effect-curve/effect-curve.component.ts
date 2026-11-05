@@ -33,6 +33,8 @@ import { ProjectService } from '../../services/project.service';
 import { FixtureCapabilityColor as PixelColor } from '../../models/fixture-capability';
 import { getStagePlacements } from '../../models/pan-tilt';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../../models/pixel-stage';
+import { PIXEL_FONT, textBitmap } from '../../models/pixel-text';
+import { animationMillis, DEFAULT_PIXEL_IMAGE_SIZE, imageBitmapOf, PIXEL_IMAGE_SIZES } from '../../models/pixel-image';
 
 // a fixture in the preview of a pixel effect: where each of its parts is, and the step of the chase it takes
 interface PixelPreviewFixture {
@@ -168,6 +170,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
   public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
   public readonly pixelSpreads = ['fixture', 'stage'];
+  public readonly pixelFonts = [PIXEL_FONT, 'sans-serif', 'serif', 'monospace'];
+  public readonly pixelAligns = ['left', 'center', 'right'];
+  public readonly pixelFits = ['contain', 'cover', 'stretch', 'pixels'];
+  public readonly pixelTextColors = ['along', 'letters', 'one'];
+  public readonly pixelImageColors = ['own', 'palette'];
+  public readonly pixelImageSizes = PIXEL_IMAGE_SIZES;
+
+  // how large an image is made when it is picked, and whether the last one could not be read
+  public pixelImageSize = DEFAULT_PIXEL_IMAGE_SIZE;
+  public pixelImageFailed = false;
   public readonly pixelViews = ['front', 'top'];
   public readonly pixelPalettes = builtInPixelPalettes;
 
@@ -390,7 +402,127 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   setPattern(pattern: string) {
     this.pixelEffect.pattern = pattern;
+
+    // a text to start with
+    if (pattern === 'text' && !this.pixelEffect.text) {
+      this.pixelEffect.text = 'Rocket Show';
+    }
+
+    if (pattern === 'text') {
+      this.renderText();
+    }
+
     this.livePreviewService.previewLive();
+  }
+
+  // ---- a text or an image
+
+  // the ways the text or the image scrolls, the first one where it does without being told
+  get pixelScrolls(): string[] {
+    return this.pixelEffect.pattern === 'text' ? ['left', 'right', 'up', 'down', 'none'] : ['none', 'left', 'right', 'up', 'down'];
+  }
+
+  get pixelScroll(): string {
+    return this.pixelScrolls.indexOf(this.pixelEffect.scroll) >= 0 ? this.pixelEffect.scroll : this.pixelScrolls[0];
+  }
+
+  // a text which does not scroll along stands where it is aligned
+  usesAlign(): boolean {
+    return this.pixelEffect.pattern === 'text' && this.pixelScroll !== 'left' && this.pixelScroll !== 'right';
+  }
+
+  // the picture of the text in its font, made anew whenever one of them changes
+  private renderText() {
+    const effect = this.pixelEffect;
+    effect.bitmap = textBitmap(effect.text, effect.font, effect.textHeight);
+  }
+
+  setText(text: string) {
+    this.pixelEffect.text = text ?? '';
+    this.renderText();
+    this.livePreviewService.previewLive();
+  }
+
+  setFont(font: string) {
+    this.pixelEffect.font = font;
+    this.renderText();
+    this.livePreviewService.previewLive();
+  }
+
+  setTextHeight(value: any) {
+    const height = Number(value);
+
+    if (value !== '' && value !== null && Number.isInteger(height) && height >= 4 && height <= 64) {
+      this.pixelEffect.textHeight = height;
+      this.renderText();
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setScroll(scroll: string) {
+    this.pixelEffect.scroll = scroll;
+    this.livePreviewService.previewLive();
+  }
+
+  setAlign(align: string) {
+    this.pixelEffect.align = align;
+    this.livePreviewService.previewLive();
+  }
+
+  setOffsetY(value: any) {
+    const offset = Number(value);
+
+    if (value !== '' && value !== null && Number.isInteger(offset) && Math.abs(offset) <= 64) {
+      this.pixelEffect.offsetY = offset;
+      this.livePreviewService.previewLive();
+    }
+  }
+
+  setTextColors(colors: string) {
+    this.pixelEffect.textColors = colors;
+    this.livePreviewService.previewLive();
+  }
+
+  setFit(fit: string) {
+    this.pixelEffect.fit = fit;
+    this.livePreviewService.previewLive();
+  }
+
+  setImageColors(colors: string) {
+    this.pixelEffect.imageColors = colors;
+    this.livePreviewService.previewLive();
+  }
+
+  // An image picked: made as small as asked and kept as its pixels. An animation runs through its frames in a period,
+  // which starts as long as the animation takes.
+  async pickImage(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const effect = this.pixelEffect;
+
+    try {
+      effect.bitmap = await imageBitmapOf(file, this.pixelImageSize);
+      effect.imageName = file.name;
+      this.pixelImageFailed = false;
+
+      const millis = animationMillis(effect.bitmap);
+
+      if (millis > 0) {
+        effect.lengthMode = 'millis';
+        effect.lengthMillis = millis;
+      }
+
+      this.livePreviewService.previewLive();
+    } catch (error) {
+      this.pixelImageFailed = true;
+    }
+
+    input.value = '';
   }
 
   // the size and the softness are set between 0 and 1
@@ -770,9 +902,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
     }
 
-    const [place, level] = samplePixelPattern(effect, cycles, context);
+    const sample = samplePixelPattern(effect, cycles, context);
     const stops = effect.palette.ref === 'preset' ? PixelPalette.shadesOf(base) : effect.palette.stops;
-    const lit = PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, place).map((component) => component * level);
+    const color =
+      sample.length > 2 ? sample.slice(2, 5) : PixelPalette.colorOf(stops, effect.palette.between, effect.palette.repeat, sample[0]);
+    const level = sample[1];
+    const lit = color.map((component) => component * level);
 
     return lit.map((component, i) => {
       switch (effect.blend) {

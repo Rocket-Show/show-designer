@@ -1,4 +1,5 @@
 import { band, fract, fractalNoise, hash, smoothStep, toInt, triangle, valueNoise } from './pixel-math';
+import { encodeBase64, PixelBitmap } from './pixel-bitmap';
 import { PixelContext, PixelPatternSettings, pixelPatterns, samplePixelPattern } from './pixel-pattern';
 
 function settings(pattern: string, extra: Partial<PixelPatternSettings> = {}): PixelPatternSettings {
@@ -350,6 +351,72 @@ describe('pixel patterns', () => {
 
     expect(filled(0, 0.7)).toBe(7);
     expect(filled(0, 0.2)).toBe(1);
+  });
+
+  it('scrolls a text of a pixel for each pixel through a matrix, or shows it aligned', () => {
+    // a text of 4 x 2 pixels: the first and the last column lit
+    const bitmap = new PixelBitmap({
+      width: 4,
+      height: 2,
+      frames: [encodeBase64(new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]))],
+      letterStarts: [0, 2],
+    });
+    const text = (extra: any = {}) => settings('text', { bitmap, ...extra });
+    // the columns of the top row of a matrix of 6 x 2 which are lit
+    const litColumns = (pattern: PixelPatternSettings, cycle: number) =>
+      [0, 1, 2, 3, 4, 5].filter((column) => samplePixelPattern(pattern, cycle, pixel(column, 6, 0, 2))[1] > 0);
+
+    // through the whole matrix in a period, coming in on the right
+    expect(litColumns(text(), 0)).toEqual([]);
+    expect(litColumns(text(), 0.1)).toEqual([5]);
+    expect(litColumns(text(), 0.5)).toEqual([1, 4]);
+    expect(litColumns(text({ scroll: 'right' }), 0.5)).toEqual([1, 4]);
+    // still in the middle, on the left or on the right
+    expect(litColumns(text({ scroll: 'none' }), 0.3)).toEqual([1, 4]);
+    expect(litColumns(text({ scroll: 'none', align: 'left' }), 0.3)).toEqual([0, 3]);
+    expect(litColumns(text({ scroll: 'none', align: 'right' }), 0.3)).toEqual([2, 5]);
+
+    // the colors along the text, of its letters or one
+    const at = (extra: any) => samplePixelPattern(text({ scroll: 'none', align: 'left', ...extra }), 0, pixel(3, 6, 0, 2))[0];
+    expect([at({}), at({ textColors: 'letters' }), at({ textColors: 'one' })]).toEqual([0.75, 0.34, 0]);
+  });
+
+  it('fits an image into the pixels in its own colors, or its brightness through the palette', () => {
+    // an image of 2 x 1 pixels, red and blue
+    const bitmap = new PixelBitmap({ width: 2, height: 1, channels: 3, frames: [encodeBase64(new Uint8Array([255, 0, 0, 0, 0, 255]))] });
+    const image = (extra: any = {}) => settings('image', { bitmap, ...extra });
+    // a matrix of 4 x 4: the image is as wide, half as high in the middle
+    const at = (pattern: PixelPatternSettings, column: number, row: number) => samplePixelPattern(pattern, 0, pixel(column, 4, row, 4));
+
+    expect(at(image(), 0, 0)).toEqual([0, 0]);
+    expect(at(image(), 0, 1)).toEqual([0, 1, 1, 0, 0]);
+    expect(at(image(), 3, 2)).toEqual([0, 1, 0, 0, 1]);
+    // filling it, stretched over it
+    expect(at(image({ fit: 'cover' }), 0, 0)).toEqual([0, 1, 1, 0, 0]);
+    expect(at(image({ fit: 'stretch' }), 1, 3)).toEqual([0, 1, 1, 0, 0]);
+    // through the palette by how bright it is
+    expect(at(image({ imageColors: 'palette' }), 0, 1)).toEqual([0.299, 1]);
+    // scrolling around: half a period later the other side
+    expect(samplePixelPattern(image({ fit: 'stretch', scroll: 'left' }), 0.5, pixel(0, 4, 0, 4))).toEqual([0, 1, 0, 0, 1]);
+  });
+
+  it('runs through the frames of an animation in a period', () => {
+    const animation = new PixelBitmap({
+      width: 1,
+      height: 1,
+      channels: 3,
+      frames: [encodeBase64(new Uint8Array([255, 0, 0])), encodeBase64(new Uint8Array([0, 255, 0]))],
+      durations: [100, 300],
+    });
+    const color = (cycle: number) => samplePixelPattern(settings('image', { bitmap: animation }), cycle, pixel(0, 1)).slice(2);
+
+    expect([color(0.2), color(0.3), color(1.2)]).toEqual([
+      [1, 0, 0],
+      [0, 1, 0],
+      [1, 0, 0],
+    ]);
+    // nothing to show without a picture
+    expect(samplePixelPattern(settings('text'), 0.5, pixel(0, 1))).toEqual([0, 0]);
   });
 
   it('leaves the pixels dark for a pattern of a newer designer', () => {
