@@ -6,6 +6,7 @@ import { Preset } from './preset';
 import { PresetFixture } from './preset-fixture';
 import { Scene } from './scene';
 import { UniverseConfig } from './universe-config';
+import { ProjectPixelPalette } from './pixel-palette';
 
 export class Project {
   public id: number;
@@ -58,6 +59,10 @@ export class Project {
   public selectedCompositionUuid: string;
 
   public compositions: Composition[] = [];
+
+  // the palettes of the pixel effects saved with the project, which any effect can be painted in: an effect keeps a
+  // copy of the colors of the one it is painted in, so only the designer reads them
+  public pixelPalettes: ProjectPixelPalette[] = [];
   public fixtureProfiles: FixtureProfile[] = [];
 
   // fixtures added to the project in a DMX universe
@@ -110,6 +115,9 @@ export class Project {
     this.previewPreset = data.previewPreset;
     this.colorDimmersAtFull = data.colorDimmersAtFull ?? true;
     this.selectedCompositionUuid = data.selectedCompositionUuid;
+    this.pixelPalettes = Array.isArray(data.pixelPalettes)
+      ? data.pixelPalettes.map((palette: any) => new ProjectPixelPalette(palette))
+      : [];
 
     if (data.compositions) {
       for (const composition of data.compositions) {

@@ -94,6 +94,28 @@ export class PixelPalette {
   }
 }
 
+// A palette of the pixel effects saved with the project: its name, its colors and how it runs through them (see
+// PixelPalette)
+export class ProjectPixelPalette {
+  uuid: string;
+  name = '';
+  stops: PixelPaletteStop[] = [];
+  between = 'smooth';
+  repeat = 'mirror';
+
+  constructor(data?: any) {
+    if (!data) {
+      return;
+    }
+
+    this.uuid = data.uuid;
+    this.name = data.name ?? '';
+    this.stops = Array.isArray(data.stops) ? data.stops.map((stop: any) => new PixelPaletteStop(stop)) : [];
+    this.between = data.between || 'smooth';
+    this.repeat = data.repeat || 'mirror';
+  }
+}
+
 // a color like #ff8000 as red, green and blue between 0 and 1, black for anything else
 export function hexToRgb(hex: string): number[] {
   if (typeof hex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(hex)) {

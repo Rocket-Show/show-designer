@@ -66,13 +66,16 @@ designer (`npm run conformance:record`) and compared exactly. Where the two coul
 which are null, missing or not whole, default values, numbers and colors of the fixture library, pixel groups),
 `services/parity.spec.ts` and the cases of `PreviewService like Rocket Show plays it` in
 `services/preview.service.spec.ts` check the same cases as `DesignerParityTest` and `DesignerDmxTest` in Rocket Show. A
-change to how a project is played changes both sides, with the same cases.
+change to how a project is played changes both sides, with the same cases. That includes the pixel effects: their
+patterns, palettes, texts and images, across the stage, and how they follow the audio. Only how the audio is measured
+differs (the designer analyzes the audio file, Rocket Show the audio while it plays), so the cases bring the frames of an
+analysis along.
 
 ### Whole flows in the browser
 
-The end-to-end tests in `web/e2e` (Playwright) go through the designer like a user: adding fixtures, presets, scenes
-and compositions, playing them, saving, opening and sharing projects, undo and the layout. The app runs on the dev
-server, its API is faked in the page (see `web/e2e/README.md`):
+The end-to-end tests in `web/e2e` (Playwright) go through the designer like a user: adding fixtures, presets, scenes,
+compositions and pixel effects, playing them, saving, opening and sharing projects, undo and the layout. The app runs on
+the dev server, its API is faked in the page (see `web/e2e/README.md`):
 
 ```shell
 cd web

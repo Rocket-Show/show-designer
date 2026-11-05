@@ -20,6 +20,7 @@ import { LivePreviewService } from '../services/live-preview.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { TreeComponent } from '../tree/tree.component';
+import { FixturePixelGridComponent } from './fixture-pixel-grid/fixture-pixel-grid.component';
 import { FixtureComponent } from './fixture.component';
 
 // The fixture panel: the fixtures of the project in their folders, checked for the selected
@@ -41,7 +42,7 @@ describe('FixtureComponent', () => {
     openPool = jasmine.createSpy('open');
 
     TestBed.configureTestingModule({
-      declarations: [FixtureComponent, TreeComponent, InlineEditComponent],
+      declarations: [FixtureComponent, TreeComponent, InlineEditComponent, FixturePixelGridComponent],
       imports: [FormsModule, PopoverModule.forRoot(), TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [
         // the pool is a dialog of its own
@@ -573,6 +574,112 @@ describe('FixtureComponent', () => {
       expect(keys(preset('chase').fixtures)).toEqual(['head', 'par-2', 'par-1', 'bar 1/2', 'bar 2/2']);
       expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar']);
       expect(row('Bar').getAttribute('draggable')).toBe('true');
+    });
+  });
+
+  describe('a fixture with a matrix', () => {
+    beforeEach(() => {
+      project.fixtureProfiles.push(
+        new Project({ fixtureProfiles: [{ ...JSON.parse(JSON.stringify(profiles['test/pixel-matrix'])), uuid: 'matrix' }] })
+          .fixtureProfiles[0]
+      );
+      project.fixtures.push(
+        new Project({
+          fixtures: [
+            { uuid: 'wall', name: 'Wall', profileUuid: 'matrix', modeShortName: '36ch', dmxUniverseUuid: 'u', dmxFirstChannel: 30 },
+          ],
+        }).fixtures[0]
+      );
+
+      for (let key = 1; key <= 12; key++) {
+        project.presetFixtures.push(new PresetFixture({ fixtureUuid: 'wall', pixelKey: String(key), sortIndex: 3 + key }));
+      }
+
+      fixtureService.updateCachedFixtures();
+    });
+
+    const grid = (): HTMLCanvasElement => element().querySelector('lib-app-fixture-pixel-grid canvas');
+    const viewSwitch = (): HTMLElement => row('Wall').querySelector('.fixture-pixel-view');
+
+    // a pointer event in the middle of a pixel of the grid
+    function pointer(type: string, column: number, line: number) {
+      const bounds = grid().getBoundingClientRect();
+      const pitch = bounds.width / 4;
+
+      grid().dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 1,
+          clientX: bounds.left + (column + 0.5) * pitch,
+          clientY: bounds.top + (line + 0.5) * pitch,
+        })
+      );
+      fixture.detectChanges();
+    }
+
+    it('opens to show its pixels as a grid, or as rows to change the order they are chased in', async () => {
+      await open();
+
+      expect(viewSwitch()).toBeNull();
+
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head', 'Wall']);
+      expect(grid()).not.toBeNull();
+      expect(viewSwitch().getAttribute('title')).toBe('designer.fixture.pixels-as-rows');
+
+      await click(viewSwitch());
+
+      expect(names().slice(5, 8)).toEqual(['Wall', '1', '2']);
+      expect(grid()).toBeNull();
+      expect(viewSwitch().getAttribute('title')).toBe('designer.fixture.pixels-as-grid');
+
+      await click(viewSwitch());
+
+      expect(grid()).not.toBeNull();
+      expect(selectionChanged).toBe(0);
+    });
+
+    it('lets the preset light the pixels a drag over the grid passes', async () => {
+      await open();
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      pointer('pointerdown', 0, 0);
+      pointer('pointermove', 1, 0);
+      pointer('pointerup', 1, 0);
+      await update();
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'wall 1', 'wall 2']);
+      expect(checkbox('Wall').indeterminate).toBe(true);
+      expect(selectionChanged).toBe(1);
+      expect(previewLive).toHaveBeenCalled();
+
+      pointer('pointerdown', 1, 0);
+      pointer('pointerup', 1, 0);
+      await update();
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'wall 1']);
+    });
+
+    it('picks the whole fixture to set up in the settings', async () => {
+      fixtureService.settingsSelection = true;
+      await open();
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      pointer('pointerdown', 2, 1);
+      pointer('pointerup', 2, 1);
+      await update();
+
+      expect(fixtureService.selectedSettingsFixtures.map((candidate) => candidate.uuid)).toEqual(['wall']);
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2']);
+
+      // all of its pixels are taken now: a drag over a pixel releases it
+      pointer('pointerdown', 0, 0);
+      pointer('pointerup', 0, 0);
+      await update();
+
+      expect(fixtureService.selectedSettingsFixtures).toEqual([]);
     });
   });
 

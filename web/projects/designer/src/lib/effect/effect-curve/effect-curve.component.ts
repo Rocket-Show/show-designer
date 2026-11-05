@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
@@ -17,7 +17,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
-import { hexToRgb, PixelPalette } from '../../models/pixel-palette';
+import { hexToRgb, PixelPalette, PixelPaletteStop, ProjectPixelPalette, rgbToHex } from '../../models/pixel-palette';
 import {
   PixelContext,
   PixelPatternOptions,
@@ -26,14 +26,16 @@ import {
   pixelPatternsForMatrices,
   samplePixelPattern,
 } from '../../models/pixel-pattern';
-import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf } from '../../models/pixel-palettes';
+import { BuiltInPixelPalette, builtInPixelPalettes, pixelPaletteCss, pixelPaletteOf, pixelStopsCss } from '../../models/pixel-palettes';
+import { UuidService } from '../../services/uuid.service';
 import { toInt } from '../../models/pixel-math';
 import { ColorService } from '../../services/color.service';
 import { ProjectService } from '../../services/project.service';
 import { FixtureCapabilityColor as PixelColor } from '../../models/fixture-capability';
 import { getStagePlacements } from '../../models/pan-tilt';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../../models/pixel-stage';
-import { PIXEL_FONT, textBitmap } from '../../models/pixel-text';
+import { PIXEL_FONT, pixelFontBitmap, textBitmap } from '../../models/pixel-text';
+import { encodeBase64, PixelBitmap } from '../../models/pixel-bitmap';
 import { animationMillis, DEFAULT_PIXEL_IMAGE_SIZE, imageBitmapOf, PIXEL_IMAGE_SIZES } from '../../models/pixel-image';
 import { PixelAudio } from '../../models/pixel-audio';
 import { demoAudioFrames } from '../../models/pixel-audio-analysis';
@@ -213,6 +215,18 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   @ViewChild('curveGrid', { static: true }) curveGrid: ElementRef;
 
+  // the patterns to pick from, as they look (see drawPatternTiles)
+  @ViewChildren('patternTile') patternTiles: QueryList<ElementRef<HTMLCanvasElement>>;
+  public pickingPattern = false;
+  public readonly pixelPatternGroups = [
+    { name: 'bars', patterns: pixelPatternsForBars },
+    { name: 'matrices', patterns: pixelPatternsForMatrices },
+  ];
+
+  // a text and an image to show the patterns with, where the effect has none of its own
+  private tileText = pixelFontBitmap('Ab');
+  private tileImage = gradientBitmap();
+
   constructor(
     public presetService: PresetService,
     private animationService: AnimationService,
@@ -224,7 +238,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     private modalService: BsModalService,
     private timelineService: TimelineService,
     private colorService: ColorService,
-    private projectService?: ProjectService
+    private projectService?: ProjectService,
+    private uuidService?: UuidService
   ) {
     this.fixtureSelectionChangedSubscription = this.presetService.fixtureSelectionChanged.subscribe(() => {
       this.pixelPreviewFixtures = undefined;
@@ -420,6 +435,68 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // a pattern picked from the tiles
+  pickPattern(pattern: string) {
+    this.pickingPattern = false;
+    this.setPattern(pattern);
+  }
+
+  // Each pattern on a bar or a matrix in the colors of the effect, moving: what it looks like before it is picked.
+  // Drawn with the grid in each frame while the tiles are open.
+  private drawPatternTiles() {
+    const effect = this.pixelEffect;
+    const preset = this.presetService.selectedPreset;
+    const base = hexToRgb((preset && this.colorService.getPresetLightColor(preset)) || '#ffffff');
+    const cycles = this.animationService.timeMillis / 2000;
+
+    this.patternTiles?.forEach((tile) => {
+      const canvas = tile.nativeElement;
+
+      // as many pixels as the screen shows it with
+      if (canvas.width !== Math.round(84 * this.pixelRatio)) {
+        canvas.width = Math.round(84 * this.pixelRatio);
+        canvas.height = Math.round(44 * this.pixelRatio);
+      }
+
+      const context = canvas.getContext('2d');
+      const pattern = canvas.dataset.pattern;
+      const matrix = canvas.dataset.matrix === 'true';
+      const columns = matrix ? 10 : 16;
+      const rows = matrix ? 5 : 1;
+      const cell = Math.min(canvas.width / columns, canvas.height / rows);
+      const left = (canvas.width - cell * columns) / 2;
+      const top = (canvas.height - cell * rows) / 2;
+      const ownBitmap = effect.pattern === pattern ? effect.bitmap : undefined;
+      const settings = { ...effect, pattern, bitmap: ownBitmap || (pattern === 'text' ? this.tileText : this.tileImage) };
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          const place = Object.assign(new PixelContext(), {
+            x: (column + 0.5) / columns,
+            y: (row + 0.5) / rows,
+            column,
+            row,
+            columns,
+            rows,
+            aspectX: 1,
+            aspectY: rows / columns,
+          });
+          const [red, green, blue] = this.pixelColorOf(settings as EffectPixel, place, cycles, 0, base).map((component) =>
+            Math.round(Math.min(Math.max(component, 0), 1) * 255)
+          );
+
+          context.fillStyle = `rgb(${Math.max(red, PIXEL_OFF_COLOR[0])}, ${Math.max(green, PIXEL_OFF_COLOR[1])}, ${Math.max(
+            blue,
+            PIXEL_OFF_COLOR[2]
+          )})`;
+          context.fillRect(left + column * cell + 0.5, top + row * cell + 0.5, cell - 1, cell - 1);
+        }
+      }
+    });
+  }
+
   // ---- a text or an image
 
   // the ways the text or the image scrolls, the first one where it does without being told
@@ -565,6 +642,115 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // ---- the palettes of the project, and editing the colors of the effect
+
+  get projectPalettes(): ProjectPixelPalette[] {
+    return this.projectService?.project?.pixelPalettes || [];
+  }
+
+  // a palette of the project picked: the effect keeps a copy of its colors
+  setProjectPalette(palette: ProjectPixelPalette) {
+    this.pixelEffect.palette = new PixelPalette({
+      ref: palette.uuid,
+      stops: palette.stops.map((stop) => ({ position: stop.position, color: stop.color })),
+      between: palette.between,
+      repeat: palette.repeat,
+    });
+    this.livePreviewService.previewLive();
+  }
+
+  stopsCss(stops: PixelPaletteStop[], between: string): string {
+    return pixelStopsCss(stops, between);
+  }
+
+  // Each edit changes the colors of the effect alone: the palette it was picked from stays as it is
+  private editedPalette() {
+    this.pixelEffect.palette.ref = 'custom';
+    this.livePreviewService.previewLive();
+  }
+
+  setStopColor(index: number, color: string) {
+    if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+      this.pixelEffect.palette.stops[index].color = color.toLowerCase();
+      this.editedPalette();
+    }
+  }
+
+  setStopPosition(index: number, value: any) {
+    const position = Number(value);
+
+    if (value !== '' && value !== null && !isNaN(position) && position >= 0 && position <= 1) {
+      this.pixelEffect.palette.stops[index].position = position;
+      this.editedPalette();
+    }
+  }
+
+  // a color added in the widest gap between two, in the color the palette has there
+  addStop() {
+    const palette = this.pixelEffect.palette;
+    const positions = [0, ...palette.stops.map((stop) => stop.position).sort((a, b) => a - b), 1];
+    let at = 0.5;
+    let widest = -1;
+
+    for (let i = 1; i < positions.length; i++) {
+      if (positions[i] - positions[i - 1] > widest) {
+        widest = positions[i] - positions[i - 1];
+        at = (positions[i] + positions[i - 1]) / 2;
+      }
+    }
+
+    const color = palette.stops.length ? rgbToHex(PixelPalette.colorOf(palette.stops, palette.between, 'mirror', at)) : '#ffffff';
+    palette.stops.push(new PixelPaletteStop({ position: Math.round(at * 100) / 100, color }));
+    this.editedPalette();
+  }
+
+  removeStop(index: number) {
+    this.pixelEffect.palette.stops.splice(index, 1);
+    this.editedPalette();
+  }
+
+  setPaletteBetween(between: string) {
+    this.pixelEffect.palette.between = between;
+    this.editedPalette();
+  }
+
+  setPaletteRepeat(repeat: string) {
+    this.pixelEffect.palette.repeat = repeat;
+    this.editedPalette();
+  }
+
+  // the colors of the effect saved with the project under a name, which the effect is painted in from then on
+  savePalette(name: string) {
+    const project = this.projectService?.project;
+
+    if (!project || !name || !name.trim()) {
+      return;
+    }
+
+    const effectPalette = this.pixelEffect.palette;
+    const palette = new ProjectPixelPalette({
+      uuid: this.uuidService ? this.uuidService.getUuid() : 'palette-' + Date.now(),
+      name: name.trim(),
+      stops: effectPalette.stops.map((stop) => ({ position: stop.position, color: stop.color })),
+      between: effectPalette.between,
+      repeat: effectPalette.repeat,
+    });
+
+    project.pixelPalettes.push(palette);
+    effectPalette.ref = palette.uuid;
+    this.livePreviewService.previewLive();
+  }
+
+  deleteProjectPalette(palette: ProjectPixelPalette) {
+    const palettes = this.projectService.project.pixelPalettes;
+    palettes.splice(palettes.indexOf(palette), 1);
+
+    // an effect painted in it keeps its colors
+    if (this.pixelEffect.palette.ref === palette.uuid) {
+      this.pixelEffect.palette.ref = 'custom';
+    }
+  }
+
   setBlend(blend: string) {
     this.pixelEffect.blend = blend;
     this.livePreviewService.previewLive();
@@ -584,6 +770,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   setWhiteLed(whiteLed: boolean) {
     this.pixelEffect.whiteLed = whiteLed;
     this.livePreviewService.previewLive();
+  }
+
+  // whether the preset sets the dimmer to 0 in one of its steps: the effect does not light the fixtures with a dimmer
+  // then
+  dimmedToZero(): boolean {
+    const preset = this.presetService.selectedPreset;
+
+    return !!preset?.steps?.some((step) =>
+      step.fixtureCapabilityValues.some((value) => value.type === FixtureCapabilityType.Intensity && value.valuePercentage === 0)
+    );
   }
 
   // ---- the audio it follows
@@ -640,7 +836,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // how a palette looks in the list, the one of the preset in its color
   paletteCss(palette: BuiltInPixelPalette): string {
     const preset = this.presetService.selectedPreset;
-    return pixelPaletteCss(palette, preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+    return pixelPaletteCss(palette, (preset && this.colorService.getPresetLightColor(preset)) || '#ffffff');
   }
 
   // The fixtures of the preset which light in colors, each with the parts it has in the preset (its pixels, or itself),
@@ -726,7 +922,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     // room for the housings around the pixels between the fixtures
     const gap = 10;
     const preset = this.presetService.selectedPreset;
-    const base = hexToRgb(preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+    const base = hexToRgb((preset && this.colorService.getPresetLightColor(preset)) || '#ffffff');
     const fixtureCount = Math.max(...fixtures.map((fixture) => fixture.index)) + 1;
     const loopMillis = effect.getRunLoopMillis(fixtureCount, this.beatsPerMinute);
     const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
@@ -814,7 +1010,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     const preset = this.presetService.selectedPreset;
-    const base = hexToRgb(preset ? this.colorService.getPresetColor(preset) : '#ffffff');
+    const base = hexToRgb((preset && this.colorService.getPresetLightColor(preset)) || '#ffffff');
     const loopMillis = effect.getRunLoopMillis(stage.count, this.beatsPerMinute);
     const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
 
@@ -1228,6 +1424,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     if (this.isPixel) {
       this.drawPixels();
+
+      if (this.pickingPattern) {
+        this.drawPatternTiles();
+      }
+
       return;
     }
 
@@ -1744,4 +1945,21 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       initialState: { curve: this.curve },
     });
   }
+}
+
+// a picture to show the image pattern with: a gradient from red over green to blue, light at the top
+function gradientBitmap(): PixelBitmap {
+  const width = 8;
+  const height = 4;
+  const bytes = new Uint8Array(width * height * 3);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const along = x / (width - 1);
+      const light = 1 - y / height / 2;
+      bytes.set([255 * (1 - along) * light, 255 * (1 - Math.abs(along - 0.5) * 2) * light, 255 * along * light], (y * width + x) * 3);
+    }
+  }
+
+  return new PixelBitmap({ width, height, channels: 3, frames: [encodeBase64(bytes)] });
 }

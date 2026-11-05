@@ -79,3 +79,110 @@
   font-size: 0.75rem;
   line-height: 1.4;
 }
+
+/* tells that the dimmer of the preset keeps the pixels of a pixel effect dark */
+.pixel-dimmed-warning {
+  max-width: 200px;
+  margin-top: var(--sd-space-1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* the patterns to pick from, over the preview and the settings next to it */
+:host {
+  position: relative;
+}
+
+.pixel-picker {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  z-index: 20;
+  width: 560px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--sd-space-2);
+  background-color: var(--sd-surface-2);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.pixel-picker-group {
+  margin: var(--sd-space-1) 0;
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+}
+
+.pixel-picker-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-1);
+}
+
+.pixel-picker-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 96px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text);
+  font-size: 0.7rem;
+  text-decoration: none;
+}
+
+.pixel-picker-tile:hover,
+.pixel-picker-tile:focus {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.pixel-picker-tile.active {
+  border-color: var(--sd-primary);
+}
+
+.pixel-picker-tile canvas {
+  width: 84px;
+  height: 44px;
+  margin-bottom: 2px;
+  background-color: #08090b;
+  border-radius: var(--sd-radius-sm);
+}
+
+/* the palettes of the project and the editor of the colors of the effect */
+.pixel-palettes-project {
+  margin-top: var(--sd-space-1);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+}
+
+.pixel-palette-delete,
+.pixel-palette-remove {
+  color: var(--sd-text-muted);
+}
+
+.pixel-palette-edited {
+  height: 12px;
+  border-radius: var(--sd-radius-sm);
+}
+
+.pixel-palette-stop input[type='color'] {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.pixel-palette-name {
+  width: 140px;
+}
+
+.pixel-palette-hint {
+  max-width: 260px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

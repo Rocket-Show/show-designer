@@ -150,6 +150,20 @@ export function pixelPaletteOf(palette: BuiltInPixelPalette): PixelPalette {
   });
 }
 
+// how the colors of a palette look, as a CSS gradient: blended from one to the next or in steps
+export function pixelStopsCss(stops: { position: number; color: string }[], between: string): string {
+  const sorted = stops.slice().sort((stop1, stop2) => stop1.position - stop2.position);
+
+  if (sorted.length === 0) {
+    return '#000000';
+  }
+
+  return pixelPaletteCss(
+    { id: 'stops', stops: sorted.map((stop) => [stop.position, stop.color] as [number, string]), between },
+    sorted[0].color
+  );
+}
+
 // how a palette looks, as a CSS gradient (the shades of a color for the one of the preset)
 export function pixelPaletteCss(palette: BuiltInPixelPalette, presetColor: string): string {
   const stops: [number, string][] =

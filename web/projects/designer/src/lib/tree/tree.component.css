@@ -59,6 +59,14 @@
   z-index: 1;
 }
 
+/* what an open row shows below itself instead of its children, as tall as it needs */
+.tree-detail {
+  flex: 0 0 auto;
+  padding: 2px var(--sd-space-1) var(--sd-space-1) var(--tree-indent, 4px);
+  margin-bottom: 2px;
+  color: var(--sd-text);
+}
+
 /* opens and closes an expandable row, so its type icon can stay what it is */
 .tree-caret {
   flex: 0 0 auto;

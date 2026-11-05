@@ -14,6 +14,7 @@ import { ProjectService } from '../services/project.service';
 import { PresetFixture } from '../models/preset-fixture';
 import { LivePreviewService } from '../services/live-preview.service';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
+import { PixelGridSelection } from './fixture-pixel-grid/fixture-pixel-grid.component';
 
 // One row of the fixture tree. The project's entry says what the row is, the preset's
 // own entry (if it has one) says where the row sits while the preset brings its own
@@ -33,6 +34,8 @@ interface FixtureGroup {
   pixelCount: number;
   // remembers whether it is open (see FixtureOrderService.fixtureGroupKey)
   expandKey: string;
+  // some of its rows are pixels of its matrix: they can be shown as a grid
+  hasGrid: boolean;
 }
 
 export type FixtureGroupState = 'all' | 'some' | 'none';
@@ -249,6 +252,7 @@ export class FixtureComponent implements OnInit, OnDestroy {
       rows: run.map((item) => item.presetFixture),
       pixelCount: run.filter((item) => !!item.presetFixture.pixelKey).length,
       expandKey: this.fixtureOrderService.fixtureGroupKey(first.fixtureUuid, folderUuid),
+      hasGrid: this.hasMatrixPixels(first.fixtureUuid, run),
     };
 
     const node: TreeNode = {
@@ -256,6 +260,8 @@ export class FixtureComponent implements OnInit, OnDestroy {
       // it opens and closes like a folder, but nothing else can be put into it
       isFolder: true,
       expanded: this.fixtureOrderService.expandedFixtureGroups.has(group.expandKey),
+      // open, it shows its pixels as a grid, unless they are listed to be reordered
+      detail: group.hasGrid && !this.fixtureOrderService.listedFixtureGroups.has(group.expandKey),
       iconClass: 'icon-' + this.fixtureIconClass(first),
       fixtureGroup: group,
       children: [],
@@ -269,6 +275,21 @@ export class FixtureComponent implements OnInit, OnDestroy {
     }
 
     return node;
+  }
+
+  // are some of the rows pixels of the fixture's matrix? (a mode can control its pixels
+  // through groups only)
+  private hasMatrixPixels(fixtureUuid: string, run: FixtureOrderItem[]): boolean {
+    const fixture = this.fixtureService.getFixtureByUuid(fixtureUuid);
+    const profile = fixture ? this.fixtureService.getProfileByUuid(fixture.profileUuid) : undefined;
+
+    if (!profile?.matrix) {
+      return false;
+    }
+
+    const pixelKeys = new Set(this.fixtureService.getAllPixelKeys(profile).map((pixel) => pixel.key));
+
+    return run.some((item) => pixelKeys.has(item.presetFixture.pixelKey));
   }
 
   // the fixture with its pixels the passed row is shown in, if it is shown in one
@@ -609,6 +630,44 @@ export class FixtureComponent implements OnInit, OnDestroy {
 
     this.presetService.fixtureSelectionChanged.next();
     this.livePreviewService.previewLive();
+  }
+
+  // the grid takes the pixels a click or a drag went over, or releases them. The settings
+  // are made per fixture anyway.
+  selectPixelRows(node: TreeNode, selection: PixelGridSelection) {
+    if (this.fixtureService.settingsSelection) {
+      if (this.fixtureIsSelected(node.fixtureGroup.rows[0]) !== selection.selected) {
+        this.selectFixture(node.fixtureGroup.rows[0]);
+      }
+
+      return;
+    }
+
+    const fixture = this.fixtureService.getFixtureByUuid(node.fixtureGroup.fixtureUuid);
+
+    for (const row of selection.rows) {
+      if (this.fixtureIsSelected(row) !== selection.selected) {
+        this.presetService.switchFixtureSelection(fixture, row.pixelKey);
+      }
+    }
+
+    this.presetService.fixtureSelectionChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  rowIsSelected = (row: PresetFixture): boolean => this.fixtureIsSelected(row);
+
+  // the pixels as a grid, or as rows to change the order they are chased in
+  switchPixelView(node: TreeNode) {
+    const key = node.fixtureGroup.expandKey;
+
+    if (this.fixtureOrderService.listedFixtureGroups.has(key)) {
+      this.fixtureOrderService.listedFixtureGroups.delete(key);
+    } else {
+      this.fixtureOrderService.listedFixtureGroups.add(key);
+    }
+
+    this.buildTree();
   }
 
   selectAll() {

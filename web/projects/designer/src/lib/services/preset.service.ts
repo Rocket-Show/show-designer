@@ -50,8 +50,8 @@ export class PresetService {
   // is also what the preview shows while nothing is playing.
   selectedStep: PresetStep;
 
-  // the fixtures of a preset indexed by fixture uuid (see getPresetFixturesByUuid)
-  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byUuid: Map<string, PresetFixture[]> }>();
+  // the fixtures of a preset indexed by fixture uuid and pixel key (see getPresetFixture)
+  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byKey: Map<string, PresetFixture> }>();
 
   // fires, when the current preview element has changed (scene/preset)
   previewSelectionChanged: Subject<void> = new Subject<void>();
@@ -151,44 +151,38 @@ export class PresetService {
     return fixtureUuid1 === fixtureUuid2 && ((!pixelKey1 && !pixelKey2) || pixelKey1 === pixelKey2);
   }
 
-  getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
-    // only the fixtures of this uuid can match, which are the fixture itself and its pixels
-    for (const fixture of this.getPresetFixturesByUuid(preset, fixtureUuid)) {
-      if (this.fixtureUuidAndPixelKeyEquals(fixture.fixtureUuid, fixtureUuid, fixture.pixelKey, pixelKey)) {
-        return fixture;
-      }
-    }
-
-    return null;
-  }
-
   // getPresetFixture() is called from templates and therefore runs for every fixture on every
   // change detection cycle, which a slider being dragged triggers with each mouse move. Walking
-  // all fixtures of the preset each time makes that quadratic, so index them by uuid instead.
-  // A preset only ever gets fixtures added, removed or reordered, never exchanged in place, so
-  // the list itself together with its length tells us whether the index is still valid.
-  // Reordering leaves it valid, because a preset holds at most one entry per fixture and pixel.
-  private getPresetFixturesByUuid(preset: Preset, fixtureUuid: string): PresetFixture[] {
+  // all fixtures of the preset each time makes that quadratic (a matrix alone brings hundreds of
+  // pixels of one fixture), so index them by fixture and pixel instead. A preset only ever gets
+  // fixtures added, removed or reordered, never exchanged in place, so the list itself together
+  // with its length tells us whether the index is still valid. Reordering leaves it valid,
+  // because a preset holds at most one entry per fixture and pixel (the first one counts).
+  getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
     let index = this.presetFixtureIndex.get(preset);
 
     if (!index || index.list !== preset.fixtures || index.length !== preset.fixtures.length) {
-      const byUuid = new Map<string, PresetFixture[]>();
+      const byKey = new Map<string, PresetFixture>();
 
       for (const fixture of preset.fixtures) {
-        const fixturesOfUuid = byUuid.get(fixture.fixtureUuid);
+        const key = this.presetFixtureKey(fixture.fixtureUuid, fixture.pixelKey);
 
-        if (fixturesOfUuid) {
-          fixturesOfUuid.push(fixture);
-        } else {
-          byUuid.set(fixture.fixtureUuid, [fixture]);
+        if (!byKey.has(key)) {
+          byKey.set(key, fixture);
         }
       }
 
-      index = { list: preset.fixtures, length: preset.fixtures.length, byUuid };
+      index = { list: preset.fixtures, length: preset.fixtures.length, byKey };
       this.presetFixtureIndex.set(preset, index);
     }
 
-    return index.byUuid.get(fixtureUuid) || [];
+    return index.byKey.get(this.presetFixtureKey(fixtureUuid, pixelKey)) || null;
+  }
+
+  // a fixture and one of its pixels, matched like fixtureUuidAndPixelKeyEquals does: no pixel
+  // key is the fixture itself
+  private presetFixtureKey(fixtureUuid: string, pixelKey: string): string {
+    return fixtureUuid + '/' + (pixelKey || '');
   }
 
   // all fixtures of a preset in the order they are chased in: either the global

@@ -1,3 +1,5 @@
+import { FixtureCapabilityValue } from '../../models/fixture-capability-value';
+import { pixelPatternsForBars, pixelPatternsForMatrices } from '../../models/pixel-pattern';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -317,7 +319,7 @@ describe('EffectCurveComponent pixel preview', () => {
       { previewLive: () => {} } as any,
       unused,
       { selectedComposition: undefined } as any,
-      { getPresetColor: () => '#0000ff' } as any
+      { getPresetLightColor: () => '#0000ff' } as any
     );
     component.curve = effect;
 
@@ -718,6 +720,107 @@ describe('EffectCurveComponent', () => {
     await select(pattern, 'stack');
     expect(element.querySelector('input[name="pixelSize"]')).toBeNull();
     expect(element.querySelector('input[name="pixelSoftness"]')).toBeNull();
+  });
+
+  it('edits the colors of an effect and saves them as a palette of the project', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    // the shades of the preset have no colors to edit
+    expect(element.querySelector('.pixel-palette-editor')).toBeNull();
+    expect(element.querySelector('.pixel-palette-hint')).not.toBeNull();
+
+    (element.querySelector('#palette_pixels_red-blue') as HTMLInputElement).click();
+    await update();
+    expect(element.querySelectorAll('.pixel-palette-stop').length).toBe(2);
+
+    // a color changed, moved, added and removed: the effect's own colors from then on
+    const color = element.querySelector('input[name="stopColor0"]') as HTMLInputElement;
+    color.value = '#00ff00';
+    color.dispatchEvent(new Event('input'));
+    type(element.querySelector('input[name="stopPosition1"]'), '0.8');
+    type(element.querySelector('input[name="stopPosition1"]'), '2');
+    expect(pixels.palette.ref).toBe('custom');
+    expect(pixels.palette.stops.map((stop) => [stop.position, stop.color])).toEqual([
+      [0, '#00ff00'],
+      [0.8, '#1e4bff'],
+    ]);
+
+    (element.querySelector('.pixel-palette-add') as HTMLElement).click();
+    await update();
+    expect(pixels.palette.stops.length).toBe(3);
+    expect(pixels.palette.stops[2].position).toBe(0.4);
+    (element.querySelectorAll('.pixel-palette-remove')[2] as HTMLElement).click();
+    await select(element.querySelector('select[name="paletteBetween"]'), 'smooth');
+    await select(element.querySelector('select[name="paletteRepeat"]'), 'wrap');
+    expect([pixels.palette.stops.length, pixels.palette.between, pixels.palette.repeat]).toEqual([2, 'smooth', 'wrap']);
+
+    // saved with the project under a name, the effect painted in it
+    const name = element.querySelector('input[name="paletteName"]') as HTMLInputElement;
+    name.value = 'Green to blue';
+    (element.querySelector('.pixel-palette-save') as HTMLElement).click();
+    await update();
+    const project = TestBed.inject(ProjectService).project;
+    expect(project.pixelPalettes.map((palette) => palette.name)).toEqual(['Green to blue']);
+    expect(pixels.palette.ref).toBe(project.pixelPalettes[0].uuid);
+    expect(element.querySelectorAll('.pixel-project-palette').length).toBe(1);
+
+    // picked by another effect, which keeps its own copy, and deleted
+    (element.querySelector('#palette_pixels_fire') as HTMLInputElement).click();
+    await update();
+    (element.querySelector('.pixel-project-palette input') as HTMLInputElement).click();
+    await update();
+    expect(pixels.palette.stops.map((stop) => stop.color)).toEqual(['#00ff00', '#1e4bff']);
+    expect(pixels.palette.stops === project.pixelPalettes[0].stops).toBe(false);
+
+    (element.querySelector('.pixel-palette-delete') as HTMLElement).click();
+    await update();
+    expect(project.pixelPalettes).toEqual([]);
+    expect(pixels.palette.ref).toBe('custom');
+  });
+
+  it('picks a pattern from all of them, each moving in the colors of the effect', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels', palette: { ref: 'fire', stops: [{ position: 0, color: '#ff0000' }] } });
+    curve = pixels;
+    await render();
+
+    (element.querySelector('.pixel-picker-toggle') as HTMLElement).click();
+    await update();
+    const tiles = Array.from(element.querySelectorAll('.pixel-picker-tile'));
+    expect(tiles.length).toBe(pixelPatternsForBars.length + pixelPatternsForMatrices.length);
+    expect(element.querySelector('.pixel-picker-tile.active canvas').getAttribute('data-pattern')).toBe('chase');
+
+    // drawn with the grid: the pixels of a flow in red
+    (component as any).animationService.timeMillis = 500;
+    component.redraw();
+    const flow = element.querySelector('canvas[data-pattern="flow"]') as HTMLCanvasElement;
+    const pixel = flow.getContext('2d').getImageData(flow.width / 2, flow.height / 2, 1, 1).data;
+    expect(pixel[0]).toBeGreaterThan(200);
+
+    // a text and an image show something of their own, or a sample
+    const text = element.querySelector('canvas[data-pattern="text"]') as HTMLCanvasElement;
+    const lit = Array.from(text.getContext('2d').getImageData(0, 0, text.width, text.height).data).filter(
+      (value, i) => i % 4 === 0 && value > 200
+    );
+    expect(lit.length).toBeGreaterThan(0);
+
+    (tiles[tiles.length - 1] as HTMLElement).click();
+    await update();
+    expect(pixels.pattern).toBe(pixelPatternsForMatrices[pixelPatternsForMatrices.length - 1]);
+    expect(element.querySelector('.pixel-picker')).toBeNull();
+  });
+
+  it('tells when the preset dims to 0, which keeps a pixel effect dark', async () => {
+    curve = new EffectPixel({ uuid: 'pixels' });
+    await render();
+    expect(element.querySelector('.pixel-dimmed-warning')).toBeNull();
+
+    presetService.selectedPreset.steps[0].fixtureCapabilityValues.push(
+      new FixtureCapabilityValue({ type: 'Intensity', valuePercentage: 0 })
+    );
+    await update();
+    expect(element.querySelector('.pixel-dimmed-warning').textContent).toContain('designer.effect.pixel-dimmed-to-zero');
   });
 
   it('picks the palette of a pixel effect and how it is blended with the color of the preset', async () => {

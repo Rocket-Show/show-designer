@@ -23,6 +23,19 @@
         }
       </optgroup>
     </select>
+    <!-- all patterns as they look, to pick from -->
+    <a
+      href="#"
+      class="btn m-0 ml-1 px-2 pixel-picker-toggle"
+      [class.btn-primary]="pickingPattern"
+      [class.btn-secondary]="!pickingPattern"
+      popover="{{ 'designer.effect.pixel-pick-pattern' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pickingPattern = !pickingPattern; (false)"
+      ><i class="fa fa-th fa-fw" aria-hidden="true"></i
+    ></a>
     } @else {
     <select
       class="flex-grow-1"
@@ -62,9 +75,32 @@
       ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
     ></a>
   </div>
+  @if (isPixel && pickingPattern) {
+  <!-- the patterns, each in the colors of the effect, made for bars and made for matrices -->
+  <div class="pixel-picker">
+    @for (group of pixelPatternGroups; track group.name) {
+    <div class="pixel-picker-group">{{ 'designer.effect.pixel-patterns-' + group.name | translate }}</div>
+    <div class="pixel-picker-tiles">
+      @for (pattern of group.patterns; track pattern) {
+      <a href="#" class="pixel-picker-tile" [class.active]="pixelEffect.pattern === pattern" (click)="pickPattern(pattern); (false)">
+        <canvas #patternTile [attr.data-pattern]="pattern" [attr.data-matrix]="group.name === 'matrices'" width="84" height="44"></canvas>
+        <span>{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</span>
+      </a>
+      }
+    </div>
+    }
+  </div>
+  }
   <div>
     <canvas #curveGrid class="curve-grid" width="200" height="100" viewBox="150 -75 4850 5150" preserveAspectRatio="none"></canvas>
   </div>
+  @if (isPixel && dimmedToZero()) {
+  <!-- a pixel effect lights the colors, the dimmer of the preset at 0 keeps them dark -->
+  <div class="text-warning pixel-dimmed-warning">
+    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+    {{ 'designer.effect.pixel-dimmed-to-zero' | translate }}
+  </div>
+  }
 </div>
 
 <div class="mr-4">
@@ -507,6 +543,7 @@
       href="#"
       role="tab"
       [attr.aria-selected]="pixelTab === 'colors'"
+      [attr.aria-label]="'designer.effect.pixel-colors' | translate"
       popover="{{ 'designer.effect.pixel-colors' | translate }}"
       container="body"
       placement="right"
@@ -521,6 +558,7 @@
       href="#"
       role="tab"
       [attr.aria-selected]="pixelTab === 'blend'"
+      [attr.aria-label]="'designer.effect.pixel-blend' | translate"
       popover="{{ 'designer.effect.pixel-blend' | translate }}"
       container="body"
       placement="right"
@@ -535,6 +573,7 @@
       href="#"
       role="tab"
       [attr.aria-selected]="pixelTab === 'place'"
+      [attr.aria-label]="'designer.effect.pixel-place' | translate"
       popover="{{ 'designer.effect.pixel-place' | translate }}"
       container="body"
       placement="right"
@@ -549,6 +588,7 @@
       href="#"
       role="tab"
       [attr.aria-selected]="pixelTab === 'audio'"
+      [attr.aria-label]="'designer.effect.pixel-audio' | translate"
       popover="{{ 'designer.effect.pixel-audio' | translate }}"
       container="body"
       placement="right"
@@ -577,6 +617,87 @@
       <span class="pixel-palette-swatch" [style.background]="paletteCss(palette)"></span>
       {{ 'designer.effect.pixel-palette-' + palette.id | translate }}
     </label>
+  </div>
+  } @if (projectPalettes.length) {
+  <!-- the palettes saved with the project -->
+  <div class="pixel-palettes-project">{{ 'designer.effect.pixel-palettes-project' | translate }}</div>
+  @for (palette of projectPalettes; track palette.uuid) {
+  <div class="form-check pixel-palette pixel-project-palette">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'palette_' + curve.uuid"
+      [id]="'palette_' + curve.uuid + '_' + palette.uuid"
+      [checked]="pixelEffect.palette.ref === palette.uuid"
+      (change)="setProjectPalette(palette)"
+    />
+    <label class="form-check-label d-flex align-items-center" [for]="'palette_' + curve.uuid + '_' + palette.uuid">
+      <span class="pixel-palette-swatch" [style.background]="stopsCss(palette.stops, palette.between)"></span>
+      {{ palette.name }}
+    </label>
+    <a
+      href="#"
+      class="ml-auto pixel-palette-delete"
+      [attr.aria-label]="'designer.effect.pixel-palette-delete' | translate"
+      (click)="deleteProjectPalette(palette); (false)"
+      ><i class="fa fa-trash" aria-hidden="true"></i
+    ></a>
+  </div>
+  } }
+  <hr class="my-1" style="border-color: white" />
+  @if (pixelEffect.palette.ref === 'preset') {
+  <div class="text-muted pixel-palette-hint">{{ 'designer.effect.pixel-palette-follows-preset' | translate }}</div>
+  } @else {
+  <!-- the colors of the effect: each one at its place, how it runs from one to the next and beyond the ends -->
+  <div class="pixel-palette-editor">
+    <div class="pixel-palette-edited" [style.background]="stopsCss(pixelEffect.palette.stops, pixelEffect.palette.between)"></div>
+    @for (stop of pixelEffect.palette.stops; track $index; let index = $index) {
+    <div class="d-flex align-items-center mt-1 pixel-palette-stop">
+      <input type="color" [attr.name]="'stopColor' + index" [value]="stop.color" (input)="setStopColor(index, $any($event.target).value)" />
+      <input
+        type="text"
+        class="slider-input ml-1"
+        [attr.name]="'stopPosition' + index"
+        [ngModel]="stop.position"
+        (ngModelChange)="setStopPosition(index, $event)"
+      />
+      <a
+        href="#"
+        class="ml-1 pixel-palette-remove"
+        [attr.aria-label]="'designer.effect.pixel-palette-remove-color' | translate"
+        (click)="removeStop(index); (false)"
+        ><i class="fa fa-times" aria-hidden="true"></i
+      ></a>
+    </div>
+    }
+    <a href="#" class="d-inline-block mt-1 pixel-palette-add" (click)="addStop(); (false)"
+      ><i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.effect.pixel-palette-add-color' | translate }}</a
+    >
+    <div class="d-flex mt-1">
+      <select name="paletteBetween" [ngModel]="pixelEffect.palette.between" (ngModelChange)="setPaletteBetween($event)">
+        <option value="smooth">{{ 'designer.effect.pixel-palette-between-smooth' | translate }}</option>
+        <option value="steps">{{ 'designer.effect.pixel-palette-between-steps' | translate }}</option>
+      </select>
+      <select class="ml-1" name="paletteRepeat" [ngModel]="pixelEffect.palette.repeat" (ngModelChange)="setPaletteRepeat($event)">
+        <option value="mirror">{{ 'designer.effect.pixel-palette-repeat-mirror' | translate }}</option>
+        <option value="wrap">{{ 'designer.effect.pixel-palette-repeat-wrap' | translate }}</option>
+      </select>
+    </div>
+    <div class="d-flex mt-1">
+      <input
+        #paletteName
+        type="text"
+        name="paletteName"
+        class="pixel-palette-name"
+        [placeholder]="'designer.effect.pixel-palette-name' | translate"
+      />
+      <a
+        href="#"
+        class="btn btn-default btn-sm ml-1 pixel-palette-save"
+        (click)="savePalette(paletteName.value); paletteName.value = ''; (false)"
+        >{{ 'designer.effect.pixel-palette-save' | translate }}</a
+      >
+    </div>
   </div>
   } } @else if (pixelTab === 'audio') {
   <!-- the audio it follows: none or the one of the composition, which band and how -->

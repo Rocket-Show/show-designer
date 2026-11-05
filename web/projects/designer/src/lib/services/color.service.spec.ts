@@ -2,6 +2,8 @@ import { Color } from '../models/color';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
+import { EffectPixel } from '../models/effect-pixel';
+import { PixelPalette } from '../models/pixel-palette';
 import { PresetStep } from '../models/preset-step';
 import { Scene } from '../models/scene';
 import { ColorService } from './color.service';
@@ -116,6 +118,27 @@ describe('ColorService', () => {
 
     red.colorAuto = false;
     expect(service.getPresetColor(red)).toBe('#123456');
+  });
+
+  it('marks a preset with the palette of a pixel effect painting in colors of its own', () => {
+    const preset = new Preset();
+    preset.steps = [step(1, 0, 0)];
+    const pixels = new EffectPixel({ palette: { ref: 'ice', stops: [{ position: 0, color: '#0000ff' }] } });
+    preset.effects = [pixels];
+
+    expect(service.getDerivedPresetColor(preset)).toBe('#0000ff');
+    // what it puts on its fixtures stays its own color
+    expect(service.getPresetLightColor(preset)).toBe('#ff0000');
+
+    // in the shades of the color of the preset, masking it or hidden, the effect shows the color of the preset
+    pixels.blend = 'mask';
+    expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
+    pixels.blend = 'replace';
+    pixels.visible = false;
+    expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
+    pixels.visible = true;
+    pixels.palette = new PixelPalette({ ref: 'preset' });
+    expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
   });
 
   it('shows a dark color bright enough to be seen, keeping its hue', () => {

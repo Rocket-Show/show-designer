@@ -5,3 +5,14 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+
+/* switches an open fixture between its pixels as a grid and as rows */
+.fixture-pixel-view {
+  flex: 0 0 auto;
+  color: var(--sd-text-dim);
+  font-size: 11px;
+}
+
+.fixture-pixel-view:hover {
+  color: var(--sd-text);
+}

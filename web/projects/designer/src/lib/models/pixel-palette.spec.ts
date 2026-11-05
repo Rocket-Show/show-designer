@@ -1,4 +1,5 @@
-import { hexToRgb, PixelPalette, rgbToHex } from './pixel-palette';
+import { hexToRgb, PixelPalette, ProjectPixelPalette, rgbToHex } from './pixel-palette';
+import { Project } from './project';
 
 function palette(stops: [number, string][], extra: any = {}): PixelPalette {
   return new PixelPalette({ stops: stops.map(([position, color]) => ({ position, color })), ...extra });
@@ -84,5 +85,20 @@ describe('PixelPalette', () => {
     expect(shades.stops.map((stop) => stop.color)).toEqual(['#ff8000', '#ffdfbf']);
     expect(round(shades.colorAt(0))).toEqual([255, 128, 0]);
     expect(rgbToHex([2, -1, 0.5])).toBe('#ff0080');
+  });
+
+  it('is saved with the project under a name, keeping what it does not get', () => {
+    const project = new Project({
+      pixelPalettes: [{ uuid: 'p', name: 'Mine', stops: [{ position: 0.5, color: '#00ff00' }], between: 'steps' }, {}],
+    });
+
+    expect(project.pixelPalettes[0] instanceof ProjectPixelPalette).toBe(true);
+    expect([project.pixelPalettes[0].name, project.pixelPalettes[0].stops[0].color, project.pixelPalettes[0].between]).toEqual([
+      'Mine',
+      '#00ff00',
+      'steps',
+    ]);
+    expect([project.pixelPalettes[1].name, project.pixelPalettes[1].repeat, project.pixelPalettes[1].stops]).toEqual(['', 'mirror', []]);
+    expect(new Project({}).pixelPalettes).toEqual([]);
   });
 });

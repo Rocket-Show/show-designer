@@ -21,6 +21,10 @@ export class FixtureOrderService {
   // designer is: unlike a folder, it is not a part of the project the user made.
   expandedFixtureGroups = new Set<string>();
 
+  // the open fixtures which show their pixels as rows, to change the order they are chased
+  // in, instead of as a grid (by the same key)
+  listedFixtureGroups = new Set<string>();
+
   constructor(private projectService: ProjectService, private folderService: FolderService) {}
 
   // a fixture shown with its pixels in a folder of the panel, to remember it is open

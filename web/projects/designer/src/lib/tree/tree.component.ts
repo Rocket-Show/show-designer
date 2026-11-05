@@ -30,6 +30,9 @@ export interface TreeNode {
   // the icon already shows whether the node is open (a folder) -> no caret glyph in
   // front of it, and a plain click on the row opens and closes it
   toggleOnClick?: boolean;
+  // while it is open, the node shows the detail template below its row instead of its
+  // children (e.g. the pixels of a fixture as a grid, instead of a row for each)
+  detail?: boolean;
   children?: TreeNode[];
   // allow arbitrary extra payload on a node
   [key: string]: any;
@@ -120,6 +123,10 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
 
   // custom node content, provided as <ng-template #nodeTemplate let-node>
   @ContentChild('nodeTemplate') nodeTemplate?: TemplateRef<any>;
+
+  // what an open node with a detail shows below its row, provided as
+  // <ng-template #detailTemplate let-node>
+  @ContentChild('detailTemplate') detailTemplate?: TemplateRef<any>;
 
   // the visible (expanded) nodes, flattened for rendering
   flatNodes: FlatNode[] = [];
@@ -549,7 +556,7 @@ export class TreeComponent implements OnChanges, OnInit, OnDestroy {
       const flat: FlatNode = { node, key: this.key(node), level, parent };
       this.flatNodes.push(flat);
       this.flatByNode.set(node, flat);
-      if (node.isFolder && node.expanded && node.children?.length) {
+      if (node.isFolder && node.expanded && !node.detail && node.children?.length) {
         this.flatten(node.children, level + 1, node);
       }
     }
