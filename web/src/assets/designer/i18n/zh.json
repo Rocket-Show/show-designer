@@ -321,7 +321,6 @@
       "edit-universes-title": "编辑宇宙",
       "change-type": "将所选灯具更改为此配置文件",
       "fixture-type": "灯具类型",
-      "change-type-hint": "场地有其他灯具？选择灯具，然后点击左侧其配置文件旁的 ⇄。",
       "exchanged-from": "已从 {{from}} 更改。点击确定后，预设为旧型号设置的内容也会用于此型号：",
       "exchange-carried": "{{count}} 个值会被沿用",
       "exchange-lost": "{{count}} 个值无法沿用：",

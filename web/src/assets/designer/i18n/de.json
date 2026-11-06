@@ -322,7 +322,6 @@
       "edit-universes-title": "Universen bearbeiten",
       "change-type": "Die ausgewählten Fixtures auf dieses Profil ändern",
       "fixture-type": "Fixture-Typ",
-      "change-type-hint": "Andere Fixtures am Veranstaltungsort? Wähle die Fixtures aus und klicke links neben ihrem Profil auf ⇄.",
       "exchanged-from": "Geändert von {{from}}. Mit OK erhalten die Presets, was sie für das alte Modell einstellen, auch für dieses:",
       "exchange-carried": "{{count}} Werte werden übernommen",
       "exchange-lost": "{{count}} Werte können nicht übernommen werden:",

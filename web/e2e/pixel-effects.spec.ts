@@ -37,6 +37,14 @@ async function addPixelEffect(designer: any, api: any, page: Page, file: string,
   return page.locator('lib-app-effect-curve');
 }
 
+// the pattern of a pixel effect, picked from the tiles the pattern picked opens
+async function pickPattern(card: Locator, pattern: string) {
+  await card.locator('.pixel-picker-toggle').click();
+  await card.locator(`.pixel-picker-tile:has(canvas[data-pattern="${pattern}"])`).click();
+  await expect(card.locator('.pixel-picker')).toBeHidden();
+  await expect(card.locator('.pixel-picker-toggle')).toHaveAttribute('data-pattern', pattern);
+}
+
 // A pixel effect paints a pattern over the pixels of the bars and matrices of a preset, in the colors of a palette. It is
 // added among the effects of the preset, and its card shows the pixels of the preset as the effect lights them.
 test.describe('Pixel effects', () => {
@@ -63,9 +71,10 @@ test.describe('Pixel effects', () => {
 
     // a chase in the colors of the rainbow, made a flow in the colors of fire
     const card = page.locator('lib-app-effect-curve');
-    await expect(card.locator('select[name="pattern"]')).toHaveValue('chase');
+    await expect(card.locator('.pixel-picker-toggle')).toHaveText(/Chase/);
     await expect(card.getByLabel('Rainbow')).toBeChecked();
-    await card.locator('select[name="pattern"]').selectOption('flow');
+    await pickPattern(card, 'flow');
+    await expect(card.locator('.pixel-picker-toggle')).toHaveText(/Flow/);
     await card.getByLabel('Fire').check();
     await expect(card.getByText('Length')).toBeVisible();
 
@@ -96,7 +105,24 @@ test.describe('Pixel effects', () => {
     await expect(card.locator('.pixel-picker-tile')).not.toHaveCount(0);
     await card.locator('.pixel-picker-tile', { hasText: 'Plasma' }).first().click();
     await expect(card.locator('.pixel-picker')).toBeHidden();
-    await expect(card.locator('select[name="pattern"]')).toHaveValue('plasma');
+    await expect(card.locator('.pixel-picker-toggle')).toHaveText(/Plasma/);
+
+    // over the panel of the effect, however little of it the blend takes: the last tile can be scrolled to
+    await card.getByRole('tab', { name: 'Blend' }).click();
+    await card.locator('.pixel-picker-toggle').click();
+    const picker = card.locator('.pixel-picker');
+    const panel = await page.locator('lib-app-effect .card-body').first().boundingBox();
+    const shown = await picker.boundingBox();
+    expect(shown.height).toBeGreaterThan(180);
+    expect(shown.y + shown.height).toBeLessThanOrEqual(page.viewportSize().height);
+    expect(shown.x + shown.width).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(shown.y).toBeGreaterThan(panel.y);
+    await card.locator('.pixel-picker-tile').last().scrollIntoViewIfNeeded();
+    await expect(card.locator('.pixel-picker-tile').last()).toBeInViewport();
+
+    // closed with a click elsewhere
+    await card.getByRole('tab', { name: 'Colors' }).click();
+    await expect(picker).toBeHidden();
 
     // the colors of fire, the first one made green, typed after a look at the color picker
     await card.getByLabel('Fire').check();
@@ -137,12 +163,12 @@ test.describe('Pixel effects', () => {
   test('writes a text over the pixels, and shows an image picked on them in its own colors', async ({ designer, api, page }) => {
     const card = await addPixelEffect(designer, api, page, 'pixel-matrix.json', 'Matrix of 4 x 3 pixels');
 
-    await card.locator('select[name="pattern"]').selectOption('text');
+    await pickPattern(card, 'text');
     await card.locator('input[name="pixelText"]').fill('HI');
     await expect.poll(async () => (await colorsOfGrid(card)).reduce((sum, color) => sum + color, 0)).toBeGreaterThan(0);
 
     // the picture becomes pixels of the effect, red and blue
-    await card.locator('select[name="pattern"]').selectOption('image');
+    await pickPattern(card, 'image');
     await card.locator('input[name="pixelImage"]').setInputFiles({
       name: 'checker.png',
       mimeType: 'image/png',
@@ -161,7 +187,7 @@ test.describe('Pixel effects', () => {
   test('follows the audio with a level meter, a beat while no composition plays', async ({ designer, api, page }) => {
     const card = await addPixelEffect(designer, api, page, 'pixel-bar.json', 'Bar of three pixels');
 
-    await card.locator('select[name="pattern"]').selectOption('meter');
+    await pickPattern(card, 'meter');
     await card.getByRole('tab', { name: 'Audio' }).click();
     await card.getByLabel('Follows the audio of the composition').check();
     await card.locator('select[name="audioBand"]').selectOption('bass');

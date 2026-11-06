@@ -321,7 +321,6 @@
       "edit-universes-title": "Edit universes",
       "change-type": "Change the selected fixtures to this profile",
       "fixture-type": "Fixture type",
-      "change-type-hint": "Other fixtures at the venue? Select the fixtures and click ⇄ next to their profile on the left.",
       "exchanged-from": "Changed from {{from}}. On OK, the presets get what they set for the old model for this one as well:",
       "exchange-carried": "{{count}} values carry over",
       "exchange-lost": "{{count}} values cannot be carried over:",

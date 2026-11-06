@@ -55,6 +55,8 @@ interface PixelPreviewFixture {
   columns: number;
   rows: number;
   parts: PixelContext[];
+  // which of its parts are pixels lighting in white only (see isWhitePixel)
+  white?: boolean[];
   // shown while the preset lights no fixture in colors yet
   example?: boolean;
 
@@ -71,6 +73,9 @@ const PIXEL_HOUSING_EDGE_COLOR = 'rgba(255, 255, 255, 0.07)';
 // and a lighter one in the picture of the stage, where no housing is drawn around them
 const PIXEL_OFF_COLOR = [20, 23, 28];
 const STAGE_PIXEL_OFF_COLOR = [36, 40, 48];
+
+// the color the preset puts on a pixel lighting in white only: white at full, which its dimmer dims
+const WHITE = [1, 1, 1];
 
 // how strong the glow around the lit pixels is, and how far it reaches (in pixels of the fixture)
 const PIXEL_GLOW_ALPHA = 0.8;
@@ -95,8 +100,11 @@ export interface CurveChannelOption {
   channel: CachedFixtureChannel;
 }
 
-// how tall the tiles to pick a pattern from are at least (two rows), in CSS pixels
+// how tall the tiles to pick a pattern from are at least (two rows), how far they keep from the pattern picked and from
+// the edges of the window, in CSS pixels
 const PICKER_MIN_HEIGHT = 180;
+const PICKER_GAP = 4;
+const PICKER_MARGIN = 8;
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -184,8 +192,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   // ---- a pixel effect, edited with its pattern, palette and blend in place of the curve and what it drives
 
-  public readonly pixelPatternsForBars = pixelPatternsForBars;
-  public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
   public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
   public readonly pixelSpreads = ['fixture', 'stage'];
   public readonly pixelFonts = [PIXEL_FONT, 'sans-serif', 'serif', 'monospace'];
@@ -225,6 +231,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       this.startAnimation();
     } else {
       this.stopAnimation();
+
+      // the tiles close with the effect
+      this.closePicker();
     }
   }
 
@@ -234,10 +243,27 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   @ViewChildren('patternTile') patternTiles: QueryList<ElementRef<HTMLCanvasElement>>;
   public pickingPattern = false;
 
-  // the tiles, as tall as the panel shows them once they are open
+  // the pattern picked, which opens the tiles below it
+  @ViewChild('pickerToggle') pickerToggle: ElementRef<HTMLElement>;
+
+  // The tiles, placed over the panels once they are open, and again when the panel scrolls or the window changes its
+  // size. They close with a click anywhere else and with Escape.
+  private pickerElement: HTMLElement;
+  private pickerListeners: (() => void)[] = [];
+
   @ViewChild('picker') set picker(picker: ElementRef<HTMLElement>) {
-    if (picker) {
-      this.fitPicker(picker.nativeElement);
+    const element = picker?.nativeElement;
+
+    if (element === this.pickerElement) {
+      return;
+    }
+
+    this.removePickerListeners();
+    this.pickerElement = element;
+
+    if (element) {
+      this.placePicker();
+      this.addPickerListeners();
     }
   }
   public readonly pixelPatternGroups = [
@@ -313,6 +339,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopAnimation();
+    this.removePickerListeners();
     this.effectsOpenChangedSubscription.unsubscribe();
     this.fixtureSelectionChangedSubscription.unsubscribe();
     this.langChangeSubscription.unsubscribe();
@@ -458,31 +485,90 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
-  // The tiles open over the card and scroll inside: as far down as the panels they are in
-  // show them, but no smaller than two rows. Where less is left, the panel scrolls to show
-  // them.
-  private fitPicker(picker: HTMLElement) {
-    let bottom = window.innerHeight;
+  // the icon of the fixtures the pattern is made for, like in the fixture list
+  pixelPatternIcon(): string {
+    return (this.pixelPatternGroups.find((group) => group.patterns.includes(this.pixelEffect.pattern)) || this.pixelPatternGroups[0]).icon;
+  }
 
-    for (let parent = picker.parentElement; parent; parent = parent.parentElement) {
-      if (getComputedStyle(parent).overflowY !== 'visible') {
-        bottom = Math.min(bottom, parent.getBoundingClientRect().bottom);
-      }
-    }
+  togglePicker() {
+    this.pickingPattern = !this.pickingPattern;
+  }
 
-    const room = Math.floor(bottom - picker.getBoundingClientRect().top - 8);
-
-    picker.style.maxHeight = Math.max(PICKER_MIN_HEIGHT, room) + 'px';
-
-    if (room < PICKER_MIN_HEIGHT) {
-      picker.scrollIntoView?.({ block: 'nearest' });
-    }
+  closePicker() {
+    this.pickingPattern = false;
   }
 
   // a pattern picked from the tiles
   pickPattern(pattern: string) {
-    this.pickingPattern = false;
+    this.closePicker();
     this.setPattern(pattern);
+  }
+
+  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside.
+  // Where less than two rows are left below it, but more above it, they open above it.
+  placePicker() {
+    const picker = this.pickerElement;
+    const toggle = this.pickerToggle?.nativeElement;
+
+    if (!picker || !toggle) {
+      return;
+    }
+
+    const anchor = toggle.getBoundingClientRect();
+    const width = Math.min(picker.offsetWidth, window.innerWidth - 2 * PICKER_MARGIN);
+    const below = Math.floor(window.innerHeight - anchor.bottom - PICKER_GAP - PICKER_MARGIN);
+    const above = Math.floor(anchor.top - PICKER_GAP - PICKER_MARGIN);
+    const upwards = below < PICKER_MIN_HEIGHT && above > below;
+
+    picker.style.left = Math.max(PICKER_MARGIN, Math.min(anchor.left, window.innerWidth - width - PICKER_MARGIN)) + 'px';
+
+    if (upwards) {
+      picker.style.top = '';
+      picker.style.bottom = window.innerHeight - anchor.top + PICKER_GAP + 'px';
+    } else {
+      picker.style.top = anchor.bottom + PICKER_GAP + 'px';
+      picker.style.bottom = '';
+    }
+
+    picker.style.maxHeight = Math.max(upwards ? above : below, 0) + 'px';
+  }
+
+  private addPickerListeners() {
+    this.ngZone.runOutsideAngular(() => {
+      const place = () => this.placePicker();
+
+      // a click anywhere but on the tiles and on the pattern picked (which closes them itself)
+      const pointerDown = (event: Event) => {
+        const target = event.target as Node;
+
+        if (!this.pickerElement?.contains(target) && !this.pickerToggle?.nativeElement.contains(target)) {
+          this.ngZone.run(() => this.closePicker());
+        }
+      };
+      const keyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          this.ngZone.run(() => this.closePicker());
+        }
+      };
+
+      // the scroll of any panel, which does not bubble up
+      window.addEventListener('scroll', place, true);
+      window.addEventListener('resize', place);
+      document.addEventListener('pointerdown', pointerDown, true);
+      document.addEventListener('keydown', keyDown);
+
+      this.pickerListeners = [
+        () => window.removeEventListener('scroll', place, true),
+        () => window.removeEventListener('resize', place),
+        () => document.removeEventListener('pointerdown', pointerDown, true),
+        () => document.removeEventListener('keydown', keyDown),
+      ];
+    });
+  }
+
+  private removePickerListeners() {
+    this.pickerListeners.forEach((remove) => remove());
+    this.pickerListeners = [];
   }
 
   // Each pattern on a bar or a matrix in the colors of the effect, moving: what it looks like before it is picked.
@@ -921,8 +1007,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return { width: bitmap.width, height: bitmap.height, frames: bitmap.frames.length, size };
   }
 
-  // The fixtures of the preset which light in colors, each with the parts it has in the preset (its pixels, or itself),
-  // in the order the effect chases them in. None selected yet: a bar and a matrix to show what the pattern looks like.
+  // The fixtures of the preset which light in colors (or have pixels lighting in white only), each with the parts it has
+  // in the preset (its pixels, or itself), in the order the effect chases them in. None selected yet: a bar and a matrix
+  // to show what the pattern looks like.
   private getPixelPreviewFixtures(): PixelPreviewFixture[] {
     if (this.pixelPreviewFixtures) {
       return this.pixelPreviewFixtures;
@@ -940,7 +1027,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
           channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
         );
 
-        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+        if (
+          (lightsInColors || this.isWhitePixel(cachedFixture)) &&
+          this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)
+        ) {
           const parts = byFixture.get(cachedFixture.fixture.uuid) || [];
           parts.push(cachedFixture);
           byFixture.set(cachedFixture.fixture.uuid, parts);
@@ -949,7 +1039,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
       byFixture.forEach((parts, fixtureUuid) => {
         const places = parts.map((part) => this.fixtureService.getPixelPlace(part));
-        fixtures.push({ index: chase.indices.get(fixtureUuid) ?? 0, columns: places[0].columns, rows: places[0].rows, parts: places });
+        fixtures.push({
+          index: chase.indices.get(fixtureUuid) ?? 0,
+          columns: places[0].columns,
+          rows: places[0].rows,
+          parts: places,
+          white: parts.map((part) => this.isWhitePixel(part)),
+        });
       });
 
       fixtures.sort((fixture1, fixture2) => fixture1.index - fixture2.index);
@@ -1057,8 +1153,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     glow?.clearRect(0, 0, fixture.columns, fixture.rows);
 
-    for (const part of fixture.parts) {
-      const [red, green, blue] = this.pixelColorOf(effect, part, cycles, fixture.index, base).map((component) =>
+    fixture.parts.forEach((part, i) => {
+      const [red, green, blue] = this.partColorOf(effect, part, cycles, fixture.index, base, fixture.white?.[i]).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
 
@@ -1073,7 +1169,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
         glow.fillStyle = `rgb(${red}, ${green}, ${blue})`;
         glow.fillRect(part.column, part.row, 1, 1);
       }
-    }
+    });
 
     if (glow) {
       this.drawPixelGlow(glow.canvas, left, top, width, height, cell);
@@ -1109,7 +1205,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     for (const part of stage.parts) {
       const cycles = effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
-      const [red, green, blue] = this.pixelColorOf(effect, part.place, cycles, part.index, base, true).map((component) =>
+      const [red, green, blue] = this.partColorOf(effect, part.place, cycles, part.index, base, part.white, true).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
       const x = left + part.place.x * pictureWidth - cell / 2;
@@ -1129,10 +1225,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
-  // The parts of the preset lighting in colors where they are in the picture of the stage, like the preview of the
-  // designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with their places in the chase of the
-  // preset. None picked yet: three bars side by side.
-  private getStagePreview(): { view: string; parts: { place: PixelContext; index: number }[]; count: number; example: boolean } {
+  // The parts of the preset lighting in colors (and the pixels lighting in white only) where they are in the picture of
+  // the stage, like the preview of the designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with
+  // their places in the chase of the preset. None picked yet: three bars side by side.
+  private getStagePreview(): {
+    view: string;
+    parts: { place: PixelContext; index: number; white?: boolean }[];
+    count: number;
+    example: boolean;
+  } {
     const view = this.pixelEffect.view;
 
     if (this.stagePreview && this.stagePreview.view === view) {
@@ -1159,7 +1260,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
           )
         );
 
-        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+        if (
+          (lightsInColors || this.isWhitePixel(cachedFixture)) &&
+          this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)
+        ) {
           parts.push(cachedFixture);
         }
       }
@@ -1196,9 +1300,52 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     const places = stagePixelPlaces(positions, view);
-    this.stagePreview = { view, count, parts: places.map((place, i) => ({ place, index: partIndices[i] })), example: parts.length === 0 };
+    this.stagePreview = {
+      view,
+      count,
+      parts: places.map((place, i) => ({ place, index: partIndices[i], white: parts.length > 0 && this.isWhitePixel(parts[i]) })),
+      example: parts.length === 0,
+    };
 
     return this.stagePreview;
+  }
+
+  // A pixel of a bar or a matrix lighting in white only: no red, green and blue, a dimmer of its own (e.g. a LED of a
+  // matrix of white strobes). A pixel effect lights it as bright as its color is (see PreviewService.mixPixelEffect).
+  private isWhitePixel(cachedFixture: CachedFixture): boolean {
+    return (
+      !!cachedFixture.pixel &&
+      !cachedFixture.channels.some((channel) =>
+        channel.capabilities.some(
+          (capability) =>
+            capability.capability.type === FixtureCapabilityType.ColorIntensity &&
+            [PixelColor.Red, PixelColor.Green, PixelColor.Blue].indexOf(capability.capability.color) >= 0
+        )
+      ) &&
+      cachedFixture.channels.some((channel) =>
+        channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)
+      )
+    );
+  }
+
+  // the color of a part of the preview (see pixelColorOf): a pixel lighting in white only in white, as bright as the
+  // brightest of the red, green and blue of the color the effect lights it in, on white at full
+  private partColorOf(
+    effect: EffectPixel,
+    part: PixelContext,
+    cycles: number,
+    fixtureIndex: number,
+    base: number[],
+    white: boolean,
+    stage = false
+  ): number[] {
+    if (!white) {
+      return this.pixelColorOf(effect, part, cycles, fixtureIndex, base, stage);
+    }
+
+    const brightness = Math.max(...this.pixelColorOf(effect, part, cycles, fixtureIndex, WHITE, stage));
+
+    return [brightness, brightness, brightness];
   }
 
   // the color of a pixel of the preview, as red, green and blue between 0 and 1: what the effect lights it in, blended

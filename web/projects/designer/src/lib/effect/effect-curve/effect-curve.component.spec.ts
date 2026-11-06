@@ -627,6 +627,14 @@ describe('EffectCurveComponent', () => {
     await update();
   }
 
+  // the pattern of a pixel effect, picked from the tiles the pattern picked opens
+  async function pickPattern(pattern: string) {
+    (element.querySelector('.pixel-picker-toggle') as HTMLElement).click();
+    await update();
+    (element.querySelector(`canvas[data-pattern="${pattern}"]`).closest('.pixel-picker-tile') as HTMLElement).click();
+    await update();
+  }
+
   const intensity = 'designer.fixtureCapabilityType.Intensity';
   const red = 'designer.fixtureCapabilityType.ColorIntensity, designer.fixtureCapabilityColor.Red';
 
@@ -674,9 +682,11 @@ describe('EffectCurveComponent', () => {
     await render();
 
     // the pattern in place of the curve, nothing to pick to drive
-    const pattern: HTMLSelectElement = element.querySelector('select[name="pattern"]');
-    expect(pattern.value).toBe('chase');
-    expect(element.querySelectorAll('optgroup').length).toBe(2);
+    const pattern = element.querySelector('.pixel-picker-toggle') as HTMLElement;
+    expect(pattern.getAttribute('data-pattern')).toBe('chase');
+    expect(pattern.textContent).toContain('designer.effect.pixel-pattern-chase');
+    expect(pattern.querySelector('.icon-pixel-bar')).not.toBeNull();
+    expect(element.querySelector('select[name="pattern"]')).toBeNull();
     expect(element.querySelectorAll('.tab-pane').length).toBe(0);
     expect(element.querySelector('select[name="direction"]')).not.toBeNull();
     expect(element.textContent).toContain('designer.effect.pixel-size-chase');
@@ -693,27 +703,28 @@ describe('EffectCurveComponent', () => {
     expect(pixels.direction).toBe('out');
 
     // a comet bounces, a plasma has no direction and no softness, the shapes have a shape
-    await select(pattern, 'comet');
+    await pickPattern('comet');
     expect(pixels.pattern).toBe('comet');
+    expect(pattern.textContent).toContain('designer.effect.pixel-pattern-comet');
     const bounce: HTMLInputElement = element.querySelector('#bounce_pixels');
     bounce.click();
     await update();
     expect(pixels.bounce).toBe(true);
 
-    await select(pattern, 'plasma');
+    await pickPattern('plasma');
     expect(element.querySelector('select[name="direction"]')).toBeNull();
     expect(element.querySelector('input[name="pixelSoftness"]')).toBeNull();
 
-    await select(pattern, 'shapes');
+    await pickPattern('shapes');
     await select(element.querySelector('select[name="pixelShape"]'), 'heart');
     expect(pixels.shape).toBe('heart');
 
-    await select(pattern, 'sparkle');
+    await pickPattern('sparkle');
     expect(element.textContent).toContain('designer.effect.pixel-fade');
     expect(previewLive).toHaveBeenCalled();
 
     // a sweep turns either way: the direction it had runs as the first way it turns
-    await select(pattern, 'sweep');
+    await pickPattern('sweep');
     const directions = () => Array.from(element.querySelectorAll('select[name="direction"] option')).map((option: any) => option.value);
     expect(directions()).toEqual(['cw', 'ccw']);
     expect((element.querySelector('select[name="direction"]') as HTMLSelectElement).value).toBe('cw');
@@ -721,18 +732,18 @@ describe('EffectCurveComponent', () => {
     expect(pixels.direction).toBe('ccw');
 
     // an orbit moves along a path and trails, a wave runs along a curve, a stack has no size
-    await select(pattern, 'orbit');
+    await pickPattern('orbit');
     expect(element.textContent).toContain('designer.effect.pixel-path');
     expect(element.textContent).toContain('designer.effect.pixel-trail');
     expect((element.querySelector('select[name="pixelShape"]') as HTMLSelectElement).value).toBe('circle');
     await select(element.querySelector('select[name="pixelShape"]'), 'figure8');
     expect(pixels.shape).toBe('figure8');
 
-    await select(pattern, 'wave');
+    await pickPattern('wave');
     expect(element.textContent).toContain('designer.effect.pixel-curve');
     expect((element.querySelector('select[name="pixelShape"]') as HTMLSelectElement).value).toBe('sine');
 
-    await select(pattern, 'stack');
+    await pickPattern('stack');
     expect(element.querySelector('input[name="pixelSize"]')).toBeNull();
     expect(element.querySelector('input[name="pixelSoftness"]')).toBeNull();
   });
@@ -821,34 +832,154 @@ describe('EffectCurveComponent', () => {
     await update();
     expect(pixels.pattern).toBe(pixelPatternsForMatrices[pixelPatternsForMatrices.length - 1]);
     expect(element.querySelector('.pixel-picker')).toBeNull();
+
+    // shown with the icon of the matrices
+    expect(element.querySelector('.pixel-picker-toggle .icon-matrix')).not.toBeNull();
   });
 
-  it('opens the tiles as tall as the panel shows them, and scrolls them into view where too little is left', async () => {
+  it('opens the tiles over the panel below the pattern picked, as far down as the window shows them', async () => {
     curve = new EffectPixel({ uuid: 'pixels' });
     await render();
 
-    // the panel the card is in shows 300 pixels of it
+    // the panel the card is in shows only 60 pixels of it, like the one of an effect with little to set, at the top of
+    // the window
     const host = fixture.nativeElement as HTMLElement;
+    host.style.position = 'fixed';
+    host.style.top = '0';
+    host.style.left = '0';
     host.style.display = 'block';
     host.style.overflow = 'hidden';
-    host.style.height = '300px';
+    host.style.height = '60px';
 
-    const toggle = () => (element.querySelector('.pixel-picker-toggle') as HTMLElement).click();
+    const toggle = element.querySelector('.pixel-picker-toggle') as HTMLElement;
     const picker = () => element.querySelector('.pixel-picker') as HTMLElement;
 
-    toggle();
+    toggle.click();
     await update();
-    const room = Math.floor(Math.min(window.innerHeight, host.getBoundingClientRect().bottom) - picker().getBoundingClientRect().top - 8);
-    expect(picker().style.maxHeight).toBe(Math.max(180, room) + 'px');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(getComputedStyle(picker()).position).toBe('fixed');
 
-    toggle();
+    const anchor = toggle.getBoundingClientRect();
+    const box = picker().getBoundingClientRect();
+    expect(box.top).toBeCloseTo(anchor.bottom + 4, 0);
+    expect(box.left).toBeCloseTo(Math.max(8, anchor.left), 0);
+    expect(picker().style.maxHeight).toBe(Math.floor(window.innerHeight - anchor.bottom - 12) + 'px');
+
+    // not cut by the panel: its tiles show further down than the panel reaches
+    expect(box.bottom).toBeGreaterThan(host.getBoundingClientRect().bottom);
+
+    // closed again by the pattern picked
+    toggle.click();
     await update();
-    host.style.height = '60px';
-    const scrolled = spyOn(Element.prototype, 'scrollIntoView');
-    toggle();
+    expect(picker()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('opens the tiles above the pattern picked where too little is left below it', async () => {
+    curve = new EffectPixel({ uuid: 'pixels' });
+    await render();
+
+    // the pattern picked near the bottom of the window
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = window.innerHeight - 60 + 'px';
+
+    const toggle = element.querySelector('.pixel-picker-toggle') as HTMLElement;
+    toggle.click();
     await update();
-    expect(picker().style.maxHeight).toBe('180px');
-    expect(scrolled).toHaveBeenCalled();
+
+    const anchor = toggle.getBoundingClientRect();
+    const picker = element.querySelector('.pixel-picker') as HTMLElement;
+    expect(picker.getBoundingClientRect().bottom).toBeCloseTo(anchor.top - 4, 0);
+    expect(picker.style.maxHeight).toBe(Math.floor(anchor.top - 12) + 'px');
+  });
+
+  it('follows the pattern picked when the panel scrolls, and closes with a click elsewhere and with Escape', async () => {
+    curve = new EffectPixel({ uuid: 'pixels' });
+    await render();
+
+    // a panel which scrolls, at the top of the window
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.position = 'fixed';
+    host.style.top = '0';
+    host.style.left = '0';
+    host.style.display = 'block';
+    host.style.overflow = 'auto';
+    host.style.height = '120px';
+    const filler = document.createElement('div');
+    filler.style.height = '1000px';
+    host.appendChild(filler);
+
+    const toggle = element.querySelector('.pixel-picker-toggle') as HTMLElement;
+    const picker = () => element.querySelector('.pixel-picker') as HTMLElement;
+
+    toggle.click();
+    await update();
+    host.scrollTop = 30;
+    host.dispatchEvent(new Event('scroll'));
+    expect(picker().getBoundingClientRect().top).toBeCloseTo(toggle.getBoundingClientRect().bottom + 4, 0);
+
+    // a click on the tiles keeps them open, one anywhere else closes them
+    picker().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await update();
+    expect(picker()).not.toBeNull();
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await update();
+    expect(picker()).toBeNull();
+
+    toggle.click();
+    await update();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await update();
+    expect(picker()).toBeNull();
+
+    // and so does closing the effect, without listening any further
+    toggle.click();
+    await update();
+    fixture.componentRef.setInput('isSelected', false);
+    await update();
+    expect(picker()).toBeNull();
+    expect((component as any).pickerListeners.length).toBe(0);
+  });
+
+  it('shows the white LEDs of a matrix in white, as bright as the color the effect lights them in', async () => {
+    // a preset of a matrix of 3 x 2 white LEDs, each a dimmer of its own
+    const project = new Project({
+      fixtureProfiles: [{ ...JSON.parse(JSON.stringify(profiles['test/white-matrix'])), uuid: 'test/white-matrix' }],
+      fixtures: [{ uuid: 'white', profileUuid: 'test/white-matrix', modeShortName: '8ch', dmxUniverseUuid: 'u', dmxFirstChannel: 0 }],
+      presetFixtures: [],
+      presets: [{ uuid: 'look', fixtures: [], steps: [{ uuid: 'step' }] }],
+    });
+    TestBed.inject(ProjectService).project = project;
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.updateCachedFixtures();
+    project.presets[0].fixtures = fixtureService.cachedFixtures.map(
+      (cachedFixture) => new PresetFixture({ fixtureUuid: 'white', pixelKey: cachedFixture.pixel?.key })
+    );
+    presetService.selectedPreset = project.presets[0];
+
+    const pixels = new EffectPixel({ uuid: 'pixels', size: 0.34, softness: 0, palette: { stops: [{ position: 0, color: '#ff0000' }] } });
+    curve = pixels;
+    await render();
+
+    // its pixels, not its master dimmer
+    const fixtures = (component as any).getPixelPreviewFixtures();
+    expect(fixtures.length).toBe(1);
+    expect([fixtures[0].columns, fixtures[0].rows, fixtures[0].example]).toEqual([3, 2, undefined]);
+    expect(fixtures[0].white).toEqual([true, true, true, true, true, true]);
+
+    // halfway through its period, the block on the middle column: white, as bright as the red
+    const colorOf = (index: number) => (component as any).partColorOf(pixels, fixtures[0].parts[index], 0.5, 0, [0, 1, 0], true);
+    expect(colorOf(1)).toEqual([1, 1, 1]);
+    expect(Math.max(...colorOf(0))).toBeLessThan(0.01);
+
+    // across the stage as well
+    pixels.spread = 'stage';
+    (component as any).stagePreview = undefined;
+    const stage = (component as any).getStagePreview();
+    expect(stage.example).toBe(false);
+    expect(stage.parts.map((part: any) => part.white)).toEqual([true, true, true, true, true, true]);
   });
 
   it('tells when the preset dims to 0, which keeps a pixel effect dark', async () => {
@@ -905,7 +1036,7 @@ describe('EffectCurveComponent', () => {
     await render();
 
     // a text to start with, in the pixel font
-    await select(element.querySelector('select[name="pattern"]'), 'text');
+    await pickPattern('text');
     expect(pixels.text).toBe('Rocket Show');
     expect(pixels.bitmap.height).toBe(7);
     expect(element.querySelector('input[name="pixelSize"]')).toBeNull();
@@ -933,7 +1064,7 @@ describe('EffectCurveComponent', () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;
     await render();
-    await select(element.querySelector('select[name="pattern"]'), 'image');
+    await pickPattern('image');
 
     // an image of 4 x 2 pixels
     const canvas = document.createElement('canvas');
@@ -1006,7 +1137,7 @@ describe('EffectCurveComponent', () => {
     expect([pixels.audioGainDb, pixels.audioFloorDb, pixels.audioAttackMillis, pixels.audioReleaseMillis]).toEqual([6, -40, 50, 800]);
 
     // the level meter shows the audio itself
-    await select(element.querySelector('select[name="pattern"]'), 'meter');
+    await pickPattern('meter');
     expect(element.querySelector('select[name="audioFollows"]')).toBeNull();
   });
 

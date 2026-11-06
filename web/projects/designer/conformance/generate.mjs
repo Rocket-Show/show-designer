@@ -2900,6 +2900,110 @@ function channelValuesColorDimmers() {
   );
 }
 
+// ---- pixel effects on pixels lighting in white only ------------------------------------------------
+
+// A matrix of white LEDs, each pixel a dimmer of its own (like the Cameo Flash Matrix 250): alone and next to a master
+// dimmer and a strobe, with a bar of RGB pixels and a moving head (a dimmer without pixels, which the effects leave to
+// the preset). Each preset paints a pattern over them, on each fixture or across the stage, blended in any way, with
+// the dimmer of the preset at full, dimmed, off or not set, fading in, and closing the effect halfway with a step.
+function channelValuesPixelWhite() {
+  const random = randomSource(15);
+  const white = 'test/white-matrix';
+  const bar = 'test/pixel-bar';
+  const head = 'test/moving-head';
+  const fixtures = [
+    { ...edgeFixture('white', white, '6ch', 0), dmxFirstChannel: 0 },
+    { ...edgeFixture('white-master', white, '8ch', 0), dmxFirstChannel: 8 },
+    { ...edgeFixture('bar', bar, '9ch', 0), dmxFirstChannel: 16 },
+    { ...edgeFixture('head', head, '6ch', 0), dmxFirstChannel: 32 },
+  ];
+  const patterns = pixelPatternNames.filter((name) => !['meter', 'scope'].includes(name));
+  const presets = [];
+
+  for (let index = 0; index < 24; index++) {
+    const uuid = `white-${index}`;
+    const pattern = index < patterns.length ? patterns[index] : random.pick(patterns);
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      pattern,
+      spread: index % 3 === 1 ? 'stage' : 'fixture',
+      capabilities: [],
+      channels: [],
+    };
+    random.maybe(effect, 'view', ['front', 'top']);
+    random.maybe(effect, 'size', [0, 0.3, 1, random.number(1)]);
+    random.maybe(effect, 'softness', [0, 0.5, random.number(1)]);
+    random.maybe(effect, 'direction', pixelDirectionsOf(pattern));
+    random.maybe(effect, 'shape', pixelShapesOf(pattern));
+    random.maybe(effect, 'mirror', [true, false, false]);
+    random.maybe(effect, 'seed', [1, random.int(5000)]);
+    random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+    // a white LED at full lights all of its light on its own: added to or the brightest of both leave it as it is
+    random.maybe(effect, 'blend', ['replace', 'replace', 'mask', 'mask', 'add', 'max']);
+    random.maybe(effect, 'whiteLed', [true, false], 0.3);
+    random.maybe(effect, 'lengthMillis', [1000, 2500]);
+    random.maybe(effect, 'phasingMode', ['millis', 'spread']);
+    random.maybe(effect, 'phasingMillis', [0, 150]);
+
+    if (pattern === 'text' || pattern === 'image') {
+      effect.bitmap = randomBitmap(random, pattern);
+      bitmapSettings(random, effect);
+    }
+
+    // all of the pixels of some fixtures (with their general channels or without), a few pixels of others
+    const presetFixturesOfPreset = [];
+
+    for (const fixture of fixtures) {
+      const entries = presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid));
+
+      if (fixture.uuid === 'white' || random.chance(0.6)) {
+        presetFixturesOfPreset.push(...entries.filter((entry) => entry.pixelKey || random.chance(0.7)));
+      } else if (random.chance(0.4)) {
+        presetFixturesOfPreset.push(...entries.filter(() => random.chance(0.5)));
+      }
+    }
+
+    // the dimmer at full, dimmed, off or not set at all
+    const dimmer = random.pick([1, 1, 0.5, 0.5, 0.2, 0, undefined]);
+    const values = {
+      fixtureCapabilityValues: [
+        ...(dimmer === undefined ? [] : [capability('Intensity', dimmer)]),
+        ...rgb(random.number(1), random.number(1), random.number(1)),
+      ],
+    };
+    const preset = { ...edgePreset(uuid, presetFixturesOfPreset, values), effects: [effect] };
+    random.maybe(preset, 'fadeInMillis', [0, 1000], 0.4);
+
+    // a second step closing the effect halfway, or completely
+    if (random.chance(0.3)) {
+      preset.steps.push(
+        step(uuid + '-closing', 1000, values, { effectAmounts: [{ effectUuid: effect.uuid, amount: random.pick([0, 0.5]) }] })
+      );
+      preset.stepsLoop = true;
+    }
+
+    presets.push(preset);
+  }
+
+  const profiles = [white, bar, head];
+  const times = [0, 250, 777, 1500, 2999, 5000];
+  const cases = presets.map((preset) => ({
+    name: `${preset.uuid} ${preset.effects[0].pattern} ${preset.effects[0].spread} ${preset.effects[0].blend || 'replace'}`,
+    input: {
+      project: edgeProject(profiles, fixtures, [preset], [{ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }]),
+      runs: previewScenes([preset.uuid]).map((run) => ({ ...run, times })),
+    },
+  }));
+
+  return write(
+    'channel-values-pixel-white.json',
+    'channelValues',
+    'Pixel effects on pixels lighting in white only, with a dimmer of their own each, next to a master dimmer',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -2922,6 +3026,7 @@ export function generate() {
     channelValuesColorDimmers(),
     channelValuesPixelStage(),
     channelValuesPixelAudio(),
+    channelValuesPixelWhite(),
   ];
 }
 

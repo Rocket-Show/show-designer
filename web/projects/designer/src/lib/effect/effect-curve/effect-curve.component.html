@@ -10,32 +10,21 @@
       }
     </select>
     } @else if (isPixel) {
-    <!-- the pattern painted over the pixels -->
-    <select class="flex-grow-1" style="min-width: 0" name="pattern" [ngModel]="pixelEffect.pattern" (ngModelChange)="setPattern($event)">
-      <optgroup [label]="'designer.effect.pixel-patterns-bars' | translate">
-        @for (pattern of pixelPatternsForBars; track pattern) {
-        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
-        }
-      </optgroup>
-      <optgroup [label]="'designer.effect.pixel-patterns-matrices' | translate">
-        @for (pattern of pixelPatternsForMatrices; track pattern) {
-        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
-        }
-      </optgroup>
-    </select>
-    <!-- all patterns as they look, to pick from -->
+    <!-- the pattern painted over the pixels, picked from all of them as they look -->
     <a
+      #pickerToggle
       href="#"
-      class="btn m-0 ml-1 px-2 pixel-picker-toggle"
-      [class.btn-primary]="pickingPattern"
-      [class.btn-secondary]="!pickingPattern"
-      popover="{{ 'designer.effect.pixel-pick-pattern' | translate }}"
-      container="body"
-      placement="right"
-      triggers="mouseenter:mouseleave"
-      (click)="pickingPattern = !pickingPattern; (false)"
-      ><i class="fa fa-th fa-fw" aria-hidden="true"></i
-    ></a>
+      class="btn btn-secondary m-0 px-2 flex-grow-1 d-flex align-items-center pixel-picker-toggle"
+      [class.active]="pickingPattern"
+      [attr.data-pattern]="pixelEffect.pattern"
+      [attr.aria-expanded]="pickingPattern"
+      aria-haspopup="true"
+      (click)="togglePicker(); (false)"
+    >
+      <i class="pixel-picker-toggle-icon" [class]="pixelPatternIcon()" aria-hidden="true"></i>
+      <span class="pixel-picker-toggle-name">{{ 'designer.effect.pixel-pattern-' + pixelEffect.pattern | translate }}</span>
+      <i class="fa fa-caret-down fa-fw ml-auto" aria-hidden="true"></i>
+    </a>
     } @else {
     <select
       class="flex-grow-1"
@@ -76,8 +65,9 @@
     ></a>
   </div>
   @if (isPixel && pickingPattern) {
-  <!-- the patterns, each in the colors of the effect, made for bars and made for matrices -->
-  <div #picker class="pixel-picker">
+  <!-- the patterns, each in the colors of the effect, made for bars and made for matrices: over the panels, below the
+       pattern picked (see placePicker) -->
+  <div #picker class="pixel-picker" role="dialog" [attr.aria-label]="'designer.effect.pixel-pick-pattern' | translate">
     @for (group of pixelPatternGroups; track group.name) {
     <div class="pixel-picker-group">
       <i class="pixel-picker-group-icon" [class]="group.icon" aria-hidden="true"></i>

@@ -71,6 +71,8 @@ describe('PreviewService pixel effects', () => {
         profile('test/rgb-par'),
         profile('chauvet-dj/colorband-pix'),
         profile('test/pixel-matrix'),
+        profile('test/white-matrix'),
+        profile('test/moving-head'),
         matrixProfile,
       ],
       fixtures: [
@@ -81,6 +83,10 @@ describe('PreviewService pixel effects', () => {
         { uuid: 'band', profileUuid: 'chauvet-dj/colorband-pix', modeShortName: '9ch', dmxUniverseUuid: 'u', dmxFirstChannel: 70 },
         // a matrix of RGBW pixels
         { uuid: 'rgbw', profileUuid: 'test/pixel-matrix', modeShortName: '48ch', dmxUniverseUuid: 'u', dmxFirstChannel: 100 },
+        // a matrix of 3 x 2 white LEDs, alone and with a master dimmer, and a moving head
+        { uuid: 'white', profileUuid: 'test/white-matrix', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 160 },
+        { uuid: 'white-master', profileUuid: 'test/white-matrix', modeShortName: '8ch', dmxUniverseUuid: 'u', dmxFirstChannel: 170 },
+        { uuid: 'head', profileUuid: 'test/moving-head', modeShortName: '6ch', dmxUniverseUuid: 'u', dmxFirstChannel: 180 },
       ],
       presetFixtures: [],
     });
@@ -132,6 +138,23 @@ describe('PreviewService pixel effects', () => {
       Math.round(values.find((value) => value.channelName === (pixelKey ? `${color} ${pixelKey}` : color))?.value ?? 0);
 
     return [component('Red'), component('Green'), component('Blue')];
+  }
+
+  // the value of a channel of a part of a fixture (its pixel or itself) at a moment
+  function valueOf(fixtureUuid: string, pixelKey: string, channelName: string, preset: Preset, timeMillis: number): number {
+    const cachedFixture: CachedFixture = fixtureService.cachedFixtures.find(
+      (candidate) => candidate.fixture.uuid === fixtureUuid && (candidate.pixel?.key ?? undefined) === pixelKey
+    );
+    const values = previewService.getChannelValues(timeMillis, [new PresetRegionScene(preset, undefined, undefined)]).get(cachedFixture);
+
+    return values.find((value) => value.channelName === channelName)?.value ?? 0;
+  }
+
+  // the dimmers of the white LEDs of a matrix at a moment, row by row, from 0 to 255
+  function whiteDimmersOf(fixtureUuid: string, preset: Preset, timeMillis: number): number[] {
+    return ['1', '2', '3', '4', '5', '6'].map((pixelKey) =>
+      Math.round(valueOf(fixtureUuid, pixelKey, 'Dimmer LED ' + pixelKey, preset, timeMillis))
+    );
   }
 
   const presetColor = [
@@ -409,6 +432,86 @@ describe('PreviewService pixel effects', () => {
     expect(colorOf('bar-1', '1', meter(['click']), 1000)[0]).toBe(255);
     expect(colorOf('bar-1', '3', meter(['click']), 1440)[0]).toBeLessThan(255);
     timelineService.playState = 'paused';
+  });
+
+  it('lights the white LEDs of a matrix on their dimmers, as bright as the color, dimmed by the preset', () => {
+    const half = [{ type: 'Intensity', valuePercentage: 0.5 }];
+
+    // halfway through its period, the block of a third of the matrix is on its middle column
+    expect(whiteDimmersOf('white', presetWith(['white'], pixelEffect(), half), 1500)).toEqual([0, 128, 0, 0, 128, 0]);
+    expect(whiteDimmersOf('white', presetWith(['white'], pixelEffect(), [{ type: 'Intensity', valuePercentage: 1 }]), 1500)).toEqual([
+      0, 255, 0, 0, 255, 0,
+    ]);
+
+    // as bright as the brightest of the red, green and blue of a color
+    const gray = presetWith(['white'], pixelEffect({ palette: { stops: [{ position: 0, color: '#408020' }] } }), half);
+    expect(whiteDimmersOf('white', gray, 1500)[1]).toBe(64);
+
+    // white at full in the shades of the color of the preset, whatever its color
+    const shades = presetWith(['white'], pixelEffect({ palette: { ref: 'preset' } }), [...half, ...presetColor]);
+    expect(whiteDimmersOf('white', shades, 1500)).toEqual([0, 128, 0, 0, 128, 0]);
+  });
+
+  it('masks the white of the preset, and adds to it or takes the brightest of both, which is all of it', () => {
+    const half = [{ type: 'Intensity', valuePercentage: 0.5 }];
+    const gray = (blend: string) =>
+      whiteDimmersOf(
+        'white',
+        presetWith(['white'], pixelEffect({ blend, palette: { stops: [{ position: 0, color: '#808080' }] } }), half),
+        1500
+      );
+
+    expect(gray('replace')).toEqual([0, 64, 0, 0, 64, 0]);
+    expect(gray('mask')).toEqual([0, 128, 0, 0, 128, 0]);
+    expect(gray('add')).toEqual([128, 128, 128, 128, 128, 128]);
+    expect(gray('max')).toEqual([128, 128, 128, 128, 128, 128]);
+  });
+
+  it('leaves the white LEDs dark while the preset dims them to 0 or leaves their dimmer alone', () => {
+    expect(whiteDimmersOf('white', presetWith(['white'], pixelEffect(), [{ type: 'Intensity', valuePercentage: 0 }]), 1500)).toEqual([
+      0, 0, 0, 0, 0, 0,
+    ]);
+    expect(whiteDimmersOf('white', presetWith(['white'], pixelEffect(), presetColor), 1500)).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it('leaves the master dimmer of a matrix of white LEDs and the dimmer of a fixture without pixels to the preset', () => {
+    const preset = presetWith(['white-master', 'head'], pixelEffect(), [{ type: 'Intensity', valuePercentage: 0.5 }]);
+
+    expect(valueOf('white-master', undefined, 'Master Dimmer', preset, 1500)).toBe(127.5);
+    expect(whiteDimmersOf('white-master', preset, 1500)).toEqual([0, 128, 0, 0, 128, 0]);
+
+    // the moving head as the preset dims it without the effect
+    const hidden = presetWith(['white-master', 'head'], { ...pixelEffect(), visible: false }, [
+      { type: 'Intensity', valuePercentage: 0.5 },
+    ]);
+    const dimmed = valueOf('head', undefined, 'Dimmer', hidden, 1500);
+    expect(dimmed).toBeGreaterThan(0);
+    expect(valueOf('head', undefined, 'Dimmer', preset, 100)).toBe(dimmed);
+    expect(valueOf('head', undefined, 'Dimmer', preset, 1500)).toBe(dimmed);
+  });
+
+  it('fades the white LEDs back to the preset as a step closes the effect', () => {
+    const preset = presetWith(['white'], pixelEffect(), [{ type: 'Intensity', valuePercentage: 1 }]);
+    preset.steps[0].effectAmounts = [{ effectUuid: 'pixel', amount: 0.5 } as any];
+
+    // halfway between the effect and the white at full of the preset
+    expect(whiteDimmersOf('white', preset, 1500)).toEqual([128, 255, 128, 128, 255, 128]);
+  });
+
+  it('spreads one picture across the white LEDs and the pixels lighting in colors, as they hang on the stage', () => {
+    const preset = presetWith(['bar-1', 'white'], pixelEffect({ size: 0.3, spread: 'stage' }), [{ type: 'Intensity', valuePercentage: 1 }]);
+    const regionScene = new PresetRegionScene(preset, undefined, undefined);
+    previewService.getChannelValues(0, [regionScene]);
+    const partOf = (fixtureUuid: string, pixelKey: string) =>
+      fixtureService.cachedFixtures.find((candidate) => candidate.fixture.uuid === fixtureUuid && candidate.pixel?.key === pixelKey);
+    const stagePlace = (fixtureUuid: string, pixelKey: string) =>
+      (previewService as any).getStagePixelPlace(preset, 'front', partOf(fixtureUuid, pixelKey));
+
+    // the white LEDs have their places in the picture, which the pixels of the bar share with them
+    const first = stagePlace('white', '1');
+    expect(first).not.toBe(fixtureService.getPixelPlace(partOf('white', '1')));
+    expect(stagePlace('white', '3').x).toBeGreaterThan(first.x);
+    expect(stagePlace('bar-1', '1').columns).toBe(first.columns);
   });
 
   it('places a pixel in its column and row, and a group of pixels in the middle of them', () => {

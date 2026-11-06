@@ -40,6 +40,11 @@ A project of a `channelValues` case names the profiles of `profiles` like the fi
 it, the designer plays the case as it is. In a current project the dimmers of the fixtures lighting in colors only
 start at full (`colorDimmersAtFull`, see `channel-values-color-dimmers.json`).
 
+The pixel effects light the pixels lighting in white only (`channel-values-pixel-white.json`, a dimmer of their own
+each, like the LEDs of the Cameo Flash Matrix 250) as bright as the brightest of the red, green and blue of their light,
+blended with white at full and dimmed by what the preset puts on their dimmers, which leaves the master dimmer of such a
+matrix and the dimmers of the fixtures without pixels to the preset.
+
 A `channelValues` case with pixel effects following the audio (`channel-values-pixel-audio.json`) brings the frames of
 an analysis of the audio as well (`audio`, see `models/pixel-audio.ts`): for each 20 ms, the RMS, the peak, the bass, the
 mids, the highs and 16 bands in dB, analyzed from a song. How the frames light the pixels is compared exactly, how they
