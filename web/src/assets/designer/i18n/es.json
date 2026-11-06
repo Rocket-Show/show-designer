@@ -321,7 +321,6 @@
       "edit-universes-title": "Editar universos",
       "change-type": "Cambiar los fixtures seleccionados a este perfil",
       "fixture-type": "Tipo de fixture",
-      "change-type-hint": "¿Otros fixtures en el lugar? Selecciona los fixtures y haz clic en ⇄ junto a su perfil a la izquierda.",
       "exchanged-from": "Cambiado desde {{from}}. Con OK, los presets reciben también para este modelo lo que ajustan para el antiguo:",
       "exchange-carried": "{{count}} valores se traspasan",
       "exchange-lost": "{{count}} valores no se pueden traspasar:",
