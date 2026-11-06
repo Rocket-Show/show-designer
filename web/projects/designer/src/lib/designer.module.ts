@@ -34,6 +34,8 @@ import { FixtureSettingsPositionComponent } from './fixture/fixture-settings/fix
 import { FixtureSettingsStageComponent } from './fixture/fixture-settings/fixture-settings-stage/fixture-settings-stage.component';
 import { FixtureSettingsComponent } from './fixture/fixture-settings/fixture-settings.component';
 import { FixtureComponent } from './fixture/fixture.component';
+import { FixturePixelGridComponent } from './fixture/fixture-pixel-grid/fixture-pixel-grid.component';
+import { GradientEditorComponent } from './gradient-editor/gradient-editor.component';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { IconPickerComponent } from './icon-picker/icon-picker.component';
@@ -77,6 +79,8 @@ import { keepSliderValues } from './slider-value';
     TimelineComponent,
     FixtureCapabilityColorComponent,
     FixtureComponent,
+    FixturePixelGridComponent,
+    GradientEditorComponent,
     FixtureSettingsPositionComponent,
     FixtureCapabilityComponent,
     FixtureSettingsComponent,

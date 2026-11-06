@@ -72,6 +72,18 @@
   text-decoration: none;
 }
 
+/* the buttons after the first one sit next to it */
+.preview-chrome-button + .preview-chrome-button {
+  margin-left: 0;
+}
+
+/* a setting which is on (e.g. the glow) */
+.preview-chrome-button-on,
+.preview-chrome-button-on:hover,
+.preview-chrome-button-on:focus {
+  color: var(--sd-primary-text);
+}
+
 /* fills the area the render would take while the preview is hidden */
 .preview-off {
   position: absolute;

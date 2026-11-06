@@ -11,6 +11,7 @@ import { caseFiles, profiles } from '../../conformance/index';
 import { CachedFixturePixel } from './models/cached-fixture-pixel';
 import { EffectCurve } from './models/effect-curve';
 import { EffectPanTilt } from './models/effect-pan-tilt';
+import { EffectPixel } from './models/effect-pixel';
 import { FixtureCapabilityValue } from './models/fixture-capability-value';
 import { FixtureChannel } from './models/fixture-channel';
 import { FixtureMatrixPixelGroup } from './models/fixture-matrix-pixel-group';
@@ -19,6 +20,9 @@ import { Preset } from './models/preset';
 import { PresetFixture } from './models/preset-fixture';
 import { PresetRegionScene } from './models/preset-region-scene';
 import { PresetStepState } from './models/preset-step-state';
+import { PixelBitmap } from './models/pixel-bitmap';
+import { PixelPalette } from './models/pixel-palette';
+import { PixelContext, samplePixelPattern } from './models/pixel-pattern';
 import { parseProfileNumber } from './models/profile-number';
 import { Project } from './models/project';
 import { Scene } from './models/scene';
@@ -139,9 +143,13 @@ function frameServices() {
 
 // the values the preview gives every fixture (and pixel) of a project at the passed times, the way
 // it plays the timeline of a composition, the selected preset or the selected scenes
-function channelValues(projectData: any, preview: any, times: number[]): any[] {
+function channelValues(projectData: any, preview: any, times: number[], audio?: any): any[] {
   const services = frameServices();
   const project = new Project(resolveProfiles(projectData));
+
+  // the analysis of the audio the pixel effects follow, recorded (none: silence)
+  const audioFrames: number[][] = audio?.frames ?? [];
+  services.previewService.audioFrames = (index: number) => audioFrames[index];
 
   services.projectService.project = project;
   services.fixtureService.updateCachedFixtures();
@@ -230,6 +238,7 @@ function presetFixtureOf(presetFixture: PresetFixture): any[] {
 function migratedProjectOf(project: Project): any {
   return {
     version: project.version,
+    colorDimmersAtFull: project.colorDimmersAtFull,
     presetFixtures: project.presetFixtures.map(presetFixtureOf),
     presets: project.presets.map((preset) => ({
       uuid: preset.uuid,
@@ -248,7 +257,7 @@ function migratedProjectOf(project: Project): any {
         effects: step.effectAmounts.map((effectAmount) => [effectAmount.effectUuid, effectAmount.amount]),
       })),
       effects: preset.effects.map((effect) =>
-        effect instanceof EffectCurve && !(effect instanceof EffectPanTilt)
+        effect instanceof EffectCurve && !(effect instanceof EffectPanTilt) && !(effect instanceof EffectPixel)
           ? {
               uuid: effect.uuid,
               type: effect.type,
@@ -368,7 +377,21 @@ const kinds: { [kind: string]: (input: any) => any } = {
     }
   },
 
-  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times)),
+  pixelPattern: (input) => {
+    const palette = new PixelPalette(input.palette);
+    // the picture of a text or an image, read like the one of an effect
+    const settings = { ...input.settings, bitmap: input.settings.bitmap ? new PixelBitmap(input.settings.bitmap) : undefined };
+
+    return input.samples.map((sample: any) => {
+      const [place, level, ...ownColor] = samplePixelPattern(settings, sample.cycle, Object.assign(new PixelContext(), sample.pixel));
+      // the color of the palette, or the own one of an image
+      const color = ownColor.length > 0 ? ownColor : palette.colorAt(place);
+
+      return [place, level, ...color];
+    });
+  },
+
+  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times, input.audio)),
 
   migration: (input) => migratedProjectOf(migrate(input.project)),
 };

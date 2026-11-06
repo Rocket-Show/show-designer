@@ -86,7 +86,7 @@ describe('ProjectLoadService migrating the curves of a project to version 8', ()
     service.import(JSON.stringify(project));
 
     const effects = projectService.project.presets[0].effects as EffectCurve[];
-    expect(projectService.project.version).toBe(10);
+    expect(projectService.project.version).toBe(projectService.currentProjectVersion);
     expect(effects.map((effect) => effect.amplitude)).toEqual([0.5, 0.4, 1]);
   });
 
@@ -156,7 +156,7 @@ describe('ProjectLoadService migrating the pixel keys of a project to version 9'
 
     const project = projectService.project;
     const preset = project.presets[0];
-    expect(project.version).toBe(10);
+    expect(project.version).toBe(projectService.currentProjectVersion);
     expect(project.presetFixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '1', '12', '(2, 1)', '(1, 2)']);
     expect(preset.fixtures.map((fixture) => fixture.pixelKey)).toEqual([undefined, '12', '(1, 2)']);
     expect(preset.steps[0].fixtureChannelValues.map((value) => value.channelName)).toEqual(['Red 12', 'Red 1']);
@@ -229,7 +229,7 @@ describe('ProjectLoadService migrating the timeline of a project to version 10',
     service.import(JSON.stringify(projectWithComposition(9)));
 
     const composition = projectService.project.compositions[0];
-    expect(projectService.project.version).toBe(10);
+    expect(projectService.project.version).toBe(projectService.currentProjectVersion);
     expect(composition.tracks.map((track) => track.name)).toEqual(['Chorus', 'Background']);
     expect(composition.scenePlaybackRegions.map((region) => region.trackUuid)).toEqual([
       composition.tracks[1].uuid,
@@ -369,6 +369,23 @@ describe('ProjectLoadService migrating a project of version 1', () => {
     warning.calls.reset();
     service.import(JSON.stringify(projectWithSelectedPreset()));
     expect(warning).not.toHaveBeenCalled();
+  });
+
+  it('takes a project of version 10 to version 11 without saying so: it plays as it did', () => {
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 10 }));
+
+    expect(projectService.project.version).toBe(11);
+    expect(warning).not.toHaveBeenCalled();
+    // the dimmers of its fixtures lighting in colors stay off, like they were played then
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
+  });
+
+  it('keeps the dimmers of the fixtures lighting in colors of a current project as they are', () => {
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 11 }));
+    expect(projectService.project.colorDimmersAtFull).toBe(true);
+
+    service.import(JSON.stringify({ ...projectWithSelectedPreset(), version: 11, colorDimmersAtFull: false }));
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
   });
 });
 
@@ -512,9 +529,28 @@ describe('ProjectLoadService opening projects', () => {
     expect(navigate.calls.mostRecent().args[1].queryParams).toEqual({ id: '', token: '' });
   });
 
+  it('starts a new show from a template of an older version, with the dimmers of the fixtures lighting in colors at full', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), id: 1, version: 10 })));
+
+    service.template();
+
+    expect(projectService.project.version).toBe(11);
+    expect(projectService.project.colorDimmersAtFull).toBe(true);
+  });
+
+  it('keeps the dimmers of a show of an older version off when it is opened', () => {
+    spyOn(projectService, 'getProject').and.returnValue(of(new Project({ ...projectWithSelectedPreset(), id: 7, version: 10 })));
+
+    service.load(7, 'Imported').subscribe();
+
+    expect(projectService.project.colorDimmersAtFull).toBe(false);
+  });
+
   it('starts a new project with a preset played by a scene', () => {
     service.new();
     const project = projectService.project;
+
+    expect(project.colorDimmersAtFull).toBe(true);
 
     expect(project.version).toBe(projectService.currentProjectVersion);
     expect(project.uuid).toBeTruthy();

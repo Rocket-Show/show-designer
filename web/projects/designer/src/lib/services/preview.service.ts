@@ -3,7 +3,7 @@ import { Subject, Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { CachedFixture } from '../models/cached-fixture';
 import { EffectCurve } from '../models/effect-curve';
-import { FixtureCapabilityType } from '../models/fixture-capability';
+import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
@@ -12,6 +12,14 @@ import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { EffectPixel } from '../models/effect-pixel';
+import { CachedFixtureChannel } from '../models/cached-fixture-channel';
+import { PixelPalette } from '../models/pixel-palette';
+import { PixelContext, PixelPatternSettings, samplePixelPattern } from '../models/pixel-pattern';
+import { toInt } from '../models/pixel-math';
+import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../models/pixel-stage';
+import { AudioFrames, PixelAudio } from '../models/pixel-audio';
+import { demoAudioFrames } from '../models/pixel-audio-analysis';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
@@ -20,6 +28,7 @@ import {
   getStagePlacements,
   isPanTilt,
   PanTiltContext,
+  StagePlacement,
 } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { getIdentifyCapabilityValues } from '../models/identify';
@@ -39,6 +48,12 @@ export const PREVIEW_FIXTURE_EMISSIVE = 0x0d0e11;
 export const PREVIEW_FIXTURE_SELECTED_COLOR = 0x7a3a05; // --sd-primary, darkened
 export const PREVIEW_FIXTURE_SELECTED_EMISSIVE = 0xfd7e14; // --sd-primary
 
+// remembers whether the lights of the 3d preview glow, across sessions
+const PREVIEW_GLOW_STORAGE_KEY = 'previewGlow';
+
+// the layer of the scene the lights which glow are on as well (the LEDs and the lenses), see PreviewComponent.render
+export const PREVIEW_GLOW_LAYER = 1;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -51,6 +66,54 @@ export class PreviewService implements OnDestroy {
 
   public scene: THREE.Scene;
 
+  // what a frame knows while it is worked out: where the fixtures hang and the place of each part in the chase of each
+  // preset
+  private framePlacements = new Map<string, StagePlacement>();
+  private frameFixtureIndices = new Map<Preset, Map<string, number>>();
+  private frameTimeMillis = 0;
+
+  // Where the fixtures hang, and what it was worked out from (see getPlacements): the size of the stage, where each
+  // fixture is put and the order of the fixtures of the project
+  private placements: Map<string, StagePlacement>;
+  private placementInputs: any[] = [];
+
+  // The places of the parts of a preset in a picture of the stage, for each view (for the pixel effects spread across
+  // it): worked out again once the placements, the parts or the chase of the preset changed
+  private stagePlaces = new WeakMap<
+    Preset,
+    {
+      placements: Map<string, StagePlacement>;
+      indices: Map<string, number>;
+      parts: CachedFixture[];
+      views: Map<string, Map<CachedFixture, PixelContext>>;
+    }
+  >();
+  private frameAudio = new Map<EffectPixel, PixelAudio>();
+  private frameSizedSettings = new Map<EffectPixel, PixelPatternSettings>();
+
+  // The frames of the audio the pixel effects follow, if they are given (e.g. by a test). Otherwise the ones of the
+  // composition while the timeline plays it, and a beat to show what they do while it doesn't.
+  public audioFrames: AudioFrames;
+
+  // the dimmer channel of each part of a fixture (see getDimmerChannel)
+  private dimmerChannels = new WeakMap<CachedFixture, CachedFixtureChannel>();
+
+  // Whether the lights glow in the 3d preview, the way they do in the dark (it costs a bit of performance). On unless
+  // it was turned off.
+  public glow = localStorage.getItem(PREVIEW_GLOW_STORAGE_KEY) !== 'false';
+
+  // the glow left out while the designer is open, because the preview got too slow with it (see
+  // PreviewComponent.watchGlow), until it is switched on again
+  public glowSuspended = false;
+
+  // switched on again after that: it stays on, however slow the preview is
+  public glowKept = false;
+
+  // do the lights glow right now?
+  get glowing(): boolean {
+    return this.glow && !this.glowSuspended;
+  }
+
   private stageMeshes: THREE.Mesh[] = [];
 
   // a spot on the stage being picked with a click into the 3D preview (e.g. to aim the moving heads at), and the spot
@@ -60,6 +123,16 @@ export class PreviewService implements OnDestroy {
   private stageMaterial: THREE.MeshStandardMaterial;
   fixtureMaterial: THREE.MeshStandardMaterial;
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
+
+  // half the width and half the depth of the stage floor and how high it is, where the beams end (see updateStage)
+  public stageFloor = new THREE.Vector3(300, 300, 0);
+
+  public setGlow(glow: boolean) {
+    this.glowKept = glow && this.glowSuspended;
+    this.glowSuspended = false;
+    this.glow = glow;
+    localStorage.setItem(PREVIEW_GLOW_STORAGE_KEY, glow ? 'true' : 'false');
+  }
 
   constructor(
     private presetService: PresetService,
@@ -88,23 +161,23 @@ export class PreviewService implements OnDestroy {
     });
   }
 
-  private getAlreadyCalculatedFixture(fixtures: CachedFixture[], fixtureIndex: number): CachedFixture {
-    // Has this fixture already been calculated (same universe and dmx start address as a fixture before)
-    // --> return it
-    for (let i = 0; i < fixtureIndex; i++) {
-      const calculatedFixture = fixtures[i];
+  // For each of the passed fixtures, the first one before it with the same universe, DMX address and pixel (the same
+  // lamp, which it takes the values of), or undefined. Looking each of them up among the ones before took longer than
+  // a frame with a few thousand pixels.
+  private getSameLamps(fixtures: CachedFixture[]): CachedFixture[] {
+    const firstOfLamp = new Map<string, CachedFixture>();
 
-      if (
-        calculatedFixture.fixture.dmxUniverseUuid === fixtures[fixtureIndex].fixture.dmxUniverseUuid &&
-        calculatedFixture.fixture.dmxFirstChannel === fixtures[fixtureIndex].fixture.dmxFirstChannel &&
-        ((!calculatedFixture.pixel?.key && !fixtures[fixtureIndex].pixel?.key) ||
-          calculatedFixture.pixel?.key === fixtures[fixtureIndex].pixel?.key)
-      ) {
-        return calculatedFixture;
+    return fixtures.map((cachedFixture) => {
+      const key =
+        cachedFixture.fixture.dmxUniverseUuid + '|' + cachedFixture.fixture.dmxFirstChannel + '|' + (cachedFixture.pixel?.key || '');
+      const first = firstOfLamp.get(key);
+
+      if (!first) {
+        firstOfLamp.set(key, cachedFixture);
       }
-    }
 
-    return undefined;
+      return first;
+    });
   }
 
   public getPresets(timeMillis: number): PresetRegionScene[] {
@@ -293,14 +366,29 @@ export class PreviewService implements OnDestroy {
   // how bright the dimmer of a fixture (its own or its virtual one) lights with the passed
   // values, or undefined for a fixture without one (e.g. a pixel of a bar with a master dimmer)
   private getDimmerBrightness(cachedFixture: CachedFixture, values: FixtureChannelValue[]): number {
-    for (const channel of cachedFixture.channels) {
-      if (channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)) {
-        const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
-        return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
-      }
+    const channel = this.getDimmerChannel(cachedFixture);
+
+    if (!channel) {
+      return undefined;
     }
 
-    return undefined;
+    const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
+    return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
+  }
+
+  // the first channel of a part of a fixture with a dimmer on it, none without: looked for once for each part (the
+  // parts are made anew when the fixtures change)
+  private getDimmerChannel(cachedFixture: CachedFixture): CachedFixtureChannel {
+    if (!this.dimmerChannels.has(cachedFixture)) {
+      this.dimmerChannels.set(
+        cachedFixture,
+        cachedFixture.channels.find((channel) =>
+          channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)
+        )
+      );
+    }
+
+    return this.dimmerChannels.get(cachedFixture);
   }
 
   // how bright a preset lets the dimmer of a fixture light: the dimmer it sets (a curve on the
@@ -604,7 +692,9 @@ export class PreviewService implements OnDestroy {
     values: FixtureChannelValue[],
     intensityPercentage: number,
     state: PresetStepState,
-    context: PanTiltContext
+    context: PanTiltContext,
+    wholeFixtureIndex: number,
+    wholeFixtureCount: number
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -620,6 +710,21 @@ export class PreviewService implements OnDestroy {
       if (effect.visible && effectAmount > 0) {
         if (effect instanceof EffectPanTilt) {
           this.mixPanTiltEffect(effect, effectTimeMillis, preset, cachedFixture, values, effectIntensityPercentage, state, context);
+          continue;
+        }
+
+        // a pixel effect chases from one fixture to the next, with all of their pixels
+        if (effect instanceof EffectPixel) {
+          this.mixPixelEffect(
+            effect,
+            effectTimeMillis,
+            preset,
+            cachedFixture,
+            values,
+            effectIntensityPercentage,
+            wholeFixtureIndex,
+            wholeFixtureCount
+          );
           continue;
         }
 
@@ -691,6 +796,271 @@ export class PreviewService implements OnDestroy {
     }
   }
 
+  // A pixel effect on a part of a fixture (a pixel, or a fixture without pixels): the color of its pattern where the part
+  // is in its fixture, blended with the color the preset puts on it, on its red, green and blue. Its other channels keep
+  // what the preset puts on them, its dimmer as well. This follows the same rules as Rocket Show.
+  private mixPixelEffect(
+    effect: EffectPixel,
+    effectTimeMillis: number,
+    preset: PresetRegionScene,
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number,
+    fixtureIndex: number,
+    fixtureCount: number
+  ) {
+    const channels = [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].map((color) =>
+      this.getColorChannel(cachedFixture, color)
+    );
+
+    if (channels.every((channel) => !channel)) {
+      return;
+    }
+
+    const beatsPerMinute = this.getBeatsPerMinute();
+    const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
+    const cycles = effect.getCyclesAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+
+    // the effect does not apply anymore after it has finished running
+    if (cycles === undefined) {
+      return;
+    }
+
+    // the color the preset puts on the part, as red, green and blue between 0 and 1
+    const base = channels.map((channel) => {
+      const value = channel ? this.getChannelValue(values, channel.name, cachedFixture.profile.uuid) : undefined;
+      return value ? value.value / channel.maxValue : 0;
+    });
+
+    // Where the part is in its fixture, every fixture starting the random looking patterns somewhere else. Spread
+    // across the stage, where it is in the picture of the stage, which is one for all of them.
+    const stage = effect.spread === 'stage';
+    const context = Object.assign(
+      new PixelContext(),
+      stage ? this.getStagePixelPlace(preset.preset, effect.view, cachedFixture) : this.fixtureService.getPixelPlace(cachedFixture)
+    );
+    context.seed = toInt(effect.seed * 7919 + (stage ? 0 : fixtureIndex * 131));
+
+    if (effect.mirror) {
+      context.x = context.x < 0.5 ? context.x * 2 : (1 - context.x) * 2;
+    }
+
+    // The audio it follows: shown by the level meter and the wave of the audio, followed with its brightness or its size
+    // by the other patterns
+    const audio = this.getPixelAudio(effect);
+    const showsAudio = effect.pattern === 'meter' || effect.pattern === 'scope';
+    const audioLevel = audio && !showsAudio ? audio.level() : 1;
+    const settings = audio && !showsAudio && effect.audioFollows === 'size' ? this.getSizedSettings(effect, audioLevel) : effect;
+
+    // the color of the pixel through the palette, or the own one of an image
+    const sample = samplePixelPattern(settings, cycles, context, audio);
+    const level = sample[1] * (effect.audioFollows === 'size' ? 1 : audioLevel);
+    const palette = effect.palette;
+    const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
+    const color =
+      sample.length > 2
+        ? sample.slice(2, 5)
+        : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0], palette.ref !== 'preset');
+    const lit = color.map((component) => component * level);
+
+    // the white part of the light on the white LED, if it is to light it
+    const white = effect.whiteLed ? this.getColorChannel(cachedFixture, FixtureCapabilityColor.White) : undefined;
+    let litWhite = 0;
+
+    if (white) {
+      litWhite = Math.min(Math.min(lit[0], lit[1]), lit[2]);
+
+      for (let i = 0; i < 3; i++) {
+        lit[i] = lit[i] - litWhite;
+      }
+    }
+
+    channels.forEach((channel, i) => {
+      if (channel) {
+        this.mixPixelValue(effect, cachedFixture, channel, base[i], lit[i], level, values, effectIntensityPercentage);
+      }
+    });
+
+    if (white) {
+      const value = this.getChannelValue(values, white.name, cachedFixture.profile.uuid);
+      const baseWhite = value ? value.value / white.maxValue : 0;
+
+      this.mixPixelValue(effect, cachedFixture, white, baseWhite, litWhite, level, values, effectIntensityPercentage);
+    }
+  }
+
+  // A color of a pixel the effect lights, blended with the one the preset puts on it (base, between 0 and 1): the light
+  // of the pattern (lit) in place of it, the base as bright as the pattern makes it (mask), the light added to it or the
+  // brighter of both
+  private mixPixelValue(
+    effect: EffectPixel,
+    cachedFixture: CachedFixture,
+    channel: CachedFixtureChannel,
+    base: number,
+    lit: number,
+    level: number,
+    values: FixtureChannelValue[],
+    effectIntensityPercentage: number
+  ) {
+    let target: number;
+
+    switch (effect.blend) {
+      case 'mask':
+        target = base * level;
+        break;
+      case 'add':
+        target = Math.min(base + lit, 1);
+        break;
+      case 'max':
+        target = Math.max(base, lit);
+        break;
+      default:
+        target = lit;
+    }
+
+    const fixtureChannelValue = new FixtureChannelValue();
+    fixtureChannelValue.channelName = channel.name;
+    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+    fixtureChannelValue.value = channel.maxValue * target;
+    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+  }
+
+  // the audio a pixel effect follows at the moment of the frame, none for one which follows none
+  private getPixelAudio(effect: EffectPixel): PixelAudio {
+    if (effect.audioSource !== 'composition') {
+      return undefined;
+    }
+
+    let audio = this.frameAudio.get(effect);
+
+    if (!audio) {
+      audio = new PixelAudio(this.getAudioFrames(effect), this.frameTimeMillis, effect);
+      this.frameAudio.set(effect, audio);
+    }
+
+    return audio;
+  }
+
+  // the settings of a pixel effect with its size following the audio, once in a frame
+  private getSizedSettings(effect: EffectPixel, audioLevel: number): PixelPatternSettings {
+    let settings = this.frameSizedSettings.get(effect);
+
+    if (!settings) {
+      settings = { ...effect, size: effect.size * audioLevel };
+      this.frameSizedSettings.set(effect, settings);
+    }
+
+    return settings;
+  }
+
+  // the audio of the buses the effect follows while the composition plays, a beat otherwise
+  private getAudioFrames(effect: EffectPixel): AudioFrames {
+    if (this.audioFrames) {
+      return this.audioFrames;
+    }
+
+    const frames = this.timelineService.playState === 'playing' ? this.timelineService.audioFramesFor(effect.audioBuses) : undefined;
+
+    return frames || demoAudioFrames;
+  }
+
+  // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in
+  // colors, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
+  private getStagePixelPlace(preset: Preset, view: string, cachedFixture: CachedFixture): PixelContext {
+    const indices = this.frameFixtureIndices.get(preset);
+    let entry = this.stagePlaces.get(preset);
+
+    if (
+      !entry ||
+      entry.placements !== this.framePlacements ||
+      entry.indices !== indices ||
+      entry.parts !== this.fixtureService.cachedFixtures
+    ) {
+      entry = { placements: this.framePlacements, indices, parts: this.fixtureService.cachedFixtures, views: new Map() };
+      this.stagePlaces.set(preset, entry);
+    }
+
+    const views = entry.views;
+    let places = views.get(view);
+
+    if (!places) {
+      places = new Map();
+      const parts = this.fixtureService.cachedFixtures.filter(
+        (part) =>
+          indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 &&
+          [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].some((color) =>
+            this.getColorChannel(part, color)
+          )
+      );
+      const positions = parts.map((part) => {
+        const partPlace = this.fixtureService.getPixelPlace(part);
+        const placement = this.framePlacements.get(part.fixture.uuid) || { position: [0, 0, 0], rotation: [0, 0, 0] };
+
+        return pixelStagePosition(
+          partPlace,
+          pixelHousingSize(part.profile, partPlace.columns, partPlace.rows),
+          placement,
+          part.fixture.positioning
+        );
+      });
+      const contexts = stagePixelPlaces(positions, view);
+
+      parts.forEach((part, i) => places.set(part, contexts[i]));
+      views.set(view, places);
+    }
+
+    return places.get(cachedFixture) || this.fixtureService.getPixelPlace(cachedFixture);
+  }
+
+  // Where the fixtures hang (see getStagePlacements), worked out again only once what it depends on changed: the size
+  // of the stage, where each fixture is put and the order of the fixtures of the project
+  private getPlacements(): Map<string, StagePlacement> {
+    const project = this.projectService.project;
+    const inputs: any[] = [
+      project.stageWidthCm,
+      project.stageHeightCm,
+      project.stageDepthCm,
+      project.stageFloorHeightCm,
+      project.fixtures.length,
+    ];
+
+    for (const fixture of project.fixtures) {
+      inputs.push(
+        fixture,
+        fixture.positioning,
+        fixture.positionX,
+        fixture.positionY,
+        fixture.positionZ,
+        fixture.rotationX,
+        fixture.rotationY,
+        fixture.rotationZ
+      );
+    }
+
+    for (const presetFixture of project.presetFixtures) {
+      inputs.push(presetFixture.fixtureUuid);
+    }
+
+    const previous = this.placementInputs;
+
+    if (!this.placements || inputs.length !== previous.length || inputs.some((input, i) => input !== previous[i])) {
+      this.placementInputs = inputs;
+      this.placements = getStagePlacements(project);
+    }
+
+    return this.placements;
+  }
+
+  // the channel of a part of a fixture which lights in a color, the first one if there are several
+  private getColorChannel(cachedFixture: CachedFixture, color: FixtureCapabilityColor): CachedFixtureChannel {
+    return cachedFixture.channels.find((channel) =>
+      channel.capabilities.some(
+        (channelCapability) =>
+          channelCapability.capability.type === FixtureCapabilityType.ColorIntensity && channelCapability.capability.color === color
+      )
+    );
+  }
+
   // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),
   // mirrored with the preset. This follows the same rules as Rocket Show.
   private mixPanTiltEffect(
@@ -752,6 +1122,9 @@ export class PreviewService implements OnDestroy {
     // dozen fixtures
     const fixtureIndices = new Map<Preset, Map<string, number>>();
 
+    // the same for the fixtures with all of their pixels, which the pixel effects chase over
+    const wholeFixtureChases = new Map<Preset, { indices: Map<string, number>; count: number }>();
+
     // which state each preset is in. The same preset can play in more than one region
     // at a time, each of them at a different point of its sequence, so the entry of the
     // playing preset is what this is keyed by.
@@ -766,6 +1139,7 @@ export class PreviewService implements OnDestroy {
       if (!fixtureCounts.has(preset.preset)) {
         fixtureCounts.set(preset.preset, this.presetService.getPresetFixtureCount(preset.preset));
         fixtureIndices.set(preset.preset, this.presetService.getPresetFixtureIndices(preset.preset));
+        wholeFixtureChases.set(preset.preset, this.presetService.getPresetWholeFixtureChase(preset.preset));
       }
 
       // a preset chasing its steps over its fixtures is at a different point of the
@@ -790,8 +1164,14 @@ export class PreviewService implements OnDestroy {
       { action: 'lamp-on', fixtureUuids: this.projectService.project.lampOnFixtureUuids || [] },
     ];
 
-    // where the fixtures hang, to aim the moving heads at a spot
-    const placements = getStagePlacements(this.projectService.project);
+    // where the fixtures hang, to aim the moving heads at a spot (and to spread the pixel effects across the stage)
+    const placements = this.getPlacements();
+    this.framePlacements = placements;
+    this.frameFixtureIndices = fixtureIndices;
+    this.frameTimeMillis = timeMillis;
+    this.frameAudio = new Map();
+    this.frameSizedSettings = new Map();
+    const sameLamps = this.getSameLamps(this.fixtureService.cachedFixtures);
 
     for (let i = 0; i < this.fixtureService.cachedFixtures.length; i++) {
       const cachedFixture = this.fixtureService.cachedFixtures[i];
@@ -799,7 +1179,7 @@ export class PreviewService implements OnDestroy {
       // all values of the current fixture channels
       let values: FixtureChannelValue[] = [];
 
-      const alreadyCalculatedFixture = this.getAlreadyCalculatedFixture(this.fixtureService.cachedFixtures, i);
+      const alreadyCalculatedFixture = sameLamps[i];
 
       if (alreadyCalculatedFixture) {
         // only relevant for the preview --> reuse all calculated values
@@ -843,6 +1223,8 @@ export class PreviewService implements OnDestroy {
 
             this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset, context);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);
+            const wholeFixtureChase = wholeFixtureChases.get(preset.preset);
+
             this.mixEffects(
               timeMillis,
               fixtureIndex,
@@ -852,7 +1234,9 @@ export class PreviewService implements OnDestroy {
               values,
               intensityPercentage,
               state,
-              context
+              context,
+              wholeFixtureChase.indices.get(cachedFixture.fixture.uuid) ?? 0,
+              wholeFixtureChase.count
             );
           }
         }
@@ -935,6 +1319,9 @@ export class PreviewService implements OnDestroy {
     if (!this.scene) {
       return;
     }
+
+    const project = this.projectService.project;
+    this.stageFloor.set(project.stageWidthCm / 2, project.stageDepthCm / 2, project.stageFloorHeightCm);
 
     let geometry: any;
     let mesh: any;

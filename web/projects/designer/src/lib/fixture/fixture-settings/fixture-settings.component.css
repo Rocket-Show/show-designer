@@ -1,0 +1,7 @@
+/* says what the dimmers of the fixtures lighting in colors do */
+.color-dimmers-hint {
+  max-width: 260px;
+  margin-top: var(--sd-space-1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

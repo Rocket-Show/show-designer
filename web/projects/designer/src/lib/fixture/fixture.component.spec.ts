@@ -20,6 +20,7 @@ import { LivePreviewService } from '../services/live-preview.service';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { TreeComponent } from '../tree/tree.component';
+import { FixturePixelGridComponent } from './fixture-pixel-grid/fixture-pixel-grid.component';
 import { FixtureComponent } from './fixture.component';
 
 // The fixture panel: the fixtures of the project in their folders, checked for the selected
@@ -41,7 +42,7 @@ describe('FixtureComponent', () => {
     openPool = jasmine.createSpy('open');
 
     TestBed.configureTestingModule({
-      declarations: [FixtureComponent, TreeComponent, InlineEditComponent],
+      declarations: [FixtureComponent, TreeComponent, InlineEditComponent, FixturePixelGridComponent],
       imports: [FormsModule, PopoverModule.forRoot(), TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [
         // the pool is a dialog of its own
@@ -125,12 +126,15 @@ describe('FixtureComponent', () => {
 
   const element = (): HTMLElement => fixture.nativeElement;
   const rows = (): HTMLElement[] => Array.from(element().querySelectorAll('.tree-node'));
-  const names = (): string[] => rows().map((row) => row.textContent.trim());
-  const row = (name: string): HTMLElement => rows().find((candidate) => candidate.textContent.trim() === name);
+  // the name of a row, without the number of pixels a fixture shows next to it
+  const nameOf = (candidate: HTMLElement): string => candidate.querySelector('.tree-label .text-truncate').textContent.trim();
+  const names = (): string[] => rows().map(nameOf);
+  const row = (name: string): HTMLElement => rows().find((candidate) => nameOf(candidate) === name);
   const checked = (): string[] =>
     rows()
       .filter((candidate) => candidate.querySelector('input:checked'))
-      .map((candidate) => candidate.textContent.trim());
+      .map(nameOf);
+  const checkbox = (name: string): HTMLInputElement => row(name).querySelector('input');
   const keys = (presetFixtures: PresetFixture[]) =>
     presetFixtures.map((presetFixture) => presetFixture.fixtureUuid + (presetFixture.pixelKey ? ' ' + presetFixture.pixelKey : ''));
   const places = (presetFixtures: PresetFixture[]) =>
@@ -182,18 +186,21 @@ describe('FixtureComponent', () => {
   }
 
   describe('the fixtures of a preset', () => {
-    it('shows the fixtures of the project in their folders, a pixel along with the name of its fixture', async () => {
+    it('shows the fixtures of the project in their folders, a fixture with pixels in one row', async () => {
       await open();
 
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head']);
       expect(row('Par 1').querySelector('.tree-icon').classList).toContain('icon-color-changer');
-      expect(row('Bar - 1/2').querySelector('.tree-icon').classList).toContain('icon-pixel-bar');
+      expect(row('Bar').querySelector('.tree-icon').classList).toContain('icon-pixel-bar');
     });
 
     it('checks the fixtures the selected preset lights, and dims the others', async () => {
       await open();
 
-      expect(checked()).toEqual(['Par 2', 'Bar - 1/2']);
+      expect(checked()).toEqual(['Par 2']);
+      // the bar lights one of its two pixels
+      expect(checkbox('Bar').indeterminate).toBe(true);
+      expect(row('Bar').classList).not.toContain('inactive-list-item');
       expect(row('Par 1').classList).toContain('inactive-list-item');
       expect(row('Par 2').classList).not.toContain('inactive-list-item');
     });
@@ -204,7 +211,7 @@ describe('FixtureComponent', () => {
       await click(row('Par 1'));
 
       expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'par-1']);
-      expect(checked()).toEqual(['Par 1', 'Par 2', 'Bar - 1/2']);
+      expect(checked()).toEqual(['Par 1', 'Par 2']);
       // the click checks it, it does not select the row
       expect(row('Par 1').classList).not.toContain('selected');
       expect(row('Par 1').classList).toContain('focused');
@@ -232,7 +239,7 @@ describe('FixtureComponent', () => {
       await click(button('fa-check-square-o'));
 
       expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'par-1', 'bar 2/2', 'head']);
-      expect(checked().length).toBe(5);
+      expect(checked()).toEqual(['Par 1', 'Par 2', 'Bar', 'Head']);
 
       await click(button('fa-square-o'));
 
@@ -301,13 +308,14 @@ describe('FixtureComponent', () => {
       expect(button('fa-list-ol').classList).toContain('text-primary');
       // it starts from the order it chased in so far, and the others come after its own
       expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2']);
+      // the half of the bar it chases has a place of its own, the other one comes last
       expect(names()).toEqual(['Front', 'Par 2', 'Par 1', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
       expect(previewLive).toHaveBeenCalled();
 
       await click(button('fa-list-ol'));
 
       expect(preset('warm').useGlobalFixtureOrder).toBe(true);
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head']);
     });
 
     it('offers no order of its own without a preset', async () => {
@@ -329,9 +337,9 @@ describe('FixtureComponent', () => {
       presetService.selectedPreset = preset('chase');
       await open();
 
-      expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar']);
       // the fixtures it does not chase stay where they are
-      expect(row('Bar - 1/2').getAttribute('draggable')).toBe('false');
+      expect(row('Bar').getAttribute('draggable')).toBe('false');
       expect(row('Par 1').getAttribute('draggable')).toBe('true');
       expect(row('Front').getAttribute('draggable')).toBe('true');
     });
@@ -343,7 +351,7 @@ describe('FixtureComponent', () => {
 
       await dragAndDrop('Par 1', 'Par 2', 0.1);
 
-      expect(names()).toEqual(['Head', 'Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Head', 'Front', 'Par 1', 'Par 2', 'Bar']);
       expect(places(preset('chase').fixtures)).toEqual([
         ['head', undefined, 0],
         ['par-1', 'front', 0],
@@ -359,7 +367,7 @@ describe('FixtureComponent', () => {
 
       await dragAndDrop('Front', 'Head', 0.1);
 
-      expect(names()).toEqual(['Front', 'Par 2', 'Par 1', 'Head', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Front', 'Par 2', 'Par 1', 'Head', 'Bar']);
       expect(preset('chase').fixtureFolders.map((position) => [position.folderUuid, position.sortIndex])).toEqual([['front', 0]]);
       expect(places(preset('chase').fixtures)[2]).toEqual(['head', undefined, 1]);
       expect(project.fixtureFolders[0].sortIndex).toBe(0);
@@ -370,11 +378,11 @@ describe('FixtureComponent', () => {
       preset('chase').fixtureFolders = [];
       await open();
 
-      expect(names()).toEqual(['Front', 'Par 2', 'Par 1', 'Head', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Front', 'Par 2', 'Par 1', 'Head', 'Bar']);
 
       await dragAndDrop('Head', 'Front', 0.1);
 
-      expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar']);
       expect(preset('chase').fixtureFolders.map((position) => [position.folderUuid, position.sortIndex])).toEqual([['front', 1]]);
     });
 
@@ -386,7 +394,7 @@ describe('FixtureComponent', () => {
       expect(dropsBefore('Head', 'Par 2')).toBe(false);
       expect(dropsBefore('Par 1', 'Head')).toBe(false);
       // next to a fixture it does not chase
-      expect(dropsBefore('Head', 'Bar - 1/2')).toBe(false);
+      expect(dropsBefore('Head', 'Bar')).toBe(false);
       // a folder into a folder
       expect(dropsBefore('Front', 'Par 2')).toBe(false);
       // among the rows it sits with
@@ -399,7 +407,7 @@ describe('FixtureComponent', () => {
 
       await dragAndDrop('Head', 'Front', 0.5);
 
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Head', 'Bar - 1/2', 'Bar - 2/2']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Head', 'Bar']);
       expect(places(project.presetFixtures)).toEqual([
         ['par-1', 'front', 0],
         ['par-2', 'front', 1],
@@ -425,10 +433,253 @@ describe('FixtureComponent', () => {
       TestBed.inject(ProjectService).projectChanged.next();
       await update();
 
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Inner', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Inner', 'Bar', 'Head']);
       expect(panel.allowDrop([panel.treeNodes[0]], panel.treeNodes[0].children[2], 'inside')).toBe(false);
       expect(panel.allowDrop([panel.treeNodes[1]], panel.treeNodes[2], 'inside')).toBe(false);
       expect(panel.allowDrop([panel.treeNodes[1]], panel.treeNodes[0], 'inside')).toBe(true);
+    });
+  });
+
+  // A fixture with pixels is one row, which checks all of them (and its general channels)
+  // at once and opens to show them one by one. The bar's two pixels are the halves of it.
+  describe('a fixture with pixels', () => {
+    async function openOrClose(name: string) {
+      await click(row(name).querySelector('.tree-caret'));
+    }
+
+    it('starts closed and opens to show its pixels by their keys, also after the tree was built again', async () => {
+      await open();
+
+      expect(row('Bar').querySelector('.fixture-pixel-count').textContent.trim()).toBe('designer.fixture.pixel-count');
+
+      await openOrClose('Bar');
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', '1/2', '2/2', 'Head']);
+      expect(checked()).toEqual(['Par 2', '1/2']);
+      expect(row('2/2').classList).toContain('inactive-list-item');
+
+      TestBed.inject(ProjectService).projectChanged.next();
+      await update();
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', '1/2', '2/2', 'Head']);
+
+      await openOrClose('Bar');
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head']);
+    });
+
+    it('lets the preset light all of its pixels with a click on its row, and none of them with the next one', async () => {
+      await open();
+
+      await click(row('Bar'));
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'bar 2/2']);
+      expect(checked()).toEqual(['Par 2', 'Bar']);
+      expect(checkbox('Bar').indeterminate).toBe(false);
+      expect(row('Bar').classList).toContain('focused');
+      expect(selectionChanged).toBe(1);
+      expect(previewLive).toHaveBeenCalled();
+
+      await click(checkbox('Bar'));
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2']);
+      expect(row('Bar').classList).toContain('inactive-list-item');
+    });
+
+    it('lets the preset light a single pixel inside it', async () => {
+      await open();
+      await openOrClose('Bar');
+
+      await click(row('2/2'));
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'bar 2/2']);
+      expect(checked()).toEqual(['Par 2', 'Bar', '1/2', '2/2']);
+    });
+
+    it('names the general channels of a fixture inside it, next to its pixels', async () => {
+      project.presetFixtures.splice(2, 0, new PresetFixture({ fixtureUuid: 'bar', sortIndex: 1 }));
+      project.presetFixtures[3].sortIndex = 2;
+      project.presetFixtures[4].sortIndex = 3;
+      project.presetFixtures[5].sortIndex = 4;
+      await open();
+      await openOrClose('Bar');
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'designer.fixture.general-channels', '1/2', '2/2', 'Head']);
+    });
+
+    it('moves with all its pixels, which follow each other in the order of the project', async () => {
+      await open();
+
+      await dragAndDrop('Bar', 'Front', 0.1);
+
+      expect(names()).toEqual(['Bar', 'Front', 'Par 1', 'Par 2', 'Head']);
+      expect(places(project.presetFixtures)).toEqual([
+        ['bar 1/2', undefined, 0],
+        ['bar 2/2', undefined, 1],
+        ['par-1', 'front', 0],
+        ['par-2', 'front', 1],
+        ['head', undefined, 3],
+      ]);
+      expect(previewLive).toHaveBeenCalled();
+    });
+
+    it('keeps its pixels together: they are only moved among themselves', async () => {
+      await open();
+      await openOrClose('Bar');
+
+      expect(dropsBefore('2/2', '1/2')).toBe(true);
+      // out of the fixture, or something else in between its pixels
+      expect(dropsBefore('2/2', 'Head')).toBe(false);
+      expect(dropsBefore('Head', '2/2')).toBe(false);
+      expect(panel.allowDrop([panel.treeNodes[2]], panel.treeNodes[1], 'inside')).toBe(false);
+
+      await dragAndDrop('2/2', '1/2', 0.1);
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', '2/2', '1/2', 'Head']);
+      expect(places(project.presetFixtures).slice(2, 4)).toEqual([
+        ['bar 2/2', undefined, 1],
+        ['bar 1/2', undefined, 2],
+      ]);
+    });
+
+    it('shows a pixel chased between the ones of another fixture as a row of its own', async () => {
+      // the second half of the bar is chased after the head
+      project.presetFixtures[3].sortIndex = 4;
+      await open();
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Head', 'Bar - 2/2']);
+    });
+
+    it('closes along with all the folders, and stays closed when they open again', async () => {
+      await open();
+      await openOrClose('Bar');
+
+      await click(button('fa-compress'));
+
+      expect(names()).toEqual(['Front', 'Bar', 'Head']);
+
+      await click(button('fa-expand'));
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head']);
+    });
+
+    it('goes to the end of its folder with all its pixels in the order of a preset which brings its own one', async () => {
+      presetService.selectedPreset = preset('chase');
+      await open();
+
+      expect(row('Bar').getAttribute('draggable')).toBe('false');
+
+      await click(row('Bar'));
+
+      expect(keys(preset('chase').fixtures)).toEqual(['head', 'par-2', 'par-1', 'bar 1/2', 'bar 2/2']);
+      expect(names()).toEqual(['Head', 'Front', 'Par 2', 'Par 1', 'Bar']);
+      expect(row('Bar').getAttribute('draggable')).toBe('true');
+    });
+  });
+
+  describe('a fixture with a matrix', () => {
+    beforeEach(() => {
+      project.fixtureProfiles.push(
+        new Project({ fixtureProfiles: [{ ...JSON.parse(JSON.stringify(profiles['test/pixel-matrix'])), uuid: 'matrix' }] })
+          .fixtureProfiles[0]
+      );
+      project.fixtures.push(
+        new Project({
+          fixtures: [
+            { uuid: 'wall', name: 'Wall', profileUuid: 'matrix', modeShortName: '36ch', dmxUniverseUuid: 'u', dmxFirstChannel: 30 },
+          ],
+        }).fixtures[0]
+      );
+
+      for (let key = 1; key <= 12; key++) {
+        project.presetFixtures.push(new PresetFixture({ fixtureUuid: 'wall', pixelKey: String(key), sortIndex: 3 + key }));
+      }
+
+      fixtureService.updateCachedFixtures();
+    });
+
+    const grid = (): HTMLCanvasElement => element().querySelector('lib-app-fixture-pixel-grid canvas');
+    const viewSwitch = (): HTMLElement => row('Wall').querySelector('.fixture-pixel-view');
+
+    // a pointer event in the middle of a pixel of the grid
+    function pointer(type: string, column: number, line: number) {
+      const bounds = grid().getBoundingClientRect();
+      const pitch = bounds.width / 4;
+
+      grid().dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 1,
+          clientX: bounds.left + (column + 0.5) * pitch,
+          clientY: bounds.top + (line + 0.5) * pitch,
+        })
+      );
+      fixture.detectChanges();
+    }
+
+    it('opens to show its pixels as a grid, or as rows to change the order they are chased in', async () => {
+      await open();
+
+      expect(viewSwitch()).toBeNull();
+
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head', 'Wall']);
+      expect(grid()).not.toBeNull();
+      expect(viewSwitch().getAttribute('title')).toBe('designer.fixture.pixels-as-rows');
+
+      await click(viewSwitch());
+
+      expect(names().slice(5, 8)).toEqual(['Wall', '1', '2']);
+      expect(grid()).toBeNull();
+      expect(viewSwitch().getAttribute('title')).toBe('designer.fixture.pixels-as-grid');
+
+      await click(viewSwitch());
+
+      expect(grid()).not.toBeNull();
+      expect(selectionChanged).toBe(0);
+    });
+
+    it('lets the preset light the pixels a drag over the grid passes', async () => {
+      await open();
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      pointer('pointerdown', 0, 0);
+      pointer('pointermove', 1, 0);
+      pointer('pointerup', 1, 0);
+      await update();
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'wall 1', 'wall 2']);
+      expect(checkbox('Wall').indeterminate).toBe(true);
+      expect(selectionChanged).toBe(1);
+      expect(previewLive).toHaveBeenCalled();
+
+      pointer('pointerdown', 1, 0);
+      pointer('pointerup', 1, 0);
+      await update();
+
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2', 'wall 1']);
+    });
+
+    it('picks the whole fixture to set up in the settings', async () => {
+      fixtureService.settingsSelection = true;
+      await open();
+      await click(row('Wall').querySelector('.tree-caret'));
+
+      pointer('pointerdown', 2, 1);
+      pointer('pointerup', 2, 1);
+      await update();
+
+      expect(fixtureService.selectedSettingsFixtures.map((candidate) => candidate.uuid)).toEqual(['wall']);
+      expect(keys(preset('warm').fixtures)).toEqual(['par-2', 'bar 1/2']);
+
+      // all of its pixels are taken now: a drag over a pixel releases it
+      pointer('pointerdown', 0, 0);
+      pointer('pointerup', 0, 0);
+      await update();
+
+      expect(fixtureService.selectedSettingsFixtures).toEqual([]);
     });
   });
 
@@ -438,7 +689,7 @@ describe('FixtureComponent', () => {
 
       await click(button('fa-folder-o'));
 
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2', 'Head', 'designer.fixture.new-folder']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head', 'designer.fixture.new-folder']);
       expect(row('designer.fixture.new-folder').classList).toContain('focused');
       expect(project.fixtureFolders[1].parentUuid).toBeUndefined();
       expect(project.fixtureFolders[1].sortIndex).toBe(4);
@@ -446,16 +697,7 @@ describe('FixtureComponent', () => {
       await click(row('Par 2'));
       await click(button('fa-folder-o'));
 
-      expect(names()).toEqual([
-        'Front',
-        'Par 1',
-        'Par 2',
-        'designer.fixture.new-folder',
-        'Bar - 1/2',
-        'Bar - 2/2',
-        'Head',
-        'designer.fixture.new-folder',
-      ]);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'designer.fixture.new-folder', 'Bar', 'Head', 'designer.fixture.new-folder']);
       expect(project.fixtureFolders[2].parentUuid).toBe('front');
     });
 
@@ -468,7 +710,7 @@ describe('FixtureComponent', () => {
 
       await click(button('fa-folder-o'));
 
-      expect(names()).toEqual(['Front', 'Bar - 1/2', 'Bar - 2/2', 'Head', 'designer.fixture.new-folder']);
+      expect(names()).toEqual(['Front', 'Bar', 'Head', 'designer.fixture.new-folder']);
       expect(project.fixtureFolders[1].parentUuid).toBeUndefined();
     });
 
@@ -482,7 +724,7 @@ describe('FixtureComponent', () => {
       await click(row('Front'));
       await click(button('fa-trash-o'));
 
-      expect(names()).toEqual(['Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Par 1', 'Par 2', 'Bar', 'Head']);
       expect(project.fixtureFolders).toEqual([]);
       expect(places(project.presetFixtures)).toEqual([
         ['par-1', undefined, 0],
@@ -502,13 +744,13 @@ describe('FixtureComponent', () => {
 
       await click(element().querySelector('.card-header .fa-compress').parentElement);
 
-      expect(names()).toEqual(['Front', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Front', 'Bar', 'Head']);
       expect(project.fixtureFolders[0].expanded).toBe(false);
       expect(element().querySelector('.card-header .fa-expand')).not.toBeNull();
 
       await click(element().querySelector('.card-header .fa-expand').parentElement);
 
-      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar - 1/2', 'Bar - 2/2', 'Head']);
+      expect(names()).toEqual(['Front', 'Par 1', 'Par 2', 'Bar', 'Head']);
     });
 
     it('renames a folder in place', async () => {

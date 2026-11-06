@@ -27,6 +27,7 @@ made of it (`expected`).
 | `hexColor`, `mixColors` | colors of the fixture library                                                                                                  | their RGB values, mixed                                                                     |
 | `pixels`                | a fixture matrix                                                                                                               | its pixels, its groups and the order a channel is repeated for them in                      |
 | `pixelGroup`            | a group and pixels                                                                                                             | the pixels it covers, or `error` for a rule which can't be read                             |
+| `pixelPattern`          | a pattern of the pixel effects with its settings, a palette, moments and pixels (of a bar, a matrix or the stage)              | where the pattern puts each pixel in the palette, how bright it makes it and its color      |
 | `channelValues`         | a project and how it is previewed (the timeline of a composition, the selected preset, its steps running, the selected scenes) | the value of every channel of every fixture and pixel at each time                          |
 | `migration`             | a project of an older version                                                                                                  | what both keep of it migrated to the current version and play it with (see below)           |
 
@@ -35,9 +36,21 @@ white on top of what the presets light them with.
 
 A project of a `channelValues` case names the profiles of `profiles` like the fixture library does (`"$profile":
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of
-`profiles/test`.
+`profiles/test`. It is a project of the current version: Rocket Show migrates a project of an older one when it loads
+it, the designer plays the case as it is. In a current project the dimmers of the fixtures lighting in colors only
+start at full (`colorDimmersAtFull`, see `channel-values-color-dimmers.json`).
 
-A `migration` case compares the version, the fixtures and pixels of the project and of each preset (in their order,
+A `channelValues` case with pixel effects following the audio (`channel-values-pixel-audio.json`) brings the frames of
+an analysis of the audio as well (`audio`, see `models/pixel-audio.ts`): for each 20 ms, the RMS, the peak, the bass, the
+mids, the highs and 16 bands in dB, analyzed from a song. How the frames light the pixels is compared exactly, how they
+are measured is not: the designer analyzes the audio file of the composition (`models/pixel-audio-analysis.ts`), Rocket
+Show measures the audio while it plays (`AudioAnalysisService`, with the level and the spectrum of GStreamer). The
+frames stand for all the audio: the effects of the cases follow all buses. How the buses an effect picks are added
+together is a part of the measuring as well (`audioFramesFor` in the designer, `AudioAnalysisService.frame` in Rocket
+Show).
+
+A `migration` case compares the version, whether the dimmers of the fixtures lighting in colors start at full (not in a
+project of before version 11), the fixtures and pixels of the project and of each preset (in their order,
 with `useGlobalFixtureOrder`), the steps of each preset (times, transition, values and effect amounts), its curves
 (type, amplitude and the channels of each profile) and its other effects, the presets of each scene in their order and
 the tracks of each composition (their names) with the track of each clip, named by its place in the composition: the
@@ -72,4 +85,6 @@ testing/sync-designer-conformance.sh ../show-designer
 
 Both engines compute with doubles and the same operations in the same order, so they come to the very same numbers.
 Where a function of the platform rounds differently (Math.sin of the browser and of Java), both use one of their own
-(`models/cycle-sine.ts`, `CycleSine`).
+(`models/cycle-sine.ts`, `CycleSine`). The pixel effects keep to the same operations (`models/pixel-math.ts`,
+`PixelMath`), and what looks random in them comes from a hash of whole numbers, which wraps around at 32 bits on both
+sides.

@@ -102,6 +102,38 @@
             <lib-app-inline-edit [value]="node.folder.name" (valueChange)="node.folder.name = $event"></lib-app-inline-edit>
           </div>
         </div>
+        } @else if (node.fixtureGroup) {
+        <!-- a fixture with its pixels: checked while the preset takes all of them, half
+             checked while it takes some -->
+        <div class="d-flex">
+          <div class="form-check my-auto mr-1">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [ngModel]="fixtureGroupState(node) === 'all'"
+              [indeterminate]="fixtureGroupState(node) === 'some'"
+              (ngModelChange)="selectFixtureGroup(node)"
+              (click)="$event.stopPropagation()"
+            />
+          </div>
+          <div class="my-auto text-truncate">
+            {{ fixtureGroupName(node) }}
+          </div>
+          @if (node.fixtureGroup.pixelCount > 0) {
+          <div class="my-auto ml-auto pl-2 fixture-pixel-count">
+            {{ 'designer.fixture.pixel-count' | translate : { count: node.fixtureGroup.pixelCount } }}
+          </div>
+          } @if (node.expanded && node.fixtureGroup.hasGrid) {
+          <!-- open: its pixels as a grid, or as rows to change the order they are chased in -->
+          <a
+            href="#"
+            class="my-auto ml-1 fixture-pixel-view"
+            [attr.title]="(node.detail ? 'designer.fixture.pixels-as-rows' : 'designer.fixture.pixels-as-grid') | translate"
+            (click)="switchPixelView(node); $event.stopPropagation(); (false)"
+            ><i class="fa fa-fw" [class.fa-list]="node.detail" [class.fa-th]="!node.detail" aria-hidden="true"></i
+          ></a>
+          }
+        </div>
         } @else {
         <div class="d-flex">
           <div class="form-check my-auto mr-1">
@@ -113,11 +145,25 @@
               (click)="$event.stopPropagation()"
             />
           </div>
+          <!-- inside its fixture, a pixel is named by its key alone -->
           <div class="my-auto text-truncate">
+            @if (node.inFixtureGroup) {
+            {{ node.presetFixture.pixelKey || ('designer.fixture.general-channels' | translate) }}
+            } @else {
             {{ fixtureName(node.presetFixture) }}
+            }
           </div>
         </div>
         }
+      </ng-template>
+      <!-- an open fixture shows its pixels where they sit in it -->
+      <ng-template #detailTemplate let-node>
+        <lib-app-fixture-pixel-grid
+          [fixtureUuid]="node.fixtureGroup.fixtureUuid"
+          [rows]="node.fixtureGroup.rows"
+          [isSelected]="rowIsSelected"
+          (selectRows)="selectPixelRows(node, $event)"
+        ></lib-app-fixture-pixel-grid>
       </ng-template>
     </lib-tree>
     @if (projectService.project.presetFixtures.length == 0) {

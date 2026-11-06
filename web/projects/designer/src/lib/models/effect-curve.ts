@@ -258,6 +258,40 @@ export class EffectCurve extends Effect {
     return this.getCyclePosition(timeMillis - phase, false, lengthMillis);
   }
 
+  // How many periods the curve has run through at a moment, counted from where its phase puts its start, with the part of
+  // the one it is in, or undefined if it does not apply at this moment. It follows the rules of getCyclePositionAtMillis:
+  // a pixel effect needs the number of the pass as well, e.g. to take the next color on each of them.
+  public getCyclesAtMillis(timeMillis: number, fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number | undefined {
+    const lengthMillis = this.getLengthMillis(beatsPerMinute);
+    const phasingMillis = this.getPhasingMillis(fixtureIndex, fixtureCount, beatsPerMinute);
+    const phaseMillis = this.getPhaseMillis(beatsPerMinute);
+    const phase = phaseMillis + phasingMillis;
+
+    const runEndMillis = this.getRunEndMillis(beatsPerMinute);
+
+    if (runEndMillis !== undefined) {
+      const runMillis = timeMillis - phasingMillis;
+
+      if (runMillis < 0) {
+        // this fixture has not started yet
+        return undefined;
+      }
+
+      if (runMillis >= runEndMillis) {
+        if (this.endMode === 'base') {
+          return undefined;
+        }
+
+        const cycles = (runEndMillis - phaseMillis) / lengthMillis;
+
+        // a run of full cycles ends exactly on a cycle border -> hold what it showed just before it
+        return cycles - Math.floor(cycles) < EffectCurve.cycleEpsilon ? Math.floor(cycles) - EffectCurve.cycleEpsilon : cycles;
+      }
+    }
+
+    return (timeMillis - phase) / lengthMillis;
+  }
+
   // the position inside the current cycle, between 0 and 1
   private getCyclePosition(shiftedMillis: number, atRunEnd: boolean, lengthMillis: number): number {
     const cyclePosition = (((shiftedMillis / lengthMillis) % 1) + 1) % 1;

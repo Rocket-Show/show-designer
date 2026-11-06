@@ -392,7 +392,7 @@ function libraryModes() {
           name: `${name} ${modeName} ${look}`,
           input: {
             project: {
-              version: 10,
+              version: 11,
               fixtureProfiles: [{ $profile: name }],
               fixtures: [{ uuid: 'fixture', profileUuid: name, modeShortName: modeName, dmxUniverseUuid: 'u', dmxFirstChannel: 0 }],
               presetFixtures: presetFixtures('fixture', profile),
@@ -438,7 +438,7 @@ function scenarioProject(random) {
   );
 
   return {
-    version: 10,
+    version: 11,
     masterDimmerValue: random.pick([1, 1, 0.5]),
     fixtureProfiles: [...testProfiles, 'chauvet-dj/colorband-pix'].map((name) => ({ $profile: name })),
     fixtures: testFixtures,
@@ -787,7 +787,7 @@ function edgeProject(profiles, fixtures, presets, scenes) {
   const presetFixturesOfProject = fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid)));
 
   return {
-    version: 10,
+    version: 11,
     fixtureProfiles: profiles.map((name) => ({ $profile: name })),
     fixtures,
     presetFixtures: presetFixturesOfProject,
@@ -992,7 +992,7 @@ function channelValuesMixingEdges() {
   };
   const inlineProfiles = [dimmer, colorWheel];
   const project = (fixtures, presets, scenes, extra = {}) => ({
-    version: 10,
+    version: 11,
     fixtureProfiles: [...inlineProfiles, { $profile: 'test/pixel-bar' }, { $profile: 'test/rgb-par' }],
     fixtures,
     presetFixtures: fixtures.flatMap((fixture) =>
@@ -2175,6 +2175,731 @@ function migrationEdges() {
   );
 }
 
+// ---- pixel patterns ---------------------------------------------------------------------------
+
+const firstPixelPatternNames = ['chase', 'comet', 'wipe', 'flow', 'sparkle', 'plasma', 'ripple', 'shapes', 'fire'];
+const pixelPatternNames = [
+  ...firstPixelPatternNames,
+  'center',
+  'stripes',
+  'stack',
+  'sweep',
+  'spiral',
+  'checker',
+  'rain',
+  'tunnel',
+  'orbit',
+  'wave',
+  'text',
+  'image',
+  'meter',
+  'scope',
+];
+
+// The picture of a text (a brightness for each pixel, mostly on or off, with the columns its letters start at) or of
+// an image (red, green and blue, in one frame or a few of an animation, some of them without a length), as the
+// designer makes it
+function randomBitmap(random, pattern) {
+  const text = pattern === 'text';
+  const width = text ? 4 + random.int(30) : 2 + random.int(12);
+  const height = text ? 5 + random.int(4) : 1 + random.int(8);
+  const channels = text ? 1 : 3;
+  const frameCount = text ? 1 : random.pick([1, 1, 2, 3]);
+  const frames = [];
+
+  for (let frame = 0; frame < frameCount; frame++) {
+    const bytes = new Uint8Array(width * height * channels);
+
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = text ? (random.chance(0.45) ? random.pick([255, 255, 255, 128]) : 0) : random.int(256);
+    }
+
+    frames.push(Buffer.from(bytes).toString('base64'));
+  }
+
+  const bitmap = { width, height, channels, frames };
+
+  if (text) {
+    bitmap.letterStarts = [0, 6, 12, 18, 24].filter((start) => start < width);
+  } else if (frameCount > 1) {
+    bitmap.durations = frames.map(() => random.pick([40, 100, 250, 0, null]));
+  }
+
+  return bitmap;
+}
+
+// how a text or an image is shown, some of it left out like an effect of an older designer does
+function bitmapSettings(random, settings) {
+  random.maybe(settings, 'scroll', ['auto', 'left', 'right', 'up', 'down', 'none']);
+  random.maybe(settings, 'align', ['left', 'center', 'right']);
+  random.maybe(settings, 'offsetY', [0, 1, -2]);
+  random.maybe(settings, 'fit', ['contain', 'cover', 'stretch', 'pixels']);
+  random.maybe(settings, 'textColors', ['along', 'letters', 'one']);
+  random.maybe(settings, 'imageColors', ['own', 'palette']);
+}
+
+// The directions and shapes a pattern is given. The first patterns are given the ones there were with them (which
+// keeps their cases as they were), the others also the ones of the patterns which came later: the way to turn, the
+// paths of the orbit and the curves of the wave.
+const pixelDirectionsOf = (pattern) =>
+  firstPixelPatternNames.includes(pattern)
+    ? ['right', 'left', 'out', 'in', 'up', 'down']
+    : ['right', 'left', 'out', 'in', 'up', 'down', 'cw', 'ccw'];
+const pixelShapesOf = (pattern) =>
+  firstPixelPatternNames.includes(pattern)
+    ? ['circle', 'square', 'diamond', 'star', 'heart']
+    : ['circle', 'square', 'diamond', 'star', 'heart', 'figure8', 'line', 'wave', 'sine', 'triangle', 'sawtooth'];
+
+// palettes of a few colors: smooth and in steps, mirrored and wrapping, a color twice on the same place, unsorted
+const pixelPalettes = [
+  {
+    stops: [
+      { position: 0, color: '#000000' },
+      { position: 0.45, color: '#c21a00' },
+      { position: 0.68, color: '#ff7a00' },
+      { position: 1, color: '#fff5d6' },
+    ],
+  },
+  {
+    stops: [
+      { position: 0, color: '#ff0000' },
+      { position: 1 / 3, color: '#00ff00' },
+      { position: 2 / 3, color: '#0000ff' },
+      { position: 1, color: '#ff0000' },
+    ],
+    repeat: 'wrap',
+  },
+  {
+    stops: [
+      { position: 0, color: '#ff1d25' },
+      { position: 1, color: '#1e4bff' },
+    ],
+    between: 'steps',
+  },
+  {
+    stops: [
+      { position: 0.8, color: '#FFE14A' },
+      { position: 0.2, color: '#00d85a' },
+      { position: 0.5, color: '#ff2b2b' },
+      { position: 0.5, color: '#2c6bff' },
+    ],
+  },
+  {
+    stops: [
+      { position: 0, color: '#2a0845' },
+      { position: 0.55, color: '#e8407a' },
+      { position: 1, color: '#ffd76e' },
+    ],
+    between: 'steps',
+    repeat: 'wrap',
+  },
+];
+
+// where a pixel is: in a bar, in a matrix (also one wider than high), a fixture without pixels, or somewhere in a picture
+// of the stage
+function pixelContext(random) {
+  const grid = random.pick([
+    [12, 1],
+    [24, 1],
+    [8, 8],
+    [16, 16],
+    [5, 3],
+    [3, 7],
+    [1, 1],
+    [40, 9],
+  ]);
+  const [columns, rows] = grid;
+  const column = random.int(columns);
+  const row = random.int(rows);
+  const longest = Math.max(columns, rows);
+  const stage = columns === 40;
+
+  return {
+    x: stage ? random.next() : (column + 0.5) / columns,
+    y: stage ? random.next() : (row + 0.5) / rows,
+    column,
+    row,
+    columns,
+    rows,
+    aspectX: stage ? 1 : columns / longest,
+    aspectY: stage ? 0.25 : rows / longest,
+    seed: random.chance(0.5) ? 0 : random.int(2000) - 300,
+  };
+}
+
+function pixelPatterns() {
+  const random = randomSource(11);
+  const cases = [];
+  const cycles = [0, 0.25, 0.5, 0.999, 1, 2.5, -0.25, -3.75, 1234.5678];
+
+  for (const pattern of pixelPatternNames) {
+    for (let index = 0; index < 10; index++) {
+      const settings = {
+        pattern,
+        size: random.pick([0, 1, random.number(1), random.number(1)]),
+        softness: random.pick([0, 1, random.number(1), random.number(1)]),
+        direction: random.pick(pixelDirectionsOf(pattern)),
+        shape: random.pick(pixelShapesOf(pattern)),
+        bounce: random.chance(0.5),
+      };
+
+      if (pattern === 'text' || pattern === 'image') {
+        settings.bitmap = randomBitmap(random, pattern);
+        bitmapSettings(random, settings);
+      }
+
+      const input = { settings, palette: random.pick(pixelPalettes), samples: [] };
+
+      for (let sample = 0; sample < 20; sample++) {
+        input.samples.push({ cycle: random.chance(0.4) ? random.pick(cycles) : random.number(8) - 2, pixel: pixelContext(random) });
+      }
+
+      cases.push({ name: `${pattern} ${index}`, input });
+    }
+  }
+
+  // a pattern of a newer designer, and a palette without colors or with one which can't be read
+  cases.push({
+    name: 'a pattern of a newer designer',
+    input: {
+      settings: { pattern: 'fireworks', size: 0.5, softness: 0.5, direction: 'right', shape: 'circle', bounce: false },
+      palette: pixelPalettes[0],
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+  // a picture which can't be read, one with less bytes than pixels and one of no size
+  const unreadable = (bitmap) => ({ pattern: 'image', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false, bitmap });
+  cases.push({
+    name: 'pictures which can not be read',
+    input: {
+      settings: unreadable({ width: 3, height: 2, channels: 3, frames: ['!!!'] }),
+      palette: pixelPalettes[0],
+      samples: [0.1, 0.6].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+  cases.push({
+    name: 'a picture with less bytes than pixels',
+    input: {
+      settings: unreadable({ width: 4, height: 4, channels: 3, frames: [Buffer.from([255, 128, 0, 10]).toString('base64')] }),
+      palette: pixelPalettes[0],
+      samples: [0, 0.3, 0.7].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+  cases.push({
+    name: 'a picture of no size',
+    input: {
+      settings: { ...unreadable({ width: 0, height: 5, channels: 1, frames: [] }), pattern: 'text' },
+      palette: pixelPalettes[0],
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+
+  cases.push({
+    name: 'a palette without colors',
+    input: {
+      settings: { pattern: 'flow', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false },
+      palette: { stops: [] },
+      samples: [{ cycle: 0.5, pixel: pixelContext(random) }],
+    },
+  });
+  cases.push({
+    name: 'a palette with a color which cannot be read',
+    input: {
+      settings: { pattern: 'flow', size: 0.5, softness: 0, direction: 'right', shape: 'circle', bounce: false },
+      palette: {
+        stops: [
+          { position: 0, color: 'orange' },
+          { position: 1, color: '#fff' },
+        ],
+      },
+      samples: [0.1, 0.6].map((cycle) => ({ cycle, pixel: pixelContext(random) })),
+    },
+  });
+
+  return write(
+    'pixel-pattern.json',
+    'pixelPattern',
+    'The patterns of the pixel effects, through a palette, at pixels of bars, matrices and the stage',
+    cases
+  );
+}
+
+// The pixel effects on bars and matrices of all kinds: pixels given by their count and by their keys, a bar with a dimmer
+// of its own, pixels lit in thirds, groups of a matrix, RGBW pixels and a fixture without pixels. Each preset paints
+// one pattern with random settings, timing and palette over some of the fixtures (all of their pixels, or some),
+// blended with a color of its own.
+function channelValuesPixelEffects() {
+  const random = randomSource(12);
+  const bar = 'test/pixel-bar';
+  const band = 'chauvet-dj/colorband-pix';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  const fixtures = [
+    { ...edgeFixture('bar-1', bar, '9ch', 0), dmxFirstChannel: 0 },
+    { ...edgeFixture('bar-2', bar, '10ch', 0), dmxFirstChannel: 16 },
+    { ...edgeFixture('band-thirds', band, '9ch', 0), dmxFirstChannel: 32 },
+    { ...edgeFixture('band', band, '36ch', 0), dmxFirstChannel: 48 },
+    { ...edgeFixture('matrix', matrix, '36ch', 0), dmxFirstChannel: 96 },
+    { ...edgeFixture('matrix-rgbw', matrix, '48ch', 0), dmxFirstChannel: 144 },
+    { ...edgeFixture('matrix-groups', matrix, '6ch', 0), dmxFirstChannel: 200 },
+    { ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 216 },
+  ];
+  const presets = [];
+
+  for (const pattern of pixelPatternNames) {
+    for (let index = 0; index < 3; index++) {
+      const uuid = `${pattern}-${index}`;
+      const effect = { type: 'pixel', uuid: uuid + '-effect', pattern, capabilities: [], channels: [] };
+      random.maybe(effect, 'size', [0, 0.2, 0.5, 1, random.number(1)]);
+      random.maybe(effect, 'softness', [0, 0.5, 1, random.number(1)]);
+      random.maybe(effect, 'direction', pixelDirectionsOf(pattern));
+      random.maybe(effect, 'shape', pixelShapesOf(pattern));
+      random.maybe(effect, 'bounce', [true, false]);
+      random.maybe(effect, 'mirror', [true, false, false]);
+      random.maybe(effect, 'seed', [1, 2, random.int(5000)]);
+      random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+      random.maybe(effect, 'blend', ['replace', 'replace', 'mask', 'add', 'max']);
+      random.maybe(effect, 'lengthMode', ['millis', 'millis', 'beats']);
+      random.maybe(effect, 'lengthMillis', [500, 1000, 2500, 4000]);
+      random.maybe(effect, 'lengthBeats', [1, 2, 4]);
+      random.maybe(effect, 'phaseMillis', [0, 250, random.number(1000)]);
+      random.maybe(effect, 'phasingMode', ['millis', 'beats', 'spread']);
+      random.maybe(effect, 'phasingMillis', [0, 100, -250]);
+      random.maybe(effect, 'phasingBeats', [0, 0.5]);
+      random.maybe(effect, 'phasingCycles', [1, 0.5, -1, 2]);
+      random.maybe(effect, 'runMode', ['infinite', 'infinite', 'cycles', 'duration']);
+      random.maybe(effect, 'runCycles', [1, 2]);
+      random.maybe(effect, 'runDurationMillis', [700, 1500]);
+      random.maybe(effect, 'endMode', ['hold', 'base']);
+      random.maybe(effect, 'visible', [true, true, true, false], 0.3);
+
+      if (pattern === 'text' || pattern === 'image') {
+        effect.bitmap = randomBitmap(random, pattern);
+        bitmapSettings(random, effect);
+      }
+
+      // all of the pixels of some fixtures, a few pixels of others
+      const presetFixturesOfPreset = [];
+
+      for (const fixture of fixtures) {
+        const entries = presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid));
+
+        if (random.chance(0.6)) {
+          presetFixturesOfPreset.push(...entries);
+        } else if (random.chance(0.4)) {
+          presetFixturesOfPreset.push(...entries.filter(() => random.chance(0.5)));
+        }
+      }
+
+      const values = {
+        fixtureCapabilityValues: [
+          capability('Intensity', random.pick([1, 0.5])),
+          ...rgb(random.number(1), random.number(1), random.number(1)),
+        ],
+      };
+      const preset = { ...edgePreset(uuid, presetFixturesOfPreset, values), effects: [effect] };
+
+      // a second step closing the effect halfway, or completely
+      if (random.chance(0.3)) {
+        preset.steps.push(
+          step(uuid + '-closing', 1000, values, { effectAmounts: [{ effectUuid: effect.uuid, amount: random.pick([0, 0.5]) }] })
+        );
+        preset.stepsLoop = true;
+      }
+
+      presets.push(preset);
+    }
+  }
+
+  const profiles = [bar, band, matrix, par];
+  const sceneOf = (preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] });
+  const times = [0, 250, 777, 1500, 2999, 5000, 12345.678];
+
+  // played on their own, where an effect which stops repeats its run
+  const cases = presets.map((preset) => ({
+    name: preset.uuid,
+    input: {
+      project: edgeProject(profiles, fixtures, [preset], [sceneOf(preset)]),
+      runs: previewScenes([preset.uuid]).map((run) => ({ ...run, times })),
+    },
+  }));
+
+  // and on a timeline, where an effect runs once from the start of its clip on, on the tempo of the composition
+  const played = presets.filter((preset, index) => index % 3 === 0);
+  const timeline = edgeProject(profiles, fixtures, played, played.map(sceneOf));
+  timeline.compositions.push({
+    uuid: 'song',
+    name: 'Song',
+    beatsPerMinute: 128,
+    tracks: [{ uuid: 'track', name: 'Track' }],
+    scenePlaybackRegions: played.map((preset, index) => ({
+      sceneUuid: preset.uuid,
+      startMillis: index * 3000,
+      endMillis: index * 3000 + 2900,
+      trackUuid: 'track',
+    })),
+  });
+  timeline.selectedCompositionUuid = 'song';
+
+  cases.push({
+    name: 'on the timeline',
+    input: {
+      project: timeline,
+      runs: [{ preview: { mode: 'timeline', composition: 'Song' }, times: [0, 499, 1250, 2950, 3100, 6500, 9001.5, 14000, 26500] }],
+    },
+  });
+
+  return write(
+    'channel-values-pixel-effects.json',
+    'channelValues',
+    'Pixel effects on bars, matrices and their groups, alone and on a timeline',
+    cases
+  );
+}
+
+// ---- pixel effects across the stage, and on white LEDs ------------------------------------------
+
+// A rig of bars and matrices hanging in front, standing on the floor, at the back and placed by hand (turned on all of
+// their axes), with a par and the thirds of a bar among them. Each preset spreads a pattern across the stage, seen
+// from the front or from above, over all of the fixtures or some of them, or paints it on each fixture with the white
+// part of its light on the white LEDs.
+function channelValuesPixelStage() {
+  const random = randomSource(13);
+  const bar = 'test/pixel-bar';
+  const band = 'chauvet-dj/colorband-pix';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  // a bar of four RGB pixels, as large as the fixture library gives some fixtures: in fractions of millimeters
+  const decimalBar = {
+    uuid: 'decimal-bar',
+    name: 'Decimal bar',
+    matrix: { pixelCount: [4, 1, 1] },
+    physical: { dimensions: [1000.5, 66.8, 82.3] },
+    templateChannels: {
+      'Red $pixelKey': { capability: { type: 'ColorIntensity', color: 'Red' } },
+      'Green $pixelKey': { capability: { type: 'ColorIntensity', color: 'Green' } },
+      'Blue $pixelKey': { capability: { type: 'ColorIntensity', color: 'Blue' } },
+    },
+    modes: [
+      {
+        name: '12-channel',
+        shortName: '12ch',
+        channels: [
+          {
+            insert: 'matrixChannels',
+            repeatFor: 'eachPixelXYZ',
+            channelOrder: 'perPixel',
+            templateChannels: ['Red $pixelKey', 'Green $pixelKey', 'Blue $pixelKey'],
+          },
+        ],
+      },
+    ],
+  };
+  const placed = (fixture, positioning, extra = {}) => ({ ...fixture, positioning, ...extra });
+  const fixtures = [
+    placed({ ...edgeFixture('band-left', band, '36ch', 0), dmxFirstChannel: 0 }, 'topFront'),
+    placed({ ...edgeFixture('band-right', band, '36ch', 0), dmxFirstChannel: 36 }, 'topFront'),
+    placed({ ...edgeFixture('floor-bar', bar, '10ch', 0), dmxFirstChannel: 72 }, 'bottomFront'),
+    placed({ ...edgeFixture('back-matrix', matrix, '48ch', 0), dmxFirstChannel: 84 }, 'topBack'),
+    placed({ ...edgeFixture('floor-matrix', matrix, '36ch', 0), dmxFirstChannel: 132 }, 'bottomBack'),
+    placed({ ...edgeFixture('turned', bar, '9ch', 0), dmxFirstChannel: 170 }, 'manual', {
+      positionX: -120,
+      positionY: 200,
+      positionZ: 50,
+      rotationX: 15,
+      rotationY: 30,
+      rotationZ: 90,
+    }),
+    placed({ ...edgeFixture('thirds', band, '9ch', 0), dmxFirstChannel: 180 }, 'bottomFront'),
+    placed({ ...edgeFixture('decimal-bar', 'decimal-bar', '12ch', 0), dmxFirstChannel: 190 }, 'topFront'),
+    placed({ ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 300 }, 'topFront'),
+  ];
+  const presets = [];
+
+  for (let index = 0; index < 24; index++) {
+    const uuid = `stage-${index}`;
+    // (the patterns there were when these cases were made, so they stay as they were)
+    const pattern = random.pick(pixelPatternNames.filter((name) => !['text', 'image', 'meter', 'scope'].includes(name)));
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      pattern,
+      spread: index < 18 ? 'stage' : 'fixture',
+      view: random.pick(['front', 'front', 'top']),
+      whiteLed: random.chance(0.4),
+      capabilities: [],
+      channels: [],
+    };
+    random.maybe(effect, 'size', [0, 0.3, 1, random.number(1)]);
+    random.maybe(effect, 'softness', [0, 0.5, random.number(1)]);
+    random.maybe(effect, 'direction', pixelDirectionsOf(pattern));
+    random.maybe(effect, 'shape', pixelShapesOf(pattern));
+    random.maybe(effect, 'mirror', [true, false, false]);
+    random.maybe(effect, 'seed', [1, random.int(5000)]);
+    random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+    random.maybe(effect, 'blend', ['replace', 'replace', 'mask', 'add', 'max']);
+    random.maybe(effect, 'lengthMillis', [1000, 2500]);
+    random.maybe(effect, 'phasingMillis', [0, 0, 150]);
+
+    // all of the fixtures, or some of them
+    const presetFixturesOfPreset = fixtures
+      .filter(() => index % 3 === 0 || random.chance(0.6))
+      .flatMap((fixture) =>
+        presetFixtures(fixture.uuid, fixture.profileUuid === 'decimal-bar' ? decimalBar : libraryProfile(fixture.profileUuid))
+      );
+    const values = {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        ...rgb(random.number(1), random.number(1), random.number(1)),
+        capability('ColorIntensity', random.number(1), { color: 'White' }),
+      ],
+    };
+
+    presets.push({ ...edgePreset(uuid, presetFixturesOfPreset, values), effects: [effect] });
+  }
+
+  const times = [0, 333, 1250, 4321.5];
+  const cases = presets.map((preset, index) => {
+    const project = {
+      version: 11,
+      fixtureProfiles: [...[bar, band, matrix, par].map((name) => ({ $profile: name })), decimalBar],
+      fixtures,
+      presetFixtures: fixtures.flatMap((fixture) =>
+        presetFixtures(fixture.uuid, fixture.profileUuid === 'decimal-bar' ? decimalBar : libraryProfile(fixture.profileUuid))
+      ),
+      presets: [preset],
+      scenes: [{ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }],
+      compositions: [],
+    };
+
+    // a stage of another size moves the fixtures spread over it
+    if (index % 4 === 1) {
+      project.stageWidthCm = 900;
+      project.stageDepthCm = 450;
+    }
+
+    return {
+      name: `${preset.uuid} ${preset.effects[0].pattern} ${preset.effects[0].spread} ${preset.effects[0].view}`,
+      input: { project, runs: previewScenes([preset.uuid]).map((run) => ({ ...run, times })) },
+    };
+  });
+
+  return write(
+    'channel-values-pixel-stage.json',
+    'channelValues',
+    'Pixel effects spread across the stage, seen from the front and from above, and on the white LEDs of the pixels',
+    cases
+  );
+}
+
+// ---- pixel effects following the audio -----------------------------------------------------------
+
+// A recorded analysis of 5 seconds of audio (see PixelAudio): a kick on each beat at 120 bpm, a hi-hat between them,
+// mids moving about and a break of silence in the middle, each frame its RMS, peak, bass, mids, highs and 16 bands in
+// dB, rounded to a hundredth like the analyses
+function recordedAudio(random) {
+  const frames = [];
+
+  for (let index = 0; index < 250; index++) {
+    const silent = index >= 120 && index < 160;
+    const sinceKick = (index % 25) / 25;
+    const sinceHat = ((index + 12) % 25) / 25;
+    const bass = silent ? -100 : -50 + 46 * (1 - sinceKick) ** 3 + random.number(3);
+    const mids = silent ? -100 : -40 + random.number(25);
+    const highs = silent ? -100 : -55 + 40 * (1 - sinceHat) ** 6 + random.number(4);
+    const rms = silent ? -100 : Math.max(bass, mids, highs) - 3;
+    const frame = [rms, silent ? -100 : rms + 5, bass, mids, highs];
+
+    for (let band = 0; band < 16; band++) {
+      frame.push(silent ? -100 : (band < 4 ? bass : band < 11 ? mids : highs) - random.number(12));
+    }
+
+    frames.push(frame.map((db) => Math.round(db * 100) / 100));
+  }
+
+  return { frames };
+}
+
+// Bars, a matrix and a par following the recorded audio: the level meter (with the columns of the matrix as bands),
+// the wave of the audio and patterns following it with their brightness or their size, in each band, with gains,
+// floors, attacks and releases. Sampled while it plays, in its silence and after its end.
+function channelValuesPixelAudio() {
+  const random = randomSource(14);
+  const audio = recordedAudio(random);
+  const bar = 'test/pixel-bar';
+  const matrix = 'test/pixel-matrix';
+  const par = 'test/rgb-par';
+  const fixtures = [
+    { ...edgeFixture('bar', bar, '9ch', 0), dmxFirstChannel: 0 },
+    { ...edgeFixture('matrix', matrix, '36ch', 0), dmxFirstChannel: 16 },
+    { ...edgeFixture('par', par, '6ch', 0), dmxFirstChannel: 60 },
+  ];
+  const patterns = ['meter', 'meter', 'scope', 'scope', 'chase', 'plasma', 'sparkle', 'flow', 'ripple', 'meter'];
+  const cases = [];
+
+  patterns.forEach((pattern, index) => {
+    const uuid = `audio-${index}`;
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      pattern,
+      audioSource: index === patterns.length - 1 ? 'off' : 'composition',
+      capabilities: [],
+      channels: [],
+    };
+    random.maybe(effect, 'audioBand', ['full', 'bass', 'mid', 'high']);
+    random.maybe(effect, 'audioGainDb', [0, 6, -10]);
+    random.maybe(effect, 'audioFloorDb', [-60, -40, -80]);
+    random.maybe(effect, 'audioAttackMillis', [0, 20, 100]);
+    random.maybe(effect, 'audioReleaseMillis', [0, 300, 1000]);
+    random.maybe(effect, 'audioFollows', ['brightness', 'size']);
+    random.maybe(effect, 'size', [0, 0.4, 1]);
+    random.maybe(effect, 'direction', ['right', 'left', 'up']);
+    random.maybe(effect, 'palette', [{ ref: 'preset' }, ...pixelPalettes]);
+    random.maybe(effect, 'lengthMillis', [1000, 2000]);
+
+    const preset = {
+      ...edgePreset(
+        uuid,
+        fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid))),
+        { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.5, 0.2)] }
+      ),
+      effects: [effect],
+    };
+
+    cases.push({
+      name: `${uuid} ${pattern} following ${effect.audioSource === 'off' ? 'no audio' : effect.audioBand || 'full'}`,
+      input: {
+        project: edgeProject([bar, matrix, par], fixtures, [preset], [{ uuid, name: uuid, presetUuids: [uuid] }]),
+        runs: previewScenes([uuid]).map((run) => ({ ...run, times: [0, 19.9, 260, 1000.5, 2450, 2900, 3300, 4990, 6200] })),
+        audio,
+      },
+    });
+  });
+
+  return write(
+    'channel-values-pixel-audio.json',
+    'channelValues',
+    'Pixel effects following a recorded analysis of audio: level meters, waves and patterns following its bands',
+    cases
+  );
+}
+
+// ---- the dimmers of the fixtures lighting in colors, at full -----------------------------------
+
+// A wash of LEDs with a dimmer which starts at 20 % by its profile, and a wash mixing its colors with filters, without
+// a color wheel: neither gets its dimmer opened
+const startingWash = {
+  uuid: 'starting-wash',
+  name: 'Starting wash',
+  availableChannels: {
+    Dimmer: { defaultValue: '20%', capability: { type: 'Intensity' } },
+    Red: { capability: { type: 'ColorIntensity', color: 'Red' } },
+    Green: { capability: { type: 'ColorIntensity', color: 'Green' } },
+    Blue: { capability: { type: 'ColorIntensity', color: 'Blue' } },
+  },
+  modes: [{ name: '4-channel', shortName: '4ch', channels: ['Dimmer', 'Red', 'Green', 'Blue'] }],
+};
+
+const filterWash = {
+  uuid: 'filter-wash',
+  name: 'Filter wash',
+  availableChannels: {
+    Dimmer: { capability: { type: 'Intensity' } },
+    Cyan: { capability: { type: 'ColorIntensity', color: 'Cyan' } },
+    Magenta: { capability: { type: 'ColorIntensity', color: 'Magenta' } },
+    Yellow: { capability: { type: 'ColorIntensity', color: 'Yellow' } },
+  },
+  modes: [{ name: '4-channel', shortName: '4ch', channels: ['Dimmer', 'Cyan', 'Magenta', 'Yellow'] }],
+};
+
+// Each kind of fixture given a color only, in a current project (where the dimmers of the fixtures lighting in colors
+// only start at full) and in one of before (where they stay off): an RGB par, a par sharing its dimmer with a strobe,
+// a bar of pixels with a master dimmer, a wash starting its dimmer by its profile, a moving head with a color wheel, a
+// spot mixing with filters (and a wheel), a wash mixing with filters alone and a plain dimmer
+function channelValuesColorDimmers() {
+  const fixtures = [
+    edgeFixture('par', 'test/rgb-par', '6ch', 0),
+    edgeFixture('strobe-par', 'test/strobe-par', '8ch', 1),
+    edgeFixture('bar', 'test/pixel-bar', '10ch', 2),
+    edgeFixture('starting-wash', 'starting-wash', '4ch', 3),
+    edgeFixture('head', 'test/moving-head', '6ch', 4),
+    edgeFixture('cmy-spot', 'test/cmy-spot', '6ch', 5),
+    edgeFixture('filter-wash', 'filter-wash', '4ch', 6),
+    edgeFixture('dimmer', 'dimmer', '1ch', 7),
+  ];
+  const profiles = [
+    { $profile: 'test/rgb-par' },
+    { $profile: 'test/strobe-par' },
+    { $profile: 'test/pixel-bar' },
+    startingWash,
+    { $profile: 'test/moving-head' },
+    { $profile: 'test/cmy-spot' },
+    filterWash,
+    dimmerProfile,
+  ];
+  const libraryProfileOf = (uuid) => profiles.find((profile) => profile.uuid === uuid) || libraryProfile(uuid);
+  const allParts = fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfileOf(fixture.profileUuid)));
+  const colored = edgePreset('colored', allParts, { fixtureCapabilityValues: rgb(1, 0.5, 0) });
+  const dimmed = edgePreset('dimmed', allParts, { fixtureCapabilityValues: [capability('Intensity', 0.4), ...rgb(0, 0, 1)] });
+  const pixelEffect = {
+    ...edgePreset('pixels', allParts, { fixtureCapabilityValues: rgb(0, 1, 0) }),
+    effects: [
+      { type: 'pixel', uuid: 'chase', pattern: 'chase', size: 0.5, softness: 0, lengthMillis: 1000, capabilities: [], channels: [] },
+    ],
+  };
+  const project = (atFull, presets, scenes) => ({
+    version: 11,
+    colorDimmersAtFull: atFull,
+    fixtureProfiles: profiles,
+    fixtures,
+    presetFixtures: allParts,
+    presets,
+    scenes,
+    compositions: [],
+  });
+  const scene = (uuid, presetUuids, extra = {}) => ({ uuid, name: uuid, presetUuids, ...extra });
+  const cases = [];
+
+  for (const atFull of [true, false]) {
+    const when = atFull ? '' : ', in a project keeping them off';
+
+    cases.push({
+      name: 'nothing playing' + when,
+      input: { project: project(atFull, [colored], [scene('quiet', [])]), runs: previewScenes(['quiet']) },
+    });
+
+    cases.push({
+      name: 'a color alone' + when,
+      input: { project: project(atFull, [colored], [scene('colored', ['colored'])]), runs: previewScenes(['colored']) },
+    });
+
+    // fading in over the dimmers at full, and over a preset dimming them
+    cases.push({
+      name: 'a color fading in, and a dimmed color below it' + when,
+      input: {
+        project: project(atFull, [colored, dimmed], [scene('colored', ['colored'], { dimmer: 0.5 }), scene('dimmed', ['dimmed'])]),
+        runs: [...previewScenes(['colored']), ...previewScenes(['colored', 'dimmed'])],
+      },
+    });
+
+    cases.push({
+      name: 'a pixel effect' + when,
+      input: {
+        project: project(atFull, [pixelEffect], [scene('pixels', ['pixels'])]),
+        runs: previewScenes(['pixels']).map((run) => ({ ...run, times: [0, 250, 600] })),
+      },
+    });
+  }
+
+  return write(
+    'channel-values-color-dimmers.json',
+    'channelValues',
+    'The dimmers of the fixtures lighting in colors only, at full where their profiles do not say otherwise',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -2192,6 +2917,11 @@ export function generate() {
     channelValuesMovements(),
     migrations(),
     migrationEdges(),
+    pixelPatterns(),
+    channelValuesPixelEffects(),
+    channelValuesColorDimmers(),
+    channelValuesPixelStage(),
+    channelValuesPixelAudio(),
   ];
 }
 

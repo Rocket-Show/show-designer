@@ -14,6 +14,7 @@ import { of } from 'rxjs';
 import { Effect } from '../models/effect';
 import { EffectCurve } from '../models/effect-curve';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { EffectPixel } from '../models/effect-pixel';
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { EffectService } from '../services/effect.service';
@@ -167,6 +168,18 @@ describe('EffectComponent', () => {
     expect(movement.phasingMode).toBe('spread');
     expect(movement.phasingCycles).toBe(0);
     expect(effectService.selectedEffect).toBe(movement);
+  });
+
+  it('adds a pixel effect in the colors of the rainbow, so it shows on a preset without a color', () => {
+    fixture.componentInstance.addPixelEffect();
+
+    const pixels = preset.effects[2] as EffectPixel;
+    expect(pixels instanceof EffectPixel).toBe(true);
+    expect(pixels.uuid).toBeTruthy();
+    expect(pixels.palette.ref).toBe('rainbow');
+    expect(pixels.palette.repeat).toBe('wrap');
+    expect(pixels.palette.stops.length).toBe(7);
+    expect(effectService.selectedEffect).toBe(pixels);
   });
 
   it('opens a new effect, even without a preset to add it to', () => {

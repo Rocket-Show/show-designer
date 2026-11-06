@@ -16,6 +16,7 @@
       }
     </div>
 
+    @if (showHex) {
     <input
       type="text"
       class="sd-value-input sd-value-input-hex"
@@ -23,10 +24,14 @@
       (ngModelChange)="pickHex($event)"
       (blur)="resetHex()"
     />
+    }
 
+    <!-- only for an item which can derive a color of its own -->
+    @if (autoLabel) {
     <div class="form-check">
       <input type="checkbox" class="form-check-input" [id]="autoId" [ngModel]="auto" (ngModelChange)="setAuto($event)" />
       <label class="form-check-label" [attr.for]="autoId">{{ autoLabel | translate }}</label>
     </div>
+    }
   </div>
 </div>

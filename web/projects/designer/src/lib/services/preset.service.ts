@@ -9,6 +9,7 @@ import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureProfile } from '../models/fixture-profile';
 import { EffectCurve } from '../models/effect-curve';
+import { EffectPixel } from '../models/effect-pixel';
 import { Preset } from '../models/preset';
 import { PresetStep } from '../models/preset-step';
 import { EffectService } from './effect.service';
@@ -30,6 +31,86 @@ import { getPanTiltChannelValue, isPanTilt, PanTiltContext } from '../models/pan
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { countModelSpecificValues } from '../models/model-specific';
 
+// The entries of a list of fixtures as they were: the entries themselves, and which fixture and pixel each one was
+interface ChaseEntries {
+  list: PresetFixture[];
+  fixtureUuids: string[];
+  pixelKeys: string[];
+}
+
+// the chases of a preset (see PresetService.chaseCacheOf), and what they were worked out from
+interface ChaseCache {
+  global: boolean;
+  entries: ChaseEntries;
+  projectEntries: ChaseEntries;
+  // each fixture of the project with its universe and its address, one after the other
+  addresses: any[];
+  ordered?: PresetFixture[];
+  indices?: Map<string, number>;
+  wholeFixtureChase?: { indices: Map<string, number>; count: number };
+  count?: number;
+}
+
+function entriesOf(list: PresetFixture[]): ChaseEntries {
+  return {
+    list: list.slice(),
+    fixtureUuids: list.map((entry) => entry.fixtureUuid),
+    pixelKeys: list.map((entry) => entry.pixelKey),
+  };
+}
+
+function sameEntries(entries: ChaseEntries, list: PresetFixture[]): boolean {
+  if (entries.list.length !== list.length) {
+    return false;
+  }
+
+  for (let i = 0; i < list.length; i++) {
+    if (entries.list[i] !== list[i] || entries.fixtureUuids[i] !== list[i].fixtureUuid || entries.pixelKeys[i] !== list[i].pixelKey) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function addressesOf(fixtures: Fixture[]): any[] {
+  const addresses: any[] = [];
+
+  for (const fixture of fixtures) {
+    addresses.push(fixture, fixture.dmxUniverseUuid, fixture.dmxFirstChannel);
+  }
+
+  return addresses;
+}
+
+function chaseCacheIsValid(cache: ChaseCache, preset: Preset, projectFixtures: PresetFixture[], fixtures: Fixture[]): boolean {
+  if (cache.global !== preset.useGlobalFixtureOrder || !sameEntries(cache.entries, preset.fixtures)) {
+    return false;
+  }
+
+  if (preset.useGlobalFixtureOrder && !sameEntries(cache.projectEntries, projectFixtures)) {
+    return false;
+  }
+
+  if (cache.addresses.length !== fixtures.length * 3) {
+    return false;
+  }
+
+  for (let i = 0; i < fixtures.length; i++) {
+    const fixture = fixtures[i];
+
+    if (
+      cache.addresses[i * 3] !== fixture ||
+      cache.addresses[i * 3 + 1] !== fixture.dmxUniverseUuid ||
+      cache.addresses[i * 3 + 2] !== fixture.dmxFirstChannel
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -49,8 +130,11 @@ export class PresetService {
   // is also what the preview shows while nothing is playing.
   selectedStep: PresetStep;
 
-  // the fixtures of a preset indexed by fixture uuid (see getPresetFixturesByUuid)
-  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byUuid: Map<string, PresetFixture[]> }>();
+  // the chases of each preset, worked out once from what they depend on (see chaseCacheOf)
+  private chaseCaches = new WeakMap<Preset, ChaseCache>();
+
+  // the fixtures of a preset indexed by fixture uuid and pixel key (see getPresetFixture)
+  private presetFixtureIndex = new WeakMap<Preset, { list: PresetFixture[]; length: number; byKey: Map<string, PresetFixture> }>();
 
   // fires, when the current preview element has changed (scene/preset)
   previewSelectionChanged: Subject<void> = new Subject<void>();
@@ -150,49 +234,96 @@ export class PresetService {
     return fixtureUuid1 === fixtureUuid2 && ((!pixelKey1 && !pixelKey2) || pixelKey1 === pixelKey2);
   }
 
-  getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
-    // only the fixtures of this uuid can match, which are the fixture itself and its pixels
-    for (const fixture of this.getPresetFixturesByUuid(preset, fixtureUuid)) {
-      if (this.fixtureUuidAndPixelKeyEquals(fixture.fixtureUuid, fixtureUuid, fixture.pixelKey, pixelKey)) {
-        return fixture;
-      }
-    }
-
-    return null;
-  }
-
   // getPresetFixture() is called from templates and therefore runs for every fixture on every
   // change detection cycle, which a slider being dragged triggers with each mouse move. Walking
-  // all fixtures of the preset each time makes that quadratic, so index them by uuid instead.
-  // A preset only ever gets fixtures added, removed or reordered, never exchanged in place, so
-  // the list itself together with its length tells us whether the index is still valid.
-  // Reordering leaves it valid, because a preset holds at most one entry per fixture and pixel.
-  private getPresetFixturesByUuid(preset: Preset, fixtureUuid: string): PresetFixture[] {
+  // all fixtures of the preset each time makes that quadratic (a matrix alone brings hundreds of
+  // pixels of one fixture), so index them by fixture and pixel instead. A preset only ever gets
+  // fixtures added, removed or reordered, never exchanged in place, so the list itself together
+  // with its length tells us whether the index is still valid. Reordering leaves it valid,
+  // because a preset holds at most one entry per fixture and pixel (the first one counts).
+  getPresetFixture(preset: Preset, fixtureUuid: string, pixelKey?: string): PresetFixture {
     let index = this.presetFixtureIndex.get(preset);
 
     if (!index || index.list !== preset.fixtures || index.length !== preset.fixtures.length) {
-      const byUuid = new Map<string, PresetFixture[]>();
+      const byKey = new Map<string, PresetFixture>();
 
       for (const fixture of preset.fixtures) {
-        const fixturesOfUuid = byUuid.get(fixture.fixtureUuid);
+        const key = this.presetFixtureKey(fixture.fixtureUuid, fixture.pixelKey);
 
-        if (fixturesOfUuid) {
-          fixturesOfUuid.push(fixture);
-        } else {
-          byUuid.set(fixture.fixtureUuid, [fixture]);
+        if (!byKey.has(key)) {
+          byKey.set(key, fixture);
         }
       }
 
-      index = { list: preset.fixtures, length: preset.fixtures.length, byUuid };
+      index = { list: preset.fixtures, length: preset.fixtures.length, byKey };
       this.presetFixtureIndex.set(preset, index);
     }
 
-    return index.byUuid.get(fixtureUuid) || [];
+    return index.byKey.get(this.presetFixtureKey(fixtureUuid, pixelKey)) || null;
   }
 
-  // all fixtures of a preset in the order they are chased in: either the global
-  // order of the project or the preset's own one
+  // a fixture and one of its pixels, matched like fixtureUuidAndPixelKeyEquals does: no pixel
+  // key is the fixture itself
+  private presetFixtureKey(fixtureUuid: string, pixelKey: string): string {
+    return fixtureUuid + '/' + (pixelKey || '');
+  }
+
+  // The chases of a preset are worked out in every frame of the preview, but change only with what they are worked out
+  // from: the fixtures of the preset (their order, and which fixture and pixel each one is), the order of the fixtures
+  // of the project, where the preset follows it, and the addresses of the fixtures (fixtures at the same one are the
+  // same lamp). Telling whether any of it changed takes a few comparisons for each fixture, working the chases out
+  // takes far more. What is handed out is shared: it is only read.
+  private chaseCacheOf(preset: Preset): ChaseCache {
+    const project = this.projectService.project;
+    let cache = this.chaseCaches.get(preset);
+
+    if (!cache || !chaseCacheIsValid(cache, preset, project.presetFixtures, project.fixtures)) {
+      cache = {
+        global: preset.useGlobalFixtureOrder,
+        entries: entriesOf(preset.fixtures),
+        projectEntries: preset.useGlobalFixtureOrder ? entriesOf(project.presetFixtures) : undefined,
+        addresses: addressesOf(project.fixtures),
+      };
+      this.chaseCaches.set(preset, cache);
+    }
+
+    return cache;
+  }
+
+  // all fixtures of a preset in the order they are chased in: either the global order of the project or the preset's
+  // own one
   getOrderedPresetFixtures(preset: Preset): PresetFixture[] {
+    const cache = this.chaseCacheOf(preset);
+
+    return cache.ordered || (cache.ordered = this.orderPresetFixtures(preset));
+  }
+
+  // the place of each fixture (or pixel) of a preset in its chase (see countPresetFixtureIndices)
+  getPresetFixtureIndices(preset: Preset): Map<string, number> {
+    const cache = this.chaseCacheOf(preset);
+
+    return cache.indices || (cache.indices = this.countPresetFixtureIndices(preset));
+  }
+
+  // the place of each fixture of a preset in its chase by whole fixtures (see countPresetWholeFixtureChase)
+  getPresetWholeFixtureChase(preset: Preset): { indices: Map<string, number>; count: number } {
+    const cache = this.chaseCacheOf(preset);
+
+    return cache.wholeFixtureChase || (cache.wholeFixtureChase = this.countPresetWholeFixtureChase(preset));
+  }
+
+  // the number of chase steps of a preset (see countPresetFixtures)
+  getPresetFixtureCount(preset: Preset): number {
+    const cache = this.chaseCacheOf(preset);
+
+    if (cache.count === undefined) {
+      cache.count = this.countPresetFixtures(preset);
+    }
+
+    return cache.count;
+  }
+
+  private orderPresetFixtures(preset: Preset): PresetFixture[] {
     if (!preset.useGlobalFixtureOrder) {
       return preset.fixtures;
     }
@@ -221,7 +352,7 @@ export class PresetService {
   // the place of each fixture (or pixel) of a preset in its chase, by getPresetFixtureKey(). The
   // fixtures of the same lamp take one step only, a fixture listed more than once chases at its
   // first place.
-  getPresetFixtureIndices(preset: Preset): Map<string, number> {
+  private countPresetFixtureIndices(preset: Preset): Map<string, number> {
     const indices = new Map<string, number>();
     const countedLamps = new Set<string>();
 
@@ -242,9 +373,45 @@ export class PresetService {
     return indices;
   }
 
+  // The place of each fixture of a preset in its chase by fixture uuid, a fixture with all of its pixels taking one step,
+  // and the number of steps: the pixel effects chase from one fixture to the next, not from pixel to pixel. Fixtures sharing
+  // a DMX universe and address are the same lamp and take one step only, like in getPresetFixtureIndices().
+  private countPresetWholeFixtureChase(preset: Preset): { indices: Map<string, number>; count: number } {
+    const indices = new Map<string, number>();
+    const countedLamps = new Set<string>();
+    const lampKey = (presetFixture: PresetFixture) => {
+      const fixture = this.fixtureService.getFixtureByUuid(presetFixture.fixtureUuid);
+      return fixture ? `${fixture.dmxUniverseUuid}\u0000${fixture.dmxFirstChannel}` : undefined;
+    };
+
+    for (const presetFixture of this.getOrderedPresetFixtures(preset)) {
+      if (!indices.has(presetFixture.fixtureUuid)) {
+        indices.set(presetFixture.fixtureUuid, countedLamps.size);
+      }
+
+      const lamp = lampKey(presetFixture);
+
+      if (lamp !== undefined) {
+        countedLamps.add(lamp);
+      }
+    }
+
+    const lamps = new Set<string>();
+
+    for (const presetFixture of preset.fixtures) {
+      const lamp = lampKey(presetFixture);
+
+      if (lamp !== undefined) {
+        lamps.add(lamp);
+      }
+    }
+
+    return { indices, count: lamps.size };
+  }
+
   // the number of chase steps of a preset: fixtures sharing a DMX universe, address
   // and pixel key are the same lamp and therefore count only once
-  getPresetFixtureCount(preset: Preset): number {
+  private countPresetFixtures(preset: Preset): number {
     const countedLamps = new Set<string>();
 
     for (const presetFixture of preset.fixtures) {
@@ -879,6 +1046,23 @@ export class PresetService {
   channelIsDrivenByEffect(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): boolean {
     for (const effect of preset.effects) {
       if (!effect.visible || !(effect instanceof EffectCurve)) {
+        continue;
+      }
+
+      // a pixel effect lights the red, green and blue of all the fixtures of the preset
+      if (effect instanceof EffectPixel) {
+        if (
+          channel.capabilities.some(
+            (channelCapability) =>
+              channelCapability.capability.type === FixtureCapabilityType.ColorIntensity &&
+              [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].indexOf(
+                channelCapability.capability.color
+              ) >= 0
+          )
+        ) {
+          return true;
+        }
+
         continue;
       }
 

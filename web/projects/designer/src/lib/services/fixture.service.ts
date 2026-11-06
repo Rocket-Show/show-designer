@@ -19,7 +19,9 @@ import { parseProfileNumber } from '../models/profile-number';
 import { ProjectService } from './project.service';
 import { UuidService } from './uuid.service';
 import { CachedFixturePixel } from '../models/cached-fixture-pixel';
+import { PixelContext } from '../models/pixel-pattern';
 import { FixturePixelGroupResolveService } from './fixture-pixel-group-resolve.service';
+import { mixesSubtractively } from '../models/subtractive-color';
 
 @Injectable({
   providedIn: 'root',
@@ -35,6 +37,9 @@ export class FixtureService {
   // Walking the whole project each time makes that quadratic, so keep an index instead.
   // A list is only ever exchanged as a whole or grown/shrunk, never modified in place, so the
   // list itself together with its length tells us whether the index is still valid.
+  // the brightnesses of the fixture library read so far (see parseBrightnessNumber)
+  private parsedBrightnesses = new Map<string, number>();
+
   private fixtureIndex: { list: Fixture[]; length: number; byUuid: Map<string, Fixture> };
   private profileIndex: { list: FixtureProfile[]; length: number; byUuid: Map<string, FixtureProfile> };
   private cachedFixtureIndex: { list: CachedFixture[]; length: number; byUuid: Map<string, CachedFixture[]> };
@@ -481,6 +486,76 @@ export class FixtureService {
     return String(Math.max(x, y, z));
   }
 
+  // The pixels of its matrix a part of a fixture lights: a pixel itself, the pixels of a group, none for a part without a
+  // pixel (the general channels, or a fixture without pixels). The pixels of the whole matrix, see getAllPixelKeys.
+  getPixelsOfPart(cachedFixture: CachedFixture, allPixels: CachedFixturePixel[]): CachedFixturePixel[] {
+    if (!cachedFixture.pixel || !cachedFixture.profile.matrix) {
+      return [];
+    }
+
+    return this.fixturePixelGroupResolveService.getPixelsForKeyOrGroup(cachedFixture.profile.matrix, allPixels, cachedFixture.pixel.key);
+  }
+
+  // Where a part of a fixture is in it, for the pixel effects: a pixel in its column and row of the matrix (a bar has one
+  // row), a pixel group in the middle of its pixels, and a part without a pixel (a fixture without pixels, or the general
+  // channels of one with pixels) as the one pixel of the fixture. Rocket Show places them the very same way.
+  getPixelPlace(cachedFixture: CachedFixture): PixelContext {
+    if (cachedFixture.pixelPlace) {
+      return cachedFixture.pixelPlace;
+    }
+
+    const place = new PixelContext();
+    const pixel = cachedFixture.pixel;
+    const profile = cachedFixture.profile;
+
+    if (pixel && profile.matrix) {
+      const size = this.getMatrixSize(profile) || [];
+      const columns = Math.max(size[0] || 1, 1);
+      const rows = Math.max(size[1] || 1, 1);
+      let column = (columns - 1) / 2;
+      let row = (rows - 1) / 2;
+
+      if (pixel.x > 0) {
+        column = pixel.x - 1;
+        row = pixel.y - 1;
+      } else {
+        const groupPixels = this.fixturePixelGroupResolveService.getPixelsForKeyOrGroup(
+          profile.matrix,
+          this.getAllPixelKeys(profile),
+          pixel.key
+        );
+
+        if (groupPixels.length > 0) {
+          let columnSum = 0;
+          let rowSum = 0;
+
+          for (const groupPixel of groupPixels) {
+            columnSum += groupPixel.x - 1;
+            rowSum += groupPixel.y - 1;
+          }
+
+          column = columnSum / groupPixels.length;
+          row = rowSum / groupPixels.length;
+        }
+      }
+
+      const longest = Math.max(columns, rows);
+
+      place.x = (column + 0.5) / columns;
+      place.y = (row + 0.5) / rows;
+      place.column = Math.floor(column);
+      place.row = Math.floor(row);
+      place.columns = columns;
+      place.rows = rows;
+      place.aspectX = columns / longest;
+      place.aspectY = rows / longest;
+    }
+
+    cachedFixture.pixelPlace = place;
+
+    return place;
+  }
+
   // the number of pixels the matrix has on each axis (X, Y, Z)
   private getMatrixSize(profile: FixtureProfile): number[] {
     const matrix = profile.matrix;
@@ -826,6 +901,7 @@ export class FixtureService {
       }
 
       this.addVirtualDimmers(fixtureParts);
+      this.openColorDimmers(fixtureParts);
       this.cachedFixtures.push(...fixtureParts);
     }
   }
@@ -856,6 +932,43 @@ export class FixtureService {
     }
   }
 
+  // The dimmers of a fixture which lights in colors only start at full, where its profile does not say where they
+  // start (see Project.colorDimmersAtFull): at the brightest the channel lights steadily, so a dimmer sharing its
+  // channel with a strobe does not strobe. A color is all it takes to light the fixture then, it stays dark while its
+  // colors are off. A fixture with a color wheel (white through its open slot), one mixing its colors with filters
+  // (white without them) and one without colors (e.g. a halogen par) keeps its dimmers off. Like in Rocket Show.
+  private openColorDimmers(fixtureParts: CachedFixture[]) {
+    if (!this.projectService.project.colorDimmersAtFull) {
+      return;
+    }
+
+    const channels: CachedFixtureChannel[] = [].concat(...fixtureParts.map((cachedFixture) => cachedFixture.channels));
+    const lightsInColors = channels.some(
+      (channel) =>
+        channel.channel && channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
+    );
+
+    if (!lightsInColors || channels.some((channel) => channel.colorWheel) || mixesSubtractively(channels)) {
+      return;
+    }
+
+    for (const channel of channels) {
+      if (!channel.channel || channel.defaultValue !== undefined) {
+        continue;
+      }
+
+      const dimmers = channel.capabilities.filter((capability) => capability.capability.type === FixtureCapabilityType.Intensity);
+
+      if (dimmers.length > 0) {
+        const value = this.getBrightnessValue(channel, this.getBrightnessCapability(channel, dimmers, 1), 1);
+
+        if (value !== undefined) {
+          channel.defaultValue = value;
+        }
+      }
+    }
+  }
+
   capabilitiesMatch(
     type1: FixtureCapabilityType,
     type2: FixtureCapabilityType,
@@ -875,8 +988,19 @@ export class FixtureService {
     );
   }
 
+  // A brightness of the fixture library as a number, e.g. 50 of "50%": read once for each text, the preview asks for
+  // them for each pixel in each frame
   private parseBrightnessNumber(brightness: string, unit: string): number {
-    return parseProfileNumber(brightness.substring(0, brightness.length - unit.length));
+    const key = unit + ' ' + brightness;
+
+    if (this.parsedBrightnesses.has(key)) {
+      return this.parsedBrightnesses.get(key);
+    }
+
+    const parsed = parseProfileNumber(brightness.substring(0, brightness.length - unit.length));
+    this.parsedBrightnesses.set(key, parsed);
+
+    return parsed;
   }
 
   // how bright a capability lights, from 0 to 1, like the fixture library gives it: "off", "dark",

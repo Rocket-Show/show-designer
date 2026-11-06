@@ -5,7 +5,7 @@ import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
-import { ExternalComposition } from '../models/external-composition';
+import { ExternalAudioFile, ExternalComposition } from '../models/external-composition';
 import { getPresetTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
@@ -13,6 +13,8 @@ import { getClipsEndMillis } from '../models/timeline-length';
 import { assignTracks, createTrack, getFreeGap, getPreviewTracks, getTrackRegions } from '../models/timeline-track';
 import { Track } from '../models/track';
 import { computePeaks } from '../models/waveform-peaks';
+import { AudioFrames } from '../models/pixel-audio';
+import { analyzeAudio, mixAudio } from '../models/pixel-audio-analysis';
 import { ConfigService } from './config.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
@@ -20,6 +22,15 @@ import { SceneService } from './scene.service';
 import { TimelineStateService } from './timeline-state.service';
 import { LivePreviewService } from './live-preview.service';
 import { UuidService } from './uuid.service';
+
+// an audio bus of Rocket Show, which a pixel effect can follow
+export interface AudioBus {
+  uuid: string;
+  name: string;
+}
+
+// the files of the buses are mixed at this rate to be analyzed
+const BUS_ANALYSIS_SAMPLE_RATE = 48000;
 
 @Injectable({
   providedIn: 'root',
@@ -42,6 +53,19 @@ export class TimelineService {
 
   // the loudness of the audio file over time, see computePeaks
   public peaks: Float32Array = new Float32Array(0);
+
+  // the analysis of the audio of the composition the pixel effects follow, worked out the first time one asks for it
+  private analyzedAudioFrames: AudioFrames;
+  private analyzingAudio = false;
+
+  // the audio buses of Rocket Show, which the pixel effects can follow (see audioBuses)
+  private loadedAudioBuses: AudioBus[];
+  private loadingAudioBuses = false;
+
+  // the analyses of the files of the composition of Rocket Show playing on some of its buses, by the buses, worked out
+  // the first time an effect following them asks for them (see audioFramesFor)
+  private busAudioFrames = new Map<string, AudioFrames>();
+  private analyzingBuses = new Set<string>();
 
   // 0 = the whole song fits the width, otherwise pixels per second
   public zoom = 0;
@@ -681,6 +705,8 @@ export class TimelineService {
     this.clockStartedAt = undefined;
     this.audioDurationMillis = 0;
     this.peaks = new Float32Array(0);
+    this.analyzedAudioFrames = undefined;
+    this.analyzingAudio = false;
     this.loadingAudioFile = false;
     this.audioFileError = false;
 
@@ -688,6 +714,117 @@ export class TimelineService {
       this.waveSurfer.destroy();
       this.waveSurfer = undefined;
     }
+  }
+
+  // The frames of the analysis of the audio of the composition (see PixelAudio), none until it has been analyzed: the
+  // first time a pixel effect asks for them, in the background.
+  get audioFrames(): AudioFrames {
+    const buffer = this.waveSurfer?.backend?.buffer;
+
+    if (!this.analyzedAudioFrames && !this.analyzingAudio && buffer) {
+      this.analyzingAudio = true;
+      const waveSurfer = this.waveSurfer;
+
+      analyzeAudio(buffer)
+        .then((frames) => {
+          // unless another composition has been opened meanwhile
+          if (this.waveSurfer === waveSurfer) {
+            this.analyzedAudioFrames = (index: number) => frames[index];
+          }
+        })
+        .catch((error) => console.error('Could not analyze the audio of the composition', error));
+    }
+
+    return this.analyzedAudioFrames;
+  }
+
+  // The audio buses of Rocket Show, the first time they are asked for, if the designer runs in it (none otherwise, or
+  // until they are there)
+  get audioBuses(): AudioBus[] {
+    if (!this.loadedAudioBuses && !this.loadingAudioBuses && this.externalCompositionsAvailable) {
+      this.loadingAudioBuses = true;
+
+      this.http.get('audio-buses').subscribe({
+        next: (response: any) => {
+          this.loadedAudioBuses = (Array.isArray(response) ? response : []).map((bus: any) => ({ uuid: bus.uuid, name: bus.name || '' }));
+          this.detectChanges.next();
+        },
+        error: (error) => {
+          console.error('Could not load the audio buses from Rocket Show', error);
+          this.loadedAudioBuses = [];
+        },
+      });
+    }
+
+    return this.loadedAudioBuses || [];
+  }
+
+  // does the preview follow the buses an effect picked? It does where it knows the files of the composition of Rocket
+  // Show which play on them.
+  previewsAudioBuses(): boolean {
+    return !!this.externalComposition && this.externalComposition.audioFiles.length > 0;
+  }
+
+  // The frames of the audio a pixel effect follows (see PixelAudio): of the passed buses, mixed from the files of the
+  // composition of Rocket Show which play on them, the first time they are asked for, in the background. All buses,
+  // or buses the preview can't tell the files of, follow the audio file of the composition (see audioFrames).
+  audioFramesFor(buses: string[]): AudioFrames {
+    if (!buses || buses.length === 0 || !this.previewsAudioBuses()) {
+      return this.audioFrames;
+    }
+
+    const key = buses.slice().sort().join(',');
+    const known = this.busAudioFrames.get(key);
+
+    if (!known && !this.analyzingBuses.has(key)) {
+      const composition = this.externalComposition;
+      const files = composition.audioFiles.filter((file) => buses.includes(file.busUuid));
+
+      this.analyzingBuses.add(key);
+      this.analyzeAudioFiles(files)
+        .then((frames) => {
+          // unless the composition changed meanwhile
+          if (this.externalComposition === composition) {
+            this.busAudioFrames.set(key, frames);
+          }
+        })
+        .catch((error) => console.error('Could not analyze the audio of the buses', error));
+    }
+
+    return known;
+  }
+
+  // the files mixed as they play together, analyzed (silence without any)
+  private async analyzeAudioFiles(files: ExternalAudioFile[]): Promise<AudioFrames> {
+    if (files.length === 0) {
+      return () => undefined;
+    }
+
+    const parts = await Promise.all(
+      files.map(async (file) => {
+        const data = await this.http
+          .get('file/get?name=' + encodeURIComponent(file.name) + '&type=AUDIO', { responseType: 'arraybuffer' })
+          .toPromise();
+        const decoded = await new OfflineAudioContext(1, 1, BUS_ANALYSIS_SAMPLE_RATE).decodeAudioData(data);
+        const channels: Float32Array[] = [];
+
+        for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
+          channels.push(decoded.getChannelData(channel));
+        }
+
+        return { channels, offset: Math.round((file.offsetMillis * BUS_ANALYSIS_SAMPLE_RATE) / 1000), volume: file.volume };
+      })
+    );
+
+    const samples = mixAudio(parts);
+    const frames = await analyzeAudio({
+      sampleRate: BUS_ANALYSIS_SAMPLE_RATE,
+      numberOfChannels: 1,
+      length: samples.length,
+      getChannelData: () => samples,
+    });
+
+    return (index: number) => frames[index];
   }
 
   createWaveSurfer() {
@@ -816,6 +953,8 @@ export class TimelineService {
     }
 
     this.externalComposition = undefined;
+    this.busAudioFrames.clear();
+    this.analyzingBuses.clear();
 
     const composition = this.selectedComposition;
 

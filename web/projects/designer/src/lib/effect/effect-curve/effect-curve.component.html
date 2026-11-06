@@ -9,6 +9,33 @@
       </option>
       }
     </select>
+    } @else if (isPixel) {
+    <!-- the pattern painted over the pixels -->
+    <select class="flex-grow-1" style="min-width: 0" name="pattern" [ngModel]="pixelEffect.pattern" (ngModelChange)="setPattern($event)">
+      <optgroup [label]="'designer.effect.pixel-patterns-bars' | translate">
+        @for (pattern of pixelPatternsForBars; track pattern) {
+        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
+        }
+      </optgroup>
+      <optgroup [label]="'designer.effect.pixel-patterns-matrices' | translate">
+        @for (pattern of pixelPatternsForMatrices; track pattern) {
+        <option [value]="pattern">{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</option>
+        }
+      </optgroup>
+    </select>
+    <!-- all patterns as they look, to pick from -->
+    <a
+      href="#"
+      class="btn m-0 ml-1 px-2 pixel-picker-toggle"
+      [class.btn-primary]="pickingPattern"
+      [class.btn-secondary]="!pickingPattern"
+      popover="{{ 'designer.effect.pixel-pick-pattern' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pickingPattern = !pickingPattern; (false)"
+      ><i class="fa fa-th fa-fw" aria-hidden="true"></i
+    ></a>
     } @else {
     <select
       class="flex-grow-1"
@@ -48,9 +75,35 @@
       ><i class="fa fa-cog fa-fw" aria-hidden="true"></i
     ></a>
   </div>
+  @if (isPixel && pickingPattern) {
+  <!-- the patterns, each in the colors of the effect, made for bars and made for matrices -->
+  <div #picker class="pixel-picker">
+    @for (group of pixelPatternGroups; track group.name) {
+    <div class="pixel-picker-group">
+      <i class="pixel-picker-group-icon" [class]="group.icon" aria-hidden="true"></i>
+      {{ 'designer.effect.pixel-patterns-' + group.name | translate }}
+    </div>
+    <div class="pixel-picker-tiles">
+      @for (pattern of group.patterns; track pattern) {
+      <a href="#" class="pixel-picker-tile" [class.active]="pixelEffect.pattern === pattern" (click)="pickPattern(pattern); (false)">
+        <canvas #patternTile [attr.data-pattern]="pattern" [attr.data-matrix]="group.name === 'matrices'" width="84" height="44"></canvas>
+        <span>{{ 'designer.effect.pixel-pattern-' + pattern | translate }}</span>
+      </a>
+      }
+    </div>
+    }
+  </div>
+  }
   <div>
     <canvas #curveGrid class="curve-grid" width="200" height="100" viewBox="150 -75 4850 5150" preserveAspectRatio="none"></canvas>
   </div>
+  @if (isPixel && dimmedToZero()) {
+  <!-- a pixel effect lights the colors, the dimmer of the preset at 0 keeps them dark -->
+  <div class="text-warning pixel-dimmed-warning">
+    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+    {{ 'designer.effect.pixel-dimmed-to-zero' | translate }}
+  </div>
+  }
 </div>
 
 <div class="mr-4">
@@ -136,6 +189,219 @@
       />
     </div>
     <div class="my-auto ml-1">°</div>
+  </div>
+  } } @else if (isPixel) {
+  <!-- what the pattern lets be set: its size, softness, direction, shape and bounce if it has them -->
+  @if (usesSize()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ pixelSizeLabel() | translate }}
+    </div>
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        [value]="pixelEffect.size"
+        (valueChange)="setPixelSize($event)"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input type="text" class="slider-input" name="pixelSize" [ngModel]="pixelEffect.size" (ngModelChange)="setPixelSize($event)" />
+    </div>
+  </div>
+  } @if (usesSoftness()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ pixelSoftnessLabel() | translate }}
+    </div>
+    <div class="my-auto" style="float: left">
+      <mv-slider
+        [value]="pixelEffect.softness"
+        (valueChange)="setPixelSoftness($event)"
+        style="width: 80px"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+    </div>
+    <div class="my-auto">
+      <input
+        type="text"
+        class="slider-input"
+        name="pixelSoftness"
+        [ngModel]="pixelEffect.softness"
+        (ngModelChange)="setPixelSoftness($event)"
+      />
+    </div>
+  </div>
+  } @if (usesDirection()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-direction' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="direction" [ngModel]="pixelDirection" (ngModelChange)="setDirection($event)">
+        @for (direction of pixelDirections; track direction) {
+        <option [value]="direction">{{ 'designer.effect.pixel-direction-' + direction | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (usesBounce()) {
+    <div class="form-check my-auto ml-3">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        [id]="'bounce_' + curve.uuid"
+        [ngModel]="pixelEffect.bounce"
+        (ngModelChange)="setBounce($event)"
+      />
+      <label class="form-check-label" [for]="'bounce_' + curve.uuid">{{ 'designer.effect.pixel-bounce' | translate }}</label>
+    </div>
+    }
+  </div>
+  } @if (usesShape()) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ pixelShapeLabel() | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelShape" [ngModel]="pixelShape" (ngModelChange)="setPixelShape($event)">
+        @for (shape of pixelShapes; track shape) {
+        <option [value]="shape">{{ 'designer.effect.pixel-shape-' + shape | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  } @if (pixelEffect.pattern === 'text') {
+  <!-- the text, its font and how it scrolls -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-text' | translate }}
+    </div>
+    <div class="my-auto">
+      <input type="text" class="pixel-text-input" name="pixelText" [ngModel]="pixelEffect.text" (ngModelChange)="setText($event)" />
+    </div>
+  </div>
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-font' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelFont" [ngModel]="pixelEffect.font" (ngModelChange)="setFont($event)">
+        @for (font of pixelFonts; track font) {
+        <option [value]="font">{{ 'designer.effect.pixel-font-' + font | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (pixelEffect.font !== pixelFonts[0]) {
+    <div class="my-auto ml-2">
+      <input
+        type="text"
+        class="slider-input"
+        name="pixelTextHeight"
+        [ngModel]="pixelEffect.textHeight"
+        (ngModelChange)="setTextHeight($event)"
+      />
+    </div>
+    <div class="my-auto ml-1">px</div>
+    }
+  </div>
+  } @if (pixelEffect.pattern === 'image') {
+  <!-- the image, made into pixels when it is picked -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-image' | translate }}
+    </div>
+    <div class="my-auto">
+      <label class="btn btn-default btn-sm mb-0 pixel-image-pick">
+        <i class="fa fa-picture-o" aria-hidden="true"></i>
+        {{ pixelEffect.imageName || 'designer.effect.pixel-image-pick' | translate }}
+        <input type="file" accept="image/*" name="pixelImage" class="d-none" (change)="pickImage($event)" />
+      </label>
+    </div>
+    <div class="my-auto ml-2">
+      <select name="pixelImageSize" [(ngModel)]="pixelImageSize">
+        <option [ngValue]="'fixtures'">{{ 'designer.effect.pixel-image-size-fixtures' | translate }}</option>
+        @for (size of pixelImageSizes; track size) {
+        <option [ngValue]="size">{{ size }} px</option>
+        }
+      </select>
+    </div>
+  </div>
+  <!-- what the pixels of the image take in the project -->
+  @if (pixelImageStored; as stored) {
+  <div class="text-muted pixel-image-stored">
+    {{
+      (stored.frames > 1 ? 'designer.effect.pixel-image-stored-animation' : 'designer.effect.pixel-image-stored')
+        | translate : { width: stored.width, height: stored.height, frames: stored.frames, size: stored.size }
+    }}
+  </div>
+  } @if (pixelImageFailed) {
+  <div class="text-danger pixel-image-failed">{{ 'designer.effect.pixel-image-failed' | translate }}</div>
+  }
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-fit' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelFit" [ngModel]="pixelEffect.fit" (ngModelChange)="setFit($event)">
+        @for (fit of pixelFits; track fit) {
+        <option [value]="fit">{{ 'designer.effect.pixel-fit-' + fit | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  } @if (pixelEffect.pattern === 'text' || pixelEffect.pattern === 'image') {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-scroll' | translate }}
+    </div>
+    <div class="my-auto">
+      <select name="pixelScroll" [ngModel]="pixelScroll" (ngModelChange)="setScroll($event)">
+        @for (scroll of pixelScrolls; track scroll) {
+        <option [value]="scroll">{{ 'designer.effect.pixel-scroll-' + scroll | translate }}</option>
+        }
+      </select>
+    </div>
+    @if (usesAlign()) {
+    <div class="my-auto ml-2">
+      <select name="pixelAlign" [ngModel]="pixelEffect.align" (ngModelChange)="setAlign($event)">
+        @for (align of pixelAligns; track align) {
+        <option [value]="align">{{ 'designer.effect.pixel-align-' + align | translate }}</option>
+        }
+      </select>
+    </div>
+    }
+  </div>
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left">
+      {{ 'designer.effect.pixel-bitmap-colors' | translate }}
+    </div>
+    <div class="my-auto">
+      @if (pixelEffect.pattern === 'text') {
+      <select name="pixelTextColors" [ngModel]="pixelEffect.textColors" (ngModelChange)="setTextColors($event)">
+        @for (colors of pixelTextColors; track colors) {
+        <option [value]="colors">{{ 'designer.effect.pixel-text-colors-' + colors | translate }}</option>
+        }
+      </select>
+      } @else {
+      <select name="pixelImageColors" [ngModel]="pixelEffect.imageColors" (ngModelChange)="setImageColors($event)">
+        @for (colors of pixelImageColors; track colors) {
+        <option [value]="colors">{{ 'designer.effect.pixel-image-colors-' + colors | translate }}</option>
+        }
+      </select>
+      }
+    </div>
+    @if (pixelEffect.pattern === 'text') {
+    <div class="my-auto ml-2">{{ 'designer.effect.pixel-offset-y' | translate }}</div>
+    <div class="my-auto ml-1">
+      <input type="text" class="slider-input" name="pixelOffsetY" [ngModel]="pixelEffect.offsetY" (ngModelChange)="setOffsetY($event)" />
+    </div>
+    }
   </div>
   } } @else {
   <div class="d-flex">
@@ -279,8 +545,345 @@
   </div>
 </div>
 
+<!-- a pixel effect lights the colors of the pixels: its palette and how it is blended are picked instead -->
+@if (isPixel) {
+<div class="col col-auto p-0 effect-tab-rail">
+  <div class="nav flex-column nav-pills nav-pills-attached" role="tablist" aria-orientation="vertical">
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'colors'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'colors'"
+      [attr.aria-label]="'designer.effect.pixel-colors' | translate"
+      popover="{{ 'designer.effect.pixel-colors' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'colors'; (false)"
+    >
+      <i class="fa fa-paint-brush fa-fw" aria-hidden="true"></i>
+    </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'blend'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'blend'"
+      [attr.aria-label]="'designer.effect.pixel-blend' | translate"
+      popover="{{ 'designer.effect.pixel-blend' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'blend'; (false)"
+    >
+      <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'place'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'place'"
+      [attr.aria-label]="'designer.effect.pixel-place' | translate"
+      popover="{{ 'designer.effect.pixel-place' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'place'; (false)"
+    >
+      <i class="fa fa-th-large fa-fw" aria-hidden="true"></i>
+    </a>
+    <a
+      class="nav-link px-3"
+      [class.active]="pixelTab === 'audio'"
+      href="#"
+      role="tab"
+      [attr.aria-selected]="pixelTab === 'audio'"
+      [attr.aria-label]="'designer.effect.pixel-audio' | translate"
+      popover="{{ 'designer.effect.pixel-audio' | translate }}"
+      container="body"
+      placement="right"
+      triggers="mouseenter:mouseleave"
+      (click)="pixelTab = 'audio'; (false)"
+    >
+      <i class="fa fa-volume-up fa-fw" aria-hidden="true"></i>
+    </a>
+  </div>
+</div>
+
+<div class="applying-to">
+  @if (pixelTab === 'colors') {
+  <!-- the palettes, each shown with its colors -->
+  @for (palette of pixelPalettes; track palette.id) {
+  <div class="form-check pixel-palette">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'palette_' + curve.uuid"
+      [id]="'palette_' + curve.uuid + '_' + palette.id"
+      [checked]="pixelEffect.palette.ref === palette.id"
+      (change)="setPalette(palette)"
+    />
+    <label class="form-check-label d-flex align-items-center" [for]="'palette_' + curve.uuid + '_' + palette.id">
+      <span class="pixel-palette-swatch" [style.background]="paletteCss(palette)"></span>
+      {{ 'designer.effect.pixel-palette-' + palette.id | translate }}
+    </label>
+  </div>
+  } @if (projectPalettes.length) {
+  <!-- the palettes saved with the project -->
+  <div class="pixel-palettes-project">{{ 'designer.effect.pixel-palettes-project' | translate }}</div>
+  @for (palette of projectPalettes; track palette.uuid) {
+  <div class="form-check pixel-palette pixel-project-palette">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'palette_' + curve.uuid"
+      [id]="'palette_' + curve.uuid + '_' + palette.uuid"
+      [checked]="pixelEffect.palette.ref === palette.uuid"
+      (change)="setProjectPalette(palette)"
+    />
+    <label class="form-check-label d-flex align-items-center" [for]="'palette_' + curve.uuid + '_' + palette.uuid">
+      <span class="pixel-palette-swatch" [style.background]="stopsCss(palette.stops, palette.between)"></span>
+      {{ palette.name }}
+    </label>
+    <a
+      href="#"
+      class="ml-auto pixel-palette-delete"
+      [attr.aria-label]="'designer.effect.pixel-palette-delete' | translate"
+      (click)="deleteProjectPalette(palette); (false)"
+      ><i class="fa fa-trash" aria-hidden="true"></i
+    ></a>
+  </div>
+  } }
+  <hr />
+  @if (pixelEffect.palette.ref === 'preset') {
+  <div class="text-muted pixel-palette-hint">{{ 'designer.effect.pixel-palette-follows-preset' | translate }}</div>
+  } @else {
+  <!-- the colors of the effect: each one at its place, how it runs from one to the next and beyond the ends -->
+  <div class="pixel-palette-editor">
+    <lib-app-gradient-editor
+      [stops]="pixelEffect.palette.stops"
+      [background]="stopsCss(pixelEffect.palette.stops, pixelEffect.palette.between)"
+      (stopsChange)="setStops($event)"
+    ></lib-app-gradient-editor>
+    <div class="d-flex mt-1">
+      <select name="paletteBetween" [ngModel]="pixelEffect.palette.between" (ngModelChange)="setPaletteBetween($event)">
+        <option value="smooth">{{ 'designer.effect.pixel-palette-between-smooth' | translate }}</option>
+        <option value="steps">{{ 'designer.effect.pixel-palette-between-steps' | translate }}</option>
+      </select>
+      <select class="ml-1" name="paletteRepeat" [ngModel]="pixelEffect.palette.repeat" (ngModelChange)="setPaletteRepeat($event)">
+        <option value="mirror">{{ 'designer.effect.pixel-palette-repeat-mirror' | translate }}</option>
+        <option value="wrap">{{ 'designer.effect.pixel-palette-repeat-wrap' | translate }}</option>
+      </select>
+    </div>
+    <div class="d-flex mt-1">
+      <input
+        #paletteName
+        type="text"
+        name="paletteName"
+        class="pixel-palette-name"
+        [placeholder]="'designer.effect.pixel-palette-name' | translate"
+      />
+      <a
+        href="#"
+        class="btn btn-default btn-sm ml-1 pixel-palette-save"
+        (click)="savePalette(paletteName.value); paletteName.value = ''; (false)"
+        >{{ 'designer.effect.pixel-palette-save' | translate }}</a
+      >
+    </div>
+  </div>
+  } } @else if (pixelTab === 'audio') {
+  <!-- the audio it follows: none or the one of the composition, which band and how -->
+  @for (source of pixelAudioSources; track source) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'audioSource_' + curve.uuid"
+      [id]="'audioSource_' + curve.uuid + '_' + source"
+      [checked]="pixelEffect.audioSource === source"
+      (change)="setAudioSource(source)"
+    />
+    <label class="form-check-label" [for]="'audioSource_' + curve.uuid + '_' + source">{{
+      'designer.effect.pixel-audio-source-' + source | translate
+    }}</label>
+  </div>
+  } @if (pixelEffect.audioSource === 'composition') {
+  <!-- the buses of Rocket Show it follows, added together: all of them at first -->
+  <div class="d-flex mt-1 pixel-audio-row pixel-audio-buses">
+    <div class="pixel-audio-label">{{ 'designer.effect.pixel-audio-buses' | translate }}</div>
+    <div class="pixel-audio-bus-list">
+      @for (bus of audioBusChoices; track bus.uuid) {
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [id]="'audioBus_' + curve.uuid + '_' + bus.uuid"
+          [checked]="followsAudioBus(bus.uuid)"
+          [disabled]="isLastAudioBus(bus.uuid)"
+          (change)="switchAudioBus(bus.uuid)"
+        />
+        <label class="form-check-label" [for]="'audioBus_' + curve.uuid + '_' + bus.uuid">{{
+          bus.name || ('designer.effect.pixel-audio-bus-gone' | translate)
+        }}</label>
+      </div>
+      } @empty {
+      <div class="pixel-audio-buses-picked">
+        {{
+          pixelEffect.audioBuses.length
+            ? ('designer.effect.pixel-audio-buses-some' | translate : { count: pixelEffect.audioBuses.length })
+            : ('designer.effect.pixel-audio-buses-all' | translate)
+        }}
+      </div>
+      }
+    </div>
+  </div>
+  @if (pixelEffect.audioBuses.length && !previewsAudioBuses()) {
+  <div class="text-muted pixel-audio-hint pixel-audio-buses-hint">{{ 'designer.effect.pixel-audio-buses-preview' | translate }}</div>
+  }
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-band' | translate }}</div>
+    <select name="audioBand" [ngModel]="pixelEffect.audioBand" (ngModelChange)="setAudioBand($event)">
+      @for (band of pixelAudioBands; track band) {
+      <option [value]="band">{{ 'designer.effect.pixel-audio-band-' + band | translate }}</option>
+      }
+    </select>
+  </div>
+  @if (!showsAudio()) {
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-follows' | translate }}</div>
+    <select name="audioFollows" [ngModel]="pixelEffect.audioFollows" (ngModelChange)="setAudioFollows($event)">
+      @for (follows of pixelAudioFollows; track follows) {
+      <option [value]="follows">{{ 'designer.effect.pixel-audio-follows-' + follows | translate }}</option>
+      }
+    </select>
+  </div>
+  }
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-gain' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioGainDb"
+      [ngModel]="pixelEffect.audioGainDb"
+      (ngModelChange)="setAudioNumber('audioGainDb', $event)"
+    />
+    <div class="my-auto ml-1">dB</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-floor' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioFloorDb"
+      [ngModel]="pixelEffect.audioFloorDb"
+      (ngModelChange)="setAudioNumber('audioFloorDb', $event)"
+    />
+    <div class="my-auto ml-1">dB</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-attack' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioAttackMillis"
+      [ngModel]="pixelEffect.audioAttackMillis"
+      (ngModelChange)="setAudioNumber('audioAttackMillis', $event)"
+    />
+    <div class="my-auto ml-1">ms</div>
+  </div>
+  <div class="d-flex mt-1 pixel-audio-row">
+    <div class="my-auto pixel-audio-label">{{ 'designer.effect.pixel-audio-release' | translate }}</div>
+    <input
+      type="text"
+      class="slider-input"
+      name="audioReleaseMillis"
+      [ngModel]="pixelEffect.audioReleaseMillis"
+      (ngModelChange)="setAudioNumber('audioReleaseMillis', $event)"
+    />
+    <div class="my-auto ml-1">ms</div>
+  </div>
+  <div class="text-muted pixel-audio-hint">{{ 'designer.effect.pixel-audio-hint' | translate }}</div>
+  } } @else if (pixelTab === 'place') {
+  <!-- where the pattern is painted: on each fixture or across the stage, seen from the front or from above -->
+  @for (spread of pixelSpreads; track spread) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'spread_' + curve.uuid"
+      [id]="'spread_' + curve.uuid + '_' + spread"
+      [checked]="pixelEffect.spread === spread"
+      (change)="setSpread(spread)"
+    />
+    <label class="form-check-label" [for]="'spread_' + curve.uuid + '_' + spread">{{
+      'designer.effect.pixel-spread-' + spread | translate
+    }}</label>
+  </div>
+  } @if (pixelEffect.spread === 'stage') { @for (view of pixelViews; track view) {
+  <div class="form-check ml-3">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'view_' + curve.uuid"
+      [id]="'view_' + curve.uuid + '_' + view"
+      [checked]="pixelEffect.view === view"
+      (change)="setView(view)"
+    />
+    <label class="form-check-label" [for]="'view_' + curve.uuid + '_' + view">{{ 'designer.effect.pixel-view-' + view | translate }}</label>
+  </div>
+  } }
+  <hr />
+  <!-- the white part of the light on the white LEDs of the pixels which have them -->
+  <div class="form-check">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      [id]="'whiteLed_' + curve.uuid"
+      [ngModel]="pixelEffect.whiteLed"
+      (ngModelChange)="setWhiteLed($event)"
+    />
+    <label class="form-check-label" [for]="'whiteLed_' + curve.uuid">{{ 'designer.effect.pixel-white-led' | translate }}</label>
+  </div>
+  } @else {
+  <!-- what the effect does with the color the preset puts on a pixel -->
+  @for (blend of pixelBlends; track blend) {
+  <div class="form-check">
+    <input
+      type="radio"
+      class="form-check-input"
+      [name]="'blend_' + curve.uuid"
+      [id]="'blend_' + curve.uuid + '_' + blend"
+      [checked]="pixelEffect.blend === blend"
+      (change)="setBlend(blend)"
+    />
+    <label class="form-check-label" [for]="'blend_' + curve.uuid + '_' + blend">{{
+      'designer.effect.pixel-blend-' + blend | translate
+    }}</label>
+  </div>
+  }
+  <hr />
+  <div class="form-check">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      [id]="'mirror_' + curve.uuid"
+      [ngModel]="pixelEffect.mirror"
+      (ngModelChange)="setMirror($event)"
+    />
+    <label class="form-check-label" [for]="'mirror_' + curve.uuid">{{ 'designer.effect.pixel-mirror' | translate }}</label>
+  </div>
+  <div class="d-flex mt-1">
+    <div class="my-auto mr-2">{{ 'designer.effect.pixel-seed' | translate }}</div>
+    <input type="text" class="slider-input" name="seed" [ngModel]="pixelEffect.seed" (ngModelChange)="setSeed($event)" />
+  </div>
+  }
+</div>
+}
+
 <!-- a movement always moves the pan and the tilt: nothing to pick for it to drive -->
-@if (!isMovement) {
+@if (!isMovement && !isPixel) {
 <!-- Menu for the capabilities and channels-->
 <div class="col col-auto p-0 effect-tab-rail">
   <div class="nav flex-column nav-pills nav-pills-attached" id="v-pills-tab" role="tablist" aria-orientation="vertical">
@@ -352,7 +955,7 @@
           <label class="form-check-label" for="channel_profile_{{ curve?.uuid }}_{{ profile.uuid }}">{{ profile.name }}</label>
         </div>
         }
-        <hr class="my-1" style="border-color: white" />
+        <hr />
       </div>
       }
 

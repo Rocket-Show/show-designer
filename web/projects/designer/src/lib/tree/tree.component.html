@@ -33,7 +33,12 @@
       <ng-container *ngTemplateOutlet="nodeTemplate || defaultTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>
     </span>
   </div>
-  }
+  @if (flat.node.detail && flat.node.expanded && detailTemplate) {
+  <!-- below its row, at the level of its children, which it shows instead -->
+  <div class="tree-detail" [style.--tree-indent]="indentPx(flat.level + 1)">
+    <ng-container *ngTemplateOutlet="detailTemplate; context: { $implicit: flat.node, node: flat.node }"></ng-container>
+  </div>
+  } }
 
   <div class="tree-tail" [class.drop-tail]="dropTail" (dragover)="onTailDragOver($event)" (drop)="onTailDrop($event)"></div>
 </div>

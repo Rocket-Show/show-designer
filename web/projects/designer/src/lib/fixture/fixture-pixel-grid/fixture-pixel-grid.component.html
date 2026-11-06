@@ -1,0 +1,34 @@
+<!-- the rows which are no pixel of the matrix, and the groups of the fixture library -->
+@if (otherRows.length > 0 || groups.length > 0) {
+<div class="pixel-grid-buttons">
+  @for (row of otherRows; track row) {
+  <button type="button" class="pixel-grid-button pixel-grid-row" [class.active]="rowIsSelected(row)" (click)="selectRow(row)">
+    {{ row.pixelKey || ('designer.fixture.general-channels' | translate) }}
+  </button>
+  } @for (group of groups; track group.name) {
+  <button
+    type="button"
+    class="pixel-grid-button pixel-grid-group"
+    [class.active]="groupState(group) === 'all'"
+    [class.partial]="groupState(group) === 'some'"
+    [attr.title]="'designer.fixture.pixel-group' | translate : { count: group.rows.length }"
+    (click)="selectGroup(group)"
+  >
+    {{ group.name }}
+  </button>
+  }
+</div>
+}
+
+<!-- the pixels where they sit: a click takes or releases one, a drag all it passes -->
+@if (columns > 0) {
+<canvas
+  #grid
+  class="pixel-grid"
+  [attr.title]="hoveredKey || null"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp()"
+  (pointercancel)="onPointerCancel()"
+></canvas>
+}

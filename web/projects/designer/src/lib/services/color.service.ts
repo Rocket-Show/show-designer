@@ -3,6 +3,7 @@ import { Color } from '../models/color';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
+import { EffectPixel } from '../models/effect-pixel';
 import { Scene } from '../models/scene';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -60,15 +61,38 @@ export class ColorService {
     return preset.color;
   }
 
+  // The color a preset shows: the colors of the palette of a pixel effect painting over its colors (mixed), or the
+  // color it puts on its fixtures. undefined, if it shows no color at all.
+  getDerivedPresetColor(preset: Preset): string {
+    return this.getPixelPaletteColor(preset) || this.getPresetLightColor(preset);
+  }
+
   // the color a preset puts on its fixtures: the one mixed from its color intensities,
   // or the color of the wheel slot it selects. undefined, if it sets no color at all.
   //
   // A preset with steps is read from its first step, the look it opens with, so the
   // color it is marked with stays the same while another step is edited or played.
-  getDerivedPresetColor(preset: Preset): string {
+  getPresetLightColor(preset: Preset): string {
     const capabilityValues = this.getPresetCapabilityValues(preset);
 
     return this.getColorIntensityColor(capabilityValues) || this.getWheelSlotColor(capabilityValues);
+  }
+
+  // The colors of the palette of the first pixel effect of a preset painting in colors of its own, mixed: its palette
+  // is what the preset shows. One in the shades of the color of the preset, or only making it brighter and darker
+  // (masking it), shows the color of the preset.
+  private getPixelPaletteColor(preset: Preset): string {
+    for (const effect of preset.effects) {
+      if (effect instanceof EffectPixel && effect.visible && effect.palette.ref !== 'preset' && effect.blend !== 'mask') {
+        const colors = effect.palette.stops.map((stop) => this.fixtureService.hexToRgb(stop.color)).filter((color) => color);
+
+        if (colors.length) {
+          return this.toDisplayColor(this.fixtureService.mixColors(colors));
+        }
+      }
+    }
+
+    return undefined;
   }
 
   // the color a scene is marked with (undefined = none, it is shown unmarked)

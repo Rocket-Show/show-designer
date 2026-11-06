@@ -6,6 +6,7 @@ import { Preset } from './preset';
 import { PresetFixture } from './preset-fixture';
 import { Scene } from './scene';
 import { UniverseConfig } from './universe-config';
+import { ProjectPixelPalette } from './pixel-palette';
 
 export class Project {
   public id: number;
@@ -49,9 +50,19 @@ export class Project {
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
 
+  // Whether the dimmers of a fixture which lights in colors only (e.g. an RGB par or a pixel bar with a master dimmer)
+  // start at full where its profile does not say where they start: a color is all it takes to light it, like a
+  // fixture without a dimmer (see FixtureService.openColorDimmers). It stays dark while its colors are off. A project
+  // of a version before 11 keeps its dimmers off, the way it was played then.
+  public colorDimmersAtFull = true;
+
   public selectedCompositionUuid: string;
 
   public compositions: Composition[] = [];
+
+  // the palettes of the pixel effects saved with the project, which any effect can be painted in: an effect keeps a
+  // copy of the colors of the one it is painted in, so only the designer reads them
+  public pixelPalettes: ProjectPixelPalette[] = [];
   public fixtureProfiles: FixtureProfile[] = [];
 
   // fixtures added to the project in a DMX universe
@@ -102,7 +113,11 @@ export class Project {
     this.stepPreviewRunning = false;
     this.stepPreviewStartMillis = 0;
     this.previewPreset = data.previewPreset;
+    this.colorDimmersAtFull = data.colorDimmersAtFull ?? true;
     this.selectedCompositionUuid = data.selectedCompositionUuid;
+    this.pixelPalettes = Array.isArray(data.pixelPalettes)
+      ? data.pixelPalettes.map((palette: any) => new ProjectPixelPalette(palette))
+      : [];
 
     if (data.compositions) {
       for (const composition of data.compositions) {

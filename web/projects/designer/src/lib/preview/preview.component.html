@@ -28,11 +28,26 @@
     <span class="preview-target-name">{{ previewName() }}</span>
   </div>
 
+  <!-- the glow around the lights, which costs a bit of performance -->
+  @if (!previewHidden) {
+  <a
+    href="#"
+    class="preview-chrome-button preview-glow-button"
+    [class.preview-chrome-button-on]="previewService.glowing"
+    popover="{{ (previewService.glowing ? 'designer.preview.glow-off' : 'designer.preview.glow-on') | translate }}"
+    container="body"
+    placement="left"
+    triggers="mouseenter:mouseleave"
+    (click)="switchGlow(); (false)"
+    ><i class="fa fa-fw fa-sun-o" aria-hidden="true"></i
+  ></a>
+  }
+
   <!-- rendering the stage is the most expensive thing on the screen, so it can be
        turned off while nobody is looking at it -->
   <a
     href="#"
-    class="preview-chrome-button"
+    class="preview-chrome-button preview-hide-button"
     popover="{{ (previewHidden ? 'designer.preview.show' : 'designer.preview.hide') | translate }}"
     container="body"
     placement="left"

@@ -1,0 +1,51 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.pixel-grid-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+/* a row of its own or a group of the library: lit while the preset takes it */
+.pixel-grid-button {
+  max-width: 100%;
+  padding: 0 5px;
+  height: 18px;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sm);
+  background: transparent;
+  color: var(--sd-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.pixel-grid-button:hover {
+  border-color: var(--sd-border-strong);
+  color: var(--sd-text);
+}
+
+.pixel-grid-button.active {
+  border-color: var(--sd-primary);
+  background-color: var(--sd-primary-soft);
+  color: var(--sd-primary-text);
+}
+
+/* some of the pixels of the group are taken */
+.pixel-grid-button.partial {
+  border-style: dashed;
+  border-color: var(--sd-primary);
+}
+
+.pixel-grid {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}

@@ -246,13 +246,32 @@ describe('PreviewService dimmers and fades', () => {
     expect(values[virtualDimmer]).toBeUndefined();
   });
 
-  it('fades a fixture with a dimmer in its dimmer only', () => {
+  it('fades a fixture with a dimmer in its dimmer only, in a show keeping the dimmers off', () => {
+    TestBed.inject(ProjectService).project.colorDimmersAtFull = false;
+    fixtureService.updateCachedFixtures();
     const red = preset('par', [capability('Intensity', 1), capability('ColorIntensity', 1, 'Red')]);
     const values = channelValues('par', [new PresetRegionScene(red, undefined, scene(0.3))]);
 
     // the light is at 30 %, not at 30 % of 30 %
     expect(values['Dimmer']).toBeCloseTo(76.5, 5);
     expect(values['Red']).toBe(255);
+  });
+
+  it('fades the color of a fixture its dimmer is at full for already', () => {
+    const red = preset('par', [capability('Intensity', 1), capability('ColorIntensity', 1, 'Red')]);
+    const values = channelValues('par', [new PresetRegionScene(red, undefined, scene(0.3))]);
+
+    // the light is at 30 % again, the color coming up from the dark below it
+    expect(values['Dimmer']).toBe(255);
+    expect(values['Red']).toBeCloseTo(76.5, 5);
+  });
+
+  it('lights a fixture with a dimmer in a color alone', () => {
+    const values = channelValues('par', [
+      new PresetRegionScene(preset('par', [capability('ColorIntensity', 1, 'Red')]), undefined, undefined),
+    ]);
+
+    expect([values['Dimmer'], values['Red']]).toEqual([255, 255]);
   });
 
   it('fades a fixture without a dimmer once', () => {
@@ -529,6 +548,47 @@ describe('PreviewService chases', () => {
     expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '1'))).toBe(0);
     expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '2'))).toBe(1);
     expect(presetService.getPresetFixtureCount(pixels)).toBe(2);
+  });
+
+  it('works a chase out once, and again once anything it is worked out from changed', () => {
+    const project = TestBed.inject(ProjectService).project;
+    const chase = preset(['par-2', 'par-1'], false);
+    const first = presetService.getPresetFixtureIndices(chase);
+
+    // nothing changed: the very same
+    expect(presetService.getPresetFixtureIndices(chase)).toBe(first);
+    expect(presetService.getPresetWholeFixtureChase(chase)).toBe(presetService.getPresetWholeFixtureChase(chase));
+    expect(presetService.getOrderedPresetFixtures(chase)).toBe(chase.fixtures);
+
+    // the fixtures of the preset put in another order where they are
+    chase.fixtures.reverse();
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([0, 1]);
+
+    // another pixel, in place
+    chase.fixtures[0].pixelKey = '1';
+    expect(presetService.getPresetFixtureIndices(chase).get(presetService.getPresetFixtureKey('par-1', '1'))).toBe(0);
+    chase.fixtures[0].pixelKey = undefined;
+
+    // the second par patched on the address of the first one: the same lamp
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+    project.fixtures[2].dmxFirstChannel = 0;
+    expect(presetService.getPresetFixtureCount(chase)).toBe(1);
+    expect(presetService.getPresetWholeFixtureChase(chase).count).toBe(1);
+    project.fixtures[2].dmxUniverseUuid = 'back';
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+
+    // following the order of the project, which changes
+    chase.useGlobalFixtureOrder = true;
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([0, 1]);
+    project.presetFixtures.reverse();
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([1, 0]);
+
+    // a fixture added to the project, or one exchanged
+    project.fixtures.push(new Project({ fixtures: [{ uuid: 'par-3', dmxUniverseUuid: 'front', dmxFirstChannel: 10 }] }).fixtures[0]);
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+    const exchanged = new Project({ fixtures: [{ uuid: 'par-2', dmxUniverseUuid: 'front', dmxFirstChannel: 0 }] }).fixtures[0];
+    project.fixtures = project.fixtures.map((fixture) => (fixture.uuid === 'par-2' ? exchanged : fixture));
+    expect(presetService.getPresetFixtureCount(chase)).toBe(1);
   });
 });
 

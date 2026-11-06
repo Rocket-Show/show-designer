@@ -57,6 +57,45 @@ test.describe('The fixture pool', () => {
     await expect(designer.names(designer.panel('Fixtures'))).toHaveText(['Par left', 'Spot']);
   });
 
+  test('shows a fixture with pixels in one row, which lights all of them and opens to show them where they sit', async ({
+    designer,
+    api,
+  }) => {
+    api.addTestProfile('pixel-bar.json');
+    await designer.open();
+    await designer.panel('Fixtures').getByRole('link', { name: 'Add new fixtures to the project' }).click();
+
+    const pool = designer.fixturePool;
+    await designer.addFromLibrary('Test - Bar of three pixels');
+    await pool.getByRole('button', { name: 'OK' }).click();
+    await expect(pool).toBeHidden();
+
+    // one row for the bar, not one for each of its pixels
+    const fixtures = designer.panel('Fixtures');
+    await expect(designer.names(fixtures)).toHaveText(['Bar of three pixels']);
+    const bar = designer.row(fixtures, 'Bar of three pixels');
+    await expect(bar).toContainText('3 px');
+
+    await bar.getByRole('checkbox').check();
+    await expect(designer.editor.getByText('Select at least one fixture for this preset')).toBeHidden();
+
+    // opened, it shows the pixels where they sit, and a click takes a single one out of the preset
+    await bar.locator('.tree-caret').click();
+    const grid = fixtures.locator('lib-app-fixture-pixel-grid canvas');
+    const box = await grid.boundingBox();
+    await grid.click({ position: { x: box.width / 2, y: box.height / 2 } });
+    await expect(bar.getByRole('checkbox')).toHaveJSProperty('indeterminate', true);
+
+    // or one by one, to change the order they are chased in
+    await bar.getByTitle('Pixels as rows, to change the order they are chased in').click();
+    await expect(designer.names(fixtures)).toHaveText(['Bar of three pixels', '1', '2', '3']);
+    await expect(designer.row(fixtures, '2').getByRole('checkbox')).not.toBeChecked();
+    await expect(designer.row(fixtures, '1').getByRole('checkbox')).toBeChecked();
+
+    await bar.locator('.tree-caret').click();
+    await expect(designer.names(fixtures)).toHaveText(['Bar of three pixels']);
+  });
+
   test('leaves the project as it was when the pool is cancelled', async ({ designer, page }) => {
     await designer.open();
     await designer.menu('Settings', 'Fixture pool');

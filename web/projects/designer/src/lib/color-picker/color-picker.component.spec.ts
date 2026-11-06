@@ -249,10 +249,29 @@ describe('ColorPickerComponent', () => {
   it('ties each automatic switch to its own label', () => {
     show({ auto: true });
     const other = TestBed.createComponent(ColorPickerComponent);
+    other.componentRef.setInput('autoLabel', 'designer.preset.settings-color-auto');
     other.detectChanges();
 
     const label: HTMLLabelElement = fixture.nativeElement.querySelector('label');
     expect(label.htmlFor).toBe(autoCheckbox().id);
     expect(other.nativeElement.querySelector('input[type=checkbox]').id).not.toBe(autoCheckbox().id);
+  });
+
+  it('offers no automatic switch for a color which nothing derives, with a wheel as wide as asked', async () => {
+    fixture.componentRef.setInput('auto', false);
+    fixture.componentRef.setInput('color', '#00ff00');
+    fixture.componentRef.setInput('wheelSize', 100);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(autoCheckbox()).toBeNull();
+    expect(hexInput().value).toBe('#00ff00');
+    // narrower than one as wide as it is by default
+    const wide = TestBed.createComponent(ColorPickerComponent);
+    wide.detectChanges();
+    const width = (picker: ComponentFixture<ColorPickerComponent>) =>
+      parseFloat(picker.nativeElement.querySelector('.color-picker-wheel svg').getAttribute('width'));
+    expect(width(fixture)).toBeLessThan(width(wide));
   });
 });

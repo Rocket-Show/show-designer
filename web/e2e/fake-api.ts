@@ -97,6 +97,11 @@ export class FakeApi {
   private nextProjectId = 2;
   private nextSession = 1;
 
+  // let the library offer one more of the test profiles, e.g. addTestProfile('pixel-bar.json')
+  addTestProfile(file: string) {
+    this.library.push(testProfile(file, 'Test'));
+  }
+
   async attach(context: BrowserContext) {
     await context.route(apiUrl + '**', (route) => this.answer(route));
   }

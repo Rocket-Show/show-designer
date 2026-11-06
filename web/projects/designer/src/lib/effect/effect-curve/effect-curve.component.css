@@ -1,4 +1,6 @@
 .curve-grid {
+  /* the size set on a screen with more device pixels than CSS pixels is the one of its drawing, without the border */
+  box-sizing: content-box;
   background-color: var(--sd-bg);
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius);
@@ -36,4 +38,170 @@
 /* fix padding bottom in overflow */
 .applying-to .form-check:last-child {
   margin-bottom: var(--sd-space-2);
+}
+
+/* a palette of a pixel effect, shown with its colors */
+.pixel-palette-swatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 10px;
+  margin-right: var(--sd-space-2);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* the text a pixel effect shows */
+.pixel-text-input {
+  width: 180px;
+}
+
+/* the button picking the image of a pixel effect, with the name of the image picked */
+.pixel-image-pick {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pixel-image-failed {
+  font-size: 0.75rem;
+}
+
+/* the settings of the audio a pixel effect follows: a label in front of each */
+.pixel-audio-label {
+  width: 90px;
+}
+
+.pixel-audio-hint {
+  max-width: 280px;
+  margin-top: var(--sd-space-1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* tells that the dimmer of the preset keeps the pixels of a pixel effect dark */
+.pixel-dimmed-warning {
+  max-width: 200px;
+  margin-top: var(--sd-space-1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* the patterns to pick from, over the preview and the settings next to it */
+:host {
+  position: relative;
+}
+
+.pixel-picker {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  z-index: 20;
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  /* as tall as the panel shows it, see fitPicker */
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--sd-space-2);
+  background-color: var(--sd-surface-2);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.pixel-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sd-space-1) 0;
+  color: var(--sd-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pixel-picker-group-icon {
+  width: 16px;
+  color: var(--sd-text-muted);
+  text-align: center;
+}
+
+.pixel-picker-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-1);
+}
+
+.pixel-picker-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 96px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text);
+  font-size: 0.7rem;
+  text-decoration: none;
+}
+
+.pixel-picker-tile:hover,
+.pixel-picker-tile:focus {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.pixel-picker-tile.active {
+  border-color: var(--sd-primary);
+}
+
+.pixel-picker-tile canvas {
+  width: 84px;
+  height: 44px;
+  margin-bottom: 2px;
+  background-color: #08090b;
+  border-radius: var(--sd-radius-sm);
+}
+
+/* the palettes of the project and the editor of the colors of the effect */
+.pixel-palettes-project {
+  margin-top: var(--sd-space-1);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+}
+
+.pixel-palette-delete {
+  color: var(--sd-text-muted);
+}
+
+.pixel-palette-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pixel-palette-save {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.pixel-palette-hint {
+  max-width: 260px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* the buses of Rocket Show, one below the other */
+.pixel-audio-bus-list {
+  min-width: 0;
+}
+
+.pixel-audio-buses-picked {
+  color: var(--sd-text-muted);
+}
+
+/* what the pixels of an image take in the project, below the button picking it */
+.pixel-image-stored {
+  margin: 2px 0 4px 100px;
+  font-size: 0.75rem;
 }

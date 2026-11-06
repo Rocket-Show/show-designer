@@ -27,9 +27,16 @@ export class ColorPickerComponent implements AfterViewInit, OnChanges, OnDestroy
 
   @Output() autoChange = new EventEmitter<boolean>();
 
-  // the color the item derives and the label saying where it comes from
+  // the color the item derives and the label saying where it comes from (none: the item
+  // derives no color, there is no switch)
   @Input() autoColor: string;
   @Input() autoLabel: string;
+
+  // how wide the wheel is, in CSS pixels
+  @Input() wheelSize = 150;
+
+  // whether the hex value can be typed in here (not where the item has a field for it)
+  @Input() showHex = true;
 
   // the colors offered for a quick choice
   @Input() palette: string[] = [];
@@ -59,7 +66,7 @@ export class ColorPickerComponent implements AfterViewInit, OnChanges, OnDestroy
 
   ngAfterViewInit() {
     this.picker = new iro.ColorPicker(this.wheelContainer.nativeElement, {
-      width: 150,
+      width: this.wheelSize,
       color: this.shownColor || ColorPickerComponent.noColor,
       borderWidth: 1,
       borderColor: '#3b424d',

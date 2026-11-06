@@ -3,6 +3,8 @@ import { map } from 'rxjs/operators';
 import { Effect } from '../models/effect';
 import { EffectCurve } from '../models/effect-curve';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
+import { EffectPixel } from '../models/effect-pixel';
+import { builtInPixelPalettes, pixelPaletteOf } from '../models/pixel-palettes';
 import { EffectService } from '../services/effect.service';
 import { PresetService } from '../services/preset.service';
 import { UuidService } from '../services/uuid.service';
@@ -55,6 +57,15 @@ export class EffectComponent implements OnInit {
     effect.uuid = this.uuidService.getUuid();
     effect.phasingMode = 'spread';
     effect.phasingCycles = 0;
+    this.addEffect(effect);
+    this.livePreviewService.previewLive();
+  }
+
+  // a pixel effect, starting in all the colors of the rainbow, so it shows even on a preset without a color yet
+  addPixelEffect() {
+    const effect = new EffectPixel();
+    effect.uuid = this.uuidService.getUuid();
+    effect.palette = pixelPaletteOf(builtInPixelPalettes.find((palette) => palette.id === 'rainbow'));
     this.addEffect(effect);
     this.livePreviewService.previewLive();
   }
