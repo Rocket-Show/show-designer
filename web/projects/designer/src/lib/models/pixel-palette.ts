@@ -53,28 +53,29 @@ export class PixelPalette {
     return PixelPalette.colorOf(this.stops, this.between, this.repeat, place);
   }
 
-  // the color at a place of the passed stops, which do not have to be sorted (see colorAt)
-  public static colorOf(stops: PixelPaletteStop[], between: string, repeat: string, place: number): number[] {
+  // The color at a place of the passed stops, which do not have to be sorted (see colorAt). The stops of a palette are
+  // sorted and their colors read once, as long as they stay as they are (the preview asks for each pixel in each
+  // frame); stops made for one pixel alone (the shades of the color of a preset) are not kept.
+  public static colorOf(stops: PixelPaletteStop[], between: string, repeat: string, place: number, keep = true): number[] {
     if (stops.length === 0) {
       return [0, 0, 0];
     }
 
-    // by their place, the ones on the same place in the order they are listed in
-    const sorted = stops.slice().sort((stop1, stop2) => stop1.position - stop2.position);
+    const sorted = keep ? keptSortedStops(stops) : sortedStops(stops);
     const position = repeat === 'wrap' ? fract(place) : triangle(place * 0.5);
 
     if (between === 'steps') {
-      return hexToRgb(sorted[Math.min(sorted.length - 1, Math.floor(position * sorted.length))].color);
+      return sorted[Math.min(sorted.length - 1, Math.floor(position * sorted.length))].rgb.slice();
     }
 
     if (position <= sorted[0].position) {
-      return hexToRgb(sorted[0].color);
+      return sorted[0].rgb.slice();
     }
 
     for (let i = 1; i < sorted.length; i++) {
       if (position <= sorted[i].position) {
-        const from = hexToRgb(sorted[i - 1].color);
-        const to = hexToRgb(sorted[i].color);
+        const from = sorted[i - 1].rgb;
+        const to = sorted[i].rgb;
         const width = sorted[i].position - sorted[i - 1].position;
         const share = width > 0 ? (position - sorted[i - 1].position) / width : 1;
 
@@ -82,7 +83,7 @@ export class PixelPalette {
       }
     }
 
-    return hexToRgb(sorted[sorted.length - 1].color);
+    return sorted[sorted.length - 1].rgb.slice();
   }
 
   // The shades of a color, for the palette which follows the color of the preset: from the color itself most of the way
@@ -114,6 +115,49 @@ export class ProjectPixelPalette {
     this.between = data.between || 'smooth';
     this.repeat = data.repeat || 'mirror';
   }
+}
+
+// a stop by its place, with its color read
+interface SortedStop {
+  position: number;
+  rgb: number[];
+}
+
+// the stops by their place, the ones on the same place in the order they are listed in
+function sortedStops(stops: PixelPaletteStop[]): SortedStop[] {
+  return stops
+    .slice()
+    .sort((stop1, stop2) => stop1.position - stop2.position)
+    .map((stop) => ({ position: stop.position, rgb: hexToRgb(stop.color) }));
+}
+
+// the stops sorted once, with what they were sorted from: worked out again once a stop moved or got another color
+const sortedStopsKept = new WeakMap<
+  PixelPaletteStop[],
+  { stops: PixelPaletteStop[]; positions: number[]; colors: string[]; sorted: SortedStop[] }
+>();
+
+function keptSortedStops(stops: PixelPaletteStop[]): SortedStop[] {
+  const kept = sortedStopsKept.get(stops);
+
+  if (
+    kept &&
+    kept.stops.length === stops.length &&
+    stops.every((stop, i) => stop === kept.stops[i] && stop.position === kept.positions[i] && stop.color === kept.colors[i])
+  ) {
+    return kept.sorted;
+  }
+
+  const sorted = sortedStops(stops);
+
+  sortedStopsKept.set(stops, {
+    stops: stops.slice(),
+    positions: stops.map((stop) => stop.position),
+    colors: stops.map((stop) => stop.color),
+    sorted,
+  });
+
+  return sorted;
 }
 
 // a color like #ff8000 as red, green and blue between 0 and 1, black for anything else

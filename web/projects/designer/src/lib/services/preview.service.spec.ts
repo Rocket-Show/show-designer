@@ -549,6 +549,47 @@ describe('PreviewService chases', () => {
     expect(fixtureIndices.get(presetService.getPresetFixtureKey('par-2', '2'))).toBe(1);
     expect(presetService.getPresetFixtureCount(pixels)).toBe(2);
   });
+
+  it('works a chase out once, and again once anything it is worked out from changed', () => {
+    const project = TestBed.inject(ProjectService).project;
+    const chase = preset(['par-2', 'par-1'], false);
+    const first = presetService.getPresetFixtureIndices(chase);
+
+    // nothing changed: the very same
+    expect(presetService.getPresetFixtureIndices(chase)).toBe(first);
+    expect(presetService.getPresetWholeFixtureChase(chase)).toBe(presetService.getPresetWholeFixtureChase(chase));
+    expect(presetService.getOrderedPresetFixtures(chase)).toBe(chase.fixtures);
+
+    // the fixtures of the preset put in another order where they are
+    chase.fixtures.reverse();
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([0, 1]);
+
+    // another pixel, in place
+    chase.fixtures[0].pixelKey = '1';
+    expect(presetService.getPresetFixtureIndices(chase).get(presetService.getPresetFixtureKey('par-1', '1'))).toBe(0);
+    chase.fixtures[0].pixelKey = undefined;
+
+    // the second par patched on the address of the first one: the same lamp
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+    project.fixtures[2].dmxFirstChannel = 0;
+    expect(presetService.getPresetFixtureCount(chase)).toBe(1);
+    expect(presetService.getPresetWholeFixtureChase(chase).count).toBe(1);
+    project.fixtures[2].dmxUniverseUuid = 'back';
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+
+    // following the order of the project, which changes
+    chase.useGlobalFixtureOrder = true;
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([0, 1]);
+    project.presetFixtures.reverse();
+    expect(indices(chase, ['par-1', 'par-2'])).toEqual([1, 0]);
+
+    // a fixture added to the project, or one exchanged
+    project.fixtures.push(new Project({ fixtures: [{ uuid: 'par-3', dmxUniverseUuid: 'front', dmxFirstChannel: 10 }] }).fixtures[0]);
+    expect(presetService.getPresetFixtureCount(chase)).toBe(2);
+    const exchanged = new Project({ fixtures: [{ uuid: 'par-2', dmxUniverseUuid: 'front', dmxFirstChannel: 0 }] }).fixtures[0];
+    project.fixtures = project.fixtures.map((fixture) => (fixture.uuid === 'par-2' ? exchanged : fixture));
+    expect(presetService.getPresetFixtureCount(chase)).toBe(1);
+  });
 });
 
 // What the preview shows where Rocket Show used to play it differently. These mirror the cases of

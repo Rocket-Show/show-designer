@@ -66,19 +66,37 @@ export class PreviewService implements OnDestroy {
 
   public scene: THREE.Scene;
 
-  // what a frame knows while it is worked out: where the fixtures hang, the place of each part in the chase of each
-  // preset and the places of the parts of a preset in a picture of the stage (for the pixel effects spread across it,
-  // worked out once in a frame for each preset and view)
+  // what a frame knows while it is worked out: where the fixtures hang and the place of each part in the chase of each
+  // preset
   private framePlacements = new Map<string, StagePlacement>();
   private frameFixtureIndices = new Map<Preset, Map<string, number>>();
-  private frameStagePlaces = new Map<Preset, Map<string, Map<CachedFixture, PixelContext>>>();
   private frameTimeMillis = 0;
+
+  // Where the fixtures hang, and what it was worked out from (see getPlacements): the size of the stage, where each
+  // fixture is put and the order of the fixtures of the project
+  private placements: Map<string, StagePlacement>;
+  private placementInputs: any[] = [];
+
+  // The places of the parts of a preset in a picture of the stage, for each view (for the pixel effects spread across
+  // it): worked out again once the placements, the parts or the chase of the preset changed
+  private stagePlaces = new WeakMap<
+    Preset,
+    {
+      placements: Map<string, StagePlacement>;
+      indices: Map<string, number>;
+      parts: CachedFixture[];
+      views: Map<string, Map<CachedFixture, PixelContext>>;
+    }
+  >();
   private frameAudio = new Map<EffectPixel, PixelAudio>();
   private frameSizedSettings = new Map<EffectPixel, PixelPatternSettings>();
 
   // The frames of the audio the pixel effects follow, if they are given (e.g. by a test). Otherwise the ones of the
   // composition while the timeline plays it, and a beat to show what they do while it doesn't.
   public audioFrames: AudioFrames;
+
+  // the dimmer channel of each part of a fixture (see getDimmerChannel)
+  private dimmerChannels = new WeakMap<CachedFixture, CachedFixtureChannel>();
 
   // Whether the lights glow in the 3d preview, the way they do in the dark (it costs a bit of performance). On unless
   // it was turned off.
@@ -345,14 +363,29 @@ export class PreviewService implements OnDestroy {
   // how bright the dimmer of a fixture (its own or its virtual one) lights with the passed
   // values, or undefined for a fixture without one (e.g. a pixel of a bar with a master dimmer)
   private getDimmerBrightness(cachedFixture: CachedFixture, values: FixtureChannelValue[]): number {
-    for (const channel of cachedFixture.channels) {
-      if (channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)) {
-        const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
-        return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
-      }
+    const channel = this.getDimmerChannel(cachedFixture);
+
+    if (!channel) {
+      return undefined;
     }
 
-    return undefined;
+    const value = this.getChannelValue(values, channel.name, cachedFixture.profile.uuid);
+    return value ? this.fixtureService.getDimmerBrightnessOfValue(channel, value.value) : 0;
+  }
+
+  // the first channel of a part of a fixture with a dimmer on it, none without: looked for once for each part (the
+  // parts are made anew when the fixtures change)
+  private getDimmerChannel(cachedFixture: CachedFixture): CachedFixtureChannel {
+    if (!this.dimmerChannels.has(cachedFixture)) {
+      this.dimmerChannels.set(
+        cachedFixture,
+        cachedFixture.channels.find((channel) =>
+          channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)
+        )
+      );
+    }
+
+    return this.dimmerChannels.get(cachedFixture);
   }
 
   // how bright a preset lets the dimmer of a fixture light: the dimmer it sets (a curve on the
@@ -821,7 +854,10 @@ export class PreviewService implements OnDestroy {
     const level = sample[1] * (effect.audioFollows === 'size' ? 1 : audioLevel);
     const palette = effect.palette;
     const stops = palette.ref === 'preset' ? PixelPalette.shadesOf(base) : palette.stops;
-    const color = sample.length > 2 ? sample.slice(2, 5) : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0]);
+    const color =
+      sample.length > 2
+        ? sample.slice(2, 5)
+        : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0], palette.ref !== 'preset');
     const lit = color.map((component) => component * level);
 
     // the white part of the light on the white LED, if it is to light it
@@ -928,18 +964,24 @@ export class PreviewService implements OnDestroy {
   // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in
   // colors, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
   private getStagePixelPlace(preset: Preset, view: string, cachedFixture: CachedFixture): PixelContext {
-    let views = this.frameStagePlaces.get(preset);
+    const indices = this.frameFixtureIndices.get(preset);
+    let entry = this.stagePlaces.get(preset);
 
-    if (!views) {
-      views = new Map();
-      this.frameStagePlaces.set(preset, views);
+    if (
+      !entry ||
+      entry.placements !== this.framePlacements ||
+      entry.indices !== indices ||
+      entry.parts !== this.fixtureService.cachedFixtures
+    ) {
+      entry = { placements: this.framePlacements, indices, parts: this.fixtureService.cachedFixtures, views: new Map() };
+      this.stagePlaces.set(preset, entry);
     }
 
+    const views = entry.views;
     let places = views.get(view);
 
     if (!places) {
       places = new Map();
-      const indices = this.frameFixtureIndices.get(preset);
       const parts = this.fixtureService.cachedFixtures.filter(
         (part) =>
           indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 &&
@@ -965,6 +1007,45 @@ export class PreviewService implements OnDestroy {
     }
 
     return places.get(cachedFixture) || this.fixtureService.getPixelPlace(cachedFixture);
+  }
+
+  // Where the fixtures hang (see getStagePlacements), worked out again only once what it depends on changed: the size
+  // of the stage, where each fixture is put and the order of the fixtures of the project
+  private getPlacements(): Map<string, StagePlacement> {
+    const project = this.projectService.project;
+    const inputs: any[] = [
+      project.stageWidthCm,
+      project.stageHeightCm,
+      project.stageDepthCm,
+      project.stageFloorHeightCm,
+      project.fixtures.length,
+    ];
+
+    for (const fixture of project.fixtures) {
+      inputs.push(
+        fixture,
+        fixture.positioning,
+        fixture.positionX,
+        fixture.positionY,
+        fixture.positionZ,
+        fixture.rotationX,
+        fixture.rotationY,
+        fixture.rotationZ
+      );
+    }
+
+    for (const presetFixture of project.presetFixtures) {
+      inputs.push(presetFixture.fixtureUuid);
+    }
+
+    const previous = this.placementInputs;
+
+    if (!this.placements || inputs.length !== previous.length || inputs.some((input, i) => input !== previous[i])) {
+      this.placementInputs = inputs;
+      this.placements = getStagePlacements(project);
+    }
+
+    return this.placements;
   }
 
   // the channel of a part of a fixture which lights in a color, the first one if there are several
@@ -1081,10 +1162,9 @@ export class PreviewService implements OnDestroy {
     ];
 
     // where the fixtures hang, to aim the moving heads at a spot (and to spread the pixel effects across the stage)
-    const placements = getStagePlacements(this.projectService.project);
+    const placements = this.getPlacements();
     this.framePlacements = placements;
     this.frameFixtureIndices = fixtureIndices;
-    this.frameStagePlaces = new Map();
     this.frameTimeMillis = timeMillis;
     this.frameAudio = new Map();
     this.frameSizedSettings = new Map();

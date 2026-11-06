@@ -287,6 +287,37 @@ describe('PreviewService pixel effects', () => {
     expect(secondEnd).toBeGreaterThan(200);
   });
 
+  it('follows the fixtures moved on the stage and the parts made anew, spread across the stage', () => {
+    const project = TestBed.inject(ProjectService).project;
+    const preset = presetWith(['bar-1', 'bar-2'], pixelEffect({ size: 0.3, spread: 'stage' }));
+    const firstPixels = () => [colorOf('bar-1', '1', preset, 300)[0], colorOf('bar-2', '1', preset, 300)[0]];
+
+    // the block at the left end of the picture: on the first bar
+    expect(firstPixels()[0]).toBeGreaterThan(200);
+    expect(firstPixels()[1]).toBe(0);
+
+    // the second bar put before the first one in the project: it hangs left of it now
+    const secondBar = project.presetFixtures.filter((presetFixture) => presetFixture.fixtureUuid === 'bar-2');
+    project.presetFixtures = [...secondBar, ...project.presetFixtures.filter((presetFixture) => presetFixture.fixtureUuid !== 'bar-2')];
+
+    expect(firstPixels()[0]).toBe(0);
+    expect(firstPixels()[1]).toBeGreaterThan(200);
+
+    // the parts made anew, the same picture
+    fixtureService.updateCachedFixtures();
+    expect(firstPixels()[1]).toBeGreaterThan(200);
+
+    // the first bar put on its own place on the stage, far to the right
+    const firstBar = project.fixtures.find((candidate) => candidate.uuid === 'bar-1');
+    firstBar.positioning = 'manual' as any;
+    firstBar.positionX = 2000;
+    firstBar.positionY = 300;
+    expect(firstPixels()[0]).toBe(0);
+    expect(firstPixels()[1]).toBeGreaterThan(200);
+    firstBar.positionX = -2000;
+    expect(firstPixels()[0]).toBeGreaterThan(200);
+  });
+
   it('lights the white part of the light with the white LED of a pixel, if it is to', () => {
     // the values of the first pixel of the RGBW matrix, from 0 to 255
     const valuesOf = (effect: any) => {

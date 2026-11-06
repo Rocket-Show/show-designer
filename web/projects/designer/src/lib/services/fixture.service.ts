@@ -37,6 +37,9 @@ export class FixtureService {
   // Walking the whole project each time makes that quadratic, so keep an index instead.
   // A list is only ever exchanged as a whole or grown/shrunk, never modified in place, so the
   // list itself together with its length tells us whether the index is still valid.
+  // the brightnesses of the fixture library read so far (see parseBrightnessNumber)
+  private parsedBrightnesses = new Map<string, number>();
+
   private fixtureIndex: { list: Fixture[]; length: number; byUuid: Map<string, Fixture> };
   private profileIndex: { list: FixtureProfile[]; length: number; byUuid: Map<string, FixtureProfile> };
   private cachedFixtureIndex: { list: CachedFixture[]; length: number; byUuid: Map<string, CachedFixture[]> };
@@ -985,8 +988,19 @@ export class FixtureService {
     );
   }
 
+  // A brightness of the fixture library as a number, e.g. 50 of "50%": read once for each text, the preview asks for
+  // them for each pixel in each frame
   private parseBrightnessNumber(brightness: string, unit: string): number {
-    return parseProfileNumber(brightness.substring(0, brightness.length - unit.length));
+    const key = unit + ' ' + brightness;
+
+    if (this.parsedBrightnesses.has(key)) {
+      return this.parsedBrightnesses.get(key);
+    }
+
+    const parsed = parseProfileNumber(brightness.substring(0, brightness.length - unit.length));
+    this.parsedBrightnesses.set(key, parsed);
+
+    return parsed;
   }
 
   // how bright a capability lights, from 0 to 1, like the fixture library gives it: "off", "dark",

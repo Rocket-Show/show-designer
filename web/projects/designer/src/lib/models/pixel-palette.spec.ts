@@ -1,4 +1,4 @@
-import { hexToRgb, PixelPalette, ProjectPixelPalette, rgbToHex } from './pixel-palette';
+import { hexToRgb, PixelPalette, PixelPaletteStop, ProjectPixelPalette, rgbToHex } from './pixel-palette';
 import { Project } from './project';
 
 function palette(stops: [number, string][], extra: any = {}): PixelPalette {
@@ -100,5 +100,23 @@ describe('PixelPalette', () => {
     ]);
     expect([project.pixelPalettes[1].name, project.pixelPalettes[1].repeat, project.pixelPalettes[1].stops]).toEqual(['', 'mirror', []]);
     expect(new Project({}).pixelPalettes).toEqual([]);
+  });
+
+  it('reads the colors of a palette once, and again once a stop moved or got another color', () => {
+    const stops = [new PixelPaletteStop({ position: 1, color: '#0000ff' }), new PixelPaletteStop({ position: 0, color: '#ff0000' })];
+
+    expect(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0)).toEqual([1, 0, 0]);
+    // what is handed out can be changed without changing the palette
+    PixelPalette.colorOf(stops, 'smooth', 'wrap', 0)[0] = 0.5;
+    expect(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0)).toEqual([1, 0, 0]);
+
+    stops[1].color = '#00ff00';
+    expect(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0)).toEqual([0, 1, 0]);
+    stops[1].position = 0.5;
+    expect(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0.25)).toEqual([0, 1, 0]);
+    stops.push(new PixelPaletteStop({ position: 0, color: '#ffffff' }));
+    expect(PixelPalette.colorOf(stops, 'steps', 'wrap', 0)).toEqual([1, 1, 1]);
+    // stops made for one pixel alone are not kept, and read the same
+    expect(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0.75, false)).toEqual(PixelPalette.colorOf(stops, 'smooth', 'wrap', 0.75));
   });
 });
