@@ -943,6 +943,45 @@ describe('EffectCurveComponent', () => {
     expect((component as any).pickerListeners.length).toBe(0);
   });
 
+  it('shows the white LEDs of a matrix in white, as bright as the color the effect lights them in', async () => {
+    // a preset of a matrix of 3 x 2 white LEDs, each a dimmer of its own
+    const project = new Project({
+      fixtureProfiles: [{ ...JSON.parse(JSON.stringify(profiles['test/white-matrix'])), uuid: 'test/white-matrix' }],
+      fixtures: [{ uuid: 'white', profileUuid: 'test/white-matrix', modeShortName: '8ch', dmxUniverseUuid: 'u', dmxFirstChannel: 0 }],
+      presetFixtures: [],
+      presets: [{ uuid: 'look', fixtures: [], steps: [{ uuid: 'step' }] }],
+    });
+    TestBed.inject(ProjectService).project = project;
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.updateCachedFixtures();
+    project.presets[0].fixtures = fixtureService.cachedFixtures.map(
+      (cachedFixture) => new PresetFixture({ fixtureUuid: 'white', pixelKey: cachedFixture.pixel?.key })
+    );
+    presetService.selectedPreset = project.presets[0];
+
+    const pixels = new EffectPixel({ uuid: 'pixels', size: 0.34, softness: 0, palette: { stops: [{ position: 0, color: '#ff0000' }] } });
+    curve = pixels;
+    await render();
+
+    // its pixels, not its master dimmer
+    const fixtures = (component as any).getPixelPreviewFixtures();
+    expect(fixtures.length).toBe(1);
+    expect([fixtures[0].columns, fixtures[0].rows, fixtures[0].example]).toEqual([3, 2, undefined]);
+    expect(fixtures[0].white).toEqual([true, true, true, true, true, true]);
+
+    // halfway through its period, the block on the middle column: white, as bright as the red
+    const colorOf = (index: number) => (component as any).partColorOf(pixels, fixtures[0].parts[index], 0.5, 0, [0, 1, 0], true);
+    expect(colorOf(1)).toEqual([1, 1, 1]);
+    expect(Math.max(...colorOf(0))).toBeLessThan(0.01);
+
+    // across the stage as well
+    pixels.spread = 'stage';
+    (component as any).stagePreview = undefined;
+    const stage = (component as any).getStagePreview();
+    expect(stage.example).toBe(false);
+    expect(stage.parts.map((part: any) => part.white)).toEqual([true, true, true, true, true, true]);
+  });
+
   it('tells when the preset dims to 0, which keeps a pixel effect dark', async () => {
     curve = new EffectPixel({ uuid: 'pixels' });
     await render();

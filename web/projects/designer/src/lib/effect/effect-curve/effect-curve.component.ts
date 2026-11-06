@@ -55,6 +55,8 @@ interface PixelPreviewFixture {
   columns: number;
   rows: number;
   parts: PixelContext[];
+  // which of its parts are pixels lighting in white only (see isWhitePixel)
+  white?: boolean[];
   // shown while the preset lights no fixture in colors yet
   example?: boolean;
 
@@ -71,6 +73,9 @@ const PIXEL_HOUSING_EDGE_COLOR = 'rgba(255, 255, 255, 0.07)';
 // and a lighter one in the picture of the stage, where no housing is drawn around them
 const PIXEL_OFF_COLOR = [20, 23, 28];
 const STAGE_PIXEL_OFF_COLOR = [36, 40, 48];
+
+// the color the preset puts on a pixel lighting in white only: white at full, which its dimmer dims
+const WHITE = [1, 1, 1];
 
 // how strong the glow around the lit pixels is, and how far it reaches (in pixels of the fixture)
 const PIXEL_GLOW_ALPHA = 0.8;
@@ -1002,8 +1007,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return { width: bitmap.width, height: bitmap.height, frames: bitmap.frames.length, size };
   }
 
-  // The fixtures of the preset which light in colors, each with the parts it has in the preset (its pixels, or itself),
-  // in the order the effect chases them in. None selected yet: a bar and a matrix to show what the pattern looks like.
+  // The fixtures of the preset which light in colors (or have pixels lighting in white only), each with the parts it has
+  // in the preset (its pixels, or itself), in the order the effect chases them in. None selected yet: a bar and a matrix
+  // to show what the pattern looks like.
   private getPixelPreviewFixtures(): PixelPreviewFixture[] {
     if (this.pixelPreviewFixtures) {
       return this.pixelPreviewFixtures;
@@ -1021,7 +1027,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
           channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.ColorIntensity)
         );
 
-        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+        if (
+          (lightsInColors || this.isWhitePixel(cachedFixture)) &&
+          this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)
+        ) {
           const parts = byFixture.get(cachedFixture.fixture.uuid) || [];
           parts.push(cachedFixture);
           byFixture.set(cachedFixture.fixture.uuid, parts);
@@ -1030,7 +1039,13 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
       byFixture.forEach((parts, fixtureUuid) => {
         const places = parts.map((part) => this.fixtureService.getPixelPlace(part));
-        fixtures.push({ index: chase.indices.get(fixtureUuid) ?? 0, columns: places[0].columns, rows: places[0].rows, parts: places });
+        fixtures.push({
+          index: chase.indices.get(fixtureUuid) ?? 0,
+          columns: places[0].columns,
+          rows: places[0].rows,
+          parts: places,
+          white: parts.map((part) => this.isWhitePixel(part)),
+        });
       });
 
       fixtures.sort((fixture1, fixture2) => fixture1.index - fixture2.index);
@@ -1138,8 +1153,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     glow?.clearRect(0, 0, fixture.columns, fixture.rows);
 
-    for (const part of fixture.parts) {
-      const [red, green, blue] = this.pixelColorOf(effect, part, cycles, fixture.index, base).map((component) =>
+    fixture.parts.forEach((part, i) => {
+      const [red, green, blue] = this.partColorOf(effect, part, cycles, fixture.index, base, fixture.white?.[i]).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
 
@@ -1154,7 +1169,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
         glow.fillStyle = `rgb(${red}, ${green}, ${blue})`;
         glow.fillRect(part.column, part.row, 1, 1);
       }
-    }
+    });
 
     if (glow) {
       this.drawPixelGlow(glow.canvas, left, top, width, height, cell);
@@ -1190,7 +1205,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     for (const part of stage.parts) {
       const cycles = effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
-      const [red, green, blue] = this.pixelColorOf(effect, part.place, cycles, part.index, base, true).map((component) =>
+      const [red, green, blue] = this.partColorOf(effect, part.place, cycles, part.index, base, part.white, true).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
       const x = left + part.place.x * pictureWidth - cell / 2;
@@ -1210,10 +1225,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
-  // The parts of the preset lighting in colors where they are in the picture of the stage, like the preview of the
-  // designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with their places in the chase of the
-  // preset. None picked yet: three bars side by side.
-  private getStagePreview(): { view: string; parts: { place: PixelContext; index: number }[]; count: number; example: boolean } {
+  // The parts of the preset lighting in colors (and the pixels lighting in white only) where they are in the picture of
+  // the stage, like the preview of the designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with
+  // their places in the chase of the preset. None picked yet: three bars side by side.
+  private getStagePreview(): {
+    view: string;
+    parts: { place: PixelContext; index: number; white?: boolean }[];
+    count: number;
+    example: boolean;
+  } {
     const view = this.pixelEffect.view;
 
     if (this.stagePreview && this.stagePreview.view === view) {
@@ -1240,7 +1260,10 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
           )
         );
 
-        if (lightsInColors && this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)) {
+        if (
+          (lightsInColors || this.isWhitePixel(cachedFixture)) &&
+          this.presetService.getPresetFixture(preset, cachedFixture.fixture.uuid, cachedFixture.pixel?.key)
+        ) {
           parts.push(cachedFixture);
         }
       }
@@ -1277,9 +1300,52 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     const places = stagePixelPlaces(positions, view);
-    this.stagePreview = { view, count, parts: places.map((place, i) => ({ place, index: partIndices[i] })), example: parts.length === 0 };
+    this.stagePreview = {
+      view,
+      count,
+      parts: places.map((place, i) => ({ place, index: partIndices[i], white: parts.length > 0 && this.isWhitePixel(parts[i]) })),
+      example: parts.length === 0,
+    };
 
     return this.stagePreview;
+  }
+
+  // A pixel of a bar or a matrix lighting in white only: no red, green and blue, a dimmer of its own (e.g. a LED of a
+  // matrix of white strobes). A pixel effect lights it as bright as its color is (see PreviewService.mixPixelEffect).
+  private isWhitePixel(cachedFixture: CachedFixture): boolean {
+    return (
+      !!cachedFixture.pixel &&
+      !cachedFixture.channels.some((channel) =>
+        channel.capabilities.some(
+          (capability) =>
+            capability.capability.type === FixtureCapabilityType.ColorIntensity &&
+            [PixelColor.Red, PixelColor.Green, PixelColor.Blue].indexOf(capability.capability.color) >= 0
+        )
+      ) &&
+      cachedFixture.channels.some((channel) =>
+        channel.capabilities.some((capability) => capability.capability.type === FixtureCapabilityType.Intensity)
+      )
+    );
+  }
+
+  // the color of a part of the preview (see pixelColorOf): a pixel lighting in white only in white, as bright as the
+  // brightest of the red, green and blue of the color the effect lights it in, on white at full
+  private partColorOf(
+    effect: EffectPixel,
+    part: PixelContext,
+    cycles: number,
+    fixtureIndex: number,
+    base: number[],
+    white: boolean,
+    stage = false
+  ): number[] {
+    if (!white) {
+      return this.pixelColorOf(effect, part, cycles, fixtureIndex, base, stage);
+    }
+
+    const brightness = Math.max(...this.pixelColorOf(effect, part, cycles, fixtureIndex, WHITE, stage));
+
+    return [brightness, brightness, brightness];
   }
 
   // the color of a pixel of the preview, as red, green and blue between 0 and 1: what the effect lights it in, blended

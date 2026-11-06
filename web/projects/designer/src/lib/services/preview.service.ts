@@ -798,7 +798,8 @@ export class PreviewService implements OnDestroy {
 
   // A pixel effect on a part of a fixture (a pixel, or a fixture without pixels): the color of its pattern where the part
   // is in its fixture, blended with the color the preset puts on it, on its red, green and blue. Its other channels keep
-  // what the preset puts on them, its dimmer as well. This follows the same rules as Rocket Show.
+  // what the preset puts on them, its dimmer as well. A pixel lighting in white only (see getWhitePixelDimmer) lights as
+  // bright as the color is, on its dimmer. This follows the same rules as Rocket Show.
   private mixPixelEffect(
     effect: EffectPixel,
     effectTimeMillis: number,
@@ -812,8 +813,9 @@ export class PreviewService implements OnDestroy {
     const channels = [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].map((color) =>
       this.getColorChannel(cachedFixture, color)
     );
+    const whiteDimmer = channels.every((channel) => !channel) ? this.getWhitePixelDimmer(cachedFixture) : undefined;
 
-    if (channels.every((channel) => !channel)) {
+    if (channels.every((channel) => !channel) && !whiteDimmer) {
       return;
     }
 
@@ -826,11 +828,14 @@ export class PreviewService implements OnDestroy {
       return;
     }
 
-    // the color the preset puts on the part, as red, green and blue between 0 and 1
-    const base = channels.map((channel) => {
-      const value = channel ? this.getChannelValue(values, channel.name, cachedFixture.profile.uuid) : undefined;
-      return value ? value.value / channel.maxValue : 0;
-    });
+    // the color the preset puts on the part, as red, green and blue between 0 and 1 (white at full on a pixel lighting
+    // in white only, which its dimmer dims)
+    const base = whiteDimmer
+      ? [1, 1, 1]
+      : channels.map((channel) => {
+          const value = channel ? this.getChannelValue(values, channel.name, cachedFixture.profile.uuid) : undefined;
+          return value ? value.value / channel.maxValue : 0;
+        });
 
     // Where the part is in its fixture, every fixture starting the random looking patterns somewhere else. Spread
     // across the stage, where it is in the picture of the stage, which is one for all of them.
@@ -863,6 +868,26 @@ export class PreviewService implements OnDestroy {
         : PixelPalette.colorOf(stops, palette.between, palette.repeat, sample[0], palette.ref !== 'preset');
     const lit = color.map((component) => component * level);
 
+    // A pixel lighting in white only lights as bright as the brightest of the red, green and blue of the light, blended
+    // with the white at full the preset puts on it, and dimmed by its dimmer, like a pixel lighting in colors is
+    if (whiteDimmer) {
+      const value = this.getChannelValue(values, whiteDimmer.name, cachedFixture.profile.uuid);
+      const dimmer = value ? value.value / whiteDimmer.maxValue : 0;
+
+      this.mixPixelValue(
+        effect,
+        cachedFixture,
+        whiteDimmer,
+        1,
+        Math.max(lit[0], lit[1], lit[2]),
+        level,
+        values,
+        effectIntensityPercentage,
+        dimmer
+      );
+      return;
+    }
+
     // the white part of the light on the white LED, if it is to light it
     const white = effect.whiteLed ? this.getColorChannel(cachedFixture, FixtureCapabilityColor.White) : undefined;
     let litWhite = 0;
@@ -891,7 +916,7 @@ export class PreviewService implements OnDestroy {
 
   // A color of a pixel the effect lights, blended with the one the preset puts on it (base, between 0 and 1): the light
   // of the pattern (lit) in place of it, the base as bright as the pattern makes it (mask), the light added to it or the
-  // brighter of both
+  // brighter of both. Dimmed (between 0 and 1) on the dimmer of a pixel lighting in white only.
   private mixPixelValue(
     effect: EffectPixel,
     cachedFixture: CachedFixture,
@@ -900,7 +925,8 @@ export class PreviewService implements OnDestroy {
     lit: number,
     level: number,
     values: FixtureChannelValue[],
-    effectIntensityPercentage: number
+    effectIntensityPercentage: number,
+    dimmer = 1
   ) {
     let target: number;
 
@@ -921,8 +947,24 @@ export class PreviewService implements OnDestroy {
     const fixtureChannelValue = new FixtureChannelValue();
     fixtureChannelValue.channelName = channel.name;
     fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-    fixtureChannelValue.value = channel.maxValue * target;
+    fixtureChannelValue.value = channel.maxValue * target * dimmer;
     this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+  }
+
+  // The dimmer of a pixel of a bar or a matrix lighting in white only (no red, green and blue, a dimmer of its own, e.g.
+  // a LED of a matrix of white strobes), which a pixel effect lights. None for any other part: a fixture without pixels
+  // and the general channels of one with pixels (e.g. its master dimmer) keep what the preset puts on them.
+  private getWhitePixelDimmer(cachedFixture: CachedFixture): CachedFixtureChannel {
+    return cachedFixture.pixel ? this.getDimmerChannel(cachedFixture) : undefined;
+  }
+
+  // whether a pixel effect lights a part of a fixture: in red, green and blue, or in white only
+  private lightsPixelEffect(cachedFixture: CachedFixture): boolean {
+    return (
+      [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].some((color) =>
+        this.getColorChannel(cachedFixture, color)
+      ) || !!this.getWhitePixelDimmer(cachedFixture)
+    );
   }
 
   // the audio a pixel effect follows at the moment of the frame, none for one which follows none
@@ -964,8 +1006,8 @@ export class PreviewService implements OnDestroy {
     return frames || demoAudioFrames;
   }
 
-  // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones lighting in
-  // colors, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
+  // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones a pixel effect
+  // lights, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
   private getStagePixelPlace(preset: Preset, view: string, cachedFixture: CachedFixture): PixelContext {
     const indices = this.frameFixtureIndices.get(preset);
     let entry = this.stagePlaces.get(preset);
@@ -987,10 +1029,7 @@ export class PreviewService implements OnDestroy {
       places = new Map();
       const parts = this.fixtureService.cachedFixtures.filter(
         (part) =>
-          indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 &&
-          [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].some((color) =>
-            this.getColorChannel(part, color)
-          )
+          indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 && this.lightsPixelEffect(part)
       );
       const positions = parts.map((part) => {
         const partPlace = this.fixtureService.getPixelPlace(part);
