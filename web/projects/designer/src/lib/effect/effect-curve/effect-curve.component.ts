@@ -95,8 +95,11 @@ export interface CurveChannelOption {
   channel: CachedFixtureChannel;
 }
 
-// how tall the tiles to pick a pattern from are at least (two rows), in CSS pixels
+// how tall the tiles to pick a pattern from are at least (two rows), how far they keep from the pattern picked and from
+// the edges of the window, in CSS pixels
 const PICKER_MIN_HEIGHT = 180;
+const PICKER_GAP = 4;
+const PICKER_MARGIN = 8;
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -184,8 +187,6 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   // ---- a pixel effect, edited with its pattern, palette and blend in place of the curve and what it drives
 
-  public readonly pixelPatternsForBars = pixelPatternsForBars;
-  public readonly pixelPatternsForMatrices = pixelPatternsForMatrices;
   public readonly pixelBlends = ['replace', 'mask', 'add', 'max'];
   public readonly pixelSpreads = ['fixture', 'stage'];
   public readonly pixelFonts = [PIXEL_FONT, 'sans-serif', 'serif', 'monospace'];
@@ -225,6 +226,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       this.startAnimation();
     } else {
       this.stopAnimation();
+
+      // the tiles close with the effect
+      this.closePicker();
     }
   }
 
@@ -234,10 +238,27 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   @ViewChildren('patternTile') patternTiles: QueryList<ElementRef<HTMLCanvasElement>>;
   public pickingPattern = false;
 
-  // the tiles, as tall as the panel shows them once they are open
+  // the pattern picked, which opens the tiles below it
+  @ViewChild('pickerToggle') pickerToggle: ElementRef<HTMLElement>;
+
+  // The tiles, placed over the panels once they are open, and again when the panel scrolls or the window changes its
+  // size. They close with a click anywhere else and with Escape.
+  private pickerElement: HTMLElement;
+  private pickerListeners: (() => void)[] = [];
+
   @ViewChild('picker') set picker(picker: ElementRef<HTMLElement>) {
-    if (picker) {
-      this.fitPicker(picker.nativeElement);
+    const element = picker?.nativeElement;
+
+    if (element === this.pickerElement) {
+      return;
+    }
+
+    this.removePickerListeners();
+    this.pickerElement = element;
+
+    if (element) {
+      this.placePicker();
+      this.addPickerListeners();
     }
   }
   public readonly pixelPatternGroups = [
@@ -313,6 +334,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopAnimation();
+    this.removePickerListeners();
     this.effectsOpenChangedSubscription.unsubscribe();
     this.fixtureSelectionChangedSubscription.unsubscribe();
     this.langChangeSubscription.unsubscribe();
@@ -458,31 +480,90 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
-  // The tiles open over the card and scroll inside: as far down as the panels they are in
-  // show them, but no smaller than two rows. Where less is left, the panel scrolls to show
-  // them.
-  private fitPicker(picker: HTMLElement) {
-    let bottom = window.innerHeight;
+  // the icon of the fixtures the pattern is made for, like in the fixture list
+  pixelPatternIcon(): string {
+    return (this.pixelPatternGroups.find((group) => group.patterns.includes(this.pixelEffect.pattern)) || this.pixelPatternGroups[0]).icon;
+  }
 
-    for (let parent = picker.parentElement; parent; parent = parent.parentElement) {
-      if (getComputedStyle(parent).overflowY !== 'visible') {
-        bottom = Math.min(bottom, parent.getBoundingClientRect().bottom);
-      }
-    }
+  togglePicker() {
+    this.pickingPattern = !this.pickingPattern;
+  }
 
-    const room = Math.floor(bottom - picker.getBoundingClientRect().top - 8);
-
-    picker.style.maxHeight = Math.max(PICKER_MIN_HEIGHT, room) + 'px';
-
-    if (room < PICKER_MIN_HEIGHT) {
-      picker.scrollIntoView?.({ block: 'nearest' });
-    }
+  closePicker() {
+    this.pickingPattern = false;
   }
 
   // a pattern picked from the tiles
   pickPattern(pattern: string) {
-    this.pickingPattern = false;
+    this.closePicker();
     this.setPattern(pattern);
+  }
+
+  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside.
+  // Where less than two rows are left below it, but more above it, they open above it.
+  placePicker() {
+    const picker = this.pickerElement;
+    const toggle = this.pickerToggle?.nativeElement;
+
+    if (!picker || !toggle) {
+      return;
+    }
+
+    const anchor = toggle.getBoundingClientRect();
+    const width = Math.min(picker.offsetWidth, window.innerWidth - 2 * PICKER_MARGIN);
+    const below = Math.floor(window.innerHeight - anchor.bottom - PICKER_GAP - PICKER_MARGIN);
+    const above = Math.floor(anchor.top - PICKER_GAP - PICKER_MARGIN);
+    const upwards = below < PICKER_MIN_HEIGHT && above > below;
+
+    picker.style.left = Math.max(PICKER_MARGIN, Math.min(anchor.left, window.innerWidth - width - PICKER_MARGIN)) + 'px';
+
+    if (upwards) {
+      picker.style.top = '';
+      picker.style.bottom = window.innerHeight - anchor.top + PICKER_GAP + 'px';
+    } else {
+      picker.style.top = anchor.bottom + PICKER_GAP + 'px';
+      picker.style.bottom = '';
+    }
+
+    picker.style.maxHeight = Math.max(upwards ? above : below, 0) + 'px';
+  }
+
+  private addPickerListeners() {
+    this.ngZone.runOutsideAngular(() => {
+      const place = () => this.placePicker();
+
+      // a click anywhere but on the tiles and on the pattern picked (which closes them itself)
+      const pointerDown = (event: Event) => {
+        const target = event.target as Node;
+
+        if (!this.pickerElement?.contains(target) && !this.pickerToggle?.nativeElement.contains(target)) {
+          this.ngZone.run(() => this.closePicker());
+        }
+      };
+      const keyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          this.ngZone.run(() => this.closePicker());
+        }
+      };
+
+      // the scroll of any panel, which does not bubble up
+      window.addEventListener('scroll', place, true);
+      window.addEventListener('resize', place);
+      document.addEventListener('pointerdown', pointerDown, true);
+      document.addEventListener('keydown', keyDown);
+
+      this.pickerListeners = [
+        () => window.removeEventListener('scroll', place, true),
+        () => window.removeEventListener('resize', place),
+        () => document.removeEventListener('pointerdown', pointerDown, true),
+        () => document.removeEventListener('keydown', keyDown),
+      ];
+    });
+  }
+
+  private removePickerListeners() {
+    this.pickerListeners.forEach((remove) => remove());
+    this.pickerListeners = [];
   }
 
   // Each pattern on a bar or a matrix in the colors of the effect, moving: what it looks like before it is picked.
