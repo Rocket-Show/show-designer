@@ -37,7 +37,15 @@ import { getStagePlacements } from '../../models/pan-tilt';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../../models/pixel-stage';
 import { PIXEL_FONT, pixelFontBitmap, textBitmap } from '../../models/pixel-text';
 import { encodeBase64, PixelBitmap } from '../../models/pixel-bitmap';
-import { animationMillis, DEFAULT_PIXEL_IMAGE_SIZE, imageBitmapOf, PIXEL_IMAGE_SIZES } from '../../models/pixel-image';
+import {
+  animationMillis,
+  fittedPixelImageSize,
+  imageBitmapOf,
+  PIXEL_IMAGE_SIZES,
+  PixelPicture,
+  pixelImageBytes,
+  pixelImageSize as longestSideImageSize,
+} from '../../models/pixel-image';
 import { PixelAudio } from '../../models/pixel-audio';
 import { demoAudioFrames } from '../../models/pixel-audio-analysis';
 
@@ -47,6 +55,8 @@ interface PixelPreviewFixture {
   columns: number;
   rows: number;
   parts: PixelContext[];
+  // shown while the preset lights no fixture in colors yet
+  example?: boolean;
 
   // the colors of its lit pixels, a pixel of this canvas each, drawn blurred over them to let them glow (see
   // drawPixelGlow). Made with the first preview.
@@ -188,8 +198,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public readonly pixelAudioBands = ['full', 'bass', 'mid', 'high'];
   public readonly pixelAudioFollows = ['brightness', 'size'];
 
-  // how large an image is made when it is picked, and whether the last one could not be read
-  public pixelImageSize = DEFAULT_PIXEL_IMAGE_SIZE;
+  // how large an image is made when it is picked: as large as the pixels it is shown on, or its longest side as many
+  // pixels as picked (for fixtures still to come), and whether the last one could not be read
+  public pixelImageSize: number | 'fixtures' = 'fixtures';
   public pixelImageFailed = false;
   public readonly pixelViews = ['front', 'top'];
   public readonly pixelPalettes = builtInPixelPalettes;
@@ -198,7 +209,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   public pixelTab = 'colors';
 
   // the parts of the preset in the picture of the stage, for an effect spread across it, and the view it is seen in
-  private stagePreview: { view: string; parts: { place: PixelContext; index: number }[]; count: number };
+  private stagePreview: { view: string; parts: { place: PixelContext; index: number }[]; count: number; example: boolean };
 
   // the fixtures of the preset the grid shows the pixel effect on, worked out when the selection changes
   private pixelPreviewFixtures: PixelPreviewFixture[];
@@ -621,7 +632,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     const effect = this.pixelEffect;
 
     try {
-      effect.bitmap = await imageBitmapOf(file, this.pixelImageSize);
+      const size = this.pixelImageSize;
+      const pictures = this.pixelImagePictures();
+
+      effect.bitmap = await imageBitmapOf(file, (width, height) =>
+        size === 'fixtures' ? fittedPixelImageSize(width, height, pictures) : longestSideImageSize(width, height, size)
+      );
       effect.imageName = file.name;
       this.pixelImageFailed = false;
 
@@ -877,6 +893,34 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return pixelPaletteCss(palette, (preset && this.colorService.getPresetLightColor(preset)) || '#ffffff');
   }
 
+  // The pictures an image is shown on: each fixture of the preset lighting in colors (its matrix, its pixels in a row
+  // or itself), or all of them together across the stage. None while the preset lights none.
+  pixelImagePictures(): PixelPicture[] {
+    if (this.pixelEffect.spread === 'stage') {
+      const stage = this.getStagePreview();
+
+      return stage.example || stage.parts.length === 0 ? [] : [stage.parts[0].place];
+    }
+
+    const fixtures = this.getPixelPreviewFixtures();
+
+    return fixtures.some((fixture) => fixture.example) ? [] : fixtures.map((fixture) => fixture.parts[0]);
+  }
+
+  // what the pixels of the image take in the project: their size, their frames and their bytes
+  get pixelImageStored(): { width: number; height: number; frames: number; size: string } {
+    const bitmap = this.pixelEffect.bitmap;
+
+    if (!bitmap || !this.pixelEffect.imageName) {
+      return undefined;
+    }
+
+    const bytes = pixelImageBytes(bitmap);
+    const size = bytes < 1024 * 1024 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1024 / 1024).toFixed(1) + ' MB';
+
+    return { width: bitmap.width, height: bitmap.height, frames: bitmap.frames.length, size };
+  }
+
   // The fixtures of the preset which light in colors, each with the parts it has in the preset (its pixels, or itself),
   // in the order the effect chases them in. None selected yet: a bar and a matrix to show what the pattern looks like.
   private getPixelPreviewFixtures(): PixelPreviewFixture[] {
@@ -912,7 +956,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     if (fixtures.length === 0) {
-      fixtures.push(this.examplePixelFixture(0, 12, 1), this.examplePixelFixture(1, 8, 8));
+      fixtures.push({ ...this.examplePixelFixture(0, 12, 1), example: true }, { ...this.examplePixelFixture(1, 8, 8), example: true });
     }
 
     this.pixelPreviewFixtures = fixtures;
@@ -1088,7 +1132,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // The parts of the preset lighting in colors where they are in the picture of the stage, like the preview of the
   // designer and Rocket Show see them (see PreviewService.getStagePixelPlace), with their places in the chase of the
   // preset. None picked yet: three bars side by side.
-  private getStagePreview(): { view: string; parts: { place: PixelContext; index: number }[]; count: number } {
+  private getStagePreview(): { view: string; parts: { place: PixelContext; index: number }[]; count: number; example: boolean } {
     const view = this.pixelEffect.view;
 
     if (this.stagePreview && this.stagePreview.view === view) {
@@ -1152,7 +1196,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
 
     const places = stagePixelPlaces(positions, view);
-    this.stagePreview = { view, count, parts: places.map((place, i) => ({ place, index: partIndices[i] })) };
+    this.stagePreview = { view, count, parts: places.map((place, i) => ({ place, index: partIndices[i] })), example: parts.length === 0 };
 
     return this.stagePreview;
   }

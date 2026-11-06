@@ -336,6 +336,17 @@ describe('EffectCurveComponent pixel preview', () => {
     return { component, context, presetService };
   }
 
+  it('shows an image on the pixels of the fixtures of the preset, none while it lights none', () => {
+    expect(
+      pixelPreview(chase())
+        .component.pixelImagePictures()
+        .map((picture) => [picture.columns, picture.rows])
+    ).toEqual([[3, 1]]);
+    expect(pixelPreview(chase(), false).component.pixelImagePictures()).toEqual([]);
+    // across the stage of a project without fixtures
+    expect(pixelPreview(chase({ spread: 'stage' })).component.pixelImagePictures()).toEqual([]);
+  });
+
   // a block of a third of the bar, in red: halfway through its period it is on the middle pixel
   function chase(settings: any = {}): EffectPixel {
     return new EffectPixel({
@@ -936,9 +947,25 @@ describe('EffectCurveComponent', () => {
     await component.pickImage({ target: { files: [file], value: 'red.png' } } as any);
     await update();
 
-    expect([pixels.bitmap.width, pixels.bitmap.height, pixels.bitmap.channels, pixels.imageName]).toEqual([4, 2, 3, 'red.png']);
-    expect(pixels.bitmap.value(pixels.bitmap.frame(0), 3, 1, 0)).toBe(255);
+    // as large as the pixels of the preset: the par is one, which the image covers with two
+    expect([pixels.bitmap.width, pixels.bitmap.height, pixels.bitmap.channels, pixels.imageName]).toEqual([2, 1, 3, 'red.png']);
+    expect(pixels.bitmap.value(pixels.bitmap.frame(0), 1, 0, 0)).toBe(255);
     expect(element.querySelector('.pixel-image-pick').textContent).toContain('red.png');
+    expect(element.querySelector('.pixel-image-stored').textContent.trim()).toBe('designer.effect.pixel-image-stored');
+    expect(component.pixelImageStored).toEqual({ width: 2, height: 1, frames: 1, size: '1 KB' });
+
+    // as large as asked, for fixtures still to come
+    const larger = document.createElement('canvas');
+    larger.width = 400;
+    larger.height = 200;
+    const largerBlob: Blob = await new Promise((resolve) => larger.toBlob(resolve, 'image/png'));
+    await select(element.querySelector('select[name="pixelImageSize"]'), '1: 16');
+    await component.pickImage({ target: { files: [new File([largerBlob], 'wide.png', { type: 'image/png' })], value: '' } } as any);
+    expect([pixels.bitmap.width, pixels.bitmap.height]).toEqual([16, 8]);
+    // an animation, in megabytes
+    pixels.bitmap.frames = new Array(30).fill('A'.repeat(65536));
+    expect(component.pixelImageStored.size).toBe('1.9 MB');
+    pixels.bitmap.frames = pixels.bitmap.frames.slice(0, 1);
 
     // fitted, scrolling and in its own colors or through the palette
     expect((element.querySelector('select[name="pixelScroll"]') as HTMLSelectElement).value).toBe('none');
@@ -950,7 +977,7 @@ describe('EffectCurveComponent', () => {
     await component.pickImage({ target: { files: [new File(['no image'], 'notes.txt', { type: 'text/plain' })], value: '' } } as any);
     await update();
     expect(element.querySelector('.pixel-image-failed')).not.toBeNull();
-    expect(pixels.imageName).toBe('red.png');
+    expect(pixels.imageName).toBe('wide.png');
   });
 
   it('follows the audio of the composition, in a band and with its brightness or its size', async () => {

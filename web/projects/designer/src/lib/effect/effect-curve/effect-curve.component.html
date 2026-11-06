@@ -325,13 +325,22 @@
     </div>
     <div class="my-auto ml-2">
       <select name="pixelImageSize" [(ngModel)]="pixelImageSize">
+        <option [ngValue]="'fixtures'">{{ 'designer.effect.pixel-image-size-fixtures' | translate }}</option>
         @for (size of pixelImageSizes; track size) {
         <option [ngValue]="size">{{ size }} px</option>
         }
       </select>
     </div>
   </div>
-  @if (pixelImageFailed) {
+  <!-- what the pixels of the image take in the project -->
+  @if (pixelImageStored; as stored) {
+  <div class="text-muted pixel-image-stored">
+    {{
+      (stored.frames > 1 ? 'designer.effect.pixel-image-stored-animation' : 'designer.effect.pixel-image-stored')
+        | translate : { width: stored.width, height: stored.height, frames: stored.frames, size: stored.size }
+    }}
+  </div>
+  } @if (pixelImageFailed) {
   <div class="text-danger pixel-image-failed">{{ 'designer.effect.pixel-image-failed' | translate }}</div>
   }
   <div class="d-flex">

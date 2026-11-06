@@ -199,3 +199,9 @@
 .pixel-audio-buses-picked {
   color: var(--sd-text-muted);
 }
+
+/* what the pixels of an image take in the project, below the button picking it */
+.pixel-image-stored {
+  margin: 2px 0 4px 100px;
+  font-size: 0.75rem;
+}
