@@ -27,6 +27,9 @@ import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
 // remembers whether the render is turned off, across sessions
 const PREVIEW_HIDDEN_STORAGE_KEY = 'previewHidden';
 
+// how many fixtures at most throw real light on the stage (see PreviewComponent.assignLights)
+export const PREVIEW_MAX_LIGHTS = 8;
+
 // how slow a frame of the preview may be with the glow on average (20 frames a second), measured over a number of
 // frames after the first ones, and how long a pause between two frames starts the measurement over (in ms)
 const GLOW_SLOW_FRAME_MILLIS = 50;
@@ -234,6 +237,28 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     this.renderer.render(this.scene, this.camera);
   }
 
+  // The real lights on the stage: only the brightest fixtures light it, the beams and the lenses of all of them show.
+  // Each light costs for every pixel of the stage, and the shaders of a graphics card hold only a few dozens of them
+  // (beyond, they fail to compile and the stage stays black). Always as many lights are on (as far as there are
+  // fixtures with one), so the shaders never have to be compiled again, and a fixture keeps its light against one as
+  // bright, so they don't take turns.
+  private assignLights() {
+    const fixtures = this.fixtures3d.filter((fixture3d) => fixture3d.hasLight);
+    const ranked = fixtures
+      .map((fixture3d, index) => ({ fixture3d, index, shown: fixture3d.lightShown }))
+      .sort(
+        (fixture1, fixture2) =>
+          fixture2.fixture3d.lightLevel - fixture1.fixture3d.lightLevel ||
+          Number(fixture2.shown) - Number(fixture1.shown) ||
+          fixture1.index - fixture2.index
+      );
+    const lit = new Set(ranked.slice(0, PREVIEW_MAX_LIGHTS).map((entry) => entry.fixture3d));
+
+    for (const fixture3d of fixtures) {
+      fixture3d.showLight(lit.has(fixture3d));
+    }
+  }
+
   // The glow renders the stage twice: a computer without a graphics card of its own can't keep up with it. Once it
   // has rendered a few frames (the first ones compile the shaders), the time a frame takes on average is measured, and
   // the glow left out while the designer is open, where the preview gets slower than 20 frames a second with it. A
@@ -397,6 +422,8 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
         fixture3d.isSelected = this.previewService.fixtureIsSelected(fixture3d.fixture.fixture.uuid, fixture3d.fixture.pixel?.key, presets);
       }
     }
+
+    this.assignLights();
 
     // all parts of the fixtures with pixels have added their light
     for (const housing of this.pixelHousings.values()) {

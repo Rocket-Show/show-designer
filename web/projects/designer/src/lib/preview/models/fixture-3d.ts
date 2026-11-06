@@ -68,6 +68,9 @@ export abstract class Fixture3d {
   // spotlight
   protected hasSpotLight: boolean = false;
   protected spotLight: THREE.SpotLight;
+
+  // how much light it throws on the stage in this frame, between 0 and 1 (see PreviewComponent.assignLights)
+  public lightLevel = 0;
   protected spotLightBeam: THREE.Mesh;
   protected spotlightGroup: THREE.Object3D;
   protected spotlightMaterial: THREE.ShaderMaterial;
@@ -433,6 +436,7 @@ export abstract class Fixture3d {
 
       this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
+      this.lightLevel = (colorMax / 255) * this.dimmer;
       this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
 
       const lensLevel = (colorMax / 255) * this.dimmer;
@@ -450,6 +454,22 @@ export abstract class Fixture3d {
     if (this.hasBulb) {
       this.bulbMaterial.color.copy(this.litColor);
       this.bulbMaterial.emissive.copy(this.litColor);
+    }
+  }
+
+  // does it throw light on the stage? (the beam and the lens show anyway)
+  get hasLight(): boolean {
+    return this.hasSpotLight && !!this.spotLight;
+  }
+
+  get lightShown(): boolean {
+    return this.hasLight && this.spotLight.visible;
+  }
+
+  // the light it throws on the stage, or none: only some of the fixtures light it (see PreviewComponent.assignLights)
+  showLight(shown: boolean) {
+    if (this.hasLight) {
+      this.spotLight.visible = shown;
     }
   }
 
@@ -476,7 +496,9 @@ export abstract class Fixture3d {
   protected createSpotLightBeam() {
     // TODO set the correct angle from the profile
     const beamAngleDegrees = 14;
-    const geometry = new THREE.CylinderGeometry(0.1, beamAngleDegrees * 1.2, 100, 64, 20, false);
+    // the shader works out the light for each pixel from where it is: few faces do (32 around it, one along it), and
+    // no disc closing it at its far end
+    const geometry = new THREE.CylinderGeometry(0.1, beamAngleDegrees * 1.2, 100, 32, 1, true);
     geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, -geometry.parameters.height / 2, 0));
     geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 

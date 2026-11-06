@@ -25,7 +25,7 @@ import { ColorChanger3d } from './models/color-changer-3d';
 import { Fixture3d } from './models/fixture-3d';
 import { MovingHead3d } from './models/moving-head-3d';
 import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
-import { PreviewComponent } from './preview.component';
+import { PREVIEW_MAX_LIGHTS, PreviewComponent } from './preview.component';
 
 // The 3D preview renders the stage with the fixtures of the project, in the light of what is
 // playing, and can be turned off to save the time it takes.
@@ -467,6 +467,54 @@ describe('PreviewComponent', () => {
     expect(previewService.getChannelValues).toHaveBeenCalledWith(1000, jasmine.any(Array));
     expect(par.updatePreview).toHaveBeenCalledWith([value], 0.5, 1000);
     expect(head.updatePreview).toHaveBeenCalledWith([], 0.5, 1000);
+  });
+
+  it('lights the stage with the brightest fixtures alone, always as many of them, the beams of all of them showing', () => {
+    // twelve pars in all, each a little brighter than the one before
+    for (let i = 1; i <= 11; i++) {
+      project.fixtures.push(
+        new Project({
+          fixtures: [
+            { uuid: 'par-' + i, profileUuid: 'test/par', modeShortName: 'mode', dmxFirstChannel: 100 + i, positioning: 'topFront' },
+          ],
+        }).fixtures[0]
+      );
+      project.presetFixtures.push(new Project({ presetFixtures: [{ fixtureUuid: 'par-' + i }] }).presetFixtures[0]);
+    }
+    TestBed.inject(FixtureService).updateCachedFixtures();
+    open();
+
+    const pars = ['par', ...Array.from({ length: 11 }, (_, i) => 'par-' + (i + 1))].map((uuid) => fixture3dOf(uuid)[0]);
+    const red = (level: number) => [channelValue('Red', level)];
+    const values = new Map(pars.map((par, i) => [par.fixture, red(10 + i * 20)]));
+    const getChannelValues = spyOn(previewService, 'getChannelValues').and.returnValue(values);
+    const lit = () => pars.filter((par) => par.lightShown).map((par) => pars.indexOf(par));
+    const spotLights = () => {
+      let count = 0;
+      scene().traverse((object) => (count += (object as THREE.SpotLight).isSpotLight && object.visible ? 1 : 0));
+      return count;
+    };
+
+    frame(0);
+
+    // the head (with neither a dimmer nor colors, it lights in white at full) and the seven brightest pars
+    expect(lit()).toEqual([5, 6, 7, 8, 9, 10, 11]);
+    expect(fixture3dOf('head')[0].lightShown).toBe(true);
+    expect(spotLights()).toBe(PREVIEW_MAX_LIGHTS);
+    expect(pars.every((par) => (par as any).spotLightBeam.visible)).toBe(true);
+
+    // the pars dark: the ones lit before keep their light, as many lights as before
+    getChannelValues.and.returnValue(new Map());
+    frame(100);
+
+    expect(lit()).toEqual([5, 6, 7, 8, 9, 10, 11]);
+    expect(spotLights()).toBe(PREVIEW_MAX_LIGHTS);
+
+    // the first one at full now: the dimmest one lit before goes dark
+    getChannelValues.and.returnValue(new Map([...values, [pars[0].fixture, red(255)]]));
+    frame(200);
+
+    expect(lit()).toEqual([0, 6, 7, 8, 9, 10, 11]);
   });
 
   it('plays the time of the timeline while it plays, and of the clock otherwise', () => {
