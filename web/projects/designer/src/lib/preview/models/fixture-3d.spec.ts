@@ -221,12 +221,71 @@ describe('Fixture3d beam', () => {
     expect(fixture3d.beamColor.r).toBeCloseTo(1, 5);
   });
 
-  it('shows no beam while the light is off', () => {
+  it('shows no beam while the light is off, and does not draw it either', () => {
     const fixture3d = beam(['Red', 'Green', 'Blue']);
+    const mesh = (fixture3d as any).spotLightBeam as THREE.Mesh;
 
     fixture3d.updatePreview(values({ Red: 0, Green: 0, Blue: 0 }), 1);
 
     expect(fixture3d.beamOpacity).toBe(0);
+    expect(mesh.visible).toBe(false);
+
+    fixture3d.updatePreview(values({ Red: 255, Green: 0, Blue: 0 }), 1);
+
+    expect(mesh.visible).toBe(true);
+  });
+
+  it('tells its shader where its cone of light is, and is drawn only a little beyond the stage floor', () => {
+    const fixture3d = beam(['Red', 'Green', 'Blue']);
+    const mesh = (fixture3d as any).spotLightBeam as THREE.Mesh;
+    const group = (fixture3d as any).spotlightGroup as THREE.Object3D;
+    const uniforms = (fixture3d as any).spotlightMaterial.uniforms;
+    const farEnd = () => {
+      const positions = mesh.geometry.getAttribute('position');
+      let far = 0;
+
+      for (let i = 0; i < positions.count; i++) {
+        far = Math.max(far, positions.getZ(i));
+      }
+
+      return far;
+    };
+    TestBed.inject(PreviewService).stageFloor.set(300, 200, 30);
+
+    // hanging high above the stage, pointing down: the whole beam
+    group.position.set(0, 500, 0);
+    group.updateMatrixWorld(true);
+    mesh.onBeforeRender(undefined, undefined, undefined, undefined, undefined, undefined);
+
+    expect(uniforms.axis.value.y).toBeCloseTo(-1, 5);
+    expect(uniforms.beamLength.value).toBeCloseTo(100, 5);
+    expect(uniforms.beamStart.value).toBeCloseTo(0.1 / 0.1668, 5);
+    expect(uniforms.apex.value.y).toBeCloseTo(500 - 0.02 + 0.1 / 0.1668, 3);
+    expect(uniforms.stageFloor.value.toArray()).toEqual([300, 200, 30]);
+    expect(uniforms.time.value).toBeGreaterThan(0);
+    expect(farEnd()).toBeCloseTo(100, 5);
+
+    // 30 above the floor: drawn as far as a little beyond it
+    group.position.set(0, 60, 0);
+    group.updateMatrixWorld(true);
+    mesh.onBeforeRender(undefined, undefined, undefined, undefined, undefined, undefined);
+
+    expect(farEnd()).toBeGreaterThan(30);
+    expect(farEnd()).toBeLessThan(60);
+
+    // beside the stage, as far as the ground
+    group.position.set(1000, 60, 0);
+    group.updateMatrixWorld(true);
+    mesh.onBeforeRender(undefined, undefined, undefined, undefined, undefined, undefined);
+
+    expect(farEnd()).toBeGreaterThan(60);
+
+    // pointing sideways: the whole beam
+    group.rotation.z = Math.PI / 2;
+    group.updateMatrixWorld(true);
+    mesh.onBeforeRender(undefined, undefined, undefined, undefined, undefined, undefined);
+
+    expect(farEnd()).toBeCloseTo(100, 5);
   });
 
   it('adds its light to what is behind it, and to the other beams it crosses', () => {

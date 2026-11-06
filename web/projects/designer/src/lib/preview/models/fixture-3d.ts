@@ -32,6 +32,12 @@ import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.servi
 // a lens which does not light: dark glass
 const LENS_OFF = new THREE.Color(0x15171c);
 
+// the cone of a beam as it is modelled (the fixture is scaled): as wide as the lens where it starts, opening by the tangent
+// of half its angle (about 14 degrees in all), and how long it is
+const BEAM_START_RADIUS = 0.1;
+const BEAM_TAN_ANGLE = 0.1668;
+const BEAM_LENGTH = 100;
+
 export abstract class Fixture3d {
   private readonly pointLightMaxIntensity: number = 2;
   private readonly spotLightLightMaxIntensity: number = 10;
@@ -71,6 +77,10 @@ export abstract class Fixture3d {
 
   // how much light it throws on the stage in this frame, between 0 and 1 (see PreviewComponent.assignLights)
   public lightLevel = 0;
+
+  // the vertices at the far end of the beam, and how far along it they are (see cutBeam)
+  private beamFarVertices: { index: number; x: number; y: number }[] = [];
+  private beamCut = BEAM_LENGTH;
   protected spotLightBeam: THREE.Mesh;
   protected spotlightGroup: THREE.Object3D;
   protected spotlightMaterial: THREE.ShaderMaterial;
@@ -130,64 +140,147 @@ export abstract class Fixture3d {
     this.fixtureMixesSubtractively = mixesSubtractively(this.fixture.channels);
   }
 
+  // The light of a beam as it is scattered in the haze: for each pixel of the beam, where the view enters the cone of
+  // light and where it leaves it (through its side, its far end or onto the stage floor), and the light it passes on
+  // its way. The light is brightest on the axis and fades to its edge, fades along the beam, and is brighter looking
+  // into it. A slowly drifting noise is the haze, a dither keeps the faint light from banding. Kept to a few steps for
+  // each pixel: a computer without a graphics card of its own works them out one by one.
   private createSpotlightMaterial() {
     const vertexShader = `
-    varying vec3 vNormal;
     varying vec3 vWorldPosition;
+    varying float vHaze;
+
+    uniform float time;
+
+    float hash(vec3 p) {
+      p = fract(p * 0.3183099 + 0.1);
+      p *= 17.0;
+      return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+    }
+
+    // the haze drifting through the beam, a slowly moving noise
+    float noise(vec3 x) {
+      vec3 i = floor(x);
+      vec3 f = fract(x);
+      f = f * f * (3.0 - 2.0 * f);
+
+      return mix(
+        mix(mix(hash(i), hash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 0.0)), hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+        mix(mix(hash(i + vec3(0.0, 0.0, 1.0)), hash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 1.0)), hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+        f.z
+      );
+    }
 
     void main(){
-      vNormal = normalize(normalMatrix * normal);
-
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
       vWorldPosition = worldPosition.xyz;
+      vHaze = 0.65 + 0.7 * noise(worldPosition.xyz * 0.012 + vec3(time * 0.03, time * 0.05, 0.0));
 
-      gl_Position	= projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }`;
     const fragmentShader = `
-    varying vec3 vNormal;
     varying vec3 vWorldPosition;
+    varying float vHaze;
 
     uniform vec3 lightColor;
-    uniform float	opacity;
-    uniform vec3 spotPosition;
-    uniform float attenuation;
-    uniform float	anglePower;
+    uniform float opacity;
+    // the cone of light: its apex, its axis, how wide it opens, where the beam starts and how long it is along the axis
+    uniform vec3 apex;
+    uniform vec3 axis;
+    uniform float tanAngle;
+    uniform float cos2;
+    uniform float beamStart;
+    uniform float beamLength;
+    // half the width and half the depth of the stage floor and how high it is
+    uniform vec3 stageFloor;
 
     void main(){
-      float intensity;
+      vec3 dir = normalize(vWorldPosition - cameraPosition);
+      float tSurface = distance(vWorldPosition, cameraPosition);
+      vec3 fromApex = cameraPosition - apex;
+      float alongDir = dot(dir, axis);
+      float alongFrom = dot(fromApex, axis);
+      float a = alongDir * alongDir - cos2;
+      float c = alongFrom * alongFrom - dot(fromApex, fromApex) * cos2;
+      // the beam is seen from outside: it is entered where it is drawn
+      float tIn = tSurface;
+      float tOut = 1.0e9;
 
-      intensity	= distance(vWorldPosition, spotPosition) / attenuation;
-      intensity	= 1.0 - clamp(intensity, 0.0, 1.0);
+      if (abs(a) > 1.0e-6) {
+        // where the view leaves the cone through its side: the two points it meets it at multiply to c / a
+        float other = c / (a * tSurface);
 
-      vec3 normal	= vec3(vNormal.x, vNormal.y, abs(vNormal.z));
-      float angleIntensity	= pow(dot(normal, vec3(0.0, 0.0, 1.0)), anglePower);
-      intensity	= intensity * angleIntensity * opacity;
+        if (other > tIn && alongFrom + other * alongDir > 0.0) {
+          tOut = other;
+        }
+      }
 
-      gl_FragColor	= vec4(lightColor, intensity);
+      // or through the far end of the beam, or the one at the fixture
+      if (abs(alongDir) > 1.0e-6) {
+        float tEnd = (beamStart + beamLength - alongFrom) / alongDir;
+        float tStart = (beamStart - alongFrom) / alongDir;
+
+        if (tEnd > tIn) {
+          tOut = min(tOut, tEnd);
+        }
+        if (tStart > tIn) {
+          tOut = min(tOut, tStart);
+        }
+      }
+
+      // onto the stage floor, or the ground beside it
+      if (dir.y < 0.0) {
+        float tFloor = (stageFloor.z - cameraPosition.y) / dir.y;
+        vec3 hit = cameraPosition + dir * tFloor;
+
+        if (abs(hit.x) > stageFloor.x || abs(hit.z) > stageFloor.y) {
+          tFloor = -cameraPosition.y / dir.y;
+        }
+        if (tFloor > 0.0) {
+          tOut = min(tOut, tFloor);
+        }
+      }
+
+      // nothing of the beam on the way (a pixel left out keeps the graphics card from leaving out the ones behind
+      // the floor before they are shaded)
+      if (tOut <= tIn || tOut > 1.0e8) {
+        gl_FragColor = vec4(0.0);
+        return;
+      }
+
+      // the light on the way through the beam, from how far it is from the axis and from the fixture in the middle of it
+      float span = tOut - tIn;
+      vec3 point = fromApex + dir * (tIn + span * 0.5);
+      float along = dot(point, axis);
+      float radius = max(along * tanAngle, 1.0);
+      float edge = clamp(1.0 - (dot(point, point) - along * along) / (radius * radius), 0.0, 1.0);
+      float fade = (along - beamStart) / beamLength;
+      float light = span * edge * edge / ((1.0 + fade * fade * 6.0) * radius) * vHaze;
+
+      // brighter looking into the light
+      float facing = max(-alongDir, 0.0);
+      facing *= facing;
+      facing *= facing;
+      float intensity = (1.0 - exp(-light * 1.3)) * (1.0 + 1.5 * facing * facing) * opacity;
+
+      // a dither, so the faint light does not band
+      float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+
+      gl_FragColor = vec4(lightColor, clamp(intensity + dither / 255.0, 0.0, 1.0));
     }`;
 
     this.spotlightMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        attenuation: {
-          type: 'f',
-          value: 800.0,
-        },
-        anglePower: {
-          type: 'f',
-          value: 2,
-        },
-        spotPosition: {
-          type: 'v3',
-          value: new THREE.Vector3(0, 0, 0),
-        },
-        lightColor: {
-          type: 'c',
-          value: new THREE.Color('white'),
-        },
-        opacity: {
-          type: 'f',
-          value: 1.0,
-        },
+        lightColor: { value: new THREE.Color('white') },
+        opacity: { value: 1.0 },
+        apex: { value: new THREE.Vector3() },
+        axis: { value: new THREE.Vector3(0, -1, 0) },
+        tanAngle: { value: BEAM_TAN_ANGLE },
+        cos2: { value: 1 / (1 + BEAM_TAN_ANGLE * BEAM_TAN_ANGLE) },
+        beamStart: { value: 0 },
+        beamLength: { value: BEAM_LENGTH },
+        stageFloor: { value: new THREE.Vector3(300, 300, 0) },
+        time: { value: 0 },
       },
       vertexShader,
       fragmentShader,
@@ -196,6 +289,61 @@ export abstract class Fixture3d {
       // light adds up where beams cross, and over what is behind them
       blending: THREE.AdditiveBlending,
     });
+  }
+
+  // Where the cone of the beam is in the world, as the shader of the beam asks for it: worked out each time the beam is
+  // rendered
+  private updateBeamUniforms() {
+    const uniforms = this.spotlightMaterial.uniforms;
+    const start = new THREE.Vector3(0, 0, 0).applyMatrix4(this.spotLightBeam.matrixWorld);
+    const end = new THREE.Vector3(0, 0, BEAM_LENGTH).applyMatrix4(this.spotLightBeam.matrixWorld);
+    const length = start.distanceTo(end);
+    const axis = end.clone().sub(start).normalize();
+    // the cone starts as wide as the lens, its apex a little behind it
+    const behind = (BEAM_START_RADIUS / BEAM_TAN_ANGLE) * (length / BEAM_LENGTH);
+    const apex = start.clone().addScaledVector(axis, -behind);
+    uniforms.apex.value.copy(apex);
+    uniforms.axis.value.copy(axis);
+    uniforms.beamStart.value = behind;
+    uniforms.beamLength.value = length;
+    uniforms.stageFloor.value.copy(this.previewService.stageFloor);
+    uniforms.time.value = performance.now() / 1000;
+
+    this.cutBeam(start, axis, length);
+  }
+
+  // The beam drawn only as far as a little beyond where it meets the floor (or the ground beside the stage): what is
+  // behind it isn't seen, but would be drawn. The shader ends the light on the floor itself. For the next frame, the
+  // geometry of this one has already been handed to the graphics card.
+  private cutBeam(start: THREE.Vector3, axis: THREE.Vector3, length: number) {
+    const floor = this.previewService.stageFloor;
+    let reach = length;
+
+    if (axis.y < -0.05) {
+      const toFloor = (start.y - floor.z) / -axis.y;
+      const onFloor = start.clone().addScaledVector(axis, toFloor);
+      const height = Math.abs(onFloor.x) <= floor.x && Math.abs(onFloor.z) <= floor.y ? floor.z : 0;
+      // the cone reaches the floor further away along its side than on its axis
+      const toHit = (start.y - height) / -axis.y;
+
+      reach = Math.min(length, Math.max(toHit, 0) * (1.2 + BEAM_TAN_ANGLE / -axis.y) + 10);
+    }
+
+    const cut = (reach / length) * BEAM_LENGTH;
+
+    if (Math.abs(cut - this.beamCut) < BEAM_LENGTH * 0.01) {
+      return;
+    }
+
+    const positions = this.spotLightBeam.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const radius = BEAM_START_RADIUS + BEAM_TAN_ANGLE * cut;
+
+    for (const vertex of this.beamFarVertices) {
+      positions.setXYZ(vertex.index, vertex.x * radius, vertex.y * radius, cut);
+    }
+
+    positions.needsUpdate = true;
+    this.beamCut = cut;
   }
 
   protected createObjects() {
@@ -437,7 +585,8 @@ export abstract class Fixture3d {
       this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
       this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
       this.lightLevel = (colorMax / 255) * this.dimmer;
-      this.spotLightBeam.material.uniforms.spotPosition.value = this.spotlightGroup.position;
+      // a dark beam is not drawn at all
+      this.spotLightBeam.visible = this.lightLevel > 0;
 
       const lensLevel = (colorMax / 255) * this.dimmer;
       this.lensMaterial.color.setRGB(
@@ -495,14 +644,32 @@ export abstract class Fixture3d {
 
   protected createSpotLightBeam() {
     // TODO set the correct angle from the profile
-    const beamAngleDegrees = 14;
     // the shader works out the light for each pixel from where it is: few faces do (32 around it, one along it), and
     // no disc closing it at its far end
-    const geometry = new THREE.CylinderGeometry(0.1, beamAngleDegrees * 1.2, 100, 32, 1, true);
+    const geometry = new THREE.CylinderGeometry(
+      BEAM_START_RADIUS,
+      BEAM_START_RADIUS + BEAM_TAN_ANGLE * BEAM_LENGTH,
+      BEAM_LENGTH,
+      32,
+      1,
+      true
+    );
     geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, -geometry.parameters.height / 2, 0));
     geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 
+    // the vertices at the far end, which are moved to where the beam meets the floor (see cutBeam)
+    const positions = geometry.getAttribute('position');
+    this.beamFarVertices = [];
+
+    for (let i = 0; i < positions.count; i++) {
+      if (positions.getZ(i) > BEAM_LENGTH / 2) {
+        const radius = Math.hypot(positions.getX(i), positions.getY(i)) || 1;
+        this.beamFarVertices.push({ index: i, x: positions.getX(i) / radius, y: positions.getY(i) / radius });
+      }
+    }
+
     this.spotLightBeam = new THREE.Mesh(geometry, this.spotlightMaterial);
+    this.spotLightBeam.onBeforeRender = () => this.updateBeamUniforms();
     this.spotLightBeam.position.set(0, -0.02, 0);
     this.spotLightBeam.receiveShadow = false;
     this.spotLightBeam.castShadow = false;

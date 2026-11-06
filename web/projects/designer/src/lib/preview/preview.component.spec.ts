@@ -664,7 +664,10 @@ describe('PreviewComponent', () => {
     const stageMaterial = stage.material;
     const leds = (housingOf('bar') as any).leds as THREE.InstancedMesh;
     const ledMaterial = leds.material;
-    const beam = (fixture3dOf('par')[0] as any).spotLightBeam as THREE.Mesh;
+    const par = fixture3dOf('par')[0];
+    const beam = (par as any).spotLightBeam as THREE.Mesh;
+    // the par lit, its beam shown
+    spyOn(previewService, 'getChannelValues').and.returnValue(new Map([[par.fixture, [channelValue('Red', 255)]]]));
     let whileGlowing: any[];
     spyOn(glowComposer, 'render').and.callFake(() => {
       whileGlowing = [stage.material, leds.material, beam.visible, scene().background];

@@ -124,6 +124,9 @@ export class PreviewService implements OnDestroy {
   fixtureMaterial: THREE.MeshStandardMaterial;
   fixtureSelectedMaterial: THREE.MeshLambertMaterial;
 
+  // half the width and half the depth of the stage floor and how high it is, where the beams end (see updateStage)
+  public stageFloor = new THREE.Vector3(300, 300, 0);
+
   public setGlow(glow: boolean) {
     this.glowKept = glow && this.glowSuspended;
     this.glowSuspended = false;
@@ -1316,6 +1319,9 @@ export class PreviewService implements OnDestroy {
     if (!this.scene) {
       return;
     }
+
+    const project = this.projectService.project;
+    this.stageFloor.set(project.stageWidthCm / 2, project.stageDepthCm / 2, project.stageFloorHeightCm);
 
     let geometry: any;
     let mesh: any;
