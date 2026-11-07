@@ -22,12 +22,13 @@ describe('MovingHead3d', () => {
   let meshService: { getMesh: jasmine.Spy };
   let fixtureGroup: THREE.Group;
 
-  function load(panTilt: any) {
+  function load(panTilt: any, physical?: any) {
     TestBed.inject(ProjectService).project = new Project({
       fixtureProfiles: [
         {
           uuid: 'test/head',
           name: 'Head',
+          physical,
           availableChannels: {
             Pan: { capability: { type: 'Pan', ...panTilt.pan } },
             Tilt: { capability: { type: 'Tilt', ...panTilt.tilt } },
@@ -121,8 +122,19 @@ describe('MovingHead3d', () => {
 
     head.updatePreview([value('Dimmer', 255)], 1);
 
+    // a profile which doesn't say how wide the beam opens
     expect((head as any).spotLight.angle).toBeCloseTo(THREE.MathUtils.degToRad(14), 10);
     expect((head as any).spotLight.intensity).toBe(10);
+  });
+
+  it('opens the beam as wide as the lens of the head', () => {
+    load({ pan: {}, tilt: {} }, { lens: { degreesMinMax: [8, 8] } });
+    const head = movingHead();
+
+    head.updatePreview([value('Dimmer', 255)], 1);
+
+    expect((head as any).spotlightMaterial.uniforms.tanAngle.value).toBeCloseTo(Math.tan(THREE.MathUtils.degToRad(4)), 10);
+    expect((head as any).spotLight.angle).toBeCloseTo(THREE.MathUtils.degToRad(8), 10);
   });
 
   it('shows whether it is selected', () => {

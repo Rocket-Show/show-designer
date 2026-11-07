@@ -9,6 +9,7 @@ import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { getShutterOpening, ShutterSettings } from '../../models/shutter';
 import { FixtureService } from '../../services/fixture.service';
 import { mixesSubtractively } from '../../models/subtractive-color';
+import { FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
 
 // the light an emitter besides red, green and blue adds at full, in red, green and blue
 const emitterLights: { [color: string]: number[] } = {
@@ -28,15 +29,26 @@ const filteredLights: { [color: string]: number } = {
   Yellow: 2,
 };
 import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.service';
+import { getBeamAngleDeg, getLensDegrees } from './beam-angle';
+import { getGoboState, getGoboTexture } from './gobo';
 
 // a lens which does not light: dark glass
 const LENS_OFF = new THREE.Color(0x15171c);
 
 // the cone of a beam as it is modelled (the fixture is scaled): as wide as the lens where it starts, opening by the tangent
-// of half its angle (about 14 degrees in all), and how long it is
+// of half its angle, and how long it is. A fixture whose profile doesn't say how wide its beam is opens about 19 degrees
+// (see beam-angle).
 const BEAM_START_RADIUS = 0.1;
 const BEAM_TAN_ANGLE = 0.1668;
 const BEAM_LENGTH = 100;
+
+// how many points along the view through a beam the gobo is looked up at: the light of a beam is the light of all of
+// them, which draws the shafts of a gobo through the haze
+const GOBO_SAMPLES = 6;
+
+// how much of its light the spot light of a fixture showing a gobo still throws on the stage, which leaves the pattern
+// of the gobo on the floor to the beam
+const GOBO_SPOT_LIGHT_LEVEL = 0.35;
 
 export abstract class Fixture3d {
   private readonly pointLightMaxIntensity: number = 2;
@@ -81,6 +93,22 @@ export abstract class Fixture3d {
   // the vertices at the far end of the beam, and how far along it they are (see cutBeam)
   private beamFarVertices: { index: number; x: number; y: number }[] = [];
   private beamCut = BEAM_LENGTH;
+
+  // how wide the beam opens in this frame (the tangent of half its angle), and how wide its geometry was last drawn
+  private beamTan = BEAM_TAN_ANGLE;
+  private geometryTan = BEAM_TAN_ANGLE;
+
+  // does the profile say how wide the beam opens (by its lens or a zoom)? Without, the beam opens as it always did.
+  private beamFromProfile = false;
+
+  // how far the spot light lighting the stage opens (from its axis to its edge) when the profile doesn't say, and the
+  // angle it was given last (giving it one is expensive)
+  protected defaultLightAngle = 2;
+  private lastLightAngle: number;
+
+  // does the fixture have a wheel with gobos, and is one of them in the beam in this frame?
+  private fixtureHasGobo = false;
+  private goboShown = false;
   protected spotLightBeam: THREE.Mesh;
   protected spotlightGroup: THREE.Object3D;
   protected spotlightMaterial: THREE.ShaderMaterial;
@@ -134,7 +162,21 @@ export abstract class Fixture3d {
         if (cachedChannel.colorWheel) {
           this.fixtureHasColorWheel = true;
         }
+
+        for (const capability of cachedChannel.capabilities) {
+          if (capability.capability.type === FixtureCapabilityType.Zoom || capability.capability.type === FixtureCapabilityType.BeamAngle) {
+            this.beamFromProfile = true;
+          }
+
+          if ((capability.wheelSlots || []).some((slot) => slot && slot.type === FixtureWheelSlotType.Gobo)) {
+            this.fixtureHasGobo = true;
+          }
+        }
       }
+    }
+
+    if (getLensDegrees(this.fixture)) {
+      this.beamFromProfile = true;
     }
 
     this.fixtureMixesSubtractively = mixesSubtractively(this.fixture.channels);
@@ -193,6 +235,21 @@ export abstract class Fixture3d {
     uniform float beamLength;
     // half the width and half the depth of the stage floor and how high it is
     uniform vec3 stageFloor;
+    // the gobo in the beam, if any (goboOn), the directions across the beam it is put in along, and how far it is
+    // turned (the cosine and the sine of its angle)
+    uniform sampler2D goboMap;
+    uniform float goboOn;
+    uniform vec3 goboU;
+    uniform vec3 goboV;
+    uniform vec2 goboTurn;
+
+    // how much light the gobo lets through at a point in the beam (from the apex of its cone)
+    float goboAt(vec3 point) {
+      float along = max(dot(point, axis), 1.0e-3);
+      vec2 across = vec2(dot(point, goboU), dot(point, goboV)) / (along * tanAngle);
+      across = vec2(goboTurn.x * across.x - goboTurn.y * across.y, goboTurn.y * across.x + goboTurn.x * across.y);
+      return texture2D(goboMap, across * 0.5 + 0.5).r;
+    }
 
     void main(){
       vec3 dir = normalize(vWorldPosition - cameraPosition);
@@ -229,6 +286,8 @@ export abstract class Fixture3d {
       }
 
       // onto the stage floor, or the ground beside it
+      bool onFloor = false;
+
       if (dir.y < 0.0) {
         float tFloor = (stageFloor.z - cameraPosition.y) / dir.y;
         vec3 hit = cameraPosition + dir * tFloor;
@@ -236,8 +295,9 @@ export abstract class Fixture3d {
         if (abs(hit.x) > stageFloor.x || abs(hit.z) > stageFloor.y) {
           tFloor = -cameraPosition.y / dir.y;
         }
-        if (tFloor > 0.0) {
-          tOut = min(tOut, tFloor);
+        if (tFloor > 0.0 && tFloor < tOut) {
+          tOut = tFloor;
+          onFloor = true;
         }
       }
 
@@ -255,13 +315,39 @@ export abstract class Fixture3d {
       float radius = max(along * tanAngle, 1.0);
       float edge = clamp(1.0 - (dot(point, point) - along * along) / (radius * radius), 0.0, 1.0);
       float fade = (along - beamStart) / beamLength;
-      float light = span * edge * edge / ((1.0 + fade * fade * 6.0) * radius) * vHaze;
+
+      // the light a gobo lets through on the way, and the picture it throws on the floor
+      float gobo = 1.0;
+      float splash = 0.0;
+
+      if (goboOn > 0.5) {
+        gobo = 0.0;
+
+        for (int i = 0; i < ${GOBO_SAMPLES}; i++) {
+          gobo += goboAt(fromApex + dir * (tIn + span * (float(i) + 0.5) / ${GOBO_SAMPLES}.0));
+        }
+
+        gobo /= ${GOBO_SAMPLES}.0;
+
+        if (onFloor) {
+          vec3 hitPoint = fromApex + dir * tOut;
+          float hitAlong = dot(hitPoint, axis);
+
+          if (hitAlong > beamStart) {
+            float fromAxis = sqrt(max(dot(hitPoint, hitPoint) - hitAlong * hitAlong, 0.0)) / (hitAlong * tanAngle);
+            float hitFade = (hitAlong - beamStart) / beamLength;
+            splash = goboAt(hitPoint) * smoothstep(1.0, 0.85, fromAxis) * 0.9 / (1.0 + hitFade * hitFade * 2.0);
+          }
+        }
+      }
+
+      float light = span * edge * edge / ((1.0 + fade * fade * 6.0) * radius) * vHaze * gobo;
 
       // brighter looking into the light
       float facing = max(-alongDir, 0.0);
       facing *= facing;
       facing *= facing;
-      float intensity = (1.0 - exp(-light * 1.3)) * (1.0 + 1.5 * facing * facing) * opacity;
+      float intensity = ((1.0 - exp(-light * 1.3)) * (1.0 + 1.5 * facing * facing) + splash) * opacity;
 
       // a dither, so the faint light does not band
       float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
@@ -281,6 +367,11 @@ export abstract class Fixture3d {
         beamLength: { value: BEAM_LENGTH },
         stageFloor: { value: new THREE.Vector3(300, 300, 0) },
         time: { value: 0 },
+        goboMap: { value: null },
+        goboOn: { value: 0 },
+        goboU: { value: new THREE.Vector3(1, 0, 0) },
+        goboV: { value: new THREE.Vector3(0, 1, 0) },
+        goboTurn: { value: new THREE.Vector2(1, 0) },
       },
       vertexShader,
       fragmentShader,
@@ -300,7 +391,7 @@ export abstract class Fixture3d {
     const length = start.distanceTo(end);
     const axis = end.clone().sub(start).normalize();
     // the cone starts as wide as the lens, its apex a little behind it
-    const behind = (BEAM_START_RADIUS / BEAM_TAN_ANGLE) * (length / BEAM_LENGTH);
+    const behind = (BEAM_START_RADIUS / this.beamTan) * (length / BEAM_LENGTH);
     const apex = start.clone().addScaledVector(axis, -behind);
     uniforms.apex.value.copy(apex);
     uniforms.axis.value.copy(axis);
@@ -308,6 +399,14 @@ export abstract class Fixture3d {
     uniforms.beamLength.value = length;
     uniforms.stageFloor.value.copy(this.previewService.stageFloor);
     uniforms.time.value = performance.now() / 1000;
+
+    if (this.goboShown) {
+      // the gobo is put in across the beam, turning with the head
+      const goboU: THREE.Vector3 = uniforms.goboU.value;
+      goboU.set(1, 0, 0).transformDirection(this.spotLightBeam.matrixWorld);
+      goboU.addScaledVector(axis, -goboU.dot(axis)).normalize();
+      uniforms.goboV.value.crossVectors(axis, goboU);
+    }
 
     this.cutBeam(start, axis, length);
   }
@@ -326,24 +425,85 @@ export abstract class Fixture3d {
       // the cone reaches the floor further away along its side than on its axis
       const toHit = (start.y - height) / -axis.y;
 
-      reach = Math.min(length, Math.max(toHit, 0) * (1.2 + BEAM_TAN_ANGLE / -axis.y) + 10);
+      reach = Math.min(length, Math.max(toHit, 0) * (1.2 + this.beamTan / -axis.y) + 10);
     }
 
     const cut = (reach / length) * BEAM_LENGTH;
 
-    if (Math.abs(cut - this.beamCut) < BEAM_LENGTH * 0.01) {
+    if (Math.abs(cut - this.beamCut) < BEAM_LENGTH * 0.01 && this.geometryTan === this.beamTan) {
       return;
     }
 
     const positions = this.spotLightBeam.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const radius = BEAM_START_RADIUS + BEAM_TAN_ANGLE * cut;
+    const radius = BEAM_START_RADIUS + this.beamTan * cut;
 
     for (const vertex of this.beamFarVertices) {
       positions.setXYZ(vertex.index, vertex.x * radius, vertex.y * radius, cut);
     }
 
     positions.needsUpdate = true;
+    // a wider beam reaches further out than it did: it is not left out of a frame it is still in
+    this.spotLightBeam.geometry.computeBoundingSphere();
     this.beamCut = cut;
+    this.geometryTan = this.beamTan;
+  }
+
+  // How wide the beam opens in this frame: as wide as the lens and the zoom of the fixture open it, or as it always did
+  // where the profile doesn't say. The spot light lighting the stage opens with it.
+  private updateBeamAngle(channelValues: FixtureChannelValue[]) {
+    const angle = this.beamFromProfile ? getBeamAngleDeg(this.fixture, channelValues) : undefined;
+    const tan = angle === undefined ? BEAM_TAN_ANGLE : Math.tan(THREE.MathUtils.degToRad(angle / 2));
+
+    if (tan !== this.beamTan) {
+      const uniforms = this.spotlightMaterial.uniforms;
+      this.beamTan = tan;
+      uniforms.tanAngle.value = tan;
+      uniforms.cos2.value = 1 / (1 + tan * tan);
+    }
+
+    // the light fades from its axis to its edge: it reaches as far out as the beam opens in all
+    const lightAngle = angle === undefined ? this.defaultLightAngle : Math.min(THREE.MathUtils.degToRad(angle), Math.PI / 2 - 0.01);
+
+    // Update the angle only on change, because it's expensive
+    if (lightAngle !== this.lastLightAngle) {
+      this.spotLight.angle = lightAngle;
+      this.lastLightAngle = lightAngle;
+    }
+  }
+
+  // the gobo in the beam in this frame, turned as far as the fixture has turned it by now
+  private updateGobo(channelValues: FixtureChannelValue[], timeMillis: number) {
+    const uniforms = this.spotlightMaterial.uniforms;
+    const gobo = this.fixtureHasGobo
+      ? getGoboState(
+          this.fixture,
+          channelValues,
+          (channelName) => this.fixtureService.getChannelByName(this.fixture, channelName),
+          (channel, value) => this.getCapabilityInValue(channel, value),
+          timeMillis
+        )
+      : undefined;
+
+    this.goboShown = !!gobo;
+
+    if (!gobo) {
+      uniforms.goboOn.value = 0;
+      return;
+    }
+
+    const texture = getGoboTexture(gobo.pattern);
+
+    if (uniforms.goboMap.value !== texture) {
+      uniforms.goboMap.value = texture;
+    }
+
+    uniforms.goboOn.value = 1;
+    uniforms.goboTurn.value.set(Math.cos(gobo.angle), Math.sin(gobo.angle));
+  }
+
+  // is a gobo in the beam in this frame?
+  get showsGobo(): boolean {
+    return this.goboShown;
   }
 
   protected createObjects() {
@@ -572,6 +732,9 @@ export abstract class Fixture3d {
     const colorMax = Math.max(this.colorRed, this.colorGreen, this.colorBlue);
 
     if (this.hasSpotLight) {
+      this.updateBeamAngle(channelValues);
+      this.updateGobo(channelValues, timeMillis);
+
       this.spotLight.color = color;
 
       // the beam shows the color at full and lets the brightness of the light make it
@@ -583,7 +746,7 @@ export abstract class Fixture3d {
       this.spotLightBeam.material.uniforms.lightColor.value = beamColor;
 
       this.spotLightBeam.material.uniforms.opacity.value = (colorMax / 255) * this.dimmer;
-      this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer;
+      this.spotLight.intensity = this.spotLightLightMaxIntensity * this.dimmer * (this.goboShown ? GOBO_SPOT_LIGHT_LEVEL : 1);
       this.lightLevel = (colorMax / 255) * this.dimmer;
       // a dark beam is not drawn at all
       this.spotLightBeam.visible = this.lightLevel > 0;
@@ -643,7 +806,6 @@ export abstract class Fixture3d {
   }
 
   protected createSpotLightBeam() {
-    // TODO set the correct angle from the profile
     // the shader works out the light for each pixel from where it is: few faces do (32 around it, one along it), and
     // no disc closing it at its far end
     const geometry = new THREE.CylinderGeometry(
