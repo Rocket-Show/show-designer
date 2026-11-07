@@ -168,6 +168,12 @@
       "steps-length": "Step length",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
+      "steps-order": "Order",
+      "steps-order-forward": "Forward",
+      "steps-order-backward": "Backward",
+      "steps-order-pingpong": "Forward and back",
+      "steps-order-random": "Random",
+      "steps-seed": "Seed of the random order",
       "steps-chase": "Chase",
       "model-specific": "{{count}} values only play on: {{models}}"
     },

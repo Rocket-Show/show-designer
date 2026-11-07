@@ -157,23 +157,32 @@ describe('PresetStepComponent', () => {
     const component = fixture.componentInstance;
 
     // the first step has nothing to travel from
-    expect(component.stepDescription(preset.steps[0], 0)).toBe('designer.preset.step-start: 0 designer.misc.ms');
-    expect(component.stepDescription(preset.steps[1], 1)).toBe(
+    expect(component.stepDescription(preset.steps[0])).toBe('designer.preset.step-start: 0 designer.misc.ms');
+    expect(component.stepDescription(preset.steps[1])).toBe(
       'designer.preset.step-start: 1000 designer.misc.ms, designer.preset.step-transition: 200 designer.misc.ms'
     );
 
     // unless the sequence starts over: it travels from the last step over its whole time
     preset.stepsLoop = true;
-    expect(component.stepDescription(preset.steps[0], 0)).toBe(
+    expect(component.stepDescription(preset.steps[0])).toBe(
       'designer.preset.step-start: 0 designer.misc.ms, designer.preset.step-transition: 1000 designer.misc.ms'
     );
+  });
+
+  it('tells that the step a sequence played backward opens with has nothing to travel from', () => {
+    render();
+    const component = fixture.componentInstance;
+    preset.stepsOrder = 'backward';
+
+    expect(component.stepDescription(preset.steps[2])).toBe('designer.preset.step-start: 2000 designer.misc.ms');
+    expect(component.stepDescription(preset.steps[0])).toContain('designer.preset.step-transition');
   });
 
   it('tells which steps start at a time of their own, which the speed of the sequence leaves alone', () => {
     render();
     preset.steps[1].ownStart = true;
 
-    expect(fixture.componentInstance.stepDescription(preset.steps[1], 1)).toBe(
+    expect(fixture.componentInstance.stepDescription(preset.steps[1])).toBe(
       'designer.preset.step-start: 1000 designer.misc.ms (designer.preset.step-start-own), designer.preset.step-transition: 200 designer.misc.ms'
     );
   });

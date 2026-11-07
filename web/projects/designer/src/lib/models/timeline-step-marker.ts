@@ -1,5 +1,6 @@
 import { Preset } from './preset';
 import { getStepsLoopMillis, getTransitionEndMillis, PresetStep } from './preset-step';
+import { getStepLengths, getStepsOrderIndices, isStepsOrdered } from './preset-steps-order';
 import { Scene } from './scene';
 import { ScenePlaybackRegion } from './scene-playback-region';
 
@@ -38,6 +39,10 @@ export function getStepMarkers(preset: Preset, scene: Scene, scenePlaybackRegion
   const presetStartMillis = preset.startMillis === undefined ? 0 : preset.startMillis;
   const steps = preset.steps;
 
+  if (isStepsOrdered(preset)) {
+    return getOrderedStepMarkers(preset, presetStartMillis, regionLengthMillis);
+  }
+
   // the last step holds for as long as a pass of the sequence would have given it
   const lastEndMillis = steps[0].startMillis + getStepsLoopMillis(steps, preset.stepsLoopMillis);
 
@@ -57,4 +62,29 @@ export function getStepMarkers(preset: Preset, scene: Scene, scenePlaybackRegion
   });
 
   return markers;
+}
+
+// The markers of the first pass of a preset playing its steps in another order than they are written down in: each
+// step as long as it lasts written down, one after the other in the order they are played in (see preset-steps-order).
+function getOrderedStepMarkers(preset: Preset, presetStartMillis: number, regionLengthMillis: number): TimelineStepMarker[] {
+  const lengths = getStepLengths(preset);
+  let startMillis = presetStartMillis + preset.steps[0].startMillis;
+
+  return getStepsOrderIndices(preset).map((index, position) => {
+    const step = preset.steps[index];
+    const endMillis = startMillis + lengths[index];
+
+    // only a looping preset travels into the step it opens with
+    const transitionEndMillis = position > 0 || preset.stepsLoop ? getTransitionEndMillis(step, startMillis, endMillis) : startMillis;
+
+    const marker = {
+      step,
+      leftPercentage: (startMillis / regionLengthMillis) * 100,
+      transitionWidthPercentage: ((transitionEndMillis - startMillis) / regionLengthMillis) * 100,
+    };
+
+    startMillis = endMillis;
+
+    return marker;
+  });
 }

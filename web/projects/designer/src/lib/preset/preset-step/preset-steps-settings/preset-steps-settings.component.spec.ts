@@ -68,7 +68,7 @@ describe('PresetStepsSettingsComponent', () => {
   }
 
   function selectMode(mode: string) {
-    const select: HTMLSelectElement = element.querySelector('select');
+    const select: HTMLSelectElement = element.querySelector('#stepsPhasingMode');
     select.value = mode;
     select.dispatchEvent(new Event('change'));
   }
@@ -170,6 +170,23 @@ describe('PresetStepsSettingsComponent', () => {
     expect(preset.stepsPhasingMode).toBe('spread');
     expect(preset.stepsPhasingMillis).toBe(250);
     expect(preset.stepsPhasingCycles).toBe(-1);
+  });
+
+  it('plays the steps in the order picked, a random one from a whole seed', async () => {
+    const order: HTMLSelectElement = element.querySelector('#stepsOrder');
+    expect(order.value).toBe('forward');
+
+    order.value = 'random';
+    order.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const seed: HTMLInputElement = element.querySelector('input[aria-label="designer.preset.steps-seed"]');
+    type(seed, '7.4');
+    ok();
+
+    expect(preset.stepsOrder).toBe('random');
+    expect(preset.stepsSeed).toBe(7);
   });
 
   it('keeps the chase for anything which is no number', () => {

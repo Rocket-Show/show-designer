@@ -77,6 +77,11 @@ export class Preset {
   // how many fixtures share the same chase step (1 = each fixture on its own)
   stepsPhasingGroupSize = 1;
 
+  // the order the steps are played in: 'forward', 'backward', 'pingpong' or 'random' (see preset-steps-order), and
+  // where a random order starts from, so two copies of a preset can play their steps in different orders
+  stepsOrder = 'forward';
+  stepsSeed = 1;
+
   // all related effects. They stay on the preset instead of moving into the steps, so
   // that they keep their phase across a step transition: a step only opens or closes
   // them (see PresetStep.effectAmounts).
@@ -160,6 +165,9 @@ export class Preset {
     this.stepsPhasingMillis = data.stepsPhasingMillis || 0;
     this.stepsPhasingCycles = data.stepsPhasingCycles ?? 1;
     this.stepsPhasingGroupSize = data.stepsPhasingGroupSize ?? 1;
+    // a preset written before the steps could be played in another order plays them forward, like in Rocket Show
+    this.stepsOrder = data.stepsOrder || 'forward';
+    this.stepsSeed = data.stepsSeed ?? 1;
 
     if (data.effects) {
       for (const effect of data.effects) {

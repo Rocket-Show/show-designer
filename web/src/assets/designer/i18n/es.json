@@ -168,6 +168,12 @@
       "steps-length": "Duración de un paso",
       "steps-loop": "Repetir los pasos",
       "steps-loop-length": "Duración del bucle",
+      "steps-order": "Orden",
+      "steps-order-forward": "Hacia adelante",
+      "steps-order-backward": "Hacia atrás",
+      "steps-order-pingpong": "Adelante y atrás",
+      "steps-order-random": "Aleatorio",
+      "steps-seed": "Semilla del orden aleatorio",
       "steps-chase": "Chase",
       "model-specific": "{{count}} valores solo funcionan en: {{models}}"
     },

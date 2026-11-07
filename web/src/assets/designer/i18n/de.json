@@ -168,6 +168,12 @@
       "steps-length": "Schrittlänge",
       "steps-loop": "Schritte wiederholen",
       "steps-loop-length": "Schleifenlänge",
+      "steps-order": "Reihenfolge",
+      "steps-order-forward": "Vorwärts",
+      "steps-order-backward": "Rückwärts",
+      "steps-order-pingpong": "Vor und zurück",
+      "steps-order-random": "Zufällig",
+      "steps-seed": "Startwert der zufälligen Reihenfolge",
       "steps-chase": "Chase",
       "model-specific": "{{count}} Werte spielen nur auf: {{models}}"
     },

@@ -256,6 +256,50 @@ function presetSteps() {
   return write('preset-steps.json', 'presetSteps', 'The state of a preset running through its steps, also chased over its fixtures', cases);
 }
 
+// The steps played in another order than they are written down in: backward, forward and back, and shuffled anew for
+// every pass, over several passes, before the sequence starts and chased over the fixtures
+function presetStepsOrders() {
+  const random = randomSource(31);
+  const cases = [];
+  const orders = ['backward', 'pingpong', 'random', 'random'];
+
+  for (let index = 0; index < 120; index++) {
+    const preset = presetWithSteps(random, 'order-' + index);
+    preset.stepsOrder = orders[index % orders.length];
+    random.maybe(preset, 'stepsSeed', [1, 2, 7, -3, 1000000007, null], 0.6);
+
+    if (index % 3 === 0 && preset.steps.length > 1) {
+      // a step which lasts no time, which the order leaves out
+      const twin = preset.steps[1];
+      preset.steps.splice(2, 0, { ...twin, uuid: twin.uuid + '-twin' });
+    }
+
+    const input = { preset, samples: [] };
+    random.maybe(input, 'fixtureCount', [1, 5], 0.7);
+    const ends = preset.steps.map((step) => step.startMillis);
+
+    for (let sample = 0; sample < 16; sample++) {
+      // over a few passes, which a random order shuffles anew
+      const passes = random.int(6);
+      const near =
+        ends.length > 0 && random.chance(0.4)
+          ? random.pick(ends) + random.pick([-1, 0, 0.5, 1, 50, 99.9]) + passes * random.pick([0, 1000, 2000.5])
+          : random.number(30000) - 2000;
+
+      input.samples.push({ timeMillis: near, fixtureIndex: random.int(5) });
+    }
+
+    cases.push({ name: `${preset.stepsOrder} ${preset.steps.length} steps ${index}`, input });
+  }
+
+  return write(
+    'preset-steps-orders.json',
+    'presetSteps',
+    'The state of a preset playing its steps backward, forward and back or in a random order, also chased over its fixtures',
+    cases
+  );
+}
+
 // ---- the intensity of presets and scenes ------------------------------------------------------
 
 function presetIntensity() {
@@ -3010,6 +3054,7 @@ export function generate() {
     effectCurves(),
     effectCurveEdges(),
     presetSteps(),
+    presetStepsOrders(),
     presetIntensity(),
     libraryModes(),
     scenarios(),

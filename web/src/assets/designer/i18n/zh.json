@@ -168,6 +168,12 @@
       "steps-length": "步骤时长",
       "steps-loop": "循环步骤",
       "steps-loop-length": "循环长度",
+      "steps-order": "顺序",
+      "steps-order-forward": "正向",
+      "steps-order-backward": "反向",
+      "steps-order-pingpong": "往返",
+      "steps-order-random": "随机",
+      "steps-seed": "随机顺序的种子",
       "steps-chase": "追逐",
       "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}"
     },

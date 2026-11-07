@@ -1328,7 +1328,7 @@ export class PresetService {
       return false;
     }
 
-    const passMillis = preset.steps[0].startMillis + this.presetStepService.getStepsLoopMillis(preset);
+    const passMillis = preset.steps[0].startMillis + this.presetStepService.getStepsPassMillis(preset);
 
     return this.animationService.timeMillis - this.stepPreviewStartMillis >= passMillis;
   }
