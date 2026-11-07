@@ -93,7 +93,9 @@ describe('PresetStepSettingsComponent', () => {
 
   it('shows which step it is and the time it travels over, while it has none of its own', () => {
     expect(element.querySelector('.modal-title').textContent.trim()).toBe('designer.preset.step 2');
-    expect(inputs()[0].value).toBe('1000');
+    // it takes its start from the sequence
+    expect(inputs()[0].value).toBe('');
+    expect(inputs()[0].placeholder).toBe('1000');
     expect(inputs()[1].placeholder).toBe('2000');
     expect(inputs()[1].value).toBe('');
   });
@@ -109,6 +111,7 @@ describe('PresetStepSettingsComponent', () => {
     ok();
 
     expect(step.startMillis).toBe(5000);
+    expect(step.ownStart).toBe(true);
     expect(preset.steps.map((presetStep) => presetStep.uuid)).toEqual(['first', 'third', 'second']);
     expect(previewLive).toHaveBeenCalled();
     expect(modalRef.hide).toHaveBeenCalled();
@@ -120,7 +123,29 @@ describe('PresetStepSettingsComponent', () => {
       ok();
 
       expect(step.startMillis).toBe(1000);
+      expect(step.ownStart).toBe(false);
     }
+  });
+
+  it('shows the start of a step which has one of its own, and puts it back on the grid of the sequence once it is emptied', async () => {
+    fixture.destroy();
+    const third = preset.steps[2];
+
+    fixture = TestBed.createComponent(PresetStepSettingsComponent);
+    fixture.componentInstance.preset = preset;
+    fixture.componentInstance.step = third;
+    element = fixture.nativeElement;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(inputs()[0].value).toBe('3000');
+    expect(inputs()[0].placeholder).toBe('2000');
+
+    type(inputs()[0], '');
+    ok();
+
+    expect(third.ownStart).toBe(false);
+    expect(third.startMillis).toBe(2000);
   });
 
   it('travels into the step over the time typed in, or over the whole step while it is empty', () => {

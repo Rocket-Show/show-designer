@@ -80,10 +80,19 @@ export class ColorService {
 
   // The colors of the palette of the first pixel effect of a preset painting in colors of its own, mixed: its palette
   // is what the preset shows. One in the shades of the color of the preset, or only making it brighter and darker
-  // (masking it), shows the color of the preset.
+  // (masking it), shows the color of the preset. Like its colors, it is read from the first step: an effect which
+  // only runs in a later step does not mark the preset.
   private getPixelPaletteColor(preset: Preset): string {
+    const first = preset.steps[0];
+
     for (const effect of preset.effects) {
-      if (effect instanceof EffectPixel && effect.visible && effect.palette.ref !== 'preset' && effect.blend !== 'mask') {
+      if (
+        effect instanceof EffectPixel &&
+        effect.visible &&
+        effect.palette.ref !== 'preset' &&
+        effect.blend !== 'mask' &&
+        (!first || first.getEffectAmount(effect.uuid) > 0)
+      ) {
         const colors = effect.palette.stops.map((stop) => this.fixtureService.hexToRgb(stop.color)).filter((color) => color);
 
         if (colors.length) {

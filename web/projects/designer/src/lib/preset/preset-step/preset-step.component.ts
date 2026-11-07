@@ -62,7 +62,12 @@ export class PresetStepComponent implements OnInit, OnDestroy {
   stepDescription(step: PresetStep, index: number): string {
     const preset = this.presetService.selectedPreset;
     const millis = this.translateService.instant('designer.misc.ms');
-    const started = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
+    let started = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
+
+    if (step.ownStart) {
+      // it stays where it is when the speed of the sequence changes
+      started += ' (' + this.translateService.instant('designer.preset.step-start-own') + ')';
+    }
 
     if (index === 0 && !preset.stepsLoop) {
       // the first step has nothing to travel from unless the sequence starts over

@@ -14,8 +14,25 @@
               } @if (item.type == 'pixel') {
               <i class="fa fa-th fa-fw my-auto" aria-hidden="true"></i>
               }
-              <span class="ml-2">{{ 'designer.effect.type-' + item.type | translate }}</span>
-              <div class="ml-auto mr-2">
+              <span class="ml-2 mr-auto" [class.text-muted]="!runsInStep(item)">{{ 'designer.effect.type-' + item.type | translate }}</span>
+              <!-- whether it runs in the step being edited, once the preset runs through more than one -->
+              @if (followsSteps) {
+              <div class="mr-2">
+                <i
+                  (click)="toggleRunsInStep(item); $event.stopPropagation()"
+                  class="fa fa-fw"
+                  [class.fa-check-square-o]="runsInStep(item)"
+                  [class.fa-square-o]="!runsInStep(item)"
+                  [class.text-primary]="runsInStep(item)"
+                  popover="{{ runsInStepDescription(item) }}"
+                  container="body"
+                  placement="bottom"
+                  triggers="mouseenter:mouseleave"
+                  aria-hidden="true"
+                ></i>
+              </div>
+              }
+              <div class="mr-2">
                 <i
                   (click)="toggleVisible(item); $event.stopPropagation()"
                   class="fa fa-eye fa-fw"

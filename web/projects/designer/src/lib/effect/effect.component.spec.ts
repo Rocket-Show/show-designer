@@ -16,6 +16,7 @@ import { EffectCurve } from '../models/effect-curve';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { EffectPixel } from '../models/effect-pixel';
 import { Preset } from '../models/preset';
+import { PresetStep } from '../models/preset-step';
 import { Project } from '../models/project';
 import { EffectService } from '../services/effect.service';
 import { LivePreviewService } from '../services/live-preview.service';
@@ -25,7 +26,8 @@ import { WarningDialogService } from '../services/warning-dialog.service';
 import { EffectComponent } from './effect.component';
 
 // The effects of the preset being edited, one of them opened to be edited at a time: they
-// are added, hidden, copied and deleted here. The curve editor is not rendered.
+// are added, hidden, copied and deleted here, and once the preset runs through more than one
+// step, switched on and off for the step being edited. The curve editor is not rendered.
 describe('EffectComponent', () => {
   let fixture: ComponentFixture<EffectComponent>;
   let element: HTMLElement;
@@ -244,6 +246,8 @@ describe('EffectComponent', () => {
 
     expect(warning).toHaveBeenCalledWith('designer.effect.delete-warning');
     expect(effectUuids()).toEqual(['color']);
+    // the step says nothing about it anymore
+    expect(preset.steps[0].effectAmounts).toEqual([]);
     expect(effectsChanged).toHaveBeenCalled();
     expect(previewLive).toHaveBeenCalled();
     expect(headings().length).toBe(1);
@@ -256,5 +260,74 @@ describe('EffectComponent', () => {
 
     expect(effectUuids()).toEqual(['dimmer', 'color']);
     expect(effectsChanged).not.toHaveBeenCalled();
+  });
+
+  describe('following the step being edited', () => {
+    // a second step, which lets all the effects through, being edited
+    async function editSecondStep() {
+      preset.steps.push(new PresetStep({ uuid: 'second', startMillis: 1000 }));
+      presetService.selectStep(preset.steps[1]);
+      await update();
+      previewLive.calls.reset();
+    }
+
+    function stepSwitch(index: number): HTMLElement {
+      return headingIcon(index, 'fa-check-square-o') || headingIcon(index, 'fa-square-o');
+    }
+
+    it('shows no switch for the step of a preset running through a single one', async () => {
+      presetService.selectStep(preset.steps[0]);
+      await update();
+
+      expect(stepSwitch(0)).toBeNull();
+      expect(stepSwitch(1)).toBeNull();
+    });
+
+    it('switches an effect off and on again for the step being edited, without opening it', async () => {
+      await editSecondStep();
+
+      expect(stepSwitch(0).classList).toContain('fa-check-square-o');
+      expect(stepSwitch(0).classList).toContain('text-primary');
+
+      stepSwitch(0).click();
+      await update();
+
+      expect(preset.steps[1].getEffectAmount('dimmer')).toBe(0);
+      expect(stepSwitch(0).classList).toContain('fa-square-o');
+      expect(headings()[0].querySelector('.text-muted').textContent).toContain('designer.effect.type-curve');
+      expect(effectService.selectedEffect).toBeUndefined();
+      expect(effectsChanged).toHaveBeenCalled();
+      expect(previewLive).toHaveBeenCalled();
+      // the other step goes on as it did
+      expect(preset.steps[0].getEffectAmount('dimmer')).toBe(0.5);
+
+      stepSwitch(0).click();
+      await update();
+
+      expect(preset.steps[1].getEffectAmount('dimmer')).toBe(1);
+      expect(headings()[0].querySelector('.text-muted')).toBeNull();
+    });
+
+    it('tells the step the effect runs in, and how much of it the step lets through', async () => {
+      await editSecondStep();
+      const component = fixture.componentInstance;
+
+      expect(component.runsInStepDescription(preset.effects[0])).toBe('designer.effect.runs-in-step');
+
+      presetService.selectStep(preset.steps[0]);
+      expect(component.runsInStepDescription(preset.effects[0])).toBe('designer.effect.runs-in-step (50 %)');
+    });
+
+    it('adds a new effect to the step being edited only', async () => {
+      await editSecondStep();
+
+      fixture.componentInstance.addCurveEffect();
+      await update();
+
+      const added = preset.effects[2];
+      expect(preset.steps[0].getEffectAmount(added.uuid)).toBe(0);
+      expect(preset.steps[1].getEffectAmount(added.uuid)).toBe(1);
+      expect(stepSwitch(2).classList).toContain('fa-check-square-o');
+    });
   });
 });

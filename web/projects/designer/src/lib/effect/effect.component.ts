@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { map } from 'rxjs/operators';
 import { Effect } from '../models/effect';
 import { EffectCurve } from '../models/effect-curve';
@@ -23,19 +24,44 @@ export class EffectComponent implements OnInit {
     public presetService: PresetService,
     public effectService: EffectService,
     private warningDialogService: WarningDialogService,
-    public livePreviewService: LivePreviewService
+    public livePreviewService: LivePreviewService,
+    private translateService: TranslateService
   ) {}
 
   ngOnInit() {}
 
+  // a new effect runs in the step being edited only, once the preset has more than one
   private addEffect(effect: Effect) {
-    this.effectService.selectedEffect = effect;
+    this.effectService.addEffect(this.presetService.selectedPreset, effect, this.presetService.selectedStep);
+  }
 
-    if (this.presetService.selectedPreset) {
-      this.presetService.selectedPreset.effects.push(effect);
+  // the effects follow the step being edited, once the preset runs through more than one
+  get followsSteps(): boolean {
+    return this.presetService.selectedPreset.steps.length > 1 && !!this.presetService.selectedStep;
+  }
+
+  runsInStep(effect: Effect): boolean {
+    return this.effectService.runsInStep(this.presetService.selectedStep, effect);
+  }
+
+  // let the effect run in the step being edited, or silence it there
+  toggleRunsInStep(effect: Effect) {
+    this.effectService.setRunsInStep(this.presetService.selectedStep, effect, !this.runsInStep(effect));
+    this.livePreviewService.previewLive();
+  }
+
+  // the step it runs in, and how much of it the step lets through, unless it is all of it
+  runsInStepDescription(effect: Effect): string {
+    const step = this.presetService.selectedStep;
+    const stepNumber = this.presetService.selectedPreset.steps.indexOf(step) + 1;
+    const amount = step.getEffectAmount(effect.uuid);
+    let description = this.translateService.instant('designer.effect.runs-in-step', { step: stepNumber });
+
+    if (amount > 0 && amount < 1) {
+      description += ' (' + Math.round(amount * 100) + ' %)';
     }
 
-    this.effectService.effectsChanged.next();
+    return description;
   }
 
   toggleVisible(effect: Effect) {
@@ -95,8 +121,7 @@ export class EffectComponent implements OnInit {
       .pipe(
         map((result) => {
           if (result) {
-            this.presetService.selectedPreset.effects.splice(this.presetService.selectedPreset.effects.indexOf(effect), 1);
-            this.effectService.effectsChanged.next();
+            this.effectService.deleteEffect(this.presetService.selectedPreset, effect);
             this.livePreviewService.previewLive();
           }
         })

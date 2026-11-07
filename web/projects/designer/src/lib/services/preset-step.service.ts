@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { getStepsLoopMillis, getTransitionEndMillis, PresetStep } from '../models/preset-step';
+import { getAutomaticStartMillis, getStepsLoopMillis, getTransitionEndMillis, layoutSteps, PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { UuidService } from './uuid.service';
@@ -27,9 +27,17 @@ export class PresetStepService {
     return preset.steps[0];
   }
 
-  // the steps are always processed and shown in the order they are reached
-  public sortSteps(preset: Preset) {
-    preset.steps.sort((step1, step2) => step1.startMillis - step2.startMillis);
+  // Works out where the steps start from the step length of the sequence, and keeps
+  // them in the order they are reached, which is the order they are processed and
+  // shown in.
+  public layoutSteps(preset: Preset) {
+    layoutSteps(preset.steps, preset.stepsLengthMillis);
+  }
+
+  // where the passed step of the preset starts while it does not start at a time of its
+  // own: its place on the time grid of the sequence
+  public getAutomaticStartMillis(preset: Preset, step: PresetStep): number {
+    return getAutomaticStartMillis(Math.max(preset.steps.indexOf(step), 0), preset.stepsLengthMillis);
   }
 
   // a new step starts out as a copy of the passed one, so that a look can be built up,
@@ -39,18 +47,19 @@ export class PresetStepService {
     const step = new PresetStep(template ? JSON.parse(JSON.stringify(template)) : undefined);
 
     step.uuid = this.uuidService.getUuid();
-
-    // place it after the last step, as far behind it as the step before that one was
-    const steps = preset.steps;
-    const last = steps[steps.length - 1];
-    const previous = steps[steps.length - 2];
-    const gapMillis = last && previous ? last.startMillis - previous.startMillis : 1000;
-
-    step.startMillis = last ? last.startMillis + Math.max(gapMillis, 1) : 0;
     step.transitionMillis = template ? template.transitionMillis : 0;
 
+    // It comes after the last step, on the next place of the grid of the sequence. A last
+    // step starting at a time of its own can reach past that place: the new one starts a
+    // step length after it then, which it keeps.
+    const last = preset.steps[preset.steps.length - 1];
+    const automaticStartMillis = getAutomaticStartMillis(preset.steps.length, preset.stepsLengthMillis);
+
+    step.ownStart = !!last && automaticStartMillis <= last.startMillis;
+    step.startMillis = step.ownStart ? last.startMillis + preset.stepsLengthMillis : automaticStartMillis;
+
     preset.steps.push(step);
-    this.sortSteps(preset);
+    this.layoutSteps(preset);
 
     return step;
   }
@@ -65,6 +74,9 @@ export class PresetStepService {
 
     if (index >= 0) {
       preset.steps.splice(index, 1);
+
+      // the steps which followed it close up
+      this.layoutSteps(preset);
     }
   }
 

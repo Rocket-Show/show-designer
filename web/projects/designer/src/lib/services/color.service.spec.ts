@@ -5,6 +5,7 @@ import { Preset } from '../models/preset';
 import { EffectPixel } from '../models/effect-pixel';
 import { PixelPalette } from '../models/pixel-palette';
 import { PresetStep } from '../models/preset-step';
+import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
 import { Scene } from '../models/scene';
 import { ColorService } from './color.service';
 import { FixtureService } from './fixture.service';
@@ -138,6 +139,21 @@ describe('ColorService', () => {
     expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
     pixels.visible = true;
     pixels.palette = new PixelPalette({ ref: 'preset' });
+    expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
+  });
+
+  it('marks a preset with the palette of a pixel effect only while it runs in the first step', () => {
+    const preset = new Preset();
+    const pixels = new EffectPixel({ uuid: 'pixels', palette: { ref: 'ice', stops: [{ position: 0, color: '#0000ff' }] } });
+    preset.effects = [pixels];
+
+    // a preset without steps yet runs its effects
+    expect(service.getDerivedPresetColor(preset)).toBe('#0000ff');
+
+    preset.steps = [step(1, 0, 0), step(0, 1, 0)];
+    preset.steps[0].effectAmounts = [new PresetStepEffectAmount({ effectUuid: 'pixels', amount: 0 })];
+
+    // it only runs in a later step: the preset opens with its own color
     expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
   });
 
