@@ -234,6 +234,23 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
       expect(element.querySelector('.gobo-look-toggle').textContent.trim()).toBe('designer.fixture.capability-gobo-pattern-auto');
     });
 
+    it('closes the patterns with Escape and with a click elsewhere, drawing the card anew', async () => {
+      slot(1).click();
+      await update();
+      expect(picker()).not.toBeNull();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      // drawn anew by the card itself, not by a change detection of the test
+      expect(picker()).toBeNull();
+
+      (element.querySelector('.gobo-look-toggle') as HTMLElement).click();
+      await update();
+      expect(picker()).not.toBeNull();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      expect(picker()).toBeNull();
+    });
+
     it('names the patterns by their kind and how many points, dots, lines, ... they have', () => {
       expect(component.getPatternName('star-5')).toBe('designer.fixture.gobo-family.star 5');
       // the ones without a count to tell are numbered

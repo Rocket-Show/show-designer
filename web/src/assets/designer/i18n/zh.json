@@ -285,7 +285,6 @@
       "capability-gobo-pattern": "预览中",
       "capability-gobo-pattern-auto": "按名称",
       "capability-gobo-pattern-pick": "为图案片匹配图案",
-      "capability-gobo-pattern-hint": "灯具库只给出了图案片的名称，没有图片。请选择与此图案片最相似的图案：预览会在该型号的所有灯具上显示它。",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "上切光片",

@@ -285,7 +285,6 @@
       "capability-gobo-pattern": "In der Vorschau",
       "capability-gobo-pattern-auto": "Aus dem Namen",
       "capability-gobo-pattern-pick": "Dem Gobo ein Muster zuordnen",
-      "capability-gobo-pattern-hint": "Die Fixture-Bibliothek nennt die Gobos beim Namen, hat aber keine Bilder davon. Wähle das Muster, das diesem Gobo am ähnlichsten sieht: die Vorschau zeigt es auf allen Fixtures dieses Modells.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Blende oben",

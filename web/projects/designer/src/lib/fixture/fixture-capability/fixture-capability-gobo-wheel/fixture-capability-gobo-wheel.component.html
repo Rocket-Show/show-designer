@@ -69,7 +69,6 @@
     <!-- the patterns to match the gobo with, over the panels below the pattern it shows (see placePicker) -->
     <div #picker class="gobo-picker" role="dialog" [attr.aria-label]="'designer.fixture.capability-gobo-pattern-pick' | translate">
       <div class="gobo-picker-title">{{ 'designer.fixture.capability-gobo-pattern-pick' | translate }}: {{ getSlotName(goboSlot) }}</div>
-      <div class="gobo-picker-hint text-muted">{{ 'designer.fixture.capability-gobo-pattern-hint' | translate }}</div>
       <div class="gobo-picker-tiles">
         <a
           href="#"
@@ -110,7 +109,15 @@
           getShake() > 0 ? (getShake() * 100 | number : '1.0-0') + ' %' : ('designer.fixture.capability-gobo-shake-off' | translate)
         }}</span>
       </div>
-      <mv-slider [value]="getShake()" (change)="setShake($event.newValue)" [tooltip]="'hide'" [min]="0" [max]="1" [step]="0.01"></mv-slider>
+      <mv-slider
+        class="sd-slider-fill"
+        [value]="getShake()"
+        (change)="setShake($event.newValue)"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
     </div>
     }
   </div>

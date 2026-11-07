@@ -285,7 +285,6 @@
       "capability-gobo-pattern": "Na pré-visualização",
       "capability-gobo-pattern-auto": "Pelo nome",
       "capability-gobo-pattern-pick": "Associar um padrão ao gobo",
-      "capability-gobo-pattern-hint": "A biblioteca de fixtures dá nome aos gobos, mas não tem imagens deles. Escolha o padrão mais parecido com este gobo: a pré-visualização mostra-o em todos os fixtures deste modelo.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Lâmina superior",

@@ -285,7 +285,6 @@
       "capability-gobo-pattern": "En la vista previa",
       "capability-gobo-pattern-auto": "Según su nombre",
       "capability-gobo-pattern-pick": "Asignar un patrón al gobo",
-      "capability-gobo-pattern-hint": "La biblioteca de fixtures nombra los gobos, pero no tiene imágenes de ellos. Elige el patrón que más se parezca a este gobo: la vista previa lo muestra en todos los fixtures de este modelo.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Cuchilla superior",

@@ -349,8 +349,15 @@ export class FixtureCapabilityGoboWheelComponent implements AfterViewChecked, On
     this.pickingPattern = !this.pickingPattern;
   }
 
+  // Close the patterns, also from a click elsewhere or Escape, which this card isn't drawn anew for on its own (it is
+  // drawn when it changes, see selectSlotNumber)
   closePicker() {
+    if (!this.pickingPattern) {
+      return;
+    }
+
     this.pickingPattern = false;
+    this.changeDetectorRef.detectChanges();
   }
 
   // Show the gobo picked with the passed pattern of the catalog in the preview, or with the one its name brings again

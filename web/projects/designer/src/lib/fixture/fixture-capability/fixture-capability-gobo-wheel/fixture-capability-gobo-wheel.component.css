@@ -8,6 +8,15 @@
   font-size: 0.85rem;
 }
 
+/* the shake as wide as the slots above it (the slider follows it, see sd-slider-fill) */
+.gobo-shake {
+  width: 180px;
+}
+
+.gobo-shake mv-slider {
+  display: block;
+}
+
 /* the pattern the preview shows a gobo with: a round picture, white where the light passes */
 .gobo-thumb {
   width: 18px;
@@ -59,14 +68,10 @@
 }
 
 .gobo-picker-title {
+  margin-bottom: var(--sd-space-2);
   color: var(--sd-text);
   font-size: 0.8125rem;
   font-weight: 600;
-}
-
-.gobo-picker-hint {
-  margin-bottom: var(--sd-space-2);
-  font-size: 0.75rem;
 }
 
 .gobo-picker-tiles {
