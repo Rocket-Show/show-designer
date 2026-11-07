@@ -47,6 +47,7 @@
       "settings": "设置",
       "help": "帮助",
       "fixture-pool": "灯具库",
+      "dmx-channels": "DMX 通道",
       "stage": "舞台",
       "project-new": "新建",
       "project-save": "保存",
@@ -346,6 +347,17 @@
       "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
       "lamp-on": "开灯泡",
       "lamp-on-hint": "打开舞台上灯具的灯泡"
+    },
+    "dmx": {
+      "title": "DMX 通道",
+      "universe": "域",
+      "show-unpatched": "显示未配接灯具的通道",
+      "release-all": "松开所有推子",
+      "release": "松开推子：通道重新发送预设设定的值",
+      "unpatched": "未配接",
+      "hint": "每个通道发送的值（经过总调光之后）。推子会将其通道保持在推子的值上，覆盖预设设定的值，直到松开为止。关闭此页面会松开所有推子。",
+      "no-universe": "还没有域。请在灯具库中添加一个。",
+      "no-fixtures": "还没有灯具配接到此域。"
     },
     "gradient": {
       "color": "颜色的十六进制值",

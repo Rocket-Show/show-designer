@@ -1,3 +1,4 @@
+import { DmxOverride } from './dmx-override';
 import { Composition } from './composition';
 import { Fixture } from './fixture';
 import { Folder } from './folder';
@@ -46,6 +47,10 @@ export class Project {
   // them (see maintenance). Like the identified fixtures, they only travel to the live preview.
   public resetFixtureUuids: string[] = [];
   public lampOnFixtureUuids: string[] = [];
+
+  // the DMX channels held at a value by the faders of the DMX channels, over what the presets put on them. Like the
+  // identified fixtures, they only travel to the live preview.
+  public dmxOverrides: DmxOverride[] = [];
 
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;

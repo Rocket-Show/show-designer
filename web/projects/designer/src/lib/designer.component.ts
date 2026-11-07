@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
+import { DmxChannelsComponent } from './dmx-channels/dmx-channels.component';
 import { map } from 'rxjs/operators';
 import { DesignerLayout } from './designer-layout';
 import { PreviewComponent } from './preview/preview.component';
@@ -288,6 +289,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   openFixturePool() {
     this.fixturePoolService.open();
+  }
+
+  // The DMX channels with the values sent on them and a fader for each. They open over the lower part of the designer,
+  // without darkening the rest, so that the preview above them shows what the faders do.
+  openDmxChannels() {
+    this.modalService.show(DmxChannelsComponent, { keyboard: true, backdrop: false, ignoreBackdropClick: true, class: 'modal-dmx' });
   }
 
   undo() {

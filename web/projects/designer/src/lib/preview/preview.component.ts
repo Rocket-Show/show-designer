@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FixtureCategory } from '../models/fixture-profile';
+import { DmxService } from '../services/dmx.service';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
@@ -123,7 +124,8 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     private sceneService: SceneService,
     private ngZone: NgZone,
     public hardwarePromoService: HardwarePromoService,
-    private layoutService: LayoutService
+    private layoutService: LayoutService,
+    private dmxService: DmxService
   ) {
     this.promoLink = this.hardwarePromoService.link('preview-badge');
 
@@ -413,7 +415,9 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
       }
 
       // Update the fixture properties
-      fixture3d.updatePreview(calculatedFixtures.get(fixture3d.fixture) || [], this.projectService.project.masterDimmerValue, timeMillis);
+      // with the channels held by the faders of the DMX channels on top
+      const values = this.dmxService.applyOverrides(fixture3d.fixture, calculatedFixtures.get(fixture3d.fixture) || []);
+      fixture3d.updatePreview(values, this.projectService.project.masterDimmerValue, timeMillis);
 
       // Select the fixture, if required
       if (this.fixtureService.settingsSelection) {

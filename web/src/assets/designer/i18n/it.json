@@ -47,6 +47,7 @@
       "settings": "Impostazioni",
       "help": "Aiuto",
       "fixture-pool": "Pool fixture",
+      "dmx-channels": "Canali DMX",
       "stage": "Palco",
       "project-new": "Nuovo",
       "project-save": "Salva",
@@ -346,6 +347,17 @@
       "reset-hint": "Chiede all’apparecchio sul palco di resettarsi, ad es. una testa mobile che ha perso la posizione",
       "lamp-on": "Lampada accesa",
       "lamp-on-hint": "Accende la lampada dell’apparecchio sul palco"
+    },
+    "dmx": {
+      "title": "Canali DMX",
+      "universe": "Universo",
+      "show-unpatched": "Mostra i canali senza fixture",
+      "release-all": "Rilascia tutti i fader",
+      "release": "Rilascia il fader: il canale invia di nuovo ciò che impostano i preset",
+      "unpatched": "Non assegnato",
+      "hint": "Il valore inviato su ogni canale, dopo il dimmer generale. Un fader tiene il suo canale al suo valore, sopra ciò che impostano i preset, finché non viene rilasciato. Chiudendo questa pagina vengono rilasciati tutti i fader.",
+      "no-universe": "Non c’è ancora nessun universo. Aggiungine uno nel Pool fixture.",
+      "no-fixtures": "Nessuna fixture è ancora assegnata a questo universo."
     },
     "gradient": {
       "color": "Colore come valore esadecimale",

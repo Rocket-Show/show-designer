@@ -47,6 +47,7 @@
       "settings": "Settings",
       "help": "Help",
       "fixture-pool": "Fixture pool",
+      "dmx-channels": "DMX channels",
       "stage": "Stage",
       "project-new": "New",
       "project-save": "Save",
@@ -346,6 +347,17 @@
       "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
       "lamp-on": "Lamp on",
       "lamp-on-hint": "Switches the lamp of the fixture on stage on"
+    },
+    "dmx": {
+      "title": "DMX channels",
+      "universe": "Universe",
+      "show-unpatched": "Show the channels no fixture is patched to",
+      "release-all": "Let go of all faders",
+      "release": "Let go of the fader: the channel sends what the presets put on it again",
+      "unpatched": "Not patched",
+      "hint": "The value sent on each channel, after the master dimmer. A fader holds its channel at its value, over what the presets put on it, until it is let go. Closing this page lets go of all faders.",
+      "no-universe": "There is no universe yet. Add one in the fixture pool.",
+      "no-fixtures": "No fixture is patched to this universe yet."
     },
     "gradient": {
       "color": "Color as a hex value",

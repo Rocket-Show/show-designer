@@ -47,6 +47,7 @@
       "settings": "Einstellungen",
       "help": "Hilfe",
       "fixture-pool": "Fixture pool",
+      "dmx-channels": "DMX-Kanäle",
       "stage": "Bühne",
       "project-new": "Neu",
       "project-save": "Speichern",
@@ -347,6 +348,17 @@
       "reset-hint": "Lässt das Gerät auf der Bühne einen Reset machen, z. B. ein Moving Head, der seine Position verloren hat",
       "lamp-on": "Lampe an",
       "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein"
+    },
+    "dmx": {
+      "title": "DMX-Kanäle",
+      "universe": "Universum",
+      "show-unpatched": "Kanäle ohne Fixture anzeigen",
+      "release-all": "Alle Fader loslassen",
+      "release": "Fader loslassen: der Kanal sendet wieder, was die Presets vorgeben",
+      "unpatched": "Nicht gepatcht",
+      "hint": "Der Wert, der auf jedem Kanal gesendet wird, nach dem Master-Dimmer. Ein Fader hält seinen Kanal auf seinem Wert, über dem, was die Presets vorgeben, bis er losgelassen wird. Beim Schliessen dieser Seite werden alle Fader losgelassen.",
+      "no-universe": "Es gibt noch kein Universum. Füge eines im Fixture pool hinzu.",
+      "no-fixtures": "Auf diesem Universum ist noch keine Fixture gepatcht."
     },
     "gradient": {
       "color": "Farbe als Hex-Wert",

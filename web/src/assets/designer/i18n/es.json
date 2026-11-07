@@ -47,6 +47,7 @@
       "settings": "Configuración",
       "help": "Ayuda",
       "fixture-pool": "Grupo de fixtures",
+      "dmx-channels": "Canales DMX",
       "stage": "Escenario",
       "project-new": "Nuevo",
       "project-save": "Guardar",
@@ -346,6 +347,17 @@
       "reset-hint": "Pide al aparato en el escenario que se reinicie, p. ej. una cabeza móvil que perdió su posición",
       "lamp-on": "Lámpara encendida",
       "lamp-on-hint": "Enciende la lámpara del aparato en el escenario"
+    },
+    "dmx": {
+      "title": "Canales DMX",
+      "universe": "Universo",
+      "show-unpatched": "Mostrar los canales sin fixture",
+      "release-all": "Soltar todos los faders",
+      "release": "Soltar el fader: el canal vuelve a enviar lo que ponen los presets",
+      "unpatched": "Sin asignar",
+      "hint": "El valor enviado en cada canal, después del atenuador maestro. Un fader mantiene su canal en su valor, por encima de lo que ponen los presets, hasta que se suelta. Al cerrar esta página se sueltan todos los faders.",
+      "no-universe": "Todavía no hay ningún universo. Añade uno en el Grupo de fixtures.",
+      "no-fixtures": "Todavía no hay ningún fixture asignado a este universo."
     },
     "gradient": {
       "color": "Color como valor hexadecimal",

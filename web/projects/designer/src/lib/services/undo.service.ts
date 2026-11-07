@@ -42,6 +42,7 @@ export class UndoService implements OnDestroy {
     'identifyFixtureUuids',
     'resetFixtureUuids',
     'lampOnFixtureUuids',
+    'dmxOverrides',
   ];
 
   // a gesture of the pointer starts here. Everything it changes belongs to one step,

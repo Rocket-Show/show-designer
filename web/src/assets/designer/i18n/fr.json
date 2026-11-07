@@ -47,6 +47,7 @@
       "settings": "Paramètres",
       "help": "Aide",
       "fixture-pool": "Parc de fixtures",
+      "dmx-channels": "Canaux DMX",
       "stage": "Scène",
       "project-new": "Nouveau",
       "project-save": "Enregistrer",
@@ -346,6 +347,17 @@
       "reset-hint": "Demande à l’appareil sur scène de se réinitialiser, p. ex. une lyre qui a perdu sa position",
       "lamp-on": "Lampe allumée",
       "lamp-on-hint": "Allume la lampe de l’appareil sur scène"
+    },
+    "dmx": {
+      "title": "Canaux DMX",
+      "universe": "Univers",
+      "show-unpatched": "Afficher les canaux sans fixture",
+      "release-all": "Relâcher tous les faders",
+      "release": "Relâcher le fader : le canal envoie à nouveau ce que mettent les presets",
+      "unpatched": "Non patché",
+      "hint": "La valeur envoyée sur chaque canal, après le gradateur général. Un fader maintient son canal à sa valeur, par-dessus ce que mettent les presets, jusqu’à ce qu’il soit relâché. Fermer cette page relâche tous les faders.",
+      "no-universe": "Il n’y a pas encore d’univers. Ajoutez-en un dans le Parc de fixtures.",
+      "no-fixtures": "Aucune fixture n’est encore patchée sur cet univers."
     },
     "gradient": {
       "color": "Couleur en valeur hexadécimale",

@@ -1,0 +1,90 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.dmx.title' | translate }}</h4>
+  <button type="button" class="close pull-right" aria-label="Close" (click)="close(); (false)">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <div class="dmx-toolbar mb-3">
+    @if (universes.length > 1) {
+    <select
+      class="form-control dmx-universe"
+      [attr.aria-label]="'designer.dmx.universe' | translate"
+      [ngModel]="selectedUniverse?.uuid"
+      (ngModelChange)="selectUniverse($event)"
+    >
+      @for (universe of universes; track universe.uuid) {
+      <option [value]="universe.uuid">{{ universe.name }}</option>
+      }
+    </select>
+    } @else if (selectedUniverse) {
+    <span class="dmx-universe-name">{{ selectedUniverse.name }}</span>
+    }
+
+    <div class="form-check my-auto">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        id="dmxShowUnpatched"
+        [ngModel]="showUnpatched"
+        (ngModelChange)="setShowUnpatched($event)"
+      />
+      <label class="form-check-label" for="dmxShowUnpatched">{{ 'designer.dmx.show-unpatched' | translate }}</label>
+    </div>
+
+    <button type="button" class="btn btn-secondary btn-sm ml-auto" [disabled]="!hasHeld()" (click)="releaseAll()">
+      <i class="fa fa-undo" aria-hidden="true"></i> {{ 'designer.dmx.release-all' | translate }}
+    </button>
+  </div>
+
+  <p class="text-muted small mb-3">{{ 'designer.dmx.hint' | translate }}</p>
+
+  @if (!selectedUniverse) {
+  <p class="text-muted">{{ 'designer.dmx.no-universe' | translate }}</p>
+  } @else if (groups.length === 0) {
+  <p class="text-muted">{{ 'designer.dmx.no-fixtures' | translate }}</p>
+  }
+
+  <div class="dmx-groups">
+    @for (group of groups; track group.strips[0].dmxChannel) {
+    <section class="dmx-group" [class.dmx-group-unpatched]="!group.patched">
+      <header class="dmx-group-header">
+        <span class="dmx-group-label text-truncate">{{ group.patched ? group.label : ('designer.dmx.unpatched' | translate) }}</span>
+        <span class="dmx-group-range">{{ getAddressRange(group) }}</span>
+      </header>
+      <div class="dmx-strips">
+        @for (strip of group.strips; track strip.dmxChannel) {
+        <div class="dmx-strip" [class.dmx-strip-held]="isHeld(strip.dmxChannel)" [title]="strip.title">
+          <span class="dmx-address">{{ strip.dmxChannel + 1 }}</span>
+          <span class="dmx-value">{{ values[strip.dmxChannel] }}</span>
+          <input
+            type="range"
+            class="dmx-fader"
+            min="0"
+            max="255"
+            step="1"
+            [value]="values[strip.dmxChannel]"
+            [attr.aria-label]="strip.dmxChannel + 1 + ' ' + strip.name"
+            (input)="setValue(strip.dmxChannel, $any($event.target).value)"
+          />
+          <button
+            type="button"
+            class="dmx-release"
+            [class.invisible]="!isHeld(strip.dmxChannel)"
+            [title]="'designer.dmx.release' | translate"
+            [attr.aria-label]="'designer.dmx.release' | translate"
+            (click)="release(strip.dmxChannel)"
+          >
+            <i class="fa fa-times" aria-hidden="true"></i>
+          </button>
+          <span class="dmx-name">{{ strip.name }}</span>
+        </div>
+        }
+      </div>
+    </section>
+    }
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-primary" (click)="close()">{{ 'designer.misc.ok' | translate }}</button>
+</div>
