@@ -24,9 +24,10 @@ import case20 from './cases/pixels.json';
 import case21 from './cases/preset-intensity-edges.json';
 import case22 from './cases/preset-intensity.json';
 import case23 from './cases/preset-steps-edges.json';
-import case24 from './cases/preset-steps.json';
-import case25 from './cases/profile-number.json';
-import case26 from './cases/transition-curve.json';
+import case24 from './cases/preset-steps-orders.json';
+import case25 from './cases/preset-steps.json';
+import case26 from './cases/profile-number.json';
+import case27 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -79,9 +80,10 @@ export const caseFiles: { [fileName: string]: any } = {
   'preset-intensity-edges.json': case21,
   'preset-intensity.json': case22,
   'preset-steps-edges.json': case23,
-  'preset-steps.json': case24,
-  'profile-number.json': case25,
-  'transition-curve.json': case26,
+  'preset-steps-orders.json': case24,
+  'preset-steps.json': case25,
+  'profile-number.json': case26,
+  'transition-curve.json': case27,
 };
 
 export const profiles: { [name: string]: any } = {

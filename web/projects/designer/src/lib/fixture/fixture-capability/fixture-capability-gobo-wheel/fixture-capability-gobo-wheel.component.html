@@ -26,12 +26,82 @@
         [class.active]="getCurrentSlotNumber() === slot.capability.slotNumber"
         (click)="selectSlotNumber(slot.capability.slotNumber)"
       >
+        @if (isGoboSlot(slot)) {
+        <!-- the pattern the preview shows the gobo with -->
+        <canvas
+          #goboCanvas
+          class="gobo-thumb"
+          width="18"
+          height="18"
+          [attr.data-key]="getPatternKey(getShownPattern(slot))"
+          aria-hidden="true"
+        ></canvas>
+        }
         {{ getSlotName(slot) }}
       </button>
       }
     </div>
 
-    @if (canShake()) {
+    @if (getCurrentGoboSlot(); as goboSlot) {
+    <!-- the pattern the preview shows the gobo picked with, which opens the patterns to match it with -->
+    <div class="gobo-look mt-2">
+      <div class="text-muted gobo-look-label">{{ 'designer.fixture.capability-gobo-pattern' | translate }}</div>
+      <a
+        #patternToggle
+        href="#"
+        class="btn btn-secondary btn-sm gobo-look-toggle"
+        [class.active]="pickingPattern"
+        aria-haspopup="true"
+        [attr.aria-expanded]="pickingPattern"
+        (click)="togglePicker(); (false)"
+      >
+        <canvas #goboCanvas width="28" height="28" [attr.data-key]="getPatternKey(getShownPattern(goboSlot))" aria-hidden="true"></canvas>
+        <span class="text-truncate">{{
+          getPatternChoiceId(goboSlot)
+            ? getPatternName(getPatternChoiceId(goboSlot))
+            : ('designer.fixture.capability-gobo-pattern-auto' | translate)
+        }}</span>
+        <i class="fa fa-caret-down fa-fw ml-auto" aria-hidden="true"></i>
+      </a>
+    </div>
+
+    @if (pickingPattern) {
+    <!-- the patterns to match the gobo with, over the panels below the pattern it shows (see placePicker) -->
+    <div #picker class="gobo-picker" role="dialog" [attr.aria-label]="'designer.fixture.capability-gobo-pattern-pick' | translate">
+      <div class="gobo-picker-title">{{ 'designer.fixture.capability-gobo-pattern-pick' | translate }}: {{ getSlotName(goboSlot) }}</div>
+      <div class="gobo-picker-tiles">
+        <a
+          href="#"
+          class="gobo-picker-tile"
+          [class.active]="!getPatternChoiceId(goboSlot)"
+          [title]="'designer.fixture.capability-gobo-pattern-auto' | translate"
+          (click)="pickPattern(undefined); (false)"
+        >
+          <canvas
+            #goboCanvas
+            width="56"
+            height="56"
+            [attr.data-key]="getPatternKey(getAutomaticPattern(goboSlot))"
+            aria-hidden="true"
+          ></canvas>
+          <span>{{ 'designer.fixture.capability-gobo-pattern-auto' | translate }}</span>
+        </a>
+        @for (entry of catalog; track entry.id) {
+        <a
+          href="#"
+          class="gobo-picker-tile"
+          [class.active]="getPatternChoiceId(goboSlot) === entry.id"
+          [attr.data-pattern]="entry.id"
+          [title]="getPatternName(entry.id)"
+          (click)="pickPattern(entry.id); (false)"
+        >
+          <canvas #goboCanvas width="56" height="56" [attr.data-key]="getPatternKey(entry.pattern)" aria-hidden="true"></canvas>
+          <span>{{ getPatternName(entry.id) }}</span>
+        </a>
+        }
+      </div>
+    </div>
+    } } @if (canShake()) {
     <div class="gobo-shake mt-2">
       <div class="d-flex justify-content-between text-muted">
         <span>{{ 'designer.fixture.capability-gobo-shake' | translate }}</span>
@@ -39,7 +109,15 @@
           getShake() > 0 ? (getShake() * 100 | number : '1.0-0') + ' %' : ('designer.fixture.capability-gobo-shake-off' | translate)
         }}</span>
       </div>
-      <mv-slider [value]="getShake()" (change)="setShake($event.newValue)" [tooltip]="'hide'" [min]="0" [max]="1" [step]="0.01"></mv-slider>
+      <mv-slider
+        class="sd-slider-fill"
+        [value]="getShake()"
+        (change)="setShake($event.newValue)"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
     </div>
     }
   </div>

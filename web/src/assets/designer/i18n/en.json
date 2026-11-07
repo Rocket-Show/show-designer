@@ -47,6 +47,7 @@
       "settings": "Settings",
       "help": "Help",
       "fixture-pool": "Fixture pool",
+      "dmx-channels": "DMX channels",
       "stage": "Stage",
       "project-new": "New",
       "project-save": "Save",
@@ -168,6 +169,12 @@
       "steps-length": "Step length",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
+      "steps-order": "Order",
+      "steps-order-forward": "Forward",
+      "steps-order-backward": "Backward",
+      "steps-order-pingpong": "Forward and back",
+      "steps-order-random": "Random",
+      "steps-seed": "Seed of the random order",
       "steps-chase": "Chase",
       "model-specific": "{{count}} values only play on: {{models}}"
     },
@@ -275,6 +282,9 @@
       "capability-pan-tilt-aim-stop": "Stop aiming",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Off",
+      "capability-gobo-pattern": "In the preview",
+      "capability-gobo-pattern-auto": "From its name",
+      "capability-gobo-pattern-pick": "Match the gobo with a pattern",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Blade top",
@@ -288,6 +298,19 @@
           "Bottom": "Blade bottom angle",
           "Left": "Blade left angle"
         }
+      },
+      "gobo-family": {
+        "dots": "Dots",
+        "star": "Star",
+        "rays": "Rays",
+        "bars": "Bars",
+        "grid": "Grid",
+        "rings": "Rings",
+        "spiral": "Spiral",
+        "flower": "Flower",
+        "polygon": "Polygon",
+        "checker": "Checkerboard",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {
@@ -340,6 +363,17 @@
       "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
       "lamp-on": "Lamp on",
       "lamp-on-hint": "Switches the lamp of the fixture on stage on"
+    },
+    "dmx": {
+      "title": "DMX channels",
+      "universe": "Universe",
+      "show-unpatched": "Show the channels no fixture is patched to",
+      "release-all": "Let go of all faders",
+      "release": "Let go of the fader: the channel sends what the presets put on it again",
+      "unpatched": "Not patched",
+      "hint": "The value sent on each channel, after the master dimmer. A fader holds its channel at its value, over what the presets put on it, until it is let go. Closing this page lets go of all faders.",
+      "no-universe": "There is no universe yet. Add one in the fixture pool.",
+      "no-fixtures": "No fixture is patched to this universe yet."
     },
     "gradient": {
       "color": "Color as a hex value",

@@ -21,7 +21,8 @@ export class MovingHead3d extends Fixture3d {
   private armGroup: THREE.Object3D = new THREE.Object3D();
   private objectGroup: THREE.Object3D = new THREE.Object3D();
 
-  private lastBeamAngleDegrees: number;
+  // the spot light of a head whose profile doesn't say how wide its beam opens (see Fixture3d.updateBeamAngle)
+  protected override defaultLightAngle = THREE.MathUtils.degToRad(14);
 
   // the lens on the bottom of the head
   protected override lensOffset = -1.26;
@@ -149,14 +150,6 @@ export class MovingHead3d extends Fixture3d {
     // fixture, its middle being the position the model is drawn in
     this.armGroup.rotation.y = THREE.MathUtils.degToRad((panEnd - panStart) * (this.pan - 0.5));
     this.headGroup.rotation.x = THREE.MathUtils.degToRad((tiltEnd - tiltStart) * (this.tilt - 0.5));
-
-    // Update the angle only on change, because it's expensive
-    // TODO update the correct angle from the profile
-    const beamAngleDregrees = 14;
-    if (this.lastBeamAngleDegrees !== beamAngleDregrees) {
-      this.spotLight.angle = THREE.MathUtils.degToRad(beamAngleDregrees);
-      this.lastBeamAngleDegrees = beamAngleDregrees;
-    }
 
     // Update the material
     if (this.lastSelected !== this.isSelected) {

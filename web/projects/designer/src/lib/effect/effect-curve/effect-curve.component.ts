@@ -1,3 +1,4 @@
+import { followFloatingPicker, placeFloatingPicker } from '../../floating-picker';
 import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
@@ -99,12 +100,6 @@ export interface CurveChannelOption {
   profile: FixtureProfile;
   channel: CachedFixtureChannel;
 }
-
-// how tall the tiles to pick a pattern from are at least (two rows), how far they keep from the pattern picked and from
-// the edges of the window, in CSS pixels
-const PICKER_MIN_HEIGHT = 180;
-const PICKER_GAP = 4;
-const PICKER_MARGIN = 8;
 
 @Component({
   selector: 'lib-app-effect-curve',
@@ -504,66 +499,22 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.setPattern(pattern);
   }
 
-  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside.
-  // Where less than two rows are left below it, but more above it, they open above it.
+  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside
+  // (see placeFloatingPicker).
   placePicker() {
-    const picker = this.pickerElement;
-    const toggle = this.pickerToggle?.nativeElement;
-
-    if (!picker || !toggle) {
-      return;
-    }
-
-    const anchor = toggle.getBoundingClientRect();
-    const width = Math.min(picker.offsetWidth, window.innerWidth - 2 * PICKER_MARGIN);
-    const below = Math.floor(window.innerHeight - anchor.bottom - PICKER_GAP - PICKER_MARGIN);
-    const above = Math.floor(anchor.top - PICKER_GAP - PICKER_MARGIN);
-    const upwards = below < PICKER_MIN_HEIGHT && above > below;
-
-    picker.style.left = Math.max(PICKER_MARGIN, Math.min(anchor.left, window.innerWidth - width - PICKER_MARGIN)) + 'px';
-
-    if (upwards) {
-      picker.style.top = '';
-      picker.style.bottom = window.innerHeight - anchor.top + PICKER_GAP + 'px';
-    } else {
-      picker.style.top = anchor.bottom + PICKER_GAP + 'px';
-      picker.style.bottom = '';
-    }
-
-    picker.style.maxHeight = Math.max(upwards ? above : below, 0) + 'px';
+    placeFloatingPicker(this.pickerElement, this.pickerToggle?.nativeElement);
   }
 
   private addPickerListeners() {
-    this.ngZone.runOutsideAngular(() => {
-      const place = () => this.placePicker();
+    const remove = followFloatingPicker(
+      this.ngZone,
+      () => this.pickerElement,
+      () => this.pickerToggle?.nativeElement,
+      () => this.placePicker(),
+      () => this.closePicker()
+    );
 
-      // a click anywhere but on the tiles and on the pattern picked (which closes them itself)
-      const pointerDown = (event: Event) => {
-        const target = event.target as Node;
-
-        if (!this.pickerElement?.contains(target) && !this.pickerToggle?.nativeElement.contains(target)) {
-          this.ngZone.run(() => this.closePicker());
-        }
-      };
-      const keyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          this.ngZone.run(() => this.closePicker());
-        }
-      };
-
-      // the scroll of any panel, which does not bubble up
-      window.addEventListener('scroll', place, true);
-      window.addEventListener('resize', place);
-      document.addEventListener('pointerdown', pointerDown, true);
-      document.addEventListener('keydown', keyDown);
-
-      this.pickerListeners = [
-        () => window.removeEventListener('scroll', place, true),
-        () => window.removeEventListener('resize', place),
-        () => document.removeEventListener('pointerdown', pointerDown, true),
-        () => document.removeEventListener('keydown', keyDown),
-      ];
-    });
+    this.pickerListeners = [remove];
   }
 
   private removePickerListeners() {

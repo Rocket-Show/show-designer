@@ -552,4 +552,129 @@ describe('PresetStepService', () => {
       expect(service.getStepsPhasingMillis(sequence, 2, 4)).toBe(250);
     });
   });
+  describe('the order the steps are played in', () => {
+    // three steps a second apart: 10, 20 and 30, each jumping in (no transition)
+    function threeSteps(order: string, loop = false): Preset {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(2000, 30));
+      presetWithSteps.stepsOrder = order;
+      presetWithSteps.stepsLoop = loop;
+
+      return presetWithSteps;
+    }
+
+    function played(presetWithSteps: Preset, count: number): number[] {
+      const values: number[] = [];
+
+      for (let i = 0; i < count; i++) {
+        values.push(dimmerAt(presetWithSteps, i * 1000 + 500));
+      }
+
+      return values;
+    }
+
+    it('should play the steps the way they are written down, forward', () => {
+      expect(played(threeSteps('forward', true), 6)).toEqual([10, 20, 30, 10, 20, 30]);
+    });
+
+    it('should play the steps backward, holding the first one at the end', () => {
+      expect(played(threeSteps('backward'), 5)).toEqual([30, 20, 10, 10, 10]);
+    });
+
+    it('should loop the steps backward', () => {
+      expect(played(threeSteps('backward', true), 6)).toEqual([30, 20, 10, 30, 20, 10]);
+    });
+
+    it('should play the steps forward and back, without playing the ends twice in a row', () => {
+      expect(played(threeSteps('pingpong', true), 9)).toEqual([10, 20, 30, 20, 10, 20, 30, 20, 10]);
+    });
+
+    it('should end forward and back on the first step, if the sequence does not loop', () => {
+      expect(played(threeSteps('pingpong'), 7)).toEqual([10, 20, 30, 20, 10, 10, 10]);
+    });
+
+    it('should play every step once per pass in a random order, never one twice in a row', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(2000, 30), step(3000, 40), step(4000, 50));
+      presetWithSteps.stepsOrder = 'random';
+      presetWithSteps.stepsLoop = true;
+      const values = played(presetWithSteps, 5 * 20);
+
+      for (let pass = 0; pass < 20; pass++) {
+        expect(values.slice(pass * 5, pass * 5 + 5).sort((a, b) => a - b)).toEqual([10, 20, 30, 40, 50]);
+      }
+      for (let i = 1; i < values.length; i++) {
+        expect(values[i]).not.toBe(values[i - 1]);
+      }
+
+      // not simply forward, and the same again for the same seed
+      expect(values.slice(0, 15)).not.toEqual([10, 20, 30, 40, 50, 10, 20, 30, 40, 50, 10, 20, 30, 40, 50]);
+      expect(played(presetWithSteps, 5 * 20)).toEqual(values);
+
+      // another seed shuffles differently
+      presetWithSteps.stepsSeed = 2;
+      expect(played(presetWithSteps, 5 * 20)).not.toEqual(values);
+    });
+
+    it('should let each step last as long as it does written down, in any order', () => {
+      // 10 lasts 500, 20 lasts 1500, 30 lasts as long as the one before it
+      const presetWithSteps = loaded(step(0, 10), step(500, 20), step(2000, 30));
+      presetWithSteps.stepsOrder = 'backward';
+
+      expect(service.getStepsPassMillis(presetWithSteps)).toBe(3500);
+      expect(dimmerAt(presetWithSteps, 1400)).toBe(30);
+      expect(dimmerAt(presetWithSteps, 1600)).toBe(20);
+      expect(dimmerAt(presetWithSteps, 2900)).toBe(20);
+      expect(dimmerAt(presetWithSteps, 3100)).toBe(10);
+    });
+
+    it('should travel into a step from the one played before it', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20, 1000), step(2000, 30, 1000));
+      presetWithSteps.stepsOrder = 'backward';
+      presetWithSteps.stepsLoop = true;
+
+      // 30 opens the pass, travelling from 10, which ended the pass before
+      expect(dimmerAt(presetWithSteps, 3000 + 500)).toBe(20);
+      // 20 travels from 30 over its second
+      expect(dimmerAt(presetWithSteps, 1000 + 500)).toBe(25);
+      // the step written first jumps in (it has no transition of its own)
+      expect(dimmerAt(presetWithSteps, 2000 + 1)).toBe(10);
+    });
+
+    it('should hold the step it opens with before the sequence starts', () => {
+      expect(dimmerAt(threeSteps('backward'), -500)).toBe(30);
+    });
+
+    it('should make a pass forward and back last as long as all the steps it plays', () => {
+      expect(service.getStepsPassMillis(threeSteps('pingpong', true))).toBe(4000);
+      expect(service.getStepsPassMillis(threeSteps('pingpong'))).toBe(5000);
+      expect(service.getStepsPassMillis(threeSteps('random', true))).toBe(3000);
+    });
+
+    it('should spread the chase over the fixtures over a whole pass in the order', () => {
+      const presetWithSteps = threeSteps('pingpong', true);
+      presetWithSteps.stepsPhasingMode = 'spread';
+
+      expect(service.getStepsPhasingMillis(presetWithSteps, 1, 4)).toBe(1000);
+    });
+
+    it('should leave out the steps which last no time', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(1000, 25), step(2000, 30));
+      presetWithSteps.stepsOrder = 'backward';
+
+      expect(played(presetWithSteps, 3)).toEqual([30, 25, 10]);
+    });
+
+    it('should play the steps of an order it does not know forward, like Rocket Show', () => {
+      expect(played(threeSteps('sideways', true), 4)).toEqual([10, 20, 30, 10]);
+    });
+
+    it('should know which step opens a sequence which does not loop', () => {
+      const presetWithSteps = threeSteps('backward');
+
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[2])).toBe(true);
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[0])).toBe(false);
+
+      presetWithSteps.stepsLoop = true;
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[2])).toBe(false);
+    });
+  });
 });

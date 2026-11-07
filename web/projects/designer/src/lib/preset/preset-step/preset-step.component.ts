@@ -59,7 +59,7 @@ export class PresetStepComponent implements OnInit, OnDestroy {
   }
 
   // a step only shows its number, so its times are read on the way past it
-  stepDescription(step: PresetStep, index: number): string {
+  stepDescription(step: PresetStep): string {
     const preset = this.presetService.selectedPreset;
     const millis = this.translateService.instant('designer.misc.ms');
     let started = this.translateService.instant('designer.preset.step-start') + ': ' + step.startMillis + ' ' + millis;
@@ -69,8 +69,8 @@ export class PresetStepComponent implements OnInit, OnDestroy {
       started += ' (' + this.translateService.instant('designer.preset.step-start-own') + ')';
     }
 
-    if (index === 0 && !preset.stepsLoop) {
-      // the first step has nothing to travel from unless the sequence starts over
+    if (this.presetStepService.opensSequence(preset, step)) {
+      // the step the sequence opens with has nothing to travel from unless the sequence starts over
       return started;
     }
 

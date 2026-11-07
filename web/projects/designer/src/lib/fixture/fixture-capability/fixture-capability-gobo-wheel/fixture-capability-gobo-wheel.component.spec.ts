@@ -38,6 +38,9 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
 
     previewLive = spyOn(TestBed.inject(LivePreviewService), 'previewLive');
 
+    // the patterns open on their own once per gobo and app: anew for each case
+    FixtureCapabilityGoboWheelComponent['offered'].clear();
+
     // an open slot, two gobos and a split between them, which can't be picked here
     TestBed.inject(ProjectService).project = new Project({
       fixtureProfiles: [
@@ -152,5 +155,107 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
     component.setShake(0.4);
     component.changeActive(false);
     expect(step.fixtureCapabilityValues).toEqual([]);
+  });
+  describe('the pattern the preview shows a gobo with', () => {
+    function slot(index: number): HTMLElement {
+      return element.querySelectorAll('.list-group-item')[index] as HTMLElement;
+    }
+
+    function picker(): HTMLElement {
+      return element.querySelector('.gobo-picker');
+    }
+
+    function choices() {
+      return TestBed.inject(ProjectService).project.goboPatterns.map((choice) => ({ ...choice }));
+    }
+
+    it('shows the pattern of each gobo next to it, drawn', () => {
+      expect(slot(0).querySelector('canvas')).toBeNull();
+
+      const thumbs = Array.from(element.querySelectorAll<HTMLCanvasElement>('.list-group-item canvas.gobo-thumb'));
+      expect(thumbs.length).toBe(2);
+      // the star is a star
+      expect(thumbs[0].dataset.key.startsWith('star:')).toBe(true);
+      expect(thumbs.every((thumb) => !!thumb.dataset.drawn)).toBe(true);
+    });
+
+    it('opens the patterns the first time a gobo without a pattern matched to it is picked, and not again', async () => {
+      slot(1).click();
+      await update();
+
+      expect(picker()).not.toBeNull();
+      expect(picker().querySelectorAll('.gobo-picker-tile').length).toBe(component.catalog.length + 1);
+      // what its name brings is what it shows so far
+      expect(picker().querySelector('.gobo-picker-tile.active').textContent.trim()).toBe('designer.fixture.capability-gobo-pattern-auto');
+
+      component.closePicker();
+      slot(0).click();
+      await update();
+      expect(picker()).toBeNull();
+      expect(element.querySelector('.gobo-look')).toBeNull();
+
+      slot(1).click();
+      await update();
+      expect(picker()).toBeNull();
+      expect(element.querySelector('.gobo-look')).not.toBeNull();
+
+      // another gobo of the wheel
+      slot(2).click();
+      await update();
+      expect(picker()).not.toBeNull();
+    });
+
+    it('shows the gobo with the pattern picked on all fixtures of the model, and with the one its name brings again', async () => {
+      slot(1).click();
+      await update();
+
+      (picker().querySelector('[data-pattern="dots-7"]') as HTMLElement).click();
+      await update();
+
+      expect(picker()).toBeNull();
+      expect(choices()).toEqual([{ profileUuid: 'spot', wheel: 'Gobo Wheel', slotNumber: 2, pattern: 'dots-7' }]);
+      expect(element.querySelector('.gobo-look-toggle').textContent.trim()).toBe('designer.fixture.gobo-family.dots 7');
+      expect(element.querySelectorAll<HTMLCanvasElement>('canvas.gobo-thumb')[0].dataset.key.startsWith('dots:7:')).toBe(true);
+
+      // picked again: the one picked last
+      (element.querySelector('.gobo-look-toggle') as HTMLElement).click();
+      await update();
+      expect(picker().querySelector('.gobo-picker-tile.active').getAttribute('data-pattern')).toBe('dots-7');
+      (picker().querySelector('[data-pattern="spiral-3"]') as HTMLElement).click();
+      await update();
+      expect(choices().map((choice) => choice.pattern)).toEqual(['spiral-3']);
+
+      // back to what its name brings
+      (element.querySelector('.gobo-look-toggle') as HTMLElement).click();
+      await update();
+      (picker().querySelector('.gobo-picker-tile') as HTMLElement).click();
+      await update();
+      expect(choices()).toEqual([]);
+      expect(element.querySelector('.gobo-look-toggle').textContent.trim()).toBe('designer.fixture.capability-gobo-pattern-auto');
+    });
+
+    it('closes the patterns with Escape and with a click elsewhere, drawing the card anew', async () => {
+      slot(1).click();
+      await update();
+      expect(picker()).not.toBeNull();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      // drawn anew by the card itself, not by a change detection of the test
+      expect(picker()).toBeNull();
+
+      (element.querySelector('.gobo-look-toggle') as HTMLElement).click();
+      await update();
+      expect(picker()).not.toBeNull();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      expect(picker()).toBeNull();
+    });
+
+    it('names the patterns by their kind and how many points, dots, lines, ... they have', () => {
+      expect(component.getPatternName('star-5')).toBe('designer.fixture.gobo-family.star 5');
+      // the ones without a count to tell are numbered
+      expect(component.getPatternName('breakup-32')).toBe('designer.fixture.gobo-family.breakup 2');
+      expect(component.getPatternName('unknown')).toBe('');
+    });
   });
 });

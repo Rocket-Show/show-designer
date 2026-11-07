@@ -47,6 +47,7 @@
       "settings": "Paramètres",
       "help": "Aide",
       "fixture-pool": "Parc de fixtures",
+      "dmx-channels": "Canaux DMX",
       "stage": "Scène",
       "project-new": "Nouveau",
       "project-save": "Enregistrer",
@@ -168,6 +169,12 @@
       "steps-length": "Durée d'une étape",
       "steps-loop": "Répéter les étapes",
       "steps-loop-length": "Durée de la boucle",
+      "steps-order": "Ordre",
+      "steps-order-forward": "En avant",
+      "steps-order-backward": "En arrière",
+      "steps-order-pingpong": "Aller-retour",
+      "steps-order-random": "Aléatoire",
+      "steps-seed": "Graine de l’ordre aléatoire",
       "steps-chase": "Chase",
       "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}"
     },
@@ -275,6 +282,9 @@
       "capability-pan-tilt-aim-stop": "Ne plus viser",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Arrêt",
+      "capability-gobo-pattern": "Dans l’aperçu",
+      "capability-gobo-pattern-auto": "D’après son nom",
+      "capability-gobo-pattern-pick": "Associer un motif au gobo",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Couteau haut",
@@ -288,6 +298,19 @@
           "Bottom": "Angle du couteau bas",
           "Left": "Angle du couteau gauche"
         }
+      },
+      "gobo-family": {
+        "dots": "Points",
+        "star": "Étoile",
+        "rays": "Rayons",
+        "bars": "Barres",
+        "grid": "Grille",
+        "rings": "Anneaux",
+        "spiral": "Spirale",
+        "flower": "Fleur",
+        "polygon": "Polygone",
+        "checker": "Damier",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {
@@ -340,6 +363,17 @@
       "reset-hint": "Demande à l’appareil sur scène de se réinitialiser, p. ex. une lyre qui a perdu sa position",
       "lamp-on": "Lampe allumée",
       "lamp-on-hint": "Allume la lampe de l’appareil sur scène"
+    },
+    "dmx": {
+      "title": "Canaux DMX",
+      "universe": "Univers",
+      "show-unpatched": "Afficher les canaux sans fixture",
+      "release-all": "Relâcher tous les faders",
+      "release": "Relâcher le fader : le canal envoie à nouveau ce que mettent les presets",
+      "unpatched": "Non patché",
+      "hint": "La valeur envoyée sur chaque canal, après le gradateur général. Un fader maintient son canal à sa valeur, par-dessus ce que mettent les presets, jusqu’à ce qu’il soit relâché. Fermer cette page relâche tous les faders.",
+      "no-universe": "Il n’y a pas encore d’univers. Ajoutez-en un dans le Parc de fixtures.",
+      "no-fixtures": "Aucune fixture n’est encore patchée sur cet univers."
     },
     "gradient": {
       "color": "Couleur en valeur hexadécimale",

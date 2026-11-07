@@ -1,3 +1,5 @@
+import { GoboPatternChoice } from './gobo-pattern-choice';
+import { DmxOverride } from './dmx-override';
 import { Composition } from './composition';
 import { Fixture } from './fixture';
 import { Folder } from './folder';
@@ -47,6 +49,10 @@ export class Project {
   public resetFixtureUuids: string[] = [];
   public lampOnFixtureUuids: string[] = [];
 
+  // the DMX channels held at a value by the faders of the DMX channels, over what the presets put on them. Like the
+  // identified fixtures, they only travel to the live preview.
+  public dmxOverrides: DmxOverride[] = [];
+
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;
 
@@ -63,6 +69,8 @@ export class Project {
   // the palettes of the pixel effects saved with the project, which any effect can be painted in: an effect keeps a
   // copy of the colors of the one it is painted in, so only the designer reads them
   public pixelPalettes: ProjectPixelPalette[] = [];
+  // the patterns picked for the gobos of the fixture models, which the preview shows them with (see GoboPatternChoice)
+  public goboPatterns: GoboPatternChoice[] = [];
   public fixtureProfiles: FixtureProfile[] = [];
 
   // fixtures added to the project in a DMX universe
@@ -118,6 +126,7 @@ export class Project {
     this.pixelPalettes = Array.isArray(data.pixelPalettes)
       ? data.pixelPalettes.map((palette: any) => new ProjectPixelPalette(palette))
       : [];
+    this.goboPatterns = Array.isArray(data.goboPatterns) ? data.goboPatterns.map((choice: any) => new GoboPatternChoice(choice)) : [];
 
     if (data.compositions) {
       for (const composition of data.compositions) {

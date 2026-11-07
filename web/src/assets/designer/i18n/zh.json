@@ -47,6 +47,7 @@
       "settings": "设置",
       "help": "帮助",
       "fixture-pool": "灯具库",
+      "dmx-channels": "DMX 通道",
       "stage": "舞台",
       "project-new": "新建",
       "project-save": "保存",
@@ -168,6 +169,12 @@
       "steps-length": "步骤时长",
       "steps-loop": "循环步骤",
       "steps-loop-length": "循环长度",
+      "steps-order": "顺序",
+      "steps-order-forward": "正向",
+      "steps-order-backward": "反向",
+      "steps-order-pingpong": "往返",
+      "steps-order-random": "随机",
+      "steps-seed": "随机顺序的种子",
       "steps-chase": "追逐",
       "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}"
     },
@@ -275,6 +282,9 @@
       "capability-pan-tilt-aim-stop": "停止瞄准",
       "capability-gobo-shake": "抖动",
       "capability-gobo-shake-off": "关",
+      "capability-gobo-pattern": "预览中",
+      "capability-gobo-pattern-auto": "按名称",
+      "capability-gobo-pattern-pick": "为图案片匹配图案",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "上切光片",
@@ -288,6 +298,19 @@
           "Bottom": "下切光片角度",
           "Left": "左切光片角度"
         }
+      },
+      "gobo-family": {
+        "dots": "圆点",
+        "star": "星形",
+        "rays": "光芒",
+        "bars": "条纹",
+        "grid": "网格",
+        "rings": "圆环",
+        "spiral": "螺旋",
+        "flower": "花朵",
+        "polygon": "多边形",
+        "checker": "棋盘",
+        "breakup": "碎片"
       }
     },
     "fixture-pool": {
@@ -340,6 +363,17 @@
       "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
       "lamp-on": "开灯泡",
       "lamp-on-hint": "打开舞台上灯具的灯泡"
+    },
+    "dmx": {
+      "title": "DMX 通道",
+      "universe": "域",
+      "show-unpatched": "显示未配接灯具的通道",
+      "release-all": "松开所有推子",
+      "release": "松开推子：通道重新发送预设设定的值",
+      "unpatched": "未配接",
+      "hint": "每个通道发送的值（经过总调光之后）。推子会将其通道保持在推子的值上，覆盖预设设定的值，直到松开为止。关闭此页面会松开所有推子。",
+      "no-universe": "还没有域。请在灯具库中添加一个。",
+      "no-fixtures": "还没有灯具配接到此域。"
     },
     "gradient": {
       "color": "颜色的十六进制值",

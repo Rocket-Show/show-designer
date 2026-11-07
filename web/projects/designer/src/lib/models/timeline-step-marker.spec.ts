@@ -111,4 +111,17 @@ describe('getStepMarkers', () => {
     expect(getStepMarkers(undefined, scene('preset'), region(0, 10000)).length).toBe(0);
     expect(getStepMarkers(preset(step(0), step(1000)), scene('preset'), undefined).length).toBe(0);
   });
+  it('should place the steps of a preset played backward in the order they are played in', () => {
+    // 0 lasts 1000, 1000 lasts 3000, 4000 lasts as long as the one before it
+    const sequence = preset(step(0), step(1000, 500), step(4000, 2000));
+    sequence.stepsOrder = 'backward';
+
+    const markers = getStepMarkers(sequence, scene('preset'), region(0, 10000));
+
+    expect(markers.map((marker) => marker.step.uuid)).toEqual(['step-4000', 'step-1000', 'step-0']);
+    expect(markers.map((marker) => marker.leftPercentage)).toEqual([0, 30, 60]);
+    // the step it opens with has nothing to travel from, the next one travels from it
+    expect(markers[0].transitionWidthPercentage).toBe(0);
+    expect(markers[1].transitionWidthPercentage).toBe(5);
+  });
 });

@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { Preset } from '../../../models/preset';
 import { getStepsLoopMillis, layoutSteps, PresetStep } from '../../../models/preset-step';
+import { stepsOrders } from '../../../models/preset-steps-order';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetStepService } from '../../../services/preset-step.service';
 import { PresetService } from '../../../services/preset.service';
@@ -20,6 +21,9 @@ export class PresetStepsSettingsComponent implements OnInit {
 
   stepsLoop: boolean;
   stepsLoopMillis: number;
+  stepsOrder: string;
+  stepsSeed: number;
+  stepsOrders = stepsOrders;
   stepsPhasingMode: string;
   stepsPhasingMillis: number;
   stepsPhasingCycles: number;
@@ -36,6 +40,8 @@ export class PresetStepsSettingsComponent implements OnInit {
     this.stepsLengthMillis = this.preset.stepsLengthMillis;
     this.stepsLoop = this.preset.stepsLoop;
     this.stepsLoopMillis = this.preset.stepsLoopMillis;
+    this.stepsOrder = this.preset.stepsOrder;
+    this.stepsSeed = this.preset.stepsSeed;
     this.stepsPhasingMode = this.preset.stepsPhasingMode;
     this.stepsPhasingMillis = this.preset.stepsPhasingMillis;
     this.stepsPhasingCycles = this.preset.stepsPhasingCycles;
@@ -80,6 +86,13 @@ export class PresetStepsSettingsComponent implements OnInit {
       this.preset.stepsLoopMillis = undefined;
     } else if (!isNaN(this.stepsLoopMillis) && this.stepsLoopMillis > 0) {
       this.preset.stepsLoopMillis = +this.stepsLoopMillis;
+    }
+
+    this.preset.stepsOrder = this.stepsOrder;
+
+    // a seed is a whole number, like the one of a pixel effect
+    if (!isNaN(this.stepsSeed) && (this.stepsSeed as any) !== '' && this.stepsSeed !== null) {
+      this.preset.stepsSeed = Math.round(+this.stepsSeed);
     }
 
     this.preset.stepsPhasingMode = this.stepsPhasingMode;

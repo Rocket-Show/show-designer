@@ -21,6 +21,7 @@ import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { FixturePoolEditUniversesComponent } from './fixture-pool/fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { FixturePoolComponent } from './fixture-pool/fixture-pool.component';
+import { DmxChannelsComponent } from './dmx-channels/dmx-channels.component';
 import { FixtureCapabilityChannelComponent } from './fixture/fixture-capability/fixture-capability-channel/fixture-capability-channel.component';
 import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capability/fixture-capability-color-wheel/fixture-capability-color-wheel.component';
 import { FixtureCapabilityColorComponent } from './fixture/fixture-capability/fixture-capability-color/fixture-capability-color.component';
@@ -86,6 +87,7 @@ import { keepSliderValues } from './slider-value';
     FixtureSettingsComponent,
     EffectComponent,
     FixturePoolComponent,
+    DmxChannelsComponent,
     PresetComponent,
     MasterDimmerComponent,
     FixtureCapabilityDimmerComponent,

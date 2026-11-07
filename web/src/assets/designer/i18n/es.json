@@ -47,6 +47,7 @@
       "settings": "Configuración",
       "help": "Ayuda",
       "fixture-pool": "Grupo de fixtures",
+      "dmx-channels": "Canales DMX",
       "stage": "Escenario",
       "project-new": "Nuevo",
       "project-save": "Guardar",
@@ -168,6 +169,12 @@
       "steps-length": "Duración de un paso",
       "steps-loop": "Repetir los pasos",
       "steps-loop-length": "Duración del bucle",
+      "steps-order": "Orden",
+      "steps-order-forward": "Hacia adelante",
+      "steps-order-backward": "Hacia atrás",
+      "steps-order-pingpong": "Adelante y atrás",
+      "steps-order-random": "Aleatorio",
+      "steps-seed": "Semilla del orden aleatorio",
       "steps-chase": "Chase",
       "model-specific": "{{count}} valores solo funcionan en: {{models}}"
     },
@@ -275,6 +282,9 @@
       "capability-pan-tilt-aim-stop": "Dejar de apuntar",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Apagado",
+      "capability-gobo-pattern": "En la vista previa",
+      "capability-gobo-pattern-auto": "Según su nombre",
+      "capability-gobo-pattern-pick": "Asignar un patrón al gobo",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Cuchilla superior",
@@ -288,6 +298,19 @@
           "Bottom": "Ángulo de la cuchilla inferior",
           "Left": "Ángulo de la cuchilla izquierda"
         }
+      },
+      "gobo-family": {
+        "dots": "Puntos",
+        "star": "Estrella",
+        "rays": "Rayos",
+        "bars": "Barras",
+        "grid": "Rejilla",
+        "rings": "Anillos",
+        "spiral": "Espiral",
+        "flower": "Flor",
+        "polygon": "Polígono",
+        "checker": "Damero",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {
@@ -340,6 +363,17 @@
       "reset-hint": "Pide al aparato en el escenario que se reinicie, p. ej. una cabeza móvil que perdió su posición",
       "lamp-on": "Lámpara encendida",
       "lamp-on-hint": "Enciende la lámpara del aparato en el escenario"
+    },
+    "dmx": {
+      "title": "Canales DMX",
+      "universe": "Universo",
+      "show-unpatched": "Mostrar los canales sin fixture",
+      "release-all": "Soltar todos los faders",
+      "release": "Soltar el fader: el canal vuelve a enviar lo que ponen los presets",
+      "unpatched": "Sin asignar",
+      "hint": "El valor enviado en cada canal, después del atenuador maestro. Un fader mantiene su canal en su valor, por encima de lo que ponen los presets, hasta que se suelta. Al cerrar esta página se sueltan todos los faders.",
+      "no-universe": "Todavía no hay ningún universo. Añade uno en el Grupo de fixtures.",
+      "no-fixtures": "Todavía no hay ningún fixture asignado a este universo."
     },
     "gradient": {
       "color": "Color como valor hexadecimal",
