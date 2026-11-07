@@ -698,10 +698,13 @@ describe('PresetService editing presets', () => {
   it('keeps the steps in the order they are reached', () => {
     service.selectPreset(1);
     preset('move').steps[0].startMillis = 2000;
+    preset('move').steps[0].ownStart = true;
 
     service.stepChanged();
 
     expect(preset('move').steps.map((step) => step.uuid)).toEqual(['move-2', 'move-1']);
+    // the other step closes up
+    expect(preset('move').steps.map((step) => step.startMillis)).toEqual([0, 2000]);
   });
 
   it('shows the steps once a preset has more than one, or as asked', () => {

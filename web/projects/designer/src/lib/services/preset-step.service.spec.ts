@@ -3,7 +3,7 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
-import { PresetStep } from '../models/preset-step';
+import { adoptStepsLength, PresetStep } from '../models/preset-step';
 import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
 import { PresetStepService } from './preset-step.service';
 
@@ -38,6 +38,19 @@ describe('PresetStepService', () => {
     presetWithSteps.steps = steps;
 
     return presetWithSteps;
+  }
+
+  // a preset the way a project brings it along: its step length is the one its steps are
+  // apart, the steps off its grid starting at times of their own
+  function loaded(...steps: PresetStep[]): Preset {
+    const presetWithSteps = preset(...steps);
+    presetWithSteps.stepsLengthMillis = adoptStepsLength(steps);
+
+    return presetWithSteps;
+  }
+
+  function starts(presetWithSteps: Preset): number[] {
+    return presetWithSteps.steps.map((presetStep) => presetStep.startMillis);
   }
 
   function dimmerAt(presetWithSteps: Preset, timeMillis: number): number {
@@ -381,22 +394,23 @@ describe('PresetStepService', () => {
       expect(sequence.steps.length).toBe(2);
     });
 
-    it('should add a copy of the last step, as far behind it as the step before it was', () => {
-      const sequence = preset(step(1000, 100), step(1400, 200, 300));
+    it('should add a copy of the last step on the next place of the grid of the sequence', () => {
+      const sequence = loaded(step(0, 100), step(400, 200, 300));
 
       const added = service.addStep(sequence);
 
       expect(sequence.steps.length).toBe(3);
       expect(sequence.steps[2]).toBe(added);
-      expect(added.startMillis).toBe(1800);
-      expect(added.uuid).not.toBe('step-1400');
+      expect(added.startMillis).toBe(800);
+      expect(added.ownStart).toBe(false);
+      expect(added.uuid).not.toBe('step-400');
       expect(added.transitionMillis).toBe(300);
       expect(added.fixtureChannelValues[0].value).toBe(200);
       expect(added.fixtureChannelValues[0]).not.toBe(sequence.steps[1].fixtureChannelValues[0]);
     });
 
     it('should add a copy of the step it is asked to copy', () => {
-      const sequence = preset(step(0, 100, 250), step(1000, 200));
+      const sequence = loaded(step(0, 100, 250), step(1000, 200));
 
       const added = service.addStep(sequence, sequence.steps[0]);
 
@@ -405,33 +419,60 @@ describe('PresetStepService', () => {
       expect(added.fixtureChannelValues[0].value).toBe(100);
     });
 
-    it('should add a step a second behind the only one', () => {
-      const sequence = preset(step(500, 100));
+    it('should add a step after the last one, whatever the step it copies starts at', () => {
+      const sequence = loaded(step(0, 100), step(1000, 200), step(2500, 300));
 
-      expect(service.addStep(sequence).startMillis).toBe(1500);
+      const added = service.addStep(sequence, sequence.steps[2]);
+
+      // the copy of a step with a start of its own takes its place on the grid
+      expect(sequence.steps[3]).toBe(added);
+      expect(added.ownStart).toBe(false);
+      expect(added.startMillis).toBe(3000);
+    });
+
+    it('should add a step a step length behind a last one which starts past the next place of the grid', () => {
+      const sequence = loaded(step(0, 100), step(1000, 200), step(5000, 300));
+
+      const added = service.addStep(sequence);
+
+      expect(sequence.steps[3]).toBe(added);
+      expect(added.startMillis).toBe(6000);
+      // it stays behind the last step when the speed changes
+      expect(added.ownStart).toBe(true);
+    });
+
+    it('should add a step on the grid behind the only one', () => {
+      const sequence = loaded(step(500, 100));
+
+      expect(service.addStep(sequence).startMillis).toBe(1000);
     });
 
     it('should add the first step of a preset at its start, jumping into it', () => {
       const added = service.addStep(new Preset());
 
       expect(added.startMillis).toBe(0);
+      expect(added.ownStart).toBe(false);
       expect(added.transitionMillis).toBe(0);
       expect(added.fixtureChannelValues).toEqual([]);
     });
 
-    it('should add a step at least a millisecond behind the last one', () => {
-      const sequence = preset(step(0, 100), step(0, 200));
+    it('should lay the steps out on the grid of the sequence, at its speed', () => {
+      const sequence = loaded(step(0, 100), step(1000, 200), step(2500, 300), step(3000, 400));
+      sequence.stepsLengthMillis = 500;
 
-      expect(service.addStep(sequence).startMillis).toBe(1);
+      service.layoutSteps(sequence);
+
+      // the step with a start of its own is passed by the one behind it
+      expect(starts(sequence)).toEqual([0, 500, 1000, 2500]);
+      expect(sequence.steps.map((presetStep) => presetStep.uuid)).toEqual(['step-0', 'step-1000', 'step-3000', 'step-2500']);
     });
 
-    it('should keep the steps in the order they are reached after adding one', () => {
-      // e.g. a project written by hand, its steps out of order
-      const sequence = preset(step(0, 100), step(2000, 200), step(1000, 300));
+    it('should say where a step starts while it has no start of its own', () => {
+      const sequence = loaded(step(0, 100), step(1000, 200), step(2500, 300));
 
-      service.addStep(sequence);
-
-      expect(sequence.steps.map((presetStep) => presetStep.startMillis)).toEqual([0, 1000, 1001, 2000]);
+      expect(service.getAutomaticStartMillis(sequence, sequence.steps[0])).toBe(0);
+      expect(service.getAutomaticStartMillis(sequence, sequence.steps[2])).toBe(2000);
+      expect(service.getAutomaticStartMillis(sequence, step(0, 100))).toBe(0);
     });
 
     it('should keep the only step of a preset, which is the preset itself', () => {
@@ -442,12 +483,14 @@ describe('PresetStepService', () => {
       expect(single.steps.length).toBe(1);
     });
 
-    it('should delete a step', () => {
-      const sequence = preset(step(0, 100), step(1000, 200), step(2000, 300));
+    it('should delete a step, the steps following it closing up', () => {
+      const sequence = loaded(step(0, 100), step(1000, 200), step(2000, 300), step(3500, 400));
 
       service.deleteStep(sequence, sequence.steps[1]);
 
-      expect(sequence.steps.map((presetStep) => presetStep.startMillis)).toEqual([0, 2000]);
+      // a step with a start of its own stays where it is
+      expect(starts(sequence)).toEqual([0, 1000, 3500]);
+      expect(sequence.steps.map((presetStep) => presetStep.uuid)).toEqual(['step-0', 'step-2000', 'step-3500']);
     });
 
     it('should leave the steps alone when asked to delete one which is not in the preset', () => {

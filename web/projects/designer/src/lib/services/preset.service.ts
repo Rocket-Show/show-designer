@@ -1265,10 +1265,10 @@ export class PresetService {
   }
 
   // the steps of a preset only ever run in the order they are reached, so a step whose
-  // time was changed takes its new place right away
+  // time was changed takes its new place right away, and the others close up around it
   stepChanged() {
     if (this.selectedPreset) {
-      this.presetStepService.sortSteps(this.selectedPreset);
+      this.presetStepService.layoutSteps(this.selectedPreset);
     }
 
     this.stepsChanged.next();

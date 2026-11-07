@@ -11,7 +11,14 @@ export class PresetStep {
   // when this step starts, relative to the start of the preset. It is what the preset
   // shows from that millisecond (and with it from that beat) until the next step
   // starts, and the transition into it runs over the beginning of that time.
+  // Unless the step starts at a time of its own, this is worked out from the step length
+  // of the sequence (see layoutSteps). It is written down either way, so whatever plays
+  // the preset reads the steps alone.
   startMillis = 0;
+
+  // whether the step starts at the time above instead of taking its place on the time
+  // grid of the sequence (see getAutomaticStartMillis)
+  ownStart = false;
 
   // how long the values travel from the previous step into this one, counted from the
   // start of this step: undefined = the whole time this step lasts, 0 = a jump
@@ -32,6 +39,7 @@ export class PresetStep {
 
     this.uuid = data.uuid;
     this.startMillis = data.startMillis || 0;
+    this.ownStart = data.ownStart === true;
     this.transitionMillis = data.transitionMillis === null ? undefined : data.transitionMillis;
     this.transitionCurve = data.transitionCurve || 'linear';
 
@@ -96,4 +104,74 @@ export function getStepsLoopMillis(steps: PresetStep[], loopMillis?: number): nu
   const previous = steps[steps.length - 2];
 
   return last.startMillis - steps[0].startMillis + (last.startMillis - previous.startMillis);
+}
+
+// how long a step of a sequence lasts while nothing else is set: a second each
+export const defaultStepsLengthMillis = 1000;
+
+// Where the step at the passed index starts while it does not start at a time of its
+// own: as many step lengths of the sequence after the start of the preset as there are
+// steps before it, which keeps the steps on the time grid of the sequence.
+export function getAutomaticStartMillis(index: number, lengthMillis: number): number {
+  return index * lengthMillis;
+}
+
+// Works out the starts of the steps from the step length of their sequence. A step with
+// a start of its own keeps it, the others take their place on the grid of the sequence.
+// The steps are kept in the order they start in, so a step moved before or past others
+// takes its place among them, and the others close up around it.
+export function layoutSteps(steps: PresetStep[], lengthMillis: number) {
+  // A step taking its place among others moves the ones it passes to another place on
+  // the grid, which can pass another step in turn: this settles after as many passes as
+  // there are steps at the most.
+  for (let pass = 0; pass <= steps.length; pass++) {
+    let ordered = true;
+
+    steps.forEach((step, index) => {
+      if (!step.ownStart) {
+        step.startMillis = getAutomaticStartMillis(index, lengthMillis);
+      }
+
+      if (index > 0 && step.startMillis < steps[index - 1].startMillis) {
+        ordered = false;
+      }
+    });
+
+    if (ordered) {
+      return;
+    }
+
+    // sorting keeps steps starting at the same time in the order they were in
+    steps.sort((step1, step2) => step1.startMillis - step2.startMillis);
+  }
+}
+
+// The step length of a sequence written before the designer knew one, and which of its
+// steps start at a time of their own. Of the times its steps are apart, the one which
+// puts the most of them on its grid is taken, and all of them stay where they are.
+export function adoptStepsLength(steps: PresetStep[]): number {
+  let lengthMillis = defaultStepsLengthMillis;
+  let highestCount = -1;
+
+  for (let i = 1; i < steps.length; i++) {
+    const gapMillis = steps[i].startMillis - steps[i - 1].startMillis;
+
+    if (gapMillis <= 0) {
+      continue;
+    }
+
+    const count = steps.filter((step, index) => step.startMillis === getAutomaticStartMillis(index, gapMillis)).length;
+
+    // on a tie, the time reached first
+    if (count > highestCount) {
+      highestCount = count;
+      lengthMillis = gapMillis;
+    }
+  }
+
+  steps.forEach((step, index) => {
+    step.ownStart = step.startMillis !== getAutomaticStartMillis(index, lengthMillis);
+  });
+
+  return lengthMillis;
 }

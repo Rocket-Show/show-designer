@@ -9,11 +9,14 @@ import { BsModalRef } from 'ngx-bootstrap/modal';
 import { ToastrModule } from 'ngx-toastr';
 
 import { Preset } from '../../../models/preset';
+import { PresetStep } from '../../../models/preset-step';
 import { LivePreviewService } from '../../../services/live-preview.service';
+import { PresetService } from '../../../services/preset.service';
 import { PresetStepsSettingsComponent } from './preset-steps-settings.component';
 
-// How the steps of a preset run as a whole: whether they start over, how long a pass lasts
-// and how they chase over the fixtures. Nothing is changed until the dialog is confirmed.
+// How the steps of a preset run as a whole: how long each of them lasts, whether they start
+// over, how long a pass lasts and how they chase over the fixtures. Nothing is changed until
+// the dialog is confirmed.
 describe('PresetStepsSettingsComponent', () => {
   let fixture: ComponentFixture<PresetStepsSettingsComponent>;
   let element: HTMLElement;
@@ -74,15 +77,52 @@ describe('PresetStepsSettingsComponent', () => {
     (element.querySelector('button.btn-primary') as HTMLButtonElement).click();
   }
 
+  it('shows the step length of the sequence', () => {
+    expect(inputs()[0].value).toBe('1000');
+  });
+
+  it('moves the steps to the step length typed in, apart from the ones starting at a time of their own', () => {
+    const stepsChanged = spyOn(TestBed.inject(PresetService).stepsChanged, 'next');
+    preset.steps.push(new PresetStep({ uuid: 'third', startMillis: 3000, ownStart: true }));
+
+    type(inputs()[0], '500');
+    ok();
+
+    expect(preset.stepsLengthMillis).toBe(500);
+    expect(preset.steps.map((step) => step.startMillis)).toEqual([0, 500, 3000]);
+    expect(stepsChanged).toHaveBeenCalled();
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('keeps the step length for anything which is no length', () => {
+    for (const typed of ['abc', '0', '-5', '']) {
+      type(inputs()[0], typed);
+      ok();
+
+      expect(preset.stepsLengthMillis).toBe(1000);
+      expect(preset.steps[1].startMillis).toBe(1000);
+    }
+  });
+
+  it('shows the length a pass would take at the step length typed in', async () => {
+    type(inputs()[0], '250');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(inputs()[1].placeholder).toBe('500');
+    // the steps themselves only move once the dialog is confirmed
+    expect(preset.steps[1].startMillis).toBe(1000);
+  });
+
   it('shows the length a pass takes on its own, while none is set', () => {
     // the last step holds as long as the one before it lasted
-    expect(inputs()[0].placeholder).toBe('2000');
-    expect(inputs()[0].value).toBe('');
+    expect(inputs()[1].placeholder).toBe('2000');
+    expect(inputs()[1].value).toBe('');
   });
 
   it('loops the steps over a length of their own', () => {
     (element.querySelector('#stepsLoop') as HTMLInputElement).click();
-    type(inputs()[0], '3000');
+    type(inputs()[1], '3000');
 
     ok();
 
@@ -96,7 +136,7 @@ describe('PresetStepsSettingsComponent', () => {
     preset.stepsLoopMillis = 3000;
     fixture.componentInstance.ngOnInit();
 
-    type(inputs()[0], '');
+    type(inputs()[1], '');
     ok();
 
     expect(preset.stepsLoopMillis).toBeUndefined();
@@ -106,7 +146,7 @@ describe('PresetStepsSettingsComponent', () => {
     preset.stepsLoopMillis = 3000;
 
     for (const typed of ['abc', '0', '-5']) {
-      type(inputs()[0], typed);
+      type(inputs()[1], typed);
       ok();
 
       expect(preset.stepsLoopMillis).toBe(3000);
@@ -114,17 +154,17 @@ describe('PresetStepsSettingsComponent', () => {
   });
 
   it('chases by a time or by passes spread over the fixtures', async () => {
-    expect(inputs()[1].value).toBe('100');
+    expect(inputs()[2].value).toBe('100');
 
-    type(inputs()[1], '250');
+    type(inputs()[2], '250');
     selectMode('spread');
     fixture.detectChanges();
     await fixture.whenStable();
 
     // the same field now holds the passes
-    expect(inputs()[1].value).toBe('2');
+    expect(inputs()[2].value).toBe('2');
 
-    type(inputs()[1], '-1');
+    type(inputs()[2], '-1');
     ok();
 
     expect(preset.stepsPhasingMode).toBe('spread');
@@ -133,24 +173,24 @@ describe('PresetStepsSettingsComponent', () => {
   });
 
   it('keeps the chase for anything which is no number', () => {
-    type(inputs()[1], 'abc');
+    type(inputs()[2], 'abc');
     ok();
 
     expect(preset.stepsPhasingMillis).toBe(100);
   });
 
   it('groups the fixtures of the chase, a group holding one fixture at least', () => {
-    type(inputs()[2], '0');
+    type(inputs()[3], '0');
     ok();
     expect(preset.stepsPhasingGroupSize).toBe(1);
 
-    type(inputs()[2], '4');
+    type(inputs()[3], '4');
     ok();
     expect(preset.stepsPhasingGroupSize).toBe(4);
   });
 
   it('confirms with the enter key', () => {
-    type(inputs()[0], '1500');
+    type(inputs()[1], '1500');
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
@@ -160,12 +200,14 @@ describe('PresetStepsSettingsComponent', () => {
 
   it('changes nothing when it is cancelled', () => {
     (element.querySelector('#stepsLoop') as HTMLInputElement).click();
-    type(inputs()[0], '3000');
+    type(inputs()[0], '250');
+    type(inputs()[1], '3000');
 
     (element.querySelector('.modal-footer a') as HTMLElement).click();
 
     expect(preset.stepsLoop).toBe(false);
     expect(preset.stepsLoopMillis).toBeUndefined();
+    expect(preset.stepsLengthMillis).toBe(1000);
     expect(modalRef.hide).toHaveBeenCalled();
     expect(previewLive).not.toHaveBeenCalled();
   });

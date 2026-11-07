@@ -112,4 +112,31 @@ describe('Preset', () => {
     expect(stored.getMirroredValuePercentage(FixtureCapabilityType.Pan, 0.25)).toBe(0.75);
     expect(stored.getMirroredValuePercentage(FixtureCapabilityType.Tilt, 0.25)).toBe(0.25);
   });
+
+  it('should run the steps of a new preset a second apart', () => {
+    expect(new Preset().stepsLengthMillis).toBe(1000);
+  });
+
+  it('should keep the step length of a preset and which of its steps start at a time of their own', () => {
+    const sequence = new Preset({
+      uuid: 'preset',
+      stepsLengthMillis: 250,
+      steps: [{ uuid: 'a' }, { uuid: 'b', startMillis: 250 }, { uuid: 'c', startMillis: 700, ownStart: true }],
+    });
+
+    expect(sequence.stepsLengthMillis).toBe(250);
+    expect(sequence.steps.map((step) => step.ownStart)).toEqual([false, false, true]);
+  });
+
+  it('should give a preset written before the designer knew a step length the one its steps are apart', () => {
+    const old = new Preset({
+      uuid: 'preset',
+      steps: [{ uuid: 'a' }, { uuid: 'b', startMillis: 500 }, { uuid: 'c', startMillis: 1000 }, { uuid: 'd', startMillis: 2500 }],
+    });
+
+    // it plays exactly as it did: only the step off the grid keeps a start of its own
+    expect(old.stepsLengthMillis).toBe(500);
+    expect(old.steps.map((step) => step.startMillis)).toEqual([0, 500, 1000, 2500]);
+    expect(old.steps.map((step) => step.ownStart)).toEqual([false, false, false, true]);
+  });
 });

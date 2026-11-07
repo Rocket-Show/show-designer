@@ -7,7 +7,7 @@ import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureChannelValue } from './fixture-channel-value';
 import { FolderPosition } from './folder-position';
 import { PresetFixture } from './preset-fixture';
-import { PresetStep } from './preset-step';
+import { adoptStepsLength, defaultStepsLengthMillis, PresetStep } from './preset-step';
 import { TransitionCurveType } from './transition-curve';
 
 export class Preset {
@@ -53,6 +53,11 @@ export class Preset {
   // the states this preset runs through over its playing time, in the order they are
   // reached. A preset always holds at least one step.
   steps: PresetStep[] = [];
+
+  // how long each step of the sequence lasts, which is its speed: the steps start this
+  // far apart, apart from the ones which start at a time of their own (see
+  // PresetStep.ownStart and layoutSteps)
+  stepsLengthMillis = defaultStepsLengthMillis;
 
   // start the sequence over instead of holding the last step
   stepsLoop = false;
@@ -144,6 +149,10 @@ export class Preset {
         this.steps.push(new PresetStep(step));
       }
     }
+
+    // A sequence written before the designer knew a step length takes the one its steps
+    // are apart, so it keeps playing exactly as it did and changes speed as a whole.
+    this.stepsLengthMillis = data.stepsLengthMillis > 0 ? data.stepsLengthMillis : adoptStepsLength(this.steps);
 
     this.stepsLoop = data.stepsLoop === true;
     this.stepsLoopMillis = data.stepsLoopMillis ?? undefined;

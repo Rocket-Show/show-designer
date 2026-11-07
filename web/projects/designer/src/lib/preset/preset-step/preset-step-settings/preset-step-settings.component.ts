@@ -17,6 +17,7 @@ export class PresetStepSettingsComponent implements OnInit {
   preset: Preset;
   step: PresetStep;
 
+  // empty while the step follows the step length of the sequence
   startMillis: number;
   transitionMillis: number;
   transitionCurve: TransitionCurveType;
@@ -25,6 +26,9 @@ export class PresetStepSettingsComponent implements OnInit {
   // values while it carries no transition time of its own
   stepNumber: number;
   wholeStepMillis: number;
+
+  // where the step starts while it does not start at a time of its own
+  automaticStartMillis: number;
 
   // how much of each effect of the preset this step lets through, in percent and in the
   // order the preset holds its effects in
@@ -35,7 +39,8 @@ export class PresetStepSettingsComponent implements OnInit {
   constructor(public bsModalRef: BsModalRef, private presetService: PresetService, private presetStepService: PresetStepService) {}
 
   ngOnInit() {
-    this.startMillis = this.step.startMillis;
+    this.startMillis = this.step.ownStart ? this.step.startMillis : undefined;
+    this.automaticStartMillis = this.presetStepService.getAutomaticStartMillis(this.preset, this.step);
     this.transitionMillis = this.step.transitionMillis;
     this.transitionCurve = this.step.transitionCurve;
 
@@ -49,7 +54,11 @@ export class PresetStepSettingsComponent implements OnInit {
   }
 
   ok() {
-    if (!isNaN(this.startMillis) && this.startMillis >= 0) {
+    // an empty start lets the step follow the step length of the sequence again
+    if (this.startMillis === undefined || this.startMillis === null || (this.startMillis as any) === '') {
+      this.step.ownStart = false;
+    } else if (!isNaN(this.startMillis) && this.startMillis >= 0) {
+      this.step.ownStart = true;
       this.step.startMillis = +this.startMillis;
     }
 

@@ -169,6 +169,15 @@ describe('PresetStepComponent', () => {
     );
   });
 
+  it('tells which steps start at a time of their own, which the speed of the sequence leaves alone', () => {
+    render();
+    preset.steps[1].ownStart = true;
+
+    expect(fixture.componentInstance.stepDescription(preset.steps[1], 1)).toBe(
+      'designer.preset.step-start: 1000 designer.misc.ms (designer.preset.step-start-own), designer.preset.step-transition: 200 designer.misc.ms'
+    );
+  });
+
   it('opens the settings of a step double clicked, of the selected one or of all of them', () => {
     render();
 
