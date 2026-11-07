@@ -169,6 +169,8 @@
       "steps-length": "步骤时长",
       "steps-loop": "循环步骤",
       "steps-loop-length": "循环长度",
+      "steps-length-mode": "步长单位",
+      "steps-beats-hint": "步骤跟随播放时的速度。其时间按 {{bpm}} BPM 记录。",
       "steps-order": "顺序",
       "steps-order-forward": "正向",
       "steps-order-backward": "反向",

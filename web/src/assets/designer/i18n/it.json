@@ -169,6 +169,8 @@
       "steps-length": "Durata di un passo",
       "steps-loop": "Ripeti i passi",
       "steps-loop-length": "Durata del ciclo",
+      "steps-length-mode": "Durata del passo in",
+      "steps-beats-hint": "I passi seguono il tempo a cui vengono riprodotti. I loro tempi sono scritti a {{bpm}} BPM.",
       "steps-order": "Ordine",
       "steps-order-forward": "In avanti",
       "steps-order-backward": "All’indietro",

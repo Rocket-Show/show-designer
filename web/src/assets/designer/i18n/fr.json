@@ -169,6 +169,8 @@
       "steps-length": "Durée d'une étape",
       "steps-loop": "Répéter les étapes",
       "steps-loop-length": "Durée de la boucle",
+      "steps-length-mode": "Durée du pas en",
+      "steps-beats-hint": "Les pas suivent le tempo auquel ils sont joués. Leurs temps sont notés à {{bpm}} BPM.",
       "steps-order": "Ordre",
       "steps-order-forward": "En avant",
       "steps-order-backward": "En arrière",

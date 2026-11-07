@@ -675,6 +675,71 @@ function scenarios() {
   );
 }
 
+// The timing of the clips: steps following the beat at the tempo of the composition (written down at another one), and
+// the effects and the steps of the clips running on through the hold points of the timeline. A run with holds names
+// the hold points it played through with the time held at each: the ones at or before a time count for it.
+function channelValuesTiming() {
+  const random = randomSource(41);
+  const cases = [];
+
+  for (let index = 0; index < 20; index++) {
+    const project = scenarioProject(random);
+    const composition = project.compositions[0];
+    const presetCount = 1 + random.int(3);
+
+    for (let presetIndex = 0; presetIndex < presetCount; presetIndex++) {
+      const preset = randomPreset(random, project, presetIndex);
+
+      if (random.chance(0.7)) {
+        preset.stepsLengthMode = 'beats';
+        preset.stepsBeatsPerMinute = random.pick([120, 100, 128, 93.5]);
+      }
+
+      project.presets.push(preset);
+    }
+
+    project.scenes.push({ uuid: 'scene-0', name: 'Scene 0', presetUuids: project.presets.map((preset) => preset.uuid) });
+    composition.tracks.push({ uuid: 'track-0', name: 'Track 0' });
+
+    let startMillis = random.pick([0, 500, 1000.5]);
+
+    for (let clip = 0; clip < 2; clip++) {
+      const endMillis = startMillis + random.pick([3000, 4000, 6857.142857]);
+      composition.scenePlaybackRegions.push({ sceneUuid: 'scene-0', startMillis, endMillis, trackUuid: 'track-0' });
+      startMillis = endMillis + random.pick([0, 250]);
+    }
+
+    // holds within the clips, one right at the start of a clip, the last one held for a while so far
+    const holds = [
+      { positionMillis: composition.scenePlaybackRegions[0].startMillis, heldMillis: random.pick([250, 1000]) },
+      { positionMillis: random.pick([2000, 2500.5]), heldMillis: random.pick([1500, 333.3]) },
+      { positionMillis: random.pick([5000, 5750]), heldMillis: random.pick([10000, 750.25]) },
+    ];
+
+    const times = [];
+    for (let time = 0; time <= 12000; time += 500) {
+      times.push(time + random.pick([0, 0, 0.5]));
+    }
+    times.push(...holds.map((hold) => hold.positionMillis));
+
+    const preset = random.pick(project.presets);
+    const runs = [
+      { preview: { mode: 'timeline', composition: 'Song' }, times },
+      { preview: { mode: 'timeline', composition: 'Song' }, times, holds },
+      { preview: { mode: 'preset', preset: preset.uuid, stepPreviewStartMillis: 250 }, times: [0, 250, 900, 1750.5, 4000, 7333] },
+    ];
+
+    cases.push({ name: `timing ${index}`, input: { project, runs } });
+  }
+
+  return write(
+    'channel-values-timing.json',
+    'channelValues',
+    'Steps following the beat at the tempo of the composition, and clips running on through the holds of the timeline',
+    cases
+  );
+}
+
 // ---- edges: values right on the boundaries the cases above pass by ------------------------------
 
 // times exactly where a fade starts or ends, also where a fade in still runs as the fade out
@@ -3058,6 +3123,7 @@ export function generate() {
     presetIntensity(),
     libraryModes(),
     scenarios(),
+    channelValuesTiming(),
     presetIntensityEdges(),
     presetStepsEdges(),
     channelValuesEdges(),

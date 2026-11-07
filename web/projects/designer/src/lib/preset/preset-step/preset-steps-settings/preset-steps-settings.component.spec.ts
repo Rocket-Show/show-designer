@@ -189,6 +189,24 @@ describe('PresetStepsSettingsComponent', () => {
     expect(preset.stepsSeed).toBe(7);
   });
 
+  it('times the steps in beats, written down at the tempo of the composition open, which they follow', async () => {
+    const mode: HTMLSelectElement = element.querySelector('#stepsLengthMode');
+    mode.value = 'beats';
+    mode.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // a second at 120 BPM (no composition open) is two beats
+    expect(inputs()[0].value).toBe('2');
+
+    type(inputs()[0], '1');
+    ok();
+
+    expect(preset.stepsLengthMode).toBe('beats');
+    expect(preset.stepsBeatsPerMinute).toBe(120);
+    expect(preset.stepsLengthMillis).toBe(500);
+  });
+
   it('keeps the chase for anything which is no number', () => {
     type(inputs()[2], 'abc');
     ok();

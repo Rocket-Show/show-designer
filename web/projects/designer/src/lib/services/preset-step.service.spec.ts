@@ -5,6 +5,7 @@ import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { adoptStepsLength, PresetStep } from '../models/preset-step';
 import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
+import { getStepsTimeMillis } from '../models/preset-steps-order';
 import { PresetStepService } from './preset-step.service';
 
 describe('PresetStepService', () => {
@@ -675,6 +676,22 @@ describe('PresetStepService', () => {
 
       presetWithSteps.stepsLoop = true;
       expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[2])).toBe(false);
+    });
+  });
+
+  describe('the steps following the beat', () => {
+    it('run as much faster or slower as the tempo played is than the one they are written at', () => {
+      const presetWithSteps = preset(step(0, 10), step(1000, 20));
+      presetWithSteps.stepsLengthMode = 'beats';
+      presetWithSteps.stepsBeatsPerMinute = 120;
+
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 120)).toBe(1000);
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 90)).toBe(750);
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 150)).toBe(1250);
+    });
+
+    it('leave the steps timed as written down alone', () => {
+      expect(getStepsTimeMillis(preset(step(0, 10)), 1000, 90)).toBe(1000);
     });
   });
 });

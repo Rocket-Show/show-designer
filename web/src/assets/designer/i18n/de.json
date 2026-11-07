@@ -169,6 +169,8 @@
       "steps-length": "Schrittlänge",
       "steps-loop": "Schritte wiederholen",
       "steps-loop-length": "Schleifenlänge",
+      "steps-length-mode": "Schrittlänge in",
+      "steps-beats-hint": "Die Schritte folgen dem Tempo, in dem sie gespielt werden. Ihre Zeiten sind bei {{bpm}} BPM festgehalten.",
       "steps-order": "Reihenfolge",
       "steps-order-forward": "Vorwärts",
       "steps-order-backward": "Rückwärts",

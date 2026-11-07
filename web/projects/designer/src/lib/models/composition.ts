@@ -1,3 +1,4 @@
+import { CompositionMarker } from './composition-marker';
 import { readProjectNumber } from './project-number';
 import { ScenePlaybackRegion } from './scene-playback-region';
 import { Track } from './track';
@@ -31,6 +32,9 @@ export class Composition {
   // not used anymore: without an audio file, the composition lasts as long as its scenes
   public durationMillis = 0;
 
+  // the labels and the hold points on the timeline (see CompositionMarker), in no particular order
+  public markers: CompositionMarker[] = [];
+
   // the lanes of the timeline, the topmost first. Where the clips of two tracks overlap,
   // the one higher up is on top.
   public tracks: Track[] = [];
@@ -61,6 +65,10 @@ export class Composition {
     this.gridOffsetMillis = readProjectNumber(data.gridOffsetMillis);
     this.gridResolution = readProjectNumber(data.gridResolution);
     this.durationMillis = readProjectNumber(data.durationMillis);
+
+    if (Array.isArray(data.markers)) {
+      this.markers = data.markers.map((marker: any) => new CompositionMarker(marker));
+    }
 
     if (data.tracks) {
       for (const track of data.tracks) {

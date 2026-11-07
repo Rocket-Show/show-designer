@@ -113,3 +113,14 @@ export function getStepsPassMillis(preset: Preset): number {
 
   return passMillis;
 }
+
+// The time the steps of a preset have run for, from the time it has played for: as it is for steps timed as written
+// down, as much faster or slower as the tempo played is than the one they are written at for steps following the beat.
+// Rocket Show works it out the same way (PresetSteps.getStepsTimeMillis).
+export function getStepsTimeMillis(preset: Preset, presetTimeMillis: number, beatsPerMinute: number): number {
+  if (preset.stepsLengthMode !== 'beats' || !(preset.stepsBeatsPerMinute > 0) || !(beatsPerMinute > 0)) {
+    return presetTimeMillis;
+  }
+
+  return (presetTimeMillis * beatsPerMinute) / preset.stepsBeatsPerMinute;
+}

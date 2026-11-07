@@ -169,6 +169,8 @@
       "steps-length": "Step length",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
+      "steps-length-mode": "Step length in",
+      "steps-beats-hint": "The steps follow the tempo they are played at. Their times are written down at {{bpm}} BPM.",
       "steps-order": "Order",
       "steps-order-forward": "Forward",
       "steps-order-backward": "Backward",

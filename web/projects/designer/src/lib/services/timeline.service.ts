@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
+import { CompositionHold } from '../models/composition-hold';
 import { ExternalAudioFile, ExternalComposition } from '../models/external-composition';
 import { getPresetTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
@@ -86,6 +87,10 @@ export class TimelineService {
 
   // the position of the playback moved (outside of the Angular zone while playing)
   public positionChanged: Subject<number> = new Subject();
+
+  // the hold points the timeline played through since it was started, the one it holds at last with the time held so
+  // far: the effects and the steps of the clips spanning them keep running (see getHeldMillis)
+  public holds: CompositionHold[] = [];
 
   // can we add new compositions based on an external pool and
   // should new compositions not available in this pool be added there?
