@@ -610,6 +610,24 @@ describe('PresetService editing presets', () => {
     expect(service.channelIsDrivenByEffect(move, cachedChannel('par-1', 'Dimmer'), 'test/rgb-par')).toBe(false);
   });
 
+  it('leaves a channel to the step being edited, when the step silences the effect driving it', () => {
+    const move = preset('move');
+    move.effects = [new EffectCurve({ uuid: 'pan', capabilities: [{ type: 'Pan' }] })];
+    move.steps[1].effectAmounts = [new PresetStepEffectAmount({ effectUuid: 'pan', amount: 0 })];
+    service.selectedPreset = move;
+
+    service.selectedStep = move.steps[1];
+    expect(service.channelIsDrivenByEffect(move, cachedChannel('head', 'Pan'), 'test/moving-head')).toBe(false);
+
+    service.selectedStep = move.steps[0];
+    expect(service.channelIsDrivenByEffect(move, cachedChannel('head', 'Pan'), 'test/moving-head')).toBe(true);
+
+    // a preset which has no steps yet runs its effects
+    expect(service.channelIsDrivenByEffect(new Preset({ effects: move.effects }), cachedChannel('head', 'Pan'), 'test/moving-head')).toBe(
+      true
+    );
+  });
+
   it('offers the panels the fixtures of the selected preset have', () => {
     expect(service.hasCapabilityDimmer()).toBe(false);
     expect(service.hasCapabilityColorOrColorWheel()).toBe(false);

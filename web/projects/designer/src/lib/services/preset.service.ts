@@ -1042,10 +1042,13 @@ export class PresetService {
   // capabilities and the channel itself say, but its value is a moving one and, as soon as the
   // effect is chasing, a different one for every fixture -> the channel can only tell that it is
   // in the hands of an effect, not which value it is at.
-  // this follows the same rules as mixEffects() in the preview service.
+  // this follows the same rules as mixEffects() in the preview service: an effect the step
+  // being edited silences leaves the channel to the step.
   channelIsDrivenByEffect(preset: Preset, channel: CachedFixtureChannel, profileUuid: string): boolean {
+    const step = this.getEditStep(preset);
+
     for (const effect of preset.effects) {
-      if (!effect.visible || !(effect instanceof EffectCurve)) {
+      if (!effect.visible || !(effect instanceof EffectCurve) || (step && step.getEffectAmount(effect.uuid) <= 0)) {
         continue;
       }
 

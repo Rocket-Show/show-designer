@@ -352,6 +352,7 @@
     "effect": {
       "add-new": "Adicionar novo efeito",
       "duplicate": "Duplicar efeito",
+      "runs-in-step": "Ativo no passo {{step}}",
       "type-curve": "Curva",
       "type-pan-tilt": "Pan-Tilt",
       "type-pixel": "Efeito de píxeis",
