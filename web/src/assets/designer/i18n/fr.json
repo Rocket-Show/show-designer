@@ -282,6 +282,10 @@
       "capability-pan-tilt-aim-stop": "Ne plus viser",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Arrêt",
+      "capability-gobo-pattern": "Dans l’aperçu",
+      "capability-gobo-pattern-auto": "D’après son nom",
+      "capability-gobo-pattern-pick": "Associer un motif au gobo",
+      "capability-gobo-pattern-hint": "La bibliothèque de fixtures nomme les gobos, mais n’en a pas d’images. Choisissez le motif qui ressemble le plus à ce gobo : l’aperçu le montre sur toutes les fixtures de ce modèle.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Couteau haut",
@@ -295,6 +299,19 @@
           "Bottom": "Angle du couteau bas",
           "Left": "Angle du couteau gauche"
         }
+      },
+      "gobo-family": {
+        "dots": "Points",
+        "star": "Étoile",
+        "rays": "Rayons",
+        "bars": "Barres",
+        "grid": "Grille",
+        "rings": "Anneaux",
+        "spiral": "Spirale",
+        "flower": "Fleur",
+        "polygon": "Polygone",
+        "checker": "Damier",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {

@@ -6,11 +6,12 @@ import { getPropertyRank, getRotationRank } from '../../models/capability-positi
 import { FixtureCapabilityType } from '../../models/fixture-capability';
 import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { FixtureWheelSlot, FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
+import { GoboPatternChoice } from '../../models/gobo-pattern-choice';
 
 // The gobos of the preview. The fixture library names the gobos of a wheel, but has no pictures of them, so the preview
 // draws a gobo of its own for each: one of a few kinds of pattern, picked from the name of the gobo where it tells (a
 // star, dots, lines, ...), or else from the name and the place of the gobo on its wheel. The same gobo always looks the
-// same.
+// same, unless another pattern was picked for it by hand (see goboCatalog and GoboPatternChoice).
 
 export type GoboFamily = 'dots' | 'star' | 'rays' | 'bars' | 'grid' | 'rings' | 'spiral' | 'flower' | 'breakup' | 'polygon' | 'checker';
 
@@ -131,6 +132,66 @@ export function getGoboPattern(name: string, slotNumber: number): GoboPattern {
   }
 
   return { family, count, seed: hash };
+}
+
+// ---- the patterns to pick from ----
+
+// The patterns a gobo can be shown with, when the one its name brings isn't like it: each kind with a few counts of its
+// points, dots, lines, rings, ... The id of a pattern stays the same, a project keeps it (see GoboPatternChoice).
+const catalogCounts: [GoboFamily, number[]][] = [
+  ['star', [5, 6, 8]],
+  ['dots', [5, 7, 9]],
+  ['rays', [8, 12, 16]],
+  ['flower', [5, 6, 8]],
+  ['spiral', [2, 3, 4]],
+  ['rings', [2, 3, 4]],
+  ['bars', [3, 4, 6]],
+  ['grid', [3, 4, 5]],
+  ['checker', [4, 6]],
+  ['polygon', [3, 4, 6]],
+  ['breakup', [24, 32, 40]],
+];
+
+export interface GoboCatalogEntry {
+  id: string;
+  pattern: GoboPattern;
+}
+
+export const goboCatalog: GoboCatalogEntry[] = [];
+
+for (const [family, counts] of catalogCounts) {
+  for (const count of counts) {
+    const id = family + '-' + count;
+    goboCatalog.push({ id, pattern: { family, count, seed: hashGoboName(id) } });
+  }
+}
+
+// the pattern of the catalog with the passed id, undefined for one it doesn't have (e.g. of a newer designer)
+export function getCatalogGoboPattern(id: string): GoboPattern {
+  return goboCatalog.find((entry) => entry.id === id)?.pattern;
+}
+
+// the pattern picked for a gobo of a fixture model, if one was
+export function getGoboPatternChoice(
+  choices: GoboPatternChoice[],
+  profileUuid: string,
+  wheel: string,
+  slotNumber: number
+): GoboPatternChoice {
+  return (choices || []).find((choice) => choice.profileUuid === profileUuid && choice.wheel === wheel && choice.slotNumber === slotNumber);
+}
+
+// The pattern the preview shows a gobo of a fixture model with: the one picked for it, or else the one its name brings
+export function getShownGoboPattern(
+  choices: GoboPatternChoice[],
+  profileUuid: string,
+  wheel: string,
+  slotNumber: number,
+  name: string
+): GoboPattern {
+  const choice = getGoboPatternChoice(choices, profileUuid, wheel, slotNumber);
+
+  return (choice && getCatalogGoboPattern(choice.pattern)) || getGoboPattern(name, slotNumber);
 }
 
 // a random source of its own for each gobo, the same every time (mulberry32)
@@ -439,7 +500,7 @@ function interpolateSpeed(start: string, end: string, position: number): number 
 }
 
 // the gobo slot a wheel slot capability puts in, if it is one (a capability between two slots shows the first)
-function getGoboSlot(capability: CachedFixtureCapability): { slot: FixtureWheelSlot; slotNumber: number } {
+function getGoboSlot(capability: CachedFixtureCapability): { slot: FixtureWheelSlot; slotNumber: number; wheel: string } {
   const slotNumber = capability.capability.slotNumber;
 
   if (slotNumber === undefined || slotNumber === null || !capability.wheelSlots) {
@@ -450,7 +511,7 @@ function getGoboSlot(capability: CachedFixtureCapability): { slot: FixtureWheelS
     const slot = capability.wheelSlots[i];
 
     if (slot && (slot.type === FixtureWheelSlotType.Gobo || slot.type === FixtureWheelSlotType.AnimationGoboStart)) {
-      return { slot, slotNumber: i === 0 ? Math.floor(slotNumber) : Math.ceil(slotNumber) };
+      return { slot, slotNumber: i === 0 ? Math.floor(slotNumber) : Math.ceil(slotNumber), wheel: capability.wheelName };
     }
   }
 
@@ -464,13 +525,14 @@ export function getGoboState(
   channelValues: FixtureChannelValue[],
   getChannel: (channelName: string) => CachedFixtureChannel,
   getCapabilityInValue: (channel: CachedFixtureChannel, value: number) => CachedFixtureCapability,
-  timeMillis: number
+  timeMillis: number,
+  goboPatterns: GoboPatternChoice[] = []
 ): GoboState {
   if (!fixture || !channelValues) {
     return undefined;
   }
 
-  let gobo: { slot: FixtureWheelSlot; slotNumber: number };
+  let gobo: { slot: FixtureWheelSlot; slotNumber: number; wheel: string };
   // how fast the gobo turns in its slot (turns per second), the angle it is indexed to (radians), how fast it shakes
   let turnsPerSecond = 0;
   let indexAngle = 0;
@@ -549,5 +611,5 @@ export function getGoboState(
     angle += Math.sin(seconds * shakeSpeed * Math.PI * 2) * 0.35;
   }
 
-  return { pattern: getGoboPattern(gobo.slot.name, gobo.slotNumber), angle };
+  return { pattern: getShownGoboPattern(goboPatterns, fixture.profile?.uuid, gobo.wheel, gobo.slotNumber, gobo.slot.name), angle };
 }

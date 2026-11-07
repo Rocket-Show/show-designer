@@ -480,7 +480,8 @@ export abstract class Fixture3d {
           channelValues,
           (channelName) => this.fixtureService.getChannelByName(this.fixture, channelName),
           (channel, value) => this.getCapabilityInValue(channel, value),
-          timeMillis
+          timeMillis,
+          this.previewService.goboPatterns
         )
       : undefined;
 

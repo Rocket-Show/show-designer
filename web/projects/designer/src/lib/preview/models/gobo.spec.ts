@@ -10,7 +10,18 @@ import { FixtureChannelValue } from '../../models/fixture-channel-value';
 import { Project } from '../../models/project';
 import { FixtureService } from '../../services/fixture.service';
 import { ProjectService } from '../../services/project.service';
-import { drawGoboPattern, getGoboPattern, getGoboState, getGoboTexture, getRotationTurnsPerSecond, GoboState } from './gobo';
+import { GoboPatternChoice } from '../../models/gobo-pattern-choice';
+import {
+  drawGoboPattern,
+  getCatalogGoboPattern,
+  getGoboPattern,
+  getGoboState,
+  getGoboTexture,
+  getRotationTurnsPerSecond,
+  getShownGoboPattern,
+  goboCatalog,
+  GoboState,
+} from './gobo';
 
 // The preview draws a gobo of its own for each gobo of a wheel, the fixture library having no pictures of them.
 describe('gobo', () => {
@@ -178,6 +189,30 @@ describe('gobo', () => {
       expect(shaken[0].pattern).toEqual(getGoboPattern('Stars', 2));
       expect(new Set(shaken.map((shake) => shake.angle.toFixed(3))).size).toBeGreaterThan(1);
       expect(Math.max(...shaken.map((shake) => Math.abs(shake.angle)))).toBeLessThan(0.4);
+    });
+  });
+  describe('the patterns to match a gobo with', () => {
+    it('offers a few of each kind, each with an id of its own', () => {
+      const ids = goboCatalog.map((entry) => entry.id);
+
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(new Set(goboCatalog.map((entry) => entry.pattern.family)).size).toBe(11);
+      expect(getCatalogGoboPattern('star-6')).toEqual(jasmine.objectContaining({ family: 'star', count: 6 }));
+      expect(getCatalogGoboPattern('unknown')).toBeUndefined();
+    });
+
+    it('shows a gobo with the pattern picked for it on its model, or else with the one its name brings', () => {
+      const choices = [new GoboPatternChoice({ profileUuid: 'spot', wheel: 'Gobo Wheel', slotNumber: 2, pattern: 'rings-3' })];
+
+      expect(getShownGoboPattern(choices, 'spot', 'Gobo Wheel', 2, 'Stars')).toEqual(getCatalogGoboPattern('rings-3'));
+      // another slot, wheel or model shows what its name brings
+      expect(getShownGoboPattern(choices, 'spot', 'Gobo Wheel', 3, 'Stars')).toEqual(getGoboPattern('Stars', 3));
+      expect(getShownGoboPattern(choices, 'spot', 'Gobo Wheel 2', 2, 'Stars')).toEqual(getGoboPattern('Stars', 2));
+      expect(getShownGoboPattern(choices, 'wash', 'Gobo Wheel', 2, 'Stars')).toEqual(getGoboPattern('Stars', 2));
+      // a pattern of a newer designer this one doesn't know
+      choices[0].pattern = 'unknown';
+      expect(getShownGoboPattern(choices, 'spot', 'Gobo Wheel', 2, 'Stars')).toEqual(getGoboPattern('Stars', 2));
+      expect(getShownGoboPattern(undefined, 'spot', 'Gobo Wheel', 2, 'Stars')).toEqual(getGoboPattern('Stars', 2));
     });
   });
 });

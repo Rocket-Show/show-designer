@@ -282,6 +282,10 @@
       "capability-pan-tilt-aim-stop": "Deixar de apontar",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Desligado",
+      "capability-gobo-pattern": "Na pré-visualização",
+      "capability-gobo-pattern-auto": "Pelo nome",
+      "capability-gobo-pattern-pick": "Associar um padrão ao gobo",
+      "capability-gobo-pattern-hint": "A biblioteca de fixtures dá nome aos gobos, mas não tem imagens deles. Escolha o padrão mais parecido com este gobo: a pré-visualização mostra-o em todos os fixtures deste modelo.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Lâmina superior",
@@ -295,6 +299,19 @@
           "Bottom": "Ângulo da lâmina inferior",
           "Left": "Ângulo da lâmina esquerda"
         }
+      },
+      "gobo-family": {
+        "dots": "Pontos",
+        "star": "Estrela",
+        "rays": "Raios",
+        "bars": "Barras",
+        "grid": "Grelha",
+        "rings": "Anéis",
+        "spiral": "Espiral",
+        "flower": "Flor",
+        "polygon": "Polígono",
+        "checker": "Xadrez",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {

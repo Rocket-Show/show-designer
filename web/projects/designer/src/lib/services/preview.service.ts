@@ -31,6 +31,7 @@ import {
   StagePlacement,
 } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
+import { GoboPatternChoice } from '../models/gobo-pattern-choice';
 import { getIdentifyCapabilityValues } from '../models/identify';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -126,6 +127,11 @@ export class PreviewService implements OnDestroy {
 
   // half the width and half the depth of the stage floor and how high it is, where the beams end (see updateStage)
   public stageFloor = new THREE.Vector3(300, 300, 0);
+
+  // the patterns picked for the gobos of the fixture models, which the preview shows them with
+  get goboPatterns(): GoboPatternChoice[] {
+    return this.projectService?.project?.goboPatterns || [];
+  }
 
   public setGlow(glow: boolean) {
     this.glowKept = glow && this.glowSuspended;

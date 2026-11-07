@@ -282,6 +282,10 @@
       "capability-pan-tilt-aim-stop": "Stop aiming",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Off",
+      "capability-gobo-pattern": "In the preview",
+      "capability-gobo-pattern-auto": "From its name",
+      "capability-gobo-pattern-pick": "Match the gobo with a pattern",
+      "capability-gobo-pattern-hint": "The fixture library names the gobos, but has no pictures of them. Pick the pattern which looks most like this gobo: the preview shows it on all fixtures of this model.",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Blade top",
@@ -295,6 +299,19 @@
           "Bottom": "Blade bottom angle",
           "Left": "Blade left angle"
         }
+      },
+      "gobo-family": {
+        "dots": "Dots",
+        "star": "Star",
+        "rays": "Rays",
+        "bars": "Bars",
+        "grid": "Grid",
+        "rings": "Rings",
+        "spiral": "Spiral",
+        "flower": "Flower",
+        "polygon": "Polygon",
+        "checker": "Checkerboard",
+        "breakup": "Breakup"
       }
     },
     "fixture-pool": {

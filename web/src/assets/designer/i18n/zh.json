@@ -282,6 +282,10 @@
       "capability-pan-tilt-aim-stop": "停止瞄准",
       "capability-gobo-shake": "抖动",
       "capability-gobo-shake-off": "关",
+      "capability-gobo-pattern": "预览中",
+      "capability-gobo-pattern-auto": "按名称",
+      "capability-gobo-pattern-pick": "为图案片匹配图案",
+      "capability-gobo-pattern-hint": "灯具库只给出了图案片的名称，没有图片。请选择与此图案片最相似的图案：预览会在该型号的所有灯具上显示它。",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "上切光片",
@@ -295,6 +299,19 @@
           "Bottom": "下切光片角度",
           "Left": "左切光片角度"
         }
+      },
+      "gobo-family": {
+        "dots": "圆点",
+        "star": "星形",
+        "rays": "光芒",
+        "bars": "条纹",
+        "grid": "网格",
+        "rings": "圆环",
+        "spiral": "螺旋",
+        "flower": "花朵",
+        "polygon": "多边形",
+        "checker": "棋盘",
+        "breakup": "碎片"
       }
     },
     "fixture-pool": {
