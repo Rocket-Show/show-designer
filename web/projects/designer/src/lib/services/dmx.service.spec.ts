@@ -173,22 +173,42 @@ describe('DmxService', () => {
     const head = cachedFixture('head');
     const values = [value('Pan', 32767.5), value('Dimmer', 0)];
 
-    // nothing held: the values themselves
-    expect(service.applyOverrides(head, values)).toBe(values);
+    // nothing held: the values themselves, dimmed by the master dimmer in the preview
+    expect(service.getPreviewValues(head, values, 0.5)).toEqual({ values, masterDimmer: 0.5 });
 
     service.setOverride('front', 11, 0);
-    service.setOverride('front', 14, 255);
     service.setOverride('front', 12, 1);
 
-    const held = service.applyOverrides(head, values);
-    const byName = (name: string) => held.find((candidate) => candidate.channelName === name).value;
+    const preview = service.getPreviewValues(head, values, 1);
+    const byName = (name: string) => preview.values.find((candidate) => candidate.channelName === name).value;
 
     expect(byName('Pan')).toBe(32512.5);
-    expect(byName('Dimmer')).toBe(255);
     // the tilt the presets don't put anything on, from nothing
     expect(byName('Tilt')).toBe(256);
     // the values passed in stay as they are
     expect(values[0].value).toBe(32767.5);
+  });
+
+  it('shows a fixture with a fader held like Rocket Show sends it: the fader past the master dimmer', () => {
+    const head = cachedFixture('head');
+    const par = cachedFixture('par-1');
+
+    // the dimmer of the head held at full, the master dimmer at half
+    service.setOverride('front', 14, 255);
+    const head1 = service.getPreviewValues(head, [value('Dimmer', 0)], 0.5);
+    expect(head1.masterDimmer).toBe(1);
+    expect(head1.values.find((candidate) => candidate.channelName === 'Dimmer').value).toBe(255);
+
+    // the red of the par held: its dimmer dimmed by the master dimmer like on the stage, the red as it is held
+    service.setOverride('front', 1, 200);
+    const par1 = service.getPreviewValues(par, [value('Dimmer', 255), value('Red', 10)], 0.5);
+    expect(par1.masterDimmer).toBe(1);
+    expect(par1.values.find((candidate) => candidate.channelName === 'Dimmer').value).toBe(127.5);
+    expect(par1.values.find((candidate) => candidate.channelName === 'Red').value).toBe(200);
+
+    // what the preview shows is what is sent
+    project.masterDimmerValue = 0.5;
+    expect(service.getUniverseValues('front', new Map([[par, [value('Dimmer', 255), value('Red', 10)]]])).slice(0, 2)).toEqual([127, 200]);
   });
 
   it('forgets the faders with the next project', () => {

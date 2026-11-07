@@ -67,6 +67,14 @@
                   "with": "src/environments/environment.device.ts"
                 }
               ]
+            },
+            "e2e": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.e2e.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": ""
@@ -83,6 +91,9 @@
             "device": {
               "buildTarget": "show-designer:build:device",
               "proxyConfig": "proxy.device.mjs"
+            },
+            "e2e": {
+              "buildTarget": "show-designer:build:e2e"
             }
           }
         },
