@@ -1,0 +1,43 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.timeline.marker' | translate }}</h4>
+  <button type="button" class="close pull-right" aria-label="Close" (click)="cancel()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label" for="markerName">{{ 'designer.timeline.marker-name' | translate }}</label>
+    <div class="col-lg-8">
+      <input id="markerName" type="text" class="form-control" [ngModel]="name" (ngModelChange)="name = $event" />
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label" for="markerType">{{ 'designer.timeline.marker-type' | translate }}</label>
+    <div class="col-lg-8">
+      <select id="markerType" class="custom-select" [ngModel]="type" (ngModelChange)="type = $event">
+        <option value="label">{{ 'designer.timeline.marker-type-label' | translate }}</option>
+        <option value="hold">{{ 'designer.timeline.marker-type-hold' | translate }}</option>
+      </select>
+      <small class="form-text text-muted">
+        {{ (type === 'hold' ? 'designer.timeline.marker-type-hold-hint' : 'designer.timeline.marker-type-label-hint') | translate }}
+      </small>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label" for="markerPosition">{{ 'designer.timeline.marker-position' | translate }}</label>
+    <div class="col-lg-8">
+      <input id="markerPosition" type="text" class="form-control" [ngModel]="positionMillis" (ngModelChange)="positionMillis = $event" />
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <a class="mr-auto my-auto text-danger marker-remove" href="#" role="button" (click)="remove(); (false)"
+    ><i class="fa fa-trash-o fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.remove-marker' | translate }}</a
+  >
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">
+    {{ 'designer.misc.cancel' | translate }}
+  </a>
+  <button type="button" class="btn btn-primary" (click)="ok()">{{ 'designer.misc.ok' | translate }}</button>
+</div>

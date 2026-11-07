@@ -107,6 +107,26 @@ describe('UndoService', () => {
     expect(projectService.project.selectedPresetUuid).toBe('a-preset');
   });
 
+  it('keeps what only travels to the live preview through an undo, which a project read anew starts without', () => {
+    projectService.project.stageWidthCm = 800;
+    service.captureChanges();
+    projectService.project.dmxOverrides = [{ universeUuid: 'front', dmxChannel: 0, value: 200 }];
+    projectService.project.previewHolds = [{ positionMillis: 3000, heldMillis: 1200 }];
+    projectService.project.previewHolding = true;
+    projectService.project.stepPreviewRunning = true;
+    service.captureChanges();
+
+    expect(service.canUndo).toBe(true);
+    service.undo();
+
+    const project = projectService.project;
+    expect(project.stageWidthCm).toBe(600);
+    expect(project.dmxOverrides).toEqual([{ universeUuid: 'front', dmxChannel: 0, value: 200 }]);
+    expect(project.previewHolds).toEqual([{ positionMillis: 3000, heldMillis: 1200 }]);
+    expect(project.previewHolding).toBe(true);
+    expect(project.stepPreviewRunning).toBe(true);
+  });
+
   it('drops the redo steps as soon as something else is changed', () => {
     projectService.project.stageWidthCm = 800;
     service.captureChanges();

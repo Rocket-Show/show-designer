@@ -116,3 +116,46 @@ test.describe('The clock of the timeline', () => {
     await expect(designer.tool(timeline, 'fa-play')).toBeVisible();
   });
 });
+
+// A hold point on the timeline stops the playback until GO, e.g. for a speech between two songs played as one
+// composition. A label only marks a point of it.
+test.describe('Hold points on the timeline', () => {
+  test.use({ previewHidden: true });
+
+  test('stops the playback at a hold point, and goes on with GO', async ({ designer, page }) => {
+    await designer.open();
+    await addComposition(designer, 'With a speech');
+    const timeline = designer.timeline;
+    await designer.clickTool(timeline, 'fa-file-o', 'Add new region');
+    await expect(timeline.getByText('- 00:08.000')).toBeVisible();
+
+    // a hold point where the playback stands, moved to a second in its settings
+    await designer.clickTool(timeline, 'fa-hand-paper-o', 'Add a hold point where the playback is: it stops there until GO');
+    await expect(timeline.locator('.tl-marker-hold')).toHaveText('Hold 1');
+    await designer.clickTool(timeline, 'fa-pencil', 'Settings of the selected marker');
+    const settings = designer.dialog('Position in milliseconds');
+    await expect(settings.getByLabel('Type')).toHaveValue('hold');
+    await expect(settings.getByText('The playback stops here and waits for GO.')).toBeVisible();
+    await settings.getByLabel('Name').fill('Speech');
+    await settings.getByLabel('Position in milliseconds').fill('1000');
+    await settings.getByRole('button', { name: 'OK' }).click();
+    await expect(settings).toBeHidden();
+    await expect(timeline.locator('.tl-marker-hold')).toHaveText('Speech');
+
+    // played from the start, it stops right at the hold point and waits there
+    await designer.clickTool(timeline, 'fa-play');
+    const go = timeline.getByRole('link', { name: 'GO', exact: true });
+    await expect(go).toBeVisible();
+    await expect(designer.playbackTime).toHaveText('00:01.000');
+    await page.waitForTimeout(500);
+    await expect(designer.playbackTime).toHaveText('00:01.000');
+    await expect(designer.tool(timeline, 'fa-play')).toBeVisible();
+
+    // GO plays on from there
+    await go.click();
+    await expect(go).toBeHidden();
+    await expect(designer.playbackTime).not.toHaveText('00:01.000');
+    await expect(designer.tool(timeline, 'fa-pause')).toBeVisible();
+    await designer.clickTool(timeline, 'fa-pause');
+  });
+});

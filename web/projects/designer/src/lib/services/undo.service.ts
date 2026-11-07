@@ -43,6 +43,8 @@ export class UndoService implements OnDestroy {
     'resetFixtureUuids',
     'lampOnFixtureUuids',
     'dmxOverrides',
+    'previewHolds',
+    'previewHolding',
   ];
 
   // a gesture of the pointer starts here. Everything it changes belongs to one step,
@@ -218,17 +220,18 @@ export class UndoService implements OnDestroy {
   }
 
   private apply(state: string) {
-    const data = JSON.parse(state);
+    const project = new Project(JSON.parse(state));
 
-    // the parts which are not undone stay as they are (see untrackedKeys)
+    // The parts which are not undone stay as they are (see untrackedKeys): also the ones a project read anew starts
+    // without, e.g. the faders held or where the timeline holds.
     for (const key of UndoService.untrackedKeys) {
-      data[key] = (this.projectService.project as any)[key];
+      (project as any)[key] = (this.projectService.project as any)[key];
     }
 
     this.restoring = true;
 
     try {
-      this.projectLoadService.restoreProject(new Project(data));
+      this.projectLoadService.restoreProject(project);
     } finally {
       this.restoring = false;
     }
