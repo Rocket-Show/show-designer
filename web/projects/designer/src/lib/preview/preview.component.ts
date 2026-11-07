@@ -415,9 +415,13 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
       }
 
       // Update the fixture properties
-      // with the channels held by the faders of the DMX channels on top
-      const values = this.dmxService.applyOverrides(fixture3d.fixture, calculatedFixtures.get(fixture3d.fixture) || []);
-      fixture3d.updatePreview(values, this.projectService.project.masterDimmerValue, timeMillis);
+      // with the channels held by the faders of the DMX channels on top, which the master dimmer leaves alone
+      const preview = this.dmxService.getPreviewValues(
+        fixture3d.fixture,
+        calculatedFixtures.get(fixture3d.fixture) || [],
+        this.projectService.project.masterDimmerValue
+      );
+      fixture3d.updatePreview(preview.values, preview.masterDimmer, timeMillis);
 
       // Select the fixture, if required
       if (this.fixtureService.settingsSelection) {

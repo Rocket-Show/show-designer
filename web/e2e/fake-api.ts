@@ -2,7 +2,7 @@ import { BrowserContext, Route } from '@playwright/test';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-// where the dev build of the app finds the API (web/src/environments/environment.ts)
+// where the app served for the tests finds the API (web/src/environments/environment.e2e.ts)
 export const apiUrl = 'http://localhost:8080/api/';
 
 // a profile of the fixture library: the metadata the search lists (`fixtures`) and the profile itself (`fixture`)

@@ -36,8 +36,9 @@ report of a failed run as the artifact `playwright-report`.
 
 ## The fake API
 
-The online designer talks to its PHP API (`api/`), which the dev build reaches at `http://localhost:8080/api/`
-(`src/environments/environment.ts`). The tests don't need it: `fake-api.ts` answers the requests in the browser
+The online designer talks to its PHP API (`api/`), which the app served for the tests (`ng serve --configuration e2e`)
+reaches at `http://localhost:8080/api/` (`src/environments/environment.e2e.ts`), wherever `environment.ts` points the
+dev build at. The tests don't need it: `fake-api.ts` answers the requests in the browser
 (`context.route`), like the real endpoints do (see `api/*.php` for what they answer):
 
 - `project` serves the template (id 1, which every new project starts from: one preset in one scene, no fixtures) and

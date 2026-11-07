@@ -318,32 +318,48 @@ export class DmxService {
     this.livePreviewService.previewLive();
   }
 
-  // The values of a part of a fixture with the channels held by a fader put on them, for the preview to show: each
-  // fader sets the byte of the value its channel carries. Rocket Show sends the faders as they are, so a fader on a
-  // dimmer is only shown dimmed by the master dimmer here.
-  applyOverrides(cachedFixture: CachedFixture, values: FixtureChannelValue[]): FixtureChannelValue[] {
+  // What the preview shows a part of a fixture with: its values and the master dimmer it dims its brightness by. A
+  // part with channels held by a fader is shown the way Rocket Show sends it: its values giving the brightness are
+  // dimmed by the master dimmer first, then each fader sets the byte of the value its channel carries, which the master
+  // dimmer leaves alone. The master dimmer is in its values then, the preview doesn't dim it again.
+  getPreviewValues(
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    masterDimmer: number
+  ): { values: FixtureChannelValue[]; masterDimmer: number } {
     const overrides = this.getOverrides();
+    const held: { output: DmxOutputChannel; value: number }[] = [];
 
-    if (overrides.length === 0) {
-      return values;
+    if (overrides.length > 0) {
+      for (const output of this.getOutputChannels(cachedFixture)) {
+        const dmxOverride = overrides.find(
+          (candidate) => candidate.universeUuid === cachedFixture.fixture.dmxUniverseUuid && candidate.dmxChannel === output.dmxChannel
+        );
+
+        if (dmxOverride) {
+          held.push({ output, value: this.clampByte(dmxOverride.value) });
+        }
+      }
     }
 
-    let result = values;
+    if (held.length === 0) {
+      return { values, masterDimmer };
+    }
 
-    for (const output of this.getOutputChannels(cachedFixture)) {
-      const dmxOverride = overrides.find(
-        (candidate) => candidate.universeUuid === cachedFixture.fixture.dmxUniverseUuid && candidate.dmxChannel === output.dmxChannel
-      );
+    // a copy: the values may be shared with another fixture on the same address
+    const result = values.map((value) => {
+      const channel = cachedFixture.channels.find((candidate) => candidate.name === value.channelName);
 
-      if (!dmxOverride) {
-        continue;
+      if (!channel || !channel.capabilities) {
+        return value;
       }
 
-      if (result === values) {
-        // the values may be shared with another fixture on the same address
-        result = values.slice();
-      }
+      const dimmed = new FixtureChannelValue(value);
+      dimmed.value = this.dim(channel, value.value, FixtureCapabilityType.Intensity, masterDimmer);
+      return dimmed;
+    });
 
+    for (const { output, value: byte } of held) {
       const index = result.findIndex((candidate) => candidate.channelName === output.channel.name);
       const current = index >= 0 ? result[index].value : 0;
       const fineCount = (output.channel.channel.fineChannelAliases || []).length;
@@ -352,7 +368,7 @@ export class DmxService {
       const value = new FixtureChannelValue();
       value.channelName = output.channel.name;
       value.profileUuid = cachedFixture.profile.uuid;
-      value.value = current + (this.clampByte(dmxOverride.value) - currentByte) * weight;
+      value.value = current + (byte - currentByte) * weight;
 
       if (index >= 0) {
         result[index] = value;
@@ -361,7 +377,7 @@ export class DmxService {
       }
     }
 
-    return result;
+    return { values: result, masterDimmer: 1 };
   }
 
   private clampByte(value: number): number {
