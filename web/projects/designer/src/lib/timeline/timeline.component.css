@@ -12,6 +12,7 @@
   --tl-ruler-height: 24px;
   --tl-wave-height: 56px;
   --tl-actions-height: 28px;
+  --tl-markers-height: 0px;
   --tl-track-height: 36px;
   position: relative;
   flex: 1 1 auto;
@@ -30,6 +31,11 @@
 /* a composition without an audio file has no waveform: the actions stick right below the ruler */
 .tl-no-audio {
   --tl-wave-height: 0px;
+}
+
+/* the markers stick below the waveform, the actions below them */
+.tl-has-markers {
+  --tl-markers-height: 28px;
 }
 
 .tl-scroller {
@@ -99,6 +105,7 @@
 
 .tl-ruler-row,
 .tl-wave-row,
+.tl-markers-row,
 .tl-actions-row {
   position: sticky;
   z-index: 4;
@@ -126,17 +133,19 @@
   color: var(--sd-text-dim);
 }
 
-/* a click on the ruler, the waveform or the actions jumps to the time under the pointer: a
-   plain arrow, the line following the pointer shows where. Only the playhead is dragged
-   sideways, so only on it the cursor says so. */
+/* a click on the ruler, the waveform, the markers or the actions jumps to the time under the
+   pointer: a plain arrow, the line following the pointer shows where. Only the playhead is
+   dragged sideways, so only on it the cursor says so. */
 .tl-ruler,
 .tl-wave,
+.tl-markers,
 .tl-actions {
   cursor: default;
 }
 
 .tl-playhead-hover .tl-ruler,
 .tl-playhead-hover .tl-wave,
+.tl-playhead-hover .tl-markers,
 .tl-playhead-hover .tl-actions {
   cursor: ew-resize;
 }
@@ -178,10 +187,112 @@
   display: block;
 }
 
+/* ---- the markers of the composition ----------------------------------------- */
+
+.tl-markers-row {
+  top: calc(var(--tl-ruler-height) + var(--tl-wave-height));
+  height: var(--tl-markers-height);
+}
+
+.tl-markers-row .tl-head {
+  border-bottom-color: var(--sd-border-strong);
+}
+
+.tl-markers {
+  background-color: var(--sd-surface-1);
+  border-bottom-color: var(--sd-border-strong);
+}
+
+/* A label is a green flag, a hold point a red block: the playback stops there. Wider than
+   the line it shows, to be easy to take. */
+.tl-marker {
+  --tl-marker-color: var(--sd-success);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: grab;
+}
+
+.tl-marker-hold {
+  --tl-marker-color: var(--sd-danger);
+}
+
+.tl-marker::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background-color: var(--tl-marker-color);
+}
+
+.tl-marker::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--tl-marker-color);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.tl-marker-hold::after {
+  top: 2px;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  clip-path: none;
+}
+
+.tl-marker-label {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  padding: 0 3px;
+  border-radius: var(--sd-radius-sm);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--sd-text-muted);
+  font-size: 0.6875rem;
+  line-height: 16px;
+}
+
+.tl-marker:hover .tl-marker-label {
+  color: var(--sd-text);
+}
+
+.tl-marker-selected .tl-marker-label {
+  color: var(--sd-text);
+  background-color: var(--sd-surface-3);
+  box-shadow: inset 0 0 0 1px var(--tl-marker-color);
+}
+
+.tl-marker-selected::before {
+  left: 3px;
+  width: 3px;
+}
+
+/* the playback stops at a hold point: it is drawn across the tracks as well */
+.tl-hold-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-left: 1px dashed rgba(229, 84, 75, 0.6);
+  pointer-events: none;
+}
+
 /* ---- the actions Rocket Show fires ----------------------------------------- */
 
 .tl-actions-row {
-  top: calc(var(--tl-ruler-height) + var(--tl-wave-height));
+  top: calc(var(--tl-ruler-height) + var(--tl-wave-height) + var(--tl-markers-height));
   height: var(--tl-actions-height);
 }
 
@@ -619,4 +730,30 @@
 .tl-hover-flip .tl-hover-time {
   left: auto;
   right: 5px;
+}
+
+/* ---- holding at a hold point ---------------------------------------------------- */
+
+/* the playback waits for GO: the button says so */
+.tl-go {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  animation: tl-go-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tl-go-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(46, 184, 114, 0.6);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(46, 184, 114, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-go {
+    animation: none;
+  }
 }

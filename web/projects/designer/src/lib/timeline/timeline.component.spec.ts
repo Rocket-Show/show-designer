@@ -1,6 +1,6 @@
 import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, discardPeriodicTasks, fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { ComponentFixture, discardPeriodicTasks, fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -15,6 +15,7 @@ import WaveSurfer from 'wavesurfer.js';
 
 import { InlineEditComponent } from '../inline-edit/inline-edit.component';
 import { Composition } from '../models/composition';
+import { CompositionMarker } from '../models/composition-marker';
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
@@ -26,10 +27,12 @@ import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
 import { TimelineService } from '../services/timeline.service';
+import { UndoService } from '../services/undo.service';
 import { UserService } from '../services/user.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
 import { TreeDragService } from '../tree/tree-drag.service';
 import { CompositionSettingsComponent } from './composition-settings/composition-settings.component';
+import { MarkerSettingsComponent } from './marker-settings/marker-settings.component';
 import { TimelineGridComponent } from './timeline-grid/timeline-grid.component';
 import { TimelineComponent } from './timeline.component';
 
@@ -1193,6 +1196,242 @@ describe('TimelineComponent', () => {
       key(document, ' ');
 
       expect(timelineService.playState).toBe('paused');
+    }));
+  });
+
+  describe('the markers', () => {
+    const markerElements = (): HTMLElement[] => Array.from(element.querySelectorAll<HTMLElement>('.tl-marker'));
+    const markerElement = (name: string): HTMLElement => markerElements().find((candidate) => candidate.textContent.trim() === name);
+    const markerNames = (): string[] => composition().markers.map((marker) => marker.name);
+    const markerLane = (): HTMLElement => element.querySelector('.tl-markers');
+
+    // a label at 10 seconds, and a hold point at 25 seconds
+    function addMarkers() {
+      project.compositions[0].markers = [
+        new CompositionMarker({ uuid: 'intro', name: 'Intro', positionMillis: 10000, type: 'label' }),
+        new CompositionMarker({ uuid: 'break', name: 'Break', positionMillis: 25000, type: 'hold' }),
+      ];
+    }
+
+    it('shows no lane for the markers, while there are none', fakeAsync(() => {
+      render();
+
+      expect(element.querySelector('.tl-markers-row')).toBeNull();
+      expect(frame().classList).not.toContain('tl-has-markers');
+    }));
+
+    it('draws the labels and the hold points with their names, the hold points across the tracks as well', fakeAsync(() => {
+      addMarkers();
+      render();
+
+      expect(frame().classList).toContain('tl-has-markers');
+      expect(
+        markerElements().map((marker) => [marker.textContent.trim(), marker.style.left, marker.classList.contains('tl-marker-hold')])
+      ).toEqual([
+        ['Intro', '100px', false],
+        ['Break', '250px', true],
+      ]);
+      expect(markerElement('Break').title).toBe('00:25.000 · designer.timeline.marker-type-hold');
+
+      const holdLines = Array.from(element.querySelectorAll<HTMLElement>('.tl-hold-line'));
+      expect(holdLines.map((line) => line.style.left)).toEqual(['450px']);
+    }));
+
+    it('puts a label and a hold point where the playback is, on the grid, and selects the one put there last', fakeAsync(() => {
+      render();
+      timelineService.seekToMillis(41200);
+
+      toolbarButton('fa-flag-o').click();
+      settle();
+      toolbarButton('fa-hand-paper-o').click();
+      settle();
+
+      expect(composition().markers.map((marker) => [marker.name, marker.type, marker.positionMillis])).toEqual([
+        ['designer.timeline.new-label 1', 'label', 41000],
+        ['designer.timeline.new-hold 1', 'hold', 41000],
+      ]);
+      expect(markerElements().length).toBe(2);
+      expect(timelineService.selectedMarker).toBe(composition().markers[1]);
+      expect(element.querySelector('.tl-marker-selected').classList).toContain('tl-marker-hold');
+      expect(document.activeElement).toBe(frame());
+    }));
+
+    it('selects a marker with a click, without moving it or the playback', fakeAsync(() => {
+      addMarkers();
+      render();
+      drag(clip('Chorus'), [x(40000), y(0)]);
+
+      drag(markerElement('Break'), [x(25000), 10]);
+
+      expect(timelineService.selectedMarker.name).toBe('Break');
+      expect(markerElement('Break').classList).toContain('tl-marker-selected');
+      expect(timelineService.selectedPlaybackRegion).toBeUndefined();
+      expect(composition().markers[1].positionMillis).toBe(25000);
+      expect(timelineService.getCurrentMillis()).toBe(0);
+
+      // a clip or a lane clicked selects it instead
+      drag(clip('Chorus'), [x(40000), y(0)]);
+      expect(timelineService.selectedMarker).toBeUndefined();
+      drag(markerElement('Break'), [x(25000), 10]);
+      drag(lane(1), [x(10000), y(1)]);
+      expect(timelineService.selectedMarker).toBeUndefined();
+    }));
+
+    it('moves a marker along the time, onto the grid', fakeAsync(() => {
+      addMarkers();
+      render();
+      previewLive.calls.reset();
+
+      drag(markerElement('Intro'), [x(10000), 10], [x(13000), 10], [x(15300), 10]);
+
+      expect(composition().markers[0].positionMillis).toBe(15500);
+      expect(markerElement('Intro').style.left).toBe('155px');
+      expect(timelineService.selectedMarker.name).toBe('Intro');
+      expect(previewLive).toHaveBeenCalled();
+    }));
+
+    it('jumps to the time clicked on the lane of the markers', fakeAsync(() => {
+      addMarkers();
+      render();
+
+      drag(markerLane(), [x(30000), 10]);
+
+      expect(timelineService.getCurrentMillis()).toBe(30000);
+    }));
+
+    it('removes the selected marker with the delete key', fakeAsync(() => {
+      addMarkers();
+      render();
+      drag(markerElement('Break'), [x(25000), 10]);
+
+      const event = key(frame(), 'Backspace');
+      settle();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(markerNames()).toEqual(['Intro']);
+      expect(element.querySelector('.tl-hold-line')).toBeNull();
+      expect(region('chorus')).toBeDefined();
+    }));
+
+    it('opens the settings of a marker with a double click, or of the selected one with its button', fakeAsync(() => {
+      addMarkers();
+      render();
+      expect(element.querySelector('.card-body > .d-flex .fa-pencil')).toBeNull();
+
+      markerElement('Intro').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(showModal).toHaveBeenCalledWith(
+        MarkerSettingsComponent,
+        jasmine.objectContaining({ initialState: { marker: composition().markers[0] } })
+      );
+
+      showModal.calls.reset();
+      drag(markerElement('Break'), [x(25000), 10]);
+      toolbarButton('fa-pencil').click();
+      expect(showModal).toHaveBeenCalledWith(
+        MarkerSettingsComponent,
+        jasmine.objectContaining({ initialState: { marker: composition().markers[1] } })
+      );
+    }));
+
+    it('waits at a hold point for GO, which its button gives', fakeAsync(() => {
+      addMarkers();
+      render();
+
+      toolbarButton('fa-play').click();
+      settle();
+      now = 25100;
+      (timelineService as any).followPlayback();
+      settle();
+
+      expect(timelineService.holding).toBe(true);
+      expect(component().timeLabel.nativeElement.textContent).toBe('00:25.000');
+      expect(element.querySelector('.fa-pause')).toBeNull();
+      const go = element.querySelector<HTMLElement>('.tl-go');
+      expect(go.textContent.trim()).toBe('designer.timeline.go');
+
+      now = 26000;
+      go.click();
+      settle();
+
+      expect(timelineService.holding).toBe(false);
+      expect(timelineService.playState).toBe('playing');
+      expect(element.querySelector('.tl-go')).toBeNull();
+      now = 27000;
+      expect(timelineService.getCurrentMillis()).toBe(26000);
+
+      toolbarButton('fa-pause').click();
+      settle();
+    }));
+
+    it('goes on with the play button or the space bar while it holds', fakeAsync(() => {
+      project.compositions[0].markers = [
+        new CompositionMarker({ uuid: 'first', name: 'First', positionMillis: 5000, type: 'hold' }),
+        new CompositionMarker({ uuid: 'second', name: 'Second', positionMillis: 8000, type: 'hold' }),
+      ];
+      render();
+
+      key(document, ' ');
+      now = 5100;
+      (timelineService as any).followPlayback();
+      settle();
+      expect(timelineService.heldMarker.name).toBe('First');
+
+      toolbarButton('fa-play').click();
+      settle();
+      expect(timelineService.holding).toBe(false);
+
+      now = 8200;
+      (timelineService as any).followPlayback();
+      settle();
+      expect(timelineService.heldMarker.name).toBe('Second');
+
+      const event = key(document, ' ');
+      settle();
+      expect(event.defaultPrevented).toBe(true);
+      expect(timelineService.holding).toBe(false);
+      expect(timelineService.playState).toBe('playing');
+
+      key(document, ' ');
+      expect(timelineService.playState).toBe('paused');
+    }));
+
+    it('undoes putting a marker, moving it and removing it', fakeAsync(() => {
+      // a project of today, which is put back without being migrated
+      project.version = 11;
+      render();
+      const undoService = TestBed.inject(UndoService);
+      undoService.captureChanges();
+
+      timelineService.seekToMillis(10000);
+      toolbarButton('fa-hand-paper-o').click();
+      settle();
+      undoService.captureChanges();
+      drag(markerElement('designer.timeline.new-hold 1'), [x(10000), 10], [x(20000), 10]);
+      undoService.captureChanges();
+      key(frame(), 'Delete');
+      settle();
+      undoService.captureChanges();
+      expect(composition().markers).toEqual([]);
+
+      undoService.undo();
+      redraw();
+      expect(composition().markers.map((marker) => marker.positionMillis)).toEqual([20000]);
+      expect(markerElements().map((marker) => marker.style.left)).toEqual(['200px']);
+
+      undoService.undo();
+      redraw();
+      expect(composition().markers.map((marker) => marker.positionMillis)).toEqual([10000]);
+
+      undoService.undo();
+      redraw();
+      expect(composition().markers).toEqual([]);
+      expect(element.querySelector('.tl-markers-row')).toBeNull();
+
+      undoService.redo();
+      redraw();
+      expect(markerNames()).toEqual(['designer.timeline.new-hold 1']);
+
+      flush();
     }));
   });
 

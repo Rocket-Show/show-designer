@@ -56,6 +56,7 @@ import { SceneSettingsComponent } from './scene/scene-settings/scene-settings.co
 import { SceneComponent } from './scene/scene.component';
 import { CompositionSettingsComponent } from './timeline/composition-settings/composition-settings.component';
 import { TimelineGridComponent } from './timeline/timeline-grid/timeline-grid.component';
+import { MarkerSettingsComponent } from './timeline/marker-settings/marker-settings.component';
 import { TimelineComponent } from './timeline/timeline.component';
 import { UserLoginComponent } from './user/user-login/user-login.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
@@ -92,6 +93,7 @@ import { keepSliderValues } from './slider-value';
     MasterDimmerComponent,
     FixtureCapabilityDimmerComponent,
     TimelineGridComponent,
+    MarkerSettingsComponent,
     CompositionSettingsComponent,
     ArraySortPipe,
     FixtureCapabilityPanTiltComponent,

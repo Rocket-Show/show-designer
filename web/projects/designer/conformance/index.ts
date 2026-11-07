@@ -11,23 +11,24 @@ import case7 from './cases/channel-values-pixel-effects.json';
 import case8 from './cases/channel-values-pixel-stage.json';
 import case9 from './cases/channel-values-pixel-white.json';
 import case10 from './cases/channel-values-scenarios.json';
-import case11 from './cases/default-value.json';
-import case12 from './cases/effect-curve-edges.json';
-import case13 from './cases/effect-curve.json';
-import case14 from './cases/hex-color.json';
-import case15 from './cases/migration-edges.json';
-import case16 from './cases/migration.json';
-import case17 from './cases/mix-colors.json';
-import case18 from './cases/pixel-group.json';
-import case19 from './cases/pixel-pattern.json';
-import case20 from './cases/pixels.json';
-import case21 from './cases/preset-intensity-edges.json';
-import case22 from './cases/preset-intensity.json';
-import case23 from './cases/preset-steps-edges.json';
-import case24 from './cases/preset-steps-orders.json';
-import case25 from './cases/preset-steps.json';
-import case26 from './cases/profile-number.json';
-import case27 from './cases/transition-curve.json';
+import case11 from './cases/channel-values-timing.json';
+import case12 from './cases/default-value.json';
+import case13 from './cases/effect-curve-edges.json';
+import case14 from './cases/effect-curve.json';
+import case15 from './cases/hex-color.json';
+import case16 from './cases/migration-edges.json';
+import case17 from './cases/migration.json';
+import case18 from './cases/mix-colors.json';
+import case19 from './cases/pixel-group.json';
+import case20 from './cases/pixel-pattern.json';
+import case21 from './cases/pixels.json';
+import case22 from './cases/preset-intensity-edges.json';
+import case23 from './cases/preset-intensity.json';
+import case24 from './cases/preset-steps-edges.json';
+import case25 from './cases/preset-steps-orders.json';
+import case26 from './cases/preset-steps.json';
+import case27 from './cases/profile-number.json';
+import case28 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -67,23 +68,24 @@ export const caseFiles: { [fileName: string]: any } = {
   'channel-values-pixel-stage.json': case8,
   'channel-values-pixel-white.json': case9,
   'channel-values-scenarios.json': case10,
-  'default-value.json': case11,
-  'effect-curve-edges.json': case12,
-  'effect-curve.json': case13,
-  'hex-color.json': case14,
-  'migration-edges.json': case15,
-  'migration.json': case16,
-  'mix-colors.json': case17,
-  'pixel-group.json': case18,
-  'pixel-pattern.json': case19,
-  'pixels.json': case20,
-  'preset-intensity-edges.json': case21,
-  'preset-intensity.json': case22,
-  'preset-steps-edges.json': case23,
-  'preset-steps-orders.json': case24,
-  'preset-steps.json': case25,
-  'profile-number.json': case26,
-  'transition-curve.json': case27,
+  'channel-values-timing.json': case11,
+  'default-value.json': case12,
+  'effect-curve-edges.json': case13,
+  'effect-curve.json': case14,
+  'hex-color.json': case15,
+  'migration-edges.json': case16,
+  'migration.json': case17,
+  'mix-colors.json': case18,
+  'pixel-group.json': case19,
+  'pixel-pattern.json': case20,
+  'pixels.json': case21,
+  'preset-intensity-edges.json': case22,
+  'preset-intensity.json': case23,
+  'preset-steps-edges.json': case24,
+  'preset-steps-orders.json': case25,
+  'preset-steps.json': case26,
+  'profile-number.json': case27,
+  'transition-curve.json': case28,
 };
 
 export const profiles: { [name: string]: any } = {

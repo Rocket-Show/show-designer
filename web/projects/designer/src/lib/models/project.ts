@@ -1,3 +1,4 @@
+import { CompositionHold } from './composition-hold';
 import { GoboPatternChoice } from './gobo-pattern-choice';
 import { DmxOverride } from './dmx-override';
 import { Composition } from './composition';
@@ -52,6 +53,12 @@ export class Project {
   // the DMX channels held at a value by the faders of the DMX channels, over what the presets put on them. Like the
   // identified fixtures, they only travel to the live preview.
   public dmxOverrides: DmxOverride[] = [];
+
+  // The hold points the timeline has held at since it has been played from the start or moved, with the time held at
+  // each, and whether it stands at the last of them, waiting for GO (see TimelineService.holds). The live preview
+  // holds along with it. Like the identified fixtures, they only travel to the live preview.
+  public previewHolds: CompositionHold[] = [];
+  public previewHolding = false;
 
   // true = play the selected preset on its own (solo), false = play the selected scenes
   public previewPreset = false;

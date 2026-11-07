@@ -77,6 +77,12 @@ export class Preset {
   // how many fixtures share the same chase step (1 = each fixture on its own)
   stepsPhasingGroupSize = 1;
 
+  // how the steps are timed: 'millis' as they are written down, 'beats' following the tempo they are played at. Their
+  // times are written down at stepsBeatsPerMinute then (the tempo of the composition open when the steps were set to
+  // follow the beat), and run as much faster or slower as the tempo played is (see getStepsTimeMillis).
+  stepsLengthMode = 'millis';
+  stepsBeatsPerMinute = 120;
+
   // the order the steps are played in: 'forward', 'backward', 'pingpong' or 'random' (see preset-steps-order), and
   // where a random order starts from, so two copies of a preset can play their steps in different orders
   stepsOrder = 'forward';
@@ -165,6 +171,8 @@ export class Preset {
     this.stepsPhasingMillis = data.stepsPhasingMillis || 0;
     this.stepsPhasingCycles = data.stepsPhasingCycles ?? 1;
     this.stepsPhasingGroupSize = data.stepsPhasingGroupSize ?? 1;
+    this.stepsLengthMode = data.stepsLengthMode === 'beats' ? 'beats' : 'millis';
+    this.stepsBeatsPerMinute = data.stepsBeatsPerMinute > 0 ? data.stepsBeatsPerMinute : 120;
     // a preset written before the steps could be played in another order plays them forward, like in Rocket Show
     this.stepsOrder = data.stepsOrder || 'forward';
     this.stepsSeed = data.stepsSeed ?? 1;

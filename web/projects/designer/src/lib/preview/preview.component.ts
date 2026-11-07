@@ -445,7 +445,9 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
 
   private animate(timeMillis: number) {
     if (this.timelineService.playState === 'playing') {
-      // Overwrite the current time with the playing time, if we're in playback mode
+      // Overwrite the current time with the playing time, if we're in playback mode. Standing at a hold point, the
+      // time held there grows with each frame, which the clips spanning it run on with.
+      this.timelineService.updateHeldMillis();
       timeMillis = this.timelineService.getCurrentMillis();
     }
 

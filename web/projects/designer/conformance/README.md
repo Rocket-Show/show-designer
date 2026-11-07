@@ -32,7 +32,10 @@ made of it (`expected`).
 | `migration`             | a project of an older version                                                                                                  | what both keep of it migrated to the current version and play it with (see below)           |
 
 A run of a `channelValues` case may name fixtures identified from the fixture pool (`"identify"`), which blink at full
-white on top of what the presets light them with.
+white on top of what the presets light them with, and the hold points the timeline played through (`"holds"`, each
+with its position and the time held there): the effects and the steps of a clip spanning a hold run on for the time
+held, while its position and its fades stand still (`channel-values-timing.json`, which also plays steps following the
+beat at the tempo of the composition).
 
 A project of a `channelValues` case names the profiles of `profiles` like the fixture library does (`"$profile":
 "stairville/mh-100"`): a few real profiles of the library (see `profiles/README.md`) and the test fixtures of

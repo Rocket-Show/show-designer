@@ -1,9 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Composition } from '../models/composition';
+import { CompositionMarker } from '../models/composition-marker';
 import { Scene } from '../models/scene';
 import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { getOpenTimelineMillis } from '../models/timeline-length';
@@ -26,6 +28,7 @@ import { UuidService } from '../services/uuid.service';
 import { WarningDialogService } from '../services/warning-dialog.service';
 import { TreeDragService } from '../tree/tree-drag.service';
 import { CompositionSettingsComponent } from './composition-settings/composition-settings.component';
+import { MarkerSettingsComponent } from './marker-settings/marker-settings.component';
 import { TimelineGridComponent } from './timeline-grid/timeline-grid.component';
 
 // a clip on a track, as it is drawn
@@ -67,6 +70,18 @@ interface ActionMarkerView {
   labelWidthPx: number;
 }
 
+// a marker of the composition, as it is drawn: a label, or a hold point the playback stops at until GO
+interface MarkerView {
+  marker: CompositionMarker;
+  leftPx: number;
+  hold: boolean;
+  selected: boolean;
+  time: string;
+
+  // the room up to the next marker, which the name of this one may take
+  labelWidthPx: number;
+}
+
 interface TrackView {
   track: Track;
   clips: ClipView[];
@@ -77,19 +92,20 @@ interface TrackView {
 
 // what the pointer is doing on the timeline since it went down
 interface PointerGesture {
-  kind: 'move' | 'start' | 'end' | 'create' | 'seek' | 'track';
+  kind: 'move' | 'start' | 'end' | 'create' | 'seek' | 'track' | 'marker';
   startClientX: number;
   startClientY?: number;
   moved: boolean;
   region?: ScenePlaybackRegion;
   track?: Track;
+  marker?: CompositionMarker;
 
   // where the clip was, to put it back if it is dropped onto another one
   originalStartMillis?: number;
   originalEndMillis?: number;
   originalTrackUuid?: string;
 
-  // the time between the start of the clip and the pointer
+  // the time between the start of the clip (or the marker) and the pointer
   grabMillis?: number;
 
   // the room the clip may be resized or drawn in
@@ -132,6 +148,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     start: 'col-resize',
     end: 'col-resize',
     create: 'col-resize',
+    marker: 'grabbing',
   };
 
   frame: ElementRef<HTMLElement>;
@@ -188,6 +205,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   endPx: number;
 
   actionMarkers: ActionMarkerView[] = [];
+  markerViews: MarkerView[] = [];
 
   trackViews: TrackView[] = [];
   gridStyle: { [key: string]: string } = {};
@@ -240,7 +258,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     private treeDragService: TreeDragService,
     private ngZone: NgZone,
     private layoutService: LayoutService,
-    private userService: UserService
+    private userService: UserService,
+    private translateService: TranslateService
   ) {
     this.subscriptions.push(
       this.timelineService.waveSurferReady.subscribe(() => {
@@ -327,6 +346,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
     this.endPx = this.timelineService.playsAudioFile() ? undefined : this.toPx(this.timelineService.getEndMillis());
     this.actionMarkers = this.getActionMarkers();
+    this.markerViews = this.getMarkerViews(composition);
     this.gridStyle = this.getGridStyle();
     const played = getPreviewTracks(composition);
     this.trackViews = composition.tracks.map((track) => ({ track, clips: this.getClipViews(track), silent: played.indexOf(track) < 0 }));
@@ -416,6 +436,25 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         time: this.timelineService.msToTime(trigger.positionMillis),
         actionTypes: trigger.actionTypes,
         labelWidthPx: Math.min(160, nextPx - leftPx - 10),
+      };
+    });
+  }
+
+  // the markers of the composition, from the start on
+  private getMarkerViews(composition: Composition): MarkerView[] {
+    const markers = [...composition.markers].sort((a, b) => a.positionMillis - b.positionMillis);
+
+    return markers.map((marker, index) => {
+      const leftPx = this.toPx(marker.positionMillis);
+      const nextPx = index + 1 < markers.length ? this.toPx(markers[index + 1].positionMillis) : Infinity;
+
+      return {
+        marker,
+        leftPx,
+        hold: marker.type === 'hold',
+        selected: marker.uuid === this.timelineService.selectedMarkerUuid,
+        time: this.timelineService.msToTime(marker.positionMillis),
+        labelWidthPx: Math.min(160, nextPx - leftPx - 12),
       };
     });
   }
@@ -666,7 +705,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   // to the playhead, the playhead itself is taken and dragged. Runs outside of Angular, for
   // every move of the pointer over the timeline.
   private hoverAt(clientX: number, target: Element) {
-    const overSeekLane = !!target && !!target.closest('.tl-ruler, .tl-wave, .tl-actions') && !target.closest('.tl-action');
+    const overSeekLane =
+      !!target && !!target.closest('.tl-ruler, .tl-wave, .tl-markers, .tl-actions') && !target.closest('.tl-action, .tl-marker');
 
     this.hoverClientX = overSeekLane && !this.gesture ? clientX : undefined;
     this.showHover();
@@ -745,13 +785,20 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  // delete removes the selected clip, or the track whose name was clicked last
+  // delete removes the selected marker or clip, or the track whose name was clicked last
   onKeyDown(event: KeyboardEvent) {
     if ((event.key !== 'Delete' && event.key !== 'Backspace') || this.hotkeyTargetExcludeService.exclude(event)) {
       return;
     }
 
     event.preventDefault();
+
+    const marker = this.timelineService.selectedMarker;
+
+    if (marker) {
+      this.timelineService.removeMarker(marker);
+      return;
+    }
 
     if (this.timelineService.selectedPlaybackRegion) {
       this.timelineService.removeRegion();
@@ -841,6 +888,29 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.seekTo(marker.millis);
   }
 
+  // A marker is selected by a click, and dragged along the time from there (onto the grid, if the clips snap to it). A
+  // double click opens its settings.
+  onMarkerMouseDown(event: MouseEvent, view: MarkerView) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.focusTimeline();
+    this.trackFocused = false;
+    this.timelineService.selectMarker(view.marker);
+
+    this.gesture = {
+      kind: 'marker',
+      startClientX: event.clientX,
+      moved: false,
+      marker: view.marker,
+      grabMillis: this.millisAt(event.clientX) - view.marker.positionMillis,
+    };
+    this.listen();
+  }
+
   // not past the end of the timeline, while the pointer is dragged out of it
   private seekTo(millis: number) {
     this.timelineService.seekToMillis(Math.min(millis, this.timelineMillis));
@@ -884,6 +954,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.focusTimeline();
     this.trackFocused = false;
     this.timelineService.selectedPlaybackRegion = undefined;
+    this.timelineService.selectedMarkerUuid = undefined;
 
     if (track) {
       this.timelineService.selectTrack(track);
@@ -920,6 +991,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.focusTimeline();
     this.trackFocused = true;
     this.timelineService.selectedPlaybackRegion = undefined;
+    this.timelineService.selectedMarkerUuid = undefined;
     this.timelineService.selectTrack(track);
 
     this.gesture = { kind: 'track', startClientX: event.clientX, startClientY: event.clientY, moved: false, track };
@@ -989,6 +1061,9 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         break;
       case 'create':
         this.drawRegion(gesture, millis);
+        break;
+      case 'marker':
+        this.timelineService.moveMarker(gesture.marker, Math.min(millis - gesture.grabMillis, this.timelineMillis));
         break;
     }
 
@@ -1075,6 +1150,11 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     if (!gesture || !gesture.moved || gesture.kind === 'seek') {
+      return;
+    }
+
+    if (gesture.kind === 'marker') {
+      this.timelineService.markerChanged();
       return;
     }
 
@@ -1220,6 +1300,34 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.timelineService.rewind();
   }
 
+  // GO: the playback goes on from the hold point it stands at
+  go() {
+    this.timelineService.go();
+  }
+
+  // a label or a hold point where the playback is
+  addMarker(type: 'label' | 'hold') {
+    this.timelineService.addMarker(
+      type,
+      this.translateService.instant(type === 'hold' ? 'designer.timeline.new-hold' : 'designer.timeline.new-label')
+    );
+    this.focusTimeline();
+    this.trackFocused = false;
+  }
+
+  editMarker(marker: CompositionMarker) {
+    if (!marker) {
+      return;
+    }
+
+    this.modalService.show(MarkerSettingsComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      class: '',
+      initialState: { marker },
+    });
+  }
+
   addRegion() {
     this.timelineService.addRegion();
     this.focusTimeline();
@@ -1326,8 +1434,9 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    // while the playback holds at a hold point, the space bar is GO
     if (event.key === ' ') {
-      if (this.timelineService.playState === 'paused') {
+      if (this.timelineService.playState === 'paused' || this.timelineService.holding) {
         this.play();
       } else {
         this.pause();

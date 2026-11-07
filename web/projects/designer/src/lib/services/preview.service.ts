@@ -9,6 +9,7 @@ import { Preset } from '../models/preset';
 import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
+import { getStepsTimeMillis } from '../models/preset-steps-order';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
@@ -32,6 +33,7 @@ import {
 } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { GoboPatternChoice } from '../models/gobo-pattern-choice';
+import { getHeldMillis } from '../models/composition-hold';
 import { getIdentifyCapabilityValues } from '../models/identify';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -283,14 +285,39 @@ export class PreviewService implements OnDestroy {
   // the values a preset applies at the passed time. While nothing is playing, the
   // panels are editing one step of the selected preset, so that is the one to show:
   // the sequence only runs on the timeline, or when the designer asks to watch it.
-  private getPresetStepState(preset: PresetRegionScene, timeMillis: number): PresetStepState {
+  //
+  // The steps run from the start of the preset, also through the holds of the timeline, as written down or (following
+  // the beat) as much faster or slower as the tempo is than the one they are written at. A chase shifts them by the
+  // passed time of the steps of a fixture.
+  private getPresetStepState(preset: PresetRegionScene, timeMillis: number, phasingMillis = 0): PresetStepState {
+    const followsBeat = preset.preset.stepsLengthMode === 'beats';
+
     if (preset.region) {
-      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.getPresetStartMillis(preset));
+      const startMillis = this.getPresetStartMillis(preset);
+      const heldMillis = getHeldMillis(this.timelineService.holds, startMillis, timeMillis);
+
+      if (followsBeat) {
+        const presetTimeMillis = timeMillis - startMillis + heldMillis;
+        return this.presetStepService.getStateAtMillis(
+          preset.preset,
+          getStepsTimeMillis(preset.preset, presetTimeMillis, this.getBeatsPerMinute()) - phasingMillis
+        );
+      }
+
+      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - phasingMillis - startMillis + heldMillis);
     }
 
     if (this.presetService.stepPreviewRunning) {
       // the sequence was started by hand, so it runs from the point it was started at
-      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - this.presetService.stepPreviewStartMillis);
+      if (followsBeat) {
+        const presetTimeMillis = timeMillis - this.presetService.stepPreviewStartMillis;
+        return this.presetStepService.getStateAtMillis(
+          preset.preset,
+          getStepsTimeMillis(preset.preset, presetTimeMillis, this.getBeatsPerMinute()) - phasingMillis
+        );
+      }
+
+      return this.presetStepService.getStateAtMillis(preset.preset, timeMillis - phasingMillis - this.presetService.stepPreviewStartMillis);
     }
 
     if (preset.preset.steps.length === 0) {
@@ -705,7 +732,9 @@ export class PreviewService implements OnDestroy {
     let effectTimeMillis = timeMillis;
 
     if (preset.region) {
-      effectTimeMillis = timeMillis - preset.region.startMillis;
+      // the effects keep running through the holds of the timeline
+      effectTimeMillis =
+        timeMillis - preset.region.startMillis + getHeldMillis(this.timelineService.holds, preset.region.startMillis, timeMillis);
     }
 
     for (const effect of preset.preset.effects) {
@@ -1257,7 +1286,8 @@ export class PreviewService implements OnDestroy {
               presetStates.get(preset) ||
               this.getPresetStepState(
                 preset,
-                timeMillis - this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
+                timeMillis,
+                this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
               );
 
             const context: PanTiltContext = {
