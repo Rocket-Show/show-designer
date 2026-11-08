@@ -1,9 +1,12 @@
 import { AiAbility, AiPosition, AiRig, AiRigGroup, AiRigGroupFixtures } from './ai-looks';
 import { CachedFixture } from './cached-fixture';
+import { CachedFixtureChannel } from './cached-fixture-channel';
 import { Fixture, Positioning } from './fixture';
 import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureWheelSlotType } from './fixture-wheel-slot';
 import { Folder } from './folder';
+import { GoboPatternChoice } from './gobo-pattern-choice';
+import { getShownGoboPattern } from '../preview/models/gobo';
 import { PresetFixture } from './preset-fixture';
 
 // the API takes no more groups than this
@@ -16,6 +19,8 @@ export interface AiRigSource {
   presetFixtures: PresetFixture[];
   fixtureFolders: Folder[];
   cachedFixtures: CachedFixture[];
+  // the patterns the user matched to the gobos of the models (see GoboPatternChoice)
+  goboPatterns?: GoboPatternChoice[];
   stageHeightCm: number;
   stageFloorHeightCm: number;
 }
@@ -81,6 +86,11 @@ export function buildAiRig(source: AiRigSource): AiRig {
     const pixels = getPixels(groupParts);
     if (pixels) {
       group.pixels = pixels;
+    }
+
+    const gobos = getGoboPatterns(groupParts, source.goboPatterns);
+    if (gobos.length > 0) {
+      group.gobos = gobos;
     }
 
     rigGroups.push({ group, fixtureUuids });
@@ -166,7 +176,7 @@ function getAbilities(parts: CachedFixture[]): AiAbility[] {
   ) {
     abilities.push('gobo');
   }
-  if (has((type) => type === FixtureCapabilityType.Prism)) {
+  if (has((type) => type === FixtureCapabilityType.Prism || type === FixtureCapabilityType.PrismRotation)) {
     abilities.push('prism');
   }
 
@@ -203,6 +213,57 @@ function getWheelOnlyColors(parts: CachedFixture[]): string[] {
   }
 
   return !mixes && colors.length > 0 ? colors.slice(0, 32) : undefined;
+}
+
+// a gobo on a slot of a wheel, with the kind of its pattern
+export interface AiWheelGobo {
+  wheel: string;
+  slotNumber: number;
+  pattern: string;
+}
+
+// The gobos of a gobo wheel of a channel: each slot holding one, with the kind of its pattern, as the preview draws it
+// (the one the user matched to it, or else the one its name brings). A capability between two slots holds none of
+// them, like in the gobo picker of the designer.
+export function getWheelGobos(profileUuid: string, channel: CachedFixtureChannel, goboPatterns: GoboPatternChoice[]): AiWheelGobo[] {
+  const gobos: AiWheelGobo[] = [];
+
+  for (const channelCapability of channel.capabilities) {
+    const slots = channelCapability.wheelSlots || [];
+
+    if (channelCapability.capability.type !== FixtureCapabilityType.WheelSlot || !channelCapability.wheelName || slots.length !== 1) {
+      continue;
+    }
+
+    const slot = slots[0];
+
+    if (!slot || (slot.type !== FixtureWheelSlotType.Gobo && slot.type !== FixtureWheelSlotType.AnimationGoboStart)) {
+      continue;
+    }
+
+    const slotNumber = channelCapability.capability.slotNumber;
+    const pattern = getShownGoboPattern(goboPatterns, profileUuid, channelCapability.wheelName, slotNumber, slot.name);
+    gobos.push({ wheel: channelCapability.wheelName, slotNumber, pattern: pattern.family });
+  }
+
+  return gobos;
+}
+
+// the kinds of gobos the wheels of a group have, each once, in the order they come in
+function getGoboPatterns(parts: CachedFixture[], goboPatterns: GoboPatternChoice[]): string[] {
+  const patterns: string[] = [];
+
+  for (const part of parts) {
+    for (const channel of part.channels) {
+      for (const gobo of getWheelGobos(part.profile.uuid, channel, goboPatterns)) {
+        if (patterns.indexOf(gobo.pattern) < 0) {
+          patterns.push(gobo.pattern);
+        }
+      }
+    }
+  }
+
+  return patterns;
 }
 
 // the size of the pixel grid of the bars and matrices of a group: as the profile has its pixels, or in a row

@@ -1,5 +1,12 @@
 import { AiLooks, AiPreset, AiRig } from './ai-looks';
-import { AiCompileContext, aiColorToRgb, compileAiLooks, genericStrobePercentage, genericStrobeValues } from './ai-looks-compiler';
+import {
+  AiCompileContext,
+  aiColorToRgb,
+  aiRotationPercentage,
+  compileAiLooks,
+  genericStrobePercentage,
+  genericStrobeValues,
+} from './ai-looks-compiler';
 import { EffectCurve } from './effect-curve';
 import { EffectPixel } from './effect-pixel';
 import { FixtureCapabilityType } from './fixture-capability';
@@ -23,6 +30,8 @@ describe('compileAiLooks', () => {
     movement: null,
     dimmerEffect: null,
     pixel: null,
+    gobo: null,
+    prism: null,
     strobe: null,
   };
 
@@ -201,6 +210,30 @@ describe('compileAiLooks', () => {
     expect(value(unreadable, FixtureCapabilityType.ColorIntensity)).toBeUndefined();
     expect(value(unreadable, FixtureCapabilityType.Intensity)).toBeUndefined();
     expect((compileOne(lit[5]).effects[0] as EffectCurve).fanMode).toBe('none');
+  });
+
+  it('puts the prism in, turning it as fast as asked, and leaves the gobos to the models', () => {
+    const turning = compileOne({ prism: { rotation: -0.5 } });
+    expect(value(turning, FixtureCapabilityType.Prism).valuePercentage).toBe(1);
+    expect(value(turning, FixtureCapabilityType.PrismRotation).valuePercentage).toBe(0.25);
+    // a prism or a gobo lights the fixtures, at full where nothing else brightens them
+    expect(value(turning, FixtureCapabilityType.Intensity).valuePercentage).toBe(1);
+    expect(value(compileOne({ prism: { rotation: 0 } }), FixtureCapabilityType.PrismRotation)).toBeUndefined();
+
+    // the slots of the gobos of a kind come from the models (see AiLooksService), without them none
+    const asked: any[] = [];
+    const slot = new FixtureCapabilityValue({ type: FixtureCapabilityType.WheelSlot, wheel: 'Gobo Wheel', slotNumber: 3 });
+    const goboValues = (...args: any[]) => {
+      asked.push(args);
+      return [slot];
+    };
+    expect(value(compileOne({ gobo: { pattern: 'star', rotation: 0.2 } }, { goboValues }), FixtureCapabilityType.WheelSlot)).toEqual(slot);
+    expect(asked).toEqual([[['par-1', 'par-2'], 'star', 0.2]]);
+    expect(value(compileOne({ gobo: { pattern: 'star', rotation: 0 } }), FixtureCapabilityType.WheelSlot)).toBeUndefined();
+
+    expect([aiRotationPercentage(2), aiRotationPercentage(-1), aiRotationPercentage(undefined), aiRotationPercentage(0.3)]).toEqual([
+      1, 0, 0.5, 0.65,
+    ]);
   });
 
   it('makes scenes of the presets it made, named after their section without a name, and blackouts without presets', () => {

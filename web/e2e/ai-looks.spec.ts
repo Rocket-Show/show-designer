@@ -16,6 +16,8 @@ const nothing = {
   movement: null,
   dimmerEffect: null,
   pixel: null,
+  gobo: null,
+  prism: null,
   strobe: null,
 };
 

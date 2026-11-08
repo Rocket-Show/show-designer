@@ -2,8 +2,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AiLooks, AiLooksRequest, AiLooksResponse, AiLooksStatus, AiRig, AiSettings } from '../models/ai-looks';
-import { AiCompiled, compileAiLooks, genericStrobePercentage } from '../models/ai-looks-compiler';
-import { buildAiRig } from '../models/ai-rig';
+import { AiCompiled, aiRotationPercentage, compileAiLooks, genericStrobePercentage } from '../models/ai-looks-compiler';
+import { AiWheelGobo, buildAiRig, getWheelGobos } from '../models/ai-rig';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { getPositionedCapability, getPropertyRank } from '../models/capability-position';
 import { EffectCurve } from '../models/effect-curve';
@@ -64,6 +64,7 @@ export class AiLooksService {
       presetFixtures: project.presetFixtures,
       fixtureFolders: project.fixtureFolders,
       cachedFixtures: this.fixtureService.cachedFixtures,
+      goboPatterns: project.goboPatterns,
       stageHeightCm: project.stageHeightCm,
       stageFloorHeightCm: project.stageFloorHeightCm,
     });
@@ -100,6 +101,7 @@ export class AiLooksService {
       bpm,
       newUuid: () => this.uuidService.getUuid(),
       strobeValues: (fixtureUuids, effect, flashesPerSecond) => this.getStrobeValues(fixtureUuids, effect, flashesPerSecond),
+      goboValues: (fixtureUuids, pattern, rotation) => this.getGoboValues(fixtureUuids, pattern, rotation),
     });
 
     if (compiled.presets.length === 0) {
@@ -180,6 +182,57 @@ export class AiLooksService {
         strobeValue,
         new FixtureCapabilityValue({ type: FixtureCapabilityType.StrobeSpeed, profileUuid, valuePercentage: speed ?? strobe ?? generic })
       );
+    });
+
+    return values;
+  }
+
+  // A gobo of a kind in the beams of the fixtures of a preset, without knowing what the gobos of their wheels look like:
+  // each model puts the first of its gobo wheels having a gobo of that kind on it, as the preview draws its gobos (the
+  // pattern the user matched to a gobo, or else the one its name brings), like the gobo picker of the designer does.
+  // A model without one (or asked for any gobo) puts its first gobo wheel on its first gobo, so it shows a gobo all the
+  // same, the same one every time. The gobo turns on its wheel at the speed asked, where the wheel can turn it.
+  getGoboValues(fixtureUuids: string[], pattern: string, rotation: number): FixtureCapabilityValue[] {
+    const wheelsOfProfiles = new Map<string, AiWheelGobo[][]>();
+
+    for (const cachedFixture of this.fixtureService.cachedFixtures) {
+      const profileUuid = cachedFixture.profile.uuid;
+
+      if (fixtureUuids.indexOf(cachedFixture.fixture.uuid) < 0 || wheelsOfProfiles.has(profileUuid)) {
+        continue;
+      }
+
+      const wheels = cachedFixture.channels
+        .map((channel) => getWheelGobos(profileUuid, channel, this.projectService.project.goboPatterns))
+        .filter((gobos) => gobos.length > 0);
+
+      wheelsOfProfiles.set(profileUuid, wheels);
+    }
+
+    const values: FixtureCapabilityValue[] = [];
+
+    wheelsOfProfiles.forEach((wheels, profileUuid) => {
+      if (wheels.length === 0) {
+        return;
+      }
+
+      const matching = pattern === 'any' ? undefined : ([] as AiWheelGobo[]).concat(...wheels).find((gobo) => gobo.pattern === pattern);
+      const gobo = matching || wheels[0][0];
+
+      values.push(
+        new FixtureCapabilityValue({ type: FixtureCapabilityType.WheelSlot, wheel: gobo.wheel, slotNumber: gobo.slotNumber, profileUuid })
+      );
+
+      if (rotation) {
+        values.push(
+          new FixtureCapabilityValue({
+            type: FixtureCapabilityType.WheelSlotRotation,
+            wheel: gobo.wheel,
+            profileUuid,
+            valuePercentage: aiRotationPercentage(rotation),
+          })
+        );
+      }
     });
 
     return values;

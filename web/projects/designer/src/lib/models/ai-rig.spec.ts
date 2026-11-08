@@ -1,4 +1,6 @@
+import { goboCatalog } from '../preview/models/gobo';
 import { aiMaxRigGroups, buildAiRig, getAiPosition } from './ai-rig';
+import { GoboPatternChoice } from './gobo-pattern-choice';
 import { Fixture, Positioning } from './fixture';
 import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureWheelSlotType } from './fixture-wheel-slot';
@@ -161,6 +163,43 @@ describe('buildAiRig', () => {
     expect(rig.groups[0].group).toEqual(jasmine.objectContaining({ id: 'group', name: '', category: '', abilities: ['color'] }));
     expect(rig.groups[0].group.colors).toBeUndefined();
     expect(rig.groups[1].group.pixels).toEqual({ columns: 4, rows: 2 });
+  });
+
+  it('tells the kinds of gobos the wheels have, as the preview draws them, and a turning prism as a prism', () => {
+    const spot = { uuid: 'spot', name: 'Spot', categories: ['Moving Head'] };
+    const heads = [fixture('a', 'spot')];
+    const slot = (slotNumber: number, slots: any[], wheelName = 'Gobo Wheel') => ({
+      capability: { type: FixtureCapabilityType.WheelSlot, slotNumber },
+      wheelName,
+      wheelSlots: slots,
+    });
+    const gobo = (name: string) => ({ type: FixtureWheelSlotType.Gobo, name });
+    const rings = goboCatalog.find((entry) => entry.pattern.family === 'rings');
+
+    const rig = buildAiRig({
+      fixtures: heads,
+      presetFixtures: [{ fixtureUuid: 'a' }] as any[],
+      fixtureFolders: [],
+      cachedFixtures: [
+        part(heads[0], spot, [
+          slot(1, [{ type: FixtureWheelSlotType.Open }]),
+          slot(2, [gobo('Dots')]),
+          slot(3, [gobo('Stars')]),
+          // matched to a pattern of rings by the user
+          slot(4, [gobo('Gobo 4')]),
+          // between two slots, without a wheel, a wheel of colors
+          slot(4.5, [gobo('Dots'), gobo('Stars')]),
+          slot(5, [gobo('Sun')], ''),
+          slot(6, [{ type: FixtureWheelSlotType.Color }]),
+          capability(FixtureCapabilityType.PrismRotation),
+        ]),
+      ],
+      goboPatterns: [new GoboPatternChoice({ profileUuid: 'spot', wheel: 'Gobo Wheel', slotNumber: 4, pattern: rings.id })],
+      ...stage,
+    });
+
+    expect(rig.groups[0].group.gobos).toEqual(['dots', 'star', 'rings']);
+    expect(rig.groups[0].group.abilities).toContain('prism');
   });
 
   it('describes no more groups than the API takes', () => {

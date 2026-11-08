@@ -21,6 +21,8 @@ export interface AiRigGroup {
   colors?: string[];
   // the size of the pixel grid of pixel bars and matrices
   pixels?: { columns: number; rows: number };
+  // the kinds of gobos the gobo wheels of a group have (see aiGoboPatterns)
+  gobos?: string[];
 }
 
 // a group with the fixtures it is made of, which only the designer knows
@@ -58,6 +60,10 @@ export const aiPalettes = [
   'signal',
   'red-blue',
 ];
+
+// The kinds of gobos the AI picks a gobo by, never by a slot of a wheel: the families of the patterns the preview draws
+// the gobos with (see preview/models/gobo), the one a user matched to a gobo of a model, or else the one its name brings
+export const aiGoboPatterns = ['breakup', 'dots', 'rays', 'star', 'bars', 'grid', 'rings', 'spiral', 'flower', 'polygon', 'checker'];
 
 // what the user picked
 export interface AiSettings {
@@ -127,6 +133,9 @@ export interface AiPreset {
   };
   dimmerEffect: { curve: string; beats: number; depth: number; width: number; chase: AiChase };
   pixel: { pattern: string; palette: string; colors: string[]; beats: number; direction: string; size: number };
+  // a gobo of a kind (or 'any'), and how fast and which way it turns: from -1 (fastest anticlockwise) to 1
+  gobo: { pattern: string; rotation: number };
+  prism: { rotation: number };
   strobe: { effect: string; flashesPerSecond: number };
 }
 

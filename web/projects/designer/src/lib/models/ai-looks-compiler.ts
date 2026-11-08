@@ -14,7 +14,8 @@ import { Scene } from './scene';
 
 // What the looks are turned into presets and scenes for: the project (its stage and the order of its fixtures), the
 // rig the looks were designed for, the tempo they follow and where the new uuids come from. The strobe of each model of
-// the fixtures flashes as fast as the looks say with the values strobeValues gives (see AiLooksService).
+// the fixtures flashes as fast as the looks say with the values strobeValues gives, and its gobo wheel shows a gobo of
+// the kind asked for with the ones goboValues gives (see AiLooksService).
 export interface AiCompileContext {
   stageWidthCm: number;
   stageDepthCm: number;
@@ -24,6 +25,7 @@ export interface AiCompileContext {
   bpm: number;
   newUuid: () => string;
   strobeValues?: (fixtureUuids: string[], effect: string, flashesPerSecond: number) => FixtureCapabilityValue[];
+  goboValues?: (fixtureUuids: string[], pattern: string, rotation: number) => FixtureCapabilityValue[];
 }
 
 export interface AiCompiled {
@@ -206,6 +208,23 @@ function pixelEffect(ai: AiPreset, context: AiCompileContext): EffectPixel {
   return effect;
 }
 
+// the speed of a rotation from -1 (fastest anticlockwise) to 1 as the designer keeps it: from 0 to 1, standing in the
+// middle (see capability-position)
+export function aiRotationPercentage(rotation: number): number {
+  return Math.round((0.5 + Math.min(Math.max(rotation || 0, -1), 1) / 2) * 1000) / 1000;
+}
+
+// the prism in the beams, turning if it does
+function prismValues(prism: AiPreset['prism']): FixtureCapabilityValue[] {
+  const values = [capabilityValue({ type: FixtureCapabilityType.Prism, valuePercentage: 1 })];
+
+  if (prism.rotation) {
+    values.push(capabilityValue({ type: FixtureCapabilityType.PrismRotation, valuePercentage: aiRotationPercentage(prism.rotation) }));
+  }
+
+  return values;
+}
+
 // does the preset light its fixtures in some way, besides their brightness?
 function lights(ai: AiPreset): boolean {
   return !!(
@@ -216,7 +235,9 @@ function lights(ai: AiPreset): boolean {
     typeof ai.zoom === 'number' ||
     ai.zoomFan ||
     ai.position ||
-    ai.movement
+    ai.movement ||
+    ai.gobo ||
+    ai.prism
   );
 }
 
@@ -282,6 +303,14 @@ export function compileAiLooks(looks: AiLooks, context: AiCompileContext): AiCom
 
     if (ai.position) {
       add(...positionValues(ai.position, context));
+    }
+
+    if (ai.gobo && context.goboValues) {
+      add(...context.goboValues(Array.from(fixtureUuids), ai.gobo.pattern, ai.gobo.rotation));
+    }
+
+    if (ai.prism) {
+      add(...prismValues(ai.prism));
     }
 
     if (ai.strobe) {

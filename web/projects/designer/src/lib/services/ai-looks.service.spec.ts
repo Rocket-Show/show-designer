@@ -16,7 +16,9 @@ import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
 import { Composition } from '../models/composition';
+import { GoboPatternChoice } from '../models/gobo-pattern-choice';
 import { Project } from '../models/project';
+import { goboCatalog } from '../preview/models/gobo';
 import { AiLooksService } from './ai-looks.service';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -42,6 +44,8 @@ const nothing: Omit<AiPreset, 'id' | 'name' | 'groups'> = {
   movement: null,
   dimmerEffect: null,
   pixel: null,
+  gobo: null,
+  prism: null,
   strobe: null,
 };
 
@@ -460,6 +464,110 @@ describe('AiLooksService', () => {
 
       TestBed.inject(TimelineService).selectedComposition = new Composition({ beatsPerMinute: 127.6 });
       expect(service.getTempo()).toBe(128);
+    });
+
+    describe('with gobos and prisms', () => {
+      // a spot with a gobo wheel (dots on slot 2, a star on slot 3) turning its gobos and its prism, one with two such
+      // wheels, and a beam with a prism
+      beforeEach(() => {
+        const project = projectService.project;
+
+        for (const [uuid, profile, mode] of [
+          ['spot', 'test/effects-spot', 'full'],
+          ['twins', 'test/program-spot', '9ch'],
+          ['beam', 'test/beam', undefined],
+        ]) {
+          const library = profiles[profile];
+          project.fixtureProfiles.push(
+            new Project({ fixtureProfiles: [{ ...JSON.parse(JSON.stringify(library)), uuid: profile }] }).fixtureProfiles[0]
+          );
+          project.fixtures.push(
+            new Project({
+              fixtures: [
+                {
+                  uuid,
+                  profileUuid: profile,
+                  name: uuid,
+                  modeShortName: mode || library.modes[0].shortName,
+                  dmxUniverseUuid: 'u',
+                  dmxFirstChannel: 400 + project.fixtures.length * 20,
+                  positioning: 'topBack',
+                },
+              ],
+            }).fixtures[0]
+          );
+          project.presetFixtures.push(new Project({ presetFixtures: [{ fixtureUuid: uuid }] }).presetFixtures[0]);
+        }
+        fixtureService.updateCachedFixtures();
+      });
+
+      function gobo(preset: Preset, profileUuid: string) {
+        return preset.steps[0].fixtureCapabilityValues.filter(
+          (candidate) => candidate.profileUuid === profileUuid && candidate.type !== FixtureCapabilityType.ShutterStrobe
+        );
+      }
+
+      it('tell the kinds of gobos of the wheels to the AI', () => {
+        const spot = groupOf(service.getRig(), 'Effects Spot').group;
+
+        expect(spot.gobos).toEqual(['dots', 'star']);
+        expect(spot.abilities).toContain('gobo');
+        expect(spot.abilities).toContain('prism');
+      });
+
+      it('put each model on its gobo of the kind asked, turning it, and the first of its gobos for any other', () => {
+        const rig = service.getRig();
+        const ids = ['effects-spot', 'program-spot'];
+        const star = service.addToProject(oneLook({ groups: ids, dimmer: 1, gobo: { pattern: 'star', rotation: 0.5 } }), rig, 120)
+          .presets[0];
+
+        expect(gobo(star, 'test/effects-spot').map((value) => [value.type, value.wheel, value.slotNumber, value.valuePercentage])).toEqual([
+          [FixtureCapabilityType.WheelSlot, 'Gobo Wheel', 3, undefined],
+          [FixtureCapabilityType.WheelSlotRotation, 'Gobo Wheel', undefined, 0.75],
+        ]);
+        // of two wheels, the first one having it
+        expect(gobo(star, 'test/program-spot').map((value) => [value.wheel, value.slotNumber])).toEqual([
+          ['Gobo Wheel 1', 3],
+          ['Gobo Wheel 1', undefined],
+        ]);
+        // the preview puts the wheel of the spot on the star
+        sceneService.selectScenes([projectService.project.scenes[projectService.project.scenes.length - 1]]);
+        expect(channelValue('spot', 'Gobo Wheel')).toBeGreaterThanOrEqual(20);
+        expect(channelValue('spot', 'Gobo Wheel')).toBeLessThanOrEqual(29);
+
+        for (const pattern of ['any', 'rings']) {
+          const other = service.addToProject(oneLook({ groups: ids, dimmer: 1, gobo: { pattern, rotation: 0 } }), rig, 120).presets[0];
+          expect(gobo(other, 'test/effects-spot').map((value) => [value.wheel, value.slotNumber])).toEqual([['Gobo Wheel', 2]]);
+        }
+      });
+
+      it('take the pattern the user matched to a gobo of a model', () => {
+        const rings = goboCatalog.find((entry) => entry.pattern.family === 'rings');
+        projectService.project.goboPatterns = [
+          new GoboPatternChoice({ profileUuid: 'test/effects-spot', wheel: 'Gobo Wheel', slotNumber: 3, pattern: rings.id }),
+        ];
+        const rig = service.getRig();
+
+        expect(groupOf(rig, 'Effects Spot').group.gobos).toEqual(['dots', 'rings']);
+        const preset = service.addToProject(
+          oneLook({ groups: ['effects-spot'], dimmer: 1, gobo: { pattern: 'rings', rotation: 0 } }),
+          rig,
+          120
+        ).presets[0];
+        expect(gobo(preset, 'test/effects-spot')[0].slotNumber).toBe(3);
+      });
+
+      it('put no gobo on a model without one, and the prism in', () => {
+        const preset = service.addToProject(
+          oneLook({ groups: ['spot-with-a-beam'], dimmer: 1, gobo: { pattern: 'any', rotation: 0.5 }, prism: { rotation: 0.5 } }),
+          service.getRig(),
+          120
+        ).presets[0];
+
+        expect(gobo(preset, 'test/beam')).toEqual([]);
+        expect(value(preset, FixtureCapabilityType.Prism).valuePercentage).toBe(1);
+        expect(value(preset, FixtureCapabilityType.PrismRotation).valuePercentage).toBe(0.75);
+      });
     });
 
     it('light the groups no preset brightens at full, and leave out what has nothing to play', () => {

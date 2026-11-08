@@ -99,8 +99,11 @@ asked to log in or to register first. A Rocket Show device has no such endpoint 
   stage) with what they can do.
 - `models/ai-looks-compiler.ts` turns the looks the AI answers into presets and scenes with the attributes of the
   designer: dimmers, colors and zooms, fanned out or as gradients, color sequences in steps following the beat, moving
-  heads aimed at a spot and fanned, movements, dimmer curves, pixel effects and the strobe in its effect, as fast on
-  every model as asked (`AiLooksService.getStrobeValues`).
+  heads aimed at a spot and fanned, movements, dimmer curves, pixel effects, the prism, gobos and the strobe in its
+  effect, as fast on every model as asked (`AiLooksService.getStrobeValues`). The AI picks a gobo by its kind (dots,
+  rays, a breakup, ...), never by a slot: the rig tells the kinds the wheels have, as the preview draws them (the
+  pattern matched to a gobo in its wheel, or else the one its name brings), and each model puts its wheel on the slot of
+  that kind, or else on its first gobo (`AiLooksService.getGoboValues`).
 - `ai/ai-looks` is the dialog: what the user asks for (the output, colors or a palette, the mood, the energy, the
   tempo, the movement, the contrast, the strobe), the scenes the AI designed, changing them, and adding them to the
   project in folders named after them, as one step to undo.
