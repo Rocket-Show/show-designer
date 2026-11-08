@@ -35,9 +35,10 @@ report of a failed run as the artifact `playwright-report`.
 
 ## The fake API
 
-The online designer talks to its PHP API (`api/`), which the dev build reaches at `http://localhost:8080/api/`
-(`src/environments/environment.ts`). The tests don't need it: `fake-api.ts` answers the requests in the browser
-(`context.route`), like the real endpoints do (see `api/*.php` for what they answer):
+The online designer talks to its PHP API (`show-designer-api/` in the [spark](https://github.com/Rocket-Show/spark)
+repository), which the dev build reaches at `http://localhost:8080/api/` (`src/environments/environment.ts`). The tests
+don't need it: `fake-api.ts` answers the requests in the browser (`context.route`), like the real endpoints do (see
+`show-designer-api/*.php` for what they answer):
 
 - `project` serves the template (id 1, which every new project starts from: one preset in one scene, no fixtures) and
   the saved projects to their owner or with their share token, and saves a project for a user who is signed in,

@@ -75,9 +75,10 @@ export function templateProject(): any {
 }
 
 /**
- * The API of the online designer (api/*.php), answered in the browser: the designer talks to it like to the real one,
- * the specs look into what it got and set up what it holds (users, projects, failures). One instance is the server of
- * one test, also for a second browser context (e.g. a friend opening a share link).
+ * The API of the online designer (show-designer-api/*.php in the spark repository), answered in the browser: the
+ * designer talks to it like to the real one, the specs look into what it got and set up what it holds (users, projects,
+ * failures). One instance is the server of one test, also for a second browser context (e.g. a friend opening a share
+ * link).
  */
 export class FakeApi {
   readonly library: LibraryProfile[] = [testProfile('rgb-par.json', 'Test'), testProfile('moving-head.json', 'Test')];
@@ -207,7 +208,7 @@ export class FakeApi {
 
     switch (request.method() + ' ' + endpoint) {
       case 'GET project': {
-        // see api/project.php
+        // see show-designer-api/project.php in the spark repository
         const id = Number(params.id);
         const stored = this.projects.get(id);
         const authorized =

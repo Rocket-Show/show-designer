@@ -84,11 +84,9 @@ npm run e2e
 
 ### The API
 
-The API of the online designer (`api/`) is tested over HTTP on a database of its own, see `api-test/README.md`:
-
-```shell
-node --test 'api-test/*.test.mjs'
-```
+The PHP API of the online designer, its database schema and its tests live in the
+[spark](https://github.com/Rocket-Show/spark) repository (`show-designer-api/`, `show-designer-database/` and
+`show-designer-api-test/`).
 
 ## Build & publish as NPM package
 
