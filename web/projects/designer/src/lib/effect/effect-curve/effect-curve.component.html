@@ -180,7 +180,27 @@
     </div>
     <div class="my-auto ml-1">°</div>
   </div>
-  } } @else if (isPixel) {
+  }
+  <!-- how far each head moves by its place in the row: all the same, fanned from the middle or from the first one -->
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left" [title]="'designer.effect.pan-tilt-fan-hint' | translate">
+      {{ 'designer.effect.pan-tilt-fan' | translate }}
+    </div>
+    <div class="my-auto">
+      <select
+        name="fanMode"
+        [attr.aria-label]="'designer.effect.pan-tilt-fan' | translate"
+        [title]="'designer.effect.pan-tilt-fan-hint' | translate"
+        [ngModel]="movement.fanMode"
+        (ngModelChange)="setFanMode($event)"
+      >
+        @for (fanMode of fanModes; track fanMode) {
+        <option [value]="fanMode">{{ 'designer.effect.pan-tilt-fan-' + fanMode | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  } @else if (isPixel) {
   <!-- what the pattern lets be set: its size, softness, direction, shape and bounce if it has them -->
   @if (usesSize()) {
   <div class="d-flex">

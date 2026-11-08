@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "8 字形",
       "pan-tilt-shape-line": "直线",
       "pan-tilt-shape-wave": "波浪",
-      "pan-tilt-size": "幅度"
+      "pan-tilt-size": "幅度",
+      "pan-tilt-fan": "扇形",
+      "pan-tilt-fan-hint": "按每个灯头在排中的位置移动。从中间：第一台和最后一台向相反方向移动整个幅度，中间的不动（直线会让扇形张开又收拢）。从一侧：第一台不动，最后一台移动整个幅度。",
+      "pan-tilt-fan-none": "全部相同",
+      "pan-tilt-fan-center": "从中间",
+      "pan-tilt-fan-side": "从一侧"
     },
     "composition": {
       "new": "创建新合成..."

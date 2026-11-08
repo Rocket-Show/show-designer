@@ -592,7 +592,12 @@
       "pan-tilt-shape-figure8": "Acht",
       "pan-tilt-shape-line": "Linie",
       "pan-tilt-shape-wave": "Welle",
-      "pan-tilt-size": "Grösse"
+      "pan-tilt-size": "Grösse",
+      "pan-tilt-fan": "Fächer",
+      "pan-tilt-fan-hint": "Bewegt jeden Kopf nach seinem Platz in der Reihe. Von der Mitte: Der erste und der letzte bewegen sich um die ganze Grösse, zu entgegengesetzten Seiten, der mittlere bleibt stehen (eine Linie öffnet und schliesst den Fächer). Von der Seite: Der erste bleibt stehen, der letzte bewegt sich um die ganze Grösse.",
+      "pan-tilt-fan-none": "Alle gleich",
+      "pan-tilt-fan-center": "Von der Mitte",
+      "pan-tilt-fan-side": "Von der Seite"
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "Ocho",
       "pan-tilt-shape-line": "Línea",
       "pan-tilt-shape-wave": "Ola",
-      "pan-tilt-size": "Tamaño"
+      "pan-tilt-size": "Tamaño",
+      "pan-tilt-fan": "Abanico",
+      "pan-tilt-fan-hint": "Mueve cada cabeza según su lugar en la fila. Desde el centro: la primera y la última se mueven todo el tamaño, hacia lados opuestos, la del medio se queda quieta (una línea abre y cierra el abanico). Desde un lado: la primera se queda quieta, la última se mueve todo el tamaño.",
+      "pan-tilt-fan-none": "Todas igual",
+      "pan-tilt-fan-center": "Desde el centro",
+      "pan-tilt-fan-side": "Desde un lado"
     },
     "composition": {
       "new": "Crear nueva composición..."

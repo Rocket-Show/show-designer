@@ -227,6 +227,49 @@ describe('PresetStepService', () => {
     expect(state.fixtureCapabilityValues[0].valuePercentage).toBeCloseTo(0.6, 10);
   });
 
+  it('should let each moving head travel on its own from one fan to the next', () => {
+    const from = step(0, 0);
+    const to = step(1000, 0, 1000);
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 0 }));
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Tilt', valuePercentage: 0.2 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 20, spreadDegrees: 120 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Tilt', valuePercentage: 0.6 }));
+
+    const state = service.getStateAtMillis(preset(from, to), 1250);
+    const pan = state.fixtureCapabilityValues.find((value) => value.type === FixtureCapabilityType.Pan);
+    const tilt = state.fixtureCapabilityValues.find((value) => value.type === FixtureCapabilityType.Tilt);
+
+    // where the heads point is worked out for each of them, from the value they travel from (see pan-tilt)
+    expect(pan.valueDegrees).toBe(20);
+    expect(pan.spreadDegrees).toBe(120);
+    expect(pan.transitionFrom).toBe(from.fixtureCapabilityValues[0]);
+    expect(pan.transitionPosition).toBe(0.25);
+
+    // two percentages of the range alone travel like any other percentage
+    expect(tilt.valuePercentage).toBeCloseTo(0.3, 10);
+    expect(tilt.transitionFrom).toBeUndefined();
+
+    // a step on its own travels from nothing, and the values of a step are never touched
+    expect(service.getStateAtMillis(preset(from, to), 2000).fixtureCapabilityValues[0].transitionFrom).toBeUndefined();
+    expect(to.fixtureCapabilityValues[0].transitionFrom).toBeUndefined();
+  });
+
+  it('should let each blade of a framing shutter travel from the same blade', () => {
+    const from = step(0, 0);
+    const to = step(1000, 0, 1000);
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Top', valuePercentage: 0 }));
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Bottom', valuePercentage: 1 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Bottom', valuePercentage: 0.5 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Top', valuePercentage: 1 }));
+
+    const state = service.getStateAtMillis(preset(from, to), 1500);
+    const blade = (name: string) => state.fixtureCapabilityValues.find((value) => value.blade === name);
+
+    expect(state.fixtureCapabilityValues.length).toBe(2);
+    expect(blade('Top').valuePercentage).toBeCloseTo(0.5, 10);
+    expect(blade('Bottom').valuePercentage).toBeCloseTo(0.75, 10);
+  });
+
   it('should turn a wheel as soon as the transition to its slot starts', () => {
     const from = step(0, 0);
     const to = step(1000, 0, 1000);

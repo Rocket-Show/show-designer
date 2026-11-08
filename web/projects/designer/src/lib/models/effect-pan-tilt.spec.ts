@@ -62,4 +62,43 @@ describe('EffectPanTilt', () => {
     expect(panTilt.sizePanDegrees).toBe(60);
     expect(panTilt.sizeTiltDegrees).toBe(30);
   });
+
+  it('fans the movement over the fixtures by their place in the row', () => {
+    const fromMiddle = new EffectPanTilt({ uuid: 'fan', shape: 'line', sizePanDegrees: 90, sizeTiltDegrees: 0, fanMode: 'center' });
+
+    expect(fromMiddle.isFanned()).toBe(true);
+    expect(fromMiddle.getFanFactor(0, 3)).toBe(-1);
+    expect(fromMiddle.getFanFactor(1, 3)).toBe(0);
+    expect(fromMiddle.getFanFactor(2, 3)).toBe(1);
+
+    // a quarter of the way: the first and the last head all the way to opposite sides, the one in the middle still
+    expect(fromMiddle.getOffsetAtMillis(625, 0, 3).pan).toBeCloseTo(-45, 9);
+    expect(fromMiddle.getOffsetAtMillis(625, 1, 3).pan).toBeCloseTo(0, 9);
+    expect(fromMiddle.getOffsetAtMillis(625, 2, 3).pan).toBeCloseTo(45, 9);
+    // three quarters: the other way round, which closes the fan of the step and crosses the heads over beyond it
+    expect(fromMiddle.getOffsetAtMillis(1875, 0, 3).pan).toBeCloseTo(45, 9);
+    expect(fromMiddle.getOffsetAtMillis(1875, 2, 3).pan).toBeCloseTo(-45, 9);
+
+    // from the side: the first head doesn't move, the last one the whole size
+    const fromSide = new EffectPanTilt({ uuid: 'side', shape: 'line', sizePanDegrees: 90, sizeTiltDegrees: 40, fanMode: 'side' });
+    expect(fromSide.getFanFactor(0, 5)).toBe(0);
+    expect(fromSide.getFanFactor(1, 5)).toBe(0.25);
+    expect(fromSide.getFanFactor(4, 5)).toBe(1);
+    expect(fromSide.getOffsetAtMillis(625, 4, 5).tilt).toBeCloseTo(20, 9);
+    expect(fromSide.getOffsetAtMillis(625, 1, 5).pan).toBeCloseTo(11.25, 9);
+
+    // a single head is the middle and the first one at once: it stays where the step points it
+    expect(fromMiddle.getFanFactor(0, 1)).toBe(0);
+    expect(fromSide.getFanFactor(0, undefined)).toBe(0);
+  });
+
+  it('moves all the heads the same way unless it is fanned', () => {
+    const panTilt = new EffectPanTilt({ uuid: 'old', shape: 'line', fanMode: null });
+
+    expect(panTilt.fanMode).toBe('none');
+    expect(panTilt.isFanned()).toBe(false);
+    expect(panTilt.getFanFactor(0, 3)).toBe(1);
+    expect(panTilt.getOffsetAtMillis(625, 0, 3)).toEqual(panTilt.getOffsetAtMillis(625, 2, 3));
+    expect(new EffectPanTilt().fanMode).toBe('none');
+  });
 });

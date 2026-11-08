@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "Otto",
       "pan-tilt-shape-line": "Linea",
       "pan-tilt-shape-wave": "Onda",
-      "pan-tilt-size": "Ampiezza"
+      "pan-tilt-size": "Ampiezza",
+      "pan-tilt-fan": "Ventaglio",
+      "pan-tilt-fan-hint": "Muove ogni testa secondo il suo posto nella fila. Dal centro: la prima e l’ultima si muovono di tutta l’ampiezza, verso lati opposti, quella in mezzo resta ferma (una linea apre e chiude il ventaglio). Da un lato: la prima resta ferma, l’ultima si muove di tutta l’ampiezza.",
+      "pan-tilt-fan-none": "Tutte uguali",
+      "pan-tilt-fan-center": "Dal centro",
+      "pan-tilt-fan-side": "Da un lato"
     },
     "composition": {
       "new": "Crea nuova composizione..."

@@ -883,6 +883,42 @@ function presetStepsEdges() {
         samples: samples([1000, 1500, 2000]),
       },
     },
+    {
+      // Where the moving heads point travels for each of them on its own, from the value of the step before (a fan to
+      // a spot, a spot to a percentage), unless both are percentages of the range alone. Each blade of a framing
+      // shutter travels from the same blade.
+      name: 'positions of moving heads and blades travelling from one step to the next',
+      input: {
+        preset: {
+          uuid: 'heads',
+          steps: [
+            step('fanned', 0, {
+              fixtureCapabilityValues: [
+                { type: 'Pan', valueDegrees: 20, spreadDegrees: 90 },
+                { type: 'Tilt', valuePercentage: 0.4 },
+                { type: 'BladeInsertion', blade: 'Top', valuePercentage: 0.2 },
+                { type: 'BladeInsertion', blade: 'Left', valuePercentage: 0.9 },
+              ],
+            }),
+            step(
+              'spot',
+              1000,
+              {
+                fixtureCapabilityValues: [
+                  { type: 'Pan', aimX: 50, aimY: 0, aimZ: 200 },
+                  { type: 'Tilt', valuePercentage: 0.6 },
+                  { type: 'BladeInsertion', blade: 'Left', valuePercentage: 0.1 },
+                  { type: 'BladeInsertion', blade: 'Top', valuePercentage: 0.6 },
+                ],
+              },
+              { transitionMillis: 1000 }
+            ),
+            step('percentage', 2000, { fixtureCapabilityValues: [{ type: 'Pan', valuePercentage: 0.25 }] }, { transitionMillis: 500 }),
+          ],
+        },
+        samples: samples([1000, 1500, 2000, 2250, 2500]),
+      },
+    },
   ];
 
   return write('preset-steps-edges.json', 'presetSteps', 'The state of a preset right on the edges of its steps', cases);
@@ -1662,6 +1698,90 @@ function channelValuesMovements() {
     },
   });
 
+  // Movements fanned over the heads: a line on the pan fanned from the middle, opening and closing the fan of the step
+  // (mirrored as well), a circle fanned from the first head, chasing over them, and a line fanned over a single head,
+  // which leaves it where the step points it
+  const fannedPresets = [
+    {
+      ...edgePreset('fan-center', movingFixtures, {
+        fixtureCapabilityValues: [pan({ valueDegrees: 10, spreadDegrees: 45 }), tilt({ valueDegrees: 20 })],
+      }),
+      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'center' })],
+    },
+    {
+      ...edgePreset('fan-center-mirrored', movingFixtures, {
+        fixtureCapabilityValues: [pan({ valueDegrees: 10, spreadDegrees: 45 }), tilt({ valueDegrees: 20 })],
+      }),
+      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'center' })],
+      mirrorPan: true,
+      mirrorTilt: true,
+    },
+    {
+      ...edgePreset('fan-side', movingFixtures, { fixtureCapabilityValues: at }),
+      effects: [movement('fan-side', 'circle', { fanMode: 'side', phasingMode: 'millis', phasingMillis: 250 })],
+    },
+    {
+      ...edgePreset('fan-single', [movingFixtures[0]], { fixtureCapabilityValues: at }),
+      effects: [movement('fan-single', 'line', { fanMode: 'center' })],
+    },
+  ];
+  const fannedScenes = fannedPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }));
+
+  cases.push({
+    name: 'movements fanned over the moving heads by their place in the row',
+    input: {
+      project: edgeProject([wideMover, movingHead], moving, fannedPresets, fannedScenes),
+      runs: fannedScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 250, 500, 1000, 1500, 2200] })),
+    },
+  });
+
+  // The heads travelling from one step into the next, each of them on its own: from straight ahead to a fan, from the
+  // fan to a spot on the stage (on an eased curve), from the spot to a percentage of the range (of a project before
+  // the degrees), and from there to another percentage like any other value, mirrored as well. The last step snaps
+  // back to straight ahead at its end.
+  const travelling = [
+    edgeFixture('front-1', wideMover, '5ch', 0),
+    edgeFixture('front-2', movingHead, '6ch', 1),
+    edgeFixture('front-3', wideMover, '5ch', 2),
+  ];
+  const travellingFixtures = travelling.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const travellingSteps = [
+    step('ahead', 0, { fixtureCapabilityValues: [capability('Intensity', 1), pan({ valueDegrees: 0 }), tilt({ valueDegrees: 0 })] }),
+    step(
+      'fanned',
+      1000,
+      { fixtureCapabilityValues: [pan({ valueDegrees: 20, spreadDegrees: 120 }), tilt({ valueDegrees: -30, spreadDegrees: 40 })] },
+      { transitionMillis: 1000 }
+    ),
+    step('spot', 2000, { fixtureCapabilityValues: aim(50, 30, 250, { spreadDegrees: 30 }) }, { transitionCurve: 'ease-in-out' }),
+    step('percentage', 3000, { fixtureCapabilityValues: [pan({ valuePercentage: 0.3 }), tilt({ valuePercentage: 0.7 })] }),
+    step('percentage-2', 4000, { fixtureCapabilityValues: [pan({ valuePercentage: 0.6 }), tilt({ valuePercentage: 0.4 })] }),
+    step('back', 5000, { fixtureCapabilityValues: [pan({ valueDegrees: 0 }), tilt({ valueDegrees: 0 })] }, { transitionCurve: 'snap' }),
+  ];
+  const travellingPresets = [
+    { uuid: 'travelling', name: 'travelling', fixtures: travellingFixtures, steps: travellingSteps, effects: [] },
+    {
+      uuid: 'travelling-mirrored',
+      name: 'travelling-mirrored',
+      fixtures: travellingFixtures,
+      steps: travellingSteps,
+      effects: [],
+      mirrorPan: true,
+      mirrorTilt: true,
+    },
+  ];
+
+  cases.push({
+    name: 'moving heads travelling between fans, spots and positions from one step into the next',
+    input: {
+      project: edgeProject([wideMover, movingHead], travelling, travellingPresets, []),
+      runs: travellingPresets.map((preset) => ({
+        preview: { mode: 'preset', preset: preset.uuid, stepPreviewStartMillis: 0 },
+        times: [0, 500, 1000, 1250, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6200],
+      })),
+    },
+  });
+
   // Rotations, blades and pulses at both ends, a quarter of the way and in the middle. The iris and the frost are set
   // before and after their pulse, the shake of the gobo picked after the gobo.
   const amounts = [0, 0.25, 0.5, 0.75, 1];
@@ -1691,6 +1811,45 @@ function channelValuesMovements() {
         { uuid: 'spots', name: 'Spots', presetUuids: spotPresets.map((preset) => preset.uuid) },
       ]),
       runs: previewScenes(['spots']),
+    },
+  });
+
+  // The blades of a framing shutter travelling from one step into the next, each blade on its own: the top one closes
+  // while the bottom one opens, the left one only set by the step travelled to
+  const bladeSpot = edgeFixture('blades', effectsSpot, 'full', 0);
+  const bladePreset = {
+    uuid: 'blades',
+    name: 'blades',
+    fixtures: [{ fixtureUuid: bladeSpot.uuid }],
+    steps: [
+      step('open', 0, {
+        fixtureCapabilityValues: [
+          capability('Intensity', 1),
+          capability('BladeInsertion', 0, { blade: 'Top' }),
+          capability('BladeInsertion', 1, { blade: 'Bottom' }),
+        ],
+      }),
+      step(
+        'closed',
+        1000,
+        {
+          fixtureCapabilityValues: [
+            capability('BladeInsertion', 0.8, { blade: 'Bottom' }),
+            capability('BladeInsertion', 1, { blade: 'Top' }),
+            capability('BladeInsertion', 0.5, { blade: 'Left' }),
+          ],
+        },
+        { transitionMillis: 1000 }
+      ),
+    ],
+    effects: [],
+  };
+
+  cases.push({
+    name: 'the blades of a framing shutter travelling from one step into the next',
+    input: {
+      project: edgeProject([effectsSpot], [bladeSpot], [bladePreset], []),
+      runs: [{ preview: { mode: 'preset', preset: 'blades', stepPreviewStartMillis: 0 }, times: [0, 1000, 1250, 1500, 2000] }],
     },
   });
 

@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "Figure 8",
       "pan-tilt-shape-line": "Line",
       "pan-tilt-shape-wave": "Wave",
-      "pan-tilt-size": "Size"
+      "pan-tilt-size": "Size",
+      "pan-tilt-fan": "Fan",
+      "pan-tilt-fan-hint": "Moves each head by its place in the row. From the middle: the first and the last move the whole size, to opposite sides, the middle one stays (a line opens and closes the fan). From the side: the first one stays, the last moves the whole size.",
+      "pan-tilt-fan-none": "Same for all",
+      "pan-tilt-fan-center": "From the middle",
+      "pan-tilt-fan-side": "From the side"
     },
     "composition": {
       "new": "Create new composition..."

@@ -27,6 +27,13 @@ export class FixtureCapabilityValue {
   // the blade of a framing shutter: Top, Right, Bottom or Left
   blade: string;
 
+  // pan and tilt, while a preset travels from one step into the next: the value of the step it travels from and how
+  // far it has come (between 0 and 1). Each moving head travels from where the one value points it to where the other
+  // does, so the heads fan in and out, follow a spot moving over the stage and turn from a spot to a position alike
+  // (see pan-tilt). Only the values a preset shows between two of its steps hold this, it is never saved.
+  transitionFrom: FixtureCapabilityValue;
+  transitionPosition: number;
+
   constructor(data?: any) {
     if (!data) {
       return;

@@ -126,6 +126,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // the shapes a movement of the moving heads moves in
   public readonly shapes = ['circle', 'figure8', 'line', 'wave'];
 
+  // how far each head moves by its place in the row of the preset (see EffectPanTilt.fanMode)
+  public readonly fanModes = ['none', 'center', 'side'];
+
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
   public lengthBeatsMin = 0.25;
@@ -381,6 +384,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   setShape(shape: string) {
     this.movement.shape = shape;
+    this.livePreviewService.previewLive();
+  }
+
+  setFanMode(fanMode: string) {
+    this.movement.fanMode = fanMode;
     this.livePreviewService.previewLive();
   }
 
@@ -1563,13 +1571,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.stroke();
 
-    // where the heads are now, each step of the chase on its own, the first one bigger
+    // where the heads are now, each step of the chase on its own, the first one bigger. A fanned movement moves each
+    // head by its place in the row, which shows all of them.
     const phasingCount = this.getPhasingCount();
     const loopMillis = movement.getRunLoopMillis(phasingCount, this.beatsPerMinute);
     const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
     const chased = movement.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) !== 0;
-    const stepCount = chased ? movement.getPhasingStepCount(phasingCount) : 1;
-    const groupSize = Math.max(Math.round(movement.phasingGroupSize), 1);
+    const fanned = movement.isFanned();
+    const groupSize = fanned ? 1 : Math.max(Math.round(movement.phasingGroupSize), 1);
+    const stepCount = fanned ? Math.max(phasingCount, 1) : chased ? movement.getPhasingStepCount(phasingCount) : 1;
 
     for (let step = stepCount - 1; step >= 0; step--) {
       const offset = movement.getOffsetAtMillis(timeMillis, step * groupSize, phasingCount, this.beatsPerMinute);

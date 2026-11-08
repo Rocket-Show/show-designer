@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "Huit",
       "pan-tilt-shape-line": "Ligne",
       "pan-tilt-shape-wave": "Vague",
-      "pan-tilt-size": "Taille"
+      "pan-tilt-size": "Taille",
+      "pan-tilt-fan": "Éventail",
+      "pan-tilt-fan-hint": "Déplace chaque tête selon sa place dans la rangée. Depuis le centre : la première et la dernière se déplacent de toute la taille, vers des côtés opposés, celle du milieu reste immobile (une ligne ouvre et ferme l’éventail). Depuis un côté : la première reste immobile, la dernière se déplace de toute la taille.",
+      "pan-tilt-fan-none": "Toutes pareilles",
+      "pan-tilt-fan-center": "Depuis le centre",
+      "pan-tilt-fan-side": "Depuis un côté"
     },
     "composition": {
       "new": "Créer une nouvelle composition..."

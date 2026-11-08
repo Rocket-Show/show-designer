@@ -162,6 +162,15 @@ describe('EffectCurveComponent grid', () => {
     expect(context.markCount).toBe(0);
   });
 
+  it('should mark each head of a fanned movement, all of them moving together', () => {
+    const movement = new EffectPanTilt({ uuid: 'fan', shape: 'line', phasingCycles: 0, fanMode: 'center' });
+    const { component, context } = gridComponent(movement, 5);
+
+    component.redraw();
+
+    expect(context.markCount).toBe(5);
+  });
+
   it('should mark each fixture of a chase', () => {
     const { component, context } = gridComponent(chasingCurve(), 4);
 
@@ -674,6 +683,13 @@ describe('EffectCurveComponent', () => {
     expect(movement.sizePanDegrees).toBe(120);
     expect(movement.sizeTiltDegrees).toBe(45);
     expect(previewLive).toHaveBeenCalled();
+
+    // fanned over the heads by their place in the row
+    const fan: HTMLSelectElement = element.querySelector('select[name="fanMode"]');
+    expect(fan.value).toBe('none');
+    expect(Array.from(fan.options).map((option) => option.value)).toEqual(['none', 'center', 'side']);
+    await select(fan, 'center');
+    expect(movement.fanMode).toBe('center');
   });
 
   it('edits a pixel effect like a curve, with its pattern and what the pattern lets be set', async () => {

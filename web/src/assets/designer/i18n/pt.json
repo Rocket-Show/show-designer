@@ -591,7 +591,12 @@
       "pan-tilt-shape-figure8": "Oito",
       "pan-tilt-shape-line": "Linha",
       "pan-tilt-shape-wave": "Onda",
-      "pan-tilt-size": "Tamanho"
+      "pan-tilt-size": "Tamanho",
+      "pan-tilt-fan": "Leque",
+      "pan-tilt-fan-hint": "Move cada cabeça conforme o seu lugar na fila. A partir do centro: a primeira e a última movem-se o tamanho todo, para lados opostos, a do meio fica parada (uma linha abre e fecha o leque). A partir de um lado: a primeira fica parada, a última move-se o tamanho todo.",
+      "pan-tilt-fan-none": "Todas iguais",
+      "pan-tilt-fan-center": "A partir do centro",
+      "pan-tilt-fan-side": "A partir de um lado"
     },
     "composition": {
       "new": "Criar nova composição..."

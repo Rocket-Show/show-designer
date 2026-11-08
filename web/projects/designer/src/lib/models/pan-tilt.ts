@@ -58,6 +58,24 @@ export function hasPanTiltValue(value: FixtureCapabilityValue): boolean {
   return hasAim(value) || isNumber(value.valueDegrees) || value.valuePercentage >= 0;
 }
 
+// Is a pan or tilt value a percentage of the range alone (of a project before the degrees): no degrees, no spot and no
+// fan?
+function isPlainPercentage(value: FixtureCapabilityValue): boolean {
+  return (
+    !hasAim(value) &&
+    !isNumber(value.valueDegrees) &&
+    value.valuePercentage >= 0 &&
+    (!isNumber(value.spreadDegrees) || value.spreadDegrees === 0)
+  );
+}
+
+// Does a preset travelling from the one value to the other turn each moving head on its own (see getPanTiltDegrees)?
+// Both have to say where to point the heads. Two percentages of the range alone travel like any other percentage does,
+// and a value saying nothing is taken as soon as the transition starts, like the slot of a wheel.
+export function isPanTiltTransition(from: FixtureCapabilityValue, to: FixtureCapabilityValue): boolean {
+  return isPanTilt(to.type) && hasPanTiltValue(from) && hasPanTiltValue(to) && !(isPlainPercentage(from) && isPlainPercentage(to));
+}
+
 function isNumber(value: number): boolean {
   return typeof value === 'number' && !isNaN(value);
 }
@@ -100,7 +118,29 @@ export function getSpreadDegrees(spreadDegrees: number, context: PanTiltContext)
 // Where a pan or tilt value points a fixture on its axis, in degrees from the middle of its range, or undefined if it
 // can't tell (e.g. a spot to aim at, but no idea where the fixture hangs). A spot is where the fixtures point,
 // whatever the mirror of the preset says; everything else is mirrored around the middle.
+// While a preset travels from one step into the next, each fixture travels from where the value of the step before
+// points it to where this one does: the fan opens or closes, a spot moves over the stage and a head turns from a spot
+// to a position on its way. If only one of them can tell, the fixture turns to it as soon as the transition starts,
+// like a wheel does to its slot.
 export function getPanTiltDegrees(value: FixtureCapabilityValue, range: number, mirror: boolean, context: PanTiltContext): number {
+  const degrees = getOwnPanTiltDegrees(value, range, mirror, context);
+
+  if (!value.transitionFrom) {
+    return degrees;
+  }
+
+  const fromDegrees = getOwnPanTiltDegrees(value.transitionFrom, range, mirror, context);
+  const position = value.transitionPosition;
+
+  if (degrees === undefined || fromDegrees === undefined) {
+    return position > 0 ? degrees : fromDegrees;
+  }
+
+  return fromDegrees + (degrees - fromDegrees) * position;
+}
+
+// where a pan or tilt value points a fixture on its own, without the step it travels from (see getPanTiltDegrees)
+function getOwnPanTiltDegrees(value: FixtureCapabilityValue, range: number, mirror: boolean, context: PanTiltContext): number {
   const spread = getSpreadDegrees(value.spreadDegrees, context);
 
   if (hasAim(value)) {
@@ -130,7 +170,7 @@ export function getPanTiltDegrees(value: FixtureCapabilityValue, range: number, 
 
 // The value of a channel playing a pan or tilt value, or undefined if the channel doesn't turn the fixture on its axis
 // or the value doesn't say where to. A percentage of the range (of a project before the degrees) is played like it
-// always was, unless the fixtures are fanned out.
+// always was, unless the fixtures are fanned out or travel from a step pointing them in another way.
 export function getPanTiltChannelValue(
   value: FixtureCapabilityValue,
   channel: CachedFixtureChannel,
@@ -144,6 +184,7 @@ export function getPanTiltChannelValue(
   }
 
   if (
+    !value.transitionFrom &&
     !hasAim(value) &&
     !isNumber(value.valueDegrees) &&
     value.valuePercentage >= 0 &&
