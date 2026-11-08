@@ -919,6 +919,54 @@ function presetStepsEdges() {
         samples: samples([1000, 1500, 2000, 2250, 2500]),
       },
     },
+    {
+      // A value fanned out over the fixtures travels for each fixture on its own, from a value or a fan, into a value or
+      // a fan; the pan fanned from the middle keeps the shape of its fan
+      name: 'fans travelling from one step to the next',
+      input: {
+        preset: {
+          uuid: 'fans',
+          steps: [
+            step('plain', 0, {
+              fixtureCapabilityValues: [
+                { type: 'Intensity', valuePercentage: 1 },
+                {
+                  type: 'ColorIntensity',
+                  color: 'Red',
+                  valuePercentage: 0.5,
+                  fan: [
+                    { position: 0, valuePercentage: 0 },
+                    { position: 1, valuePercentage: 1 },
+                  ],
+                },
+                { type: 'Pan', valueDegrees: 0 },
+              ],
+            }),
+            step(
+              'fanned',
+              1000,
+              {
+                fixtureCapabilityValues: [
+                  {
+                    type: 'Intensity',
+                    valuePercentage: 0.5,
+                    fan: [
+                      { position: 0, valuePercentage: 1 },
+                      { position: 0.5, valuePercentage: 0 },
+                      { position: 1, valuePercentage: 1 },
+                    ],
+                  },
+                  { type: 'ColorIntensity', color: 'Red', valuePercentage: 0.2 },
+                  { type: 'Pan', valueDegrees: 10, spreadDegrees: 60, fanShape: 'center' },
+                ],
+              },
+              { transitionMillis: 1000 }
+            ),
+          ],
+        },
+        samples: samples([1000, 1500, 2000]),
+      },
+    },
   ];
 
   return write('preset-steps-edges.json', 'presetSteps', 'The state of a preset right on the edges of its steps', cases);
@@ -1706,13 +1754,13 @@ function channelValuesMovements() {
       ...edgePreset('fan-center', movingFixtures, {
         fixtureCapabilityValues: [pan({ valueDegrees: 10, spreadDegrees: 45 }), tilt({ valueDegrees: 20 })],
       }),
-      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'center' })],
+      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'linear' })],
     },
     {
       ...edgePreset('fan-center-mirrored', movingFixtures, {
         fixtureCapabilityValues: [pan({ valueDegrees: 10, spreadDegrees: 45 }), tilt({ valueDegrees: 20 })],
       }),
-      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'center' })],
+      effects: [movement('fan-center', 'line', { sizeTiltDegrees: 0, phasingCycles: 0, fanMode: 'linear' })],
       mirrorPan: true,
       mirrorTilt: true,
     },
@@ -1722,7 +1770,7 @@ function channelValuesMovements() {
     },
     {
       ...edgePreset('fan-single', [movingFixtures[0]], { fixtureCapabilityValues: at }),
-      effects: [movement('fan-single', 'line', { fanMode: 'center' })],
+      effects: [movement('fan-single', 'line', { fanMode: 'linear' })],
     },
   ];
   const fannedScenes = fannedPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }));
@@ -3272,6 +3320,362 @@ function channelValuesPixelWhite() {
   );
 }
 
+// ---- fans: values, gradients of colors and effects fanned out over the fixtures ---------------
+
+// Values fanned out over the fixtures by their place in the order of the preset or on the stage: a dimmer from the
+// first to the last fixture, a zoom from the middle out to both ends, a gradient of colors spanned over washes, a wash
+// mixing its colors with filters, a beam approximating them on its color wheel and the pixels of a bar (each of them in
+// a place of its own); positions of moving heads fanned from the middle; fans travelling from one step into the next;
+// curves and movements fanned out; a pattern of the pixel effects standing still
+function channelValuesFans() {
+  const cases = [];
+  const rgbPar = 'test/rgb-par';
+  const cmySpot = 'test/cmy-spot';
+  const beam = 'test/beam';
+  const bar = 'test/pixel-bar';
+  const wideMover = 'test/wide-mover';
+  const movingHead = 'test/moving-head';
+  const fan = (type, stops, extra = {}) => ({
+    type,
+    valuePercentage: (Math.min(...stops.map((stop) => stop[1])) + Math.max(...stops.map((stop) => stop[1]))) / 2,
+    fan: stops.map(([position, valuePercentage]) => ({ position, valuePercentage })),
+    ...extra,
+  });
+  const gradient = (stops) => [
+    fan(
+      'ColorIntensity',
+      stops.map(([position, color]) => [position, color[0]]),
+      { color: 'Red' }
+    ),
+    fan(
+      'ColorIntensity',
+      stops.map(([position, color]) => [position, color[1]]),
+      { color: 'Green' }
+    ),
+    fan(
+      'ColorIntensity',
+      stops.map(([position, color]) => [position, color[2]]),
+      { color: 'Blue' }
+    ),
+  ];
+  const rainbow = gradient([
+    [0, [1, 0, 0]],
+    [0.5, [0, 1, 0]],
+    [1, [0, 0, 1]],
+  ]);
+
+  const washes = [
+    edgeFixture('par-1', rgbPar, '6ch', 0),
+    edgeFixture('par-2', rgbPar, '6ch', 1),
+    edgeFixture('cmy', cmySpot, '6ch', 2),
+    edgeFixture('beam', beam, '11ch', 3),
+    edgeFixture('bar', bar, '9ch', 4),
+    edgeFixture('par-3', rgbPar, '6ch', 5),
+  ];
+  const all = washes.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid)));
+  const reversed = all.slice().reverse();
+  const fanPresets = [
+    edgePreset('dimmer', all, {
+      fixtureCapabilityValues: [
+        fan('Intensity', [
+          [0, 0.2],
+          [1, 1],
+        ]),
+      ],
+    }),
+    edgePreset('zoom', all, {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        fan('Zoom', [
+          [0, 1],
+          [0.5, 0],
+          [1, 1],
+        ]),
+      ],
+    }),
+    edgePreset('rainbow', all, { fixtureCapabilityValues: [capability('Intensity', 1), ...rainbow] }),
+    // over the stage from the left to the right, whatever order the preset puts the fixtures in
+    {
+      ...edgePreset('rainbow-stage', reversed, { fixtureCapabilityValues: [capability('Intensity', 1), ...rainbow] }),
+      fanOrder: 'left-right',
+    },
+    // all the fixtures hang at the same height: none of them can be told apart, all of them are in the middle
+    { ...edgePreset('rainbow-height', all, { fixtureCapabilityValues: [capability('Intensity', 1), ...rainbow] }), fanOrder: 'bottom-top' },
+    // a fan of the preset in its own order on top of a color of the step, a later one winning
+    edgePreset('later', all, {
+      fixtureCapabilityValues: [
+        ...rgb(1, 1, 1),
+        fan(
+          'ColorIntensity',
+          [
+            [0, 0],
+            [1, 1],
+          ],
+          { color: 'Green' }
+        ),
+        capability('Intensity', 1),
+      ],
+    }),
+  ];
+
+  cases.push({
+    name: 'values and gradients of colors fanned out over the fixtures, in the order of the preset and on the stage',
+    input: {
+      project: edgeProject(
+        [rgbPar, cmySpot, beam, bar],
+        washes,
+        fanPresets,
+        fanPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: fanPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // Fixtures placed by hand: in the front and at the back, low and high. Fanned from the front to the back and from the
+  // bottom to the top.
+  const placed = [
+    { ...edgeFixture('front-low', rgbPar, '6ch', 0), positioning: 'manual', positionX: -200, positionY: 50, positionZ: 300 },
+    { ...edgeFixture('back-high', rgbPar, '6ch', 1), positioning: 'manual', positionX: 0, positionY: 400, positionZ: -300 },
+    { ...edgeFixture('middle', rgbPar, '6ch', 2), positioning: 'manual', positionX: 200, positionY: 150, positionZ: 0 },
+    { ...edgeFixture('floor', rgbPar, '6ch', 3), positioning: 'bottomBack' },
+  ];
+  const placedFixtures = placed.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const placedPresets = ['front-back', 'bottom-top'].map((fanOrder) => ({
+    ...edgePreset(fanOrder, placedFixtures, {
+      fixtureCapabilityValues: [
+        fan('Intensity', [
+          [0, 0],
+          [1, 1],
+        ]),
+        ...gradient([
+          [0, [1, 0.5, 0]],
+          [1, [0, 0.5, 1]],
+        ]),
+      ],
+    }),
+    fanOrder,
+  }));
+
+  cases.push({
+    name: 'gradients fanned from the front to the back and from the bottom to the top of the stage',
+    input: {
+      project: edgeProject(
+        [rgbPar],
+        placed,
+        placedPresets,
+        placedPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: placedPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // Moving heads fanned from the middle out to both ends, mirrored as well, and across the stage
+  const heads = [
+    edgeFixture('wide-1', wideMover, '5ch', 0),
+    edgeFixture('wide-2', wideMover, '5ch', 1),
+    edgeFixture('head', movingHead, '6ch', 2),
+  ];
+  const headFixtures = heads.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const centered = [
+    { type: 'Pan', valueDegrees: 10, spreadDegrees: 90, fanShape: 'center' },
+    { type: 'Tilt', valueDegrees: -20, spreadDegrees: 40 },
+  ];
+  const headPresets = [
+    edgePreset('heads-center', headFixtures, { fixtureCapabilityValues: centered }),
+    { ...edgePreset('heads-center-mirrored', headFixtures, { fixtureCapabilityValues: centered }), mirrorPan: true },
+    { ...edgePreset('heads-stage', headFixtures.slice().reverse(), { fixtureCapabilityValues: centered }), fanOrder: 'left-right' },
+  ];
+
+  cases.push({
+    name: 'moving heads fanned from the middle out to both ends',
+    input: {
+      project: edgeProject(
+        [wideMover, movingHead],
+        heads,
+        headPresets,
+        headPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: headPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // From a single color into a gradient (and a dimmer into a fan), from one gradient into another one with stops at
+  // other places on an eased curve, from there into a single color again, and a fan snapping into a value at its end
+  const travelling = {
+    uuid: 'travelling',
+    name: 'travelling',
+    fixtures: all,
+    steps: [
+      step('single', 0, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 1, 1)] }),
+      step(
+        'gradient',
+        1000,
+        {
+          fixtureCapabilityValues: [
+            fan('Intensity', [
+              [0, 0.2],
+              [1, 1],
+            ]),
+            ...rainbow,
+          ],
+        },
+        { transitionMillis: 1000 }
+      ),
+      step(
+        'other',
+        2000,
+        {
+          fixtureCapabilityValues: [
+            capability('Intensity', 0.5),
+            ...gradient([
+              [0, [0, 0, 0]],
+              [0.25, [1, 0.5, 0]],
+              [1, [0.2, 0, 1]],
+            ]),
+          ],
+        },
+        { transitionCurve: 'ease-in-out' }
+      ),
+      step('single-again', 3000, { fixtureCapabilityValues: rgb(0, 0.4, 0.8) }),
+      step(
+        'snap',
+        4000,
+        {
+          fixtureCapabilityValues: [
+            fan('Intensity', [
+              [0, 1],
+              [0.5, 0],
+              [1, 1],
+            ]),
+          ],
+        },
+        { transitionCurve: 'snap' }
+      ),
+    ],
+    effects: [],
+  };
+
+  cases.push({
+    name: 'fans and gradients travelling from one step into the next, for each fixture on its own',
+    input: {
+      project: edgeProject([rgbPar, cmySpot, beam, bar], washes, [travelling], []),
+      runs: [
+        {
+          preview: { mode: 'preset', preset: 'travelling', stepPreviewStartMillis: 0 },
+          times: [0, 1000, 1250, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5100],
+        },
+      ],
+    },
+  });
+
+  // A dimmer curve fanned in each of the ways (on top of a step), a curve on the red fanned over the stage, and a
+  // movement fanned over the stage
+  const curve = (uuid, fanMode, extra = {}) => ({
+    type: 'curve',
+    uuid,
+    curveType: 'sine',
+    lengthMillis: 2000,
+    position: 0.5,
+    amplitude: 1,
+    fanMode,
+    capabilities: [{ type: 'Intensity' }],
+    channels: [],
+    ...extra,
+  });
+  const curvePresets = ['linear', 'center', 'side', 'none'].map((fanMode) => ({
+    ...edgePreset('curve-' + fanMode, all, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 1, 1)] }),
+    effects: [curve('curve-' + fanMode, fanMode)],
+  }));
+  curvePresets.push({
+    ...edgePreset('red-stage', reversed, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(0, 0, 1)] }),
+    effects: [
+      curve('red', 'center', {
+        capabilities: [{ type: 'ColorIntensity', color: 'Red' }],
+        phasingMode: 'spread',
+        phasingCycles: 0.5,
+      }),
+    ],
+    fanOrder: 'left-right',
+  });
+  curvePresets.push({
+    ...edgePreset('movement-stage', headFixtures.slice().reverse(), { fixtureCapabilityValues: [{ type: 'Pan', valueDegrees: 0 }] }),
+    effects: [
+      {
+        type: 'pan-tilt',
+        uuid: 'movement',
+        shape: 'line',
+        sizePanDegrees: 90,
+        sizeTiltDegrees: 20,
+        lengthMillis: 2000,
+        fanMode: 'linear',
+      },
+    ],
+    fanOrder: 'left-right',
+  });
+  const curveScenes = curvePresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }));
+
+  cases.push({
+    name: 'curves and movements fanned out over the fixtures, in the order of the preset and on the stage',
+    input: {
+      project: edgeProject(
+        [rgbPar, cmySpot, beam, bar, wideMover, movingHead],
+        [...washes, ...heads.map((head, i) => ({ ...head, dmxFirstChannel: 200 + i * 16 }))],
+        curvePresets,
+        curveScenes
+      ),
+      runs: curveScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 300, 500, 1000, 1500, 2700] })),
+    },
+  });
+
+  // A flow standing still, spread over the stage: a gradient of its palette, moved along by its phase and the chase
+  const still = (uuid, extra = {}) => ({
+    type: 'pixel',
+    uuid,
+    pattern: 'flow',
+    size: 0.6,
+    spread: 'stage',
+    still: true,
+    lengthMillis: 2000,
+    palette: {
+      stops: [
+        { position: 0, color: '#ff0000' },
+        { position: 1, color: '#0000ff' },
+      ],
+      repeat: 'mirror',
+    },
+    capabilities: [],
+    channels: [],
+    ...extra,
+  });
+  const stillPresets = [
+    { ...edgePreset('still', all, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 1, 1)] }), effects: [still('still')] },
+    {
+      ...edgePreset('still-phased', all, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 1, 1)] }),
+      effects: [still('still-phased', { phaseMillis: 500, phasingMillis: 100 })],
+    },
+  ];
+
+  cases.push({
+    name: 'a pattern of the pixel effects standing still',
+    input: {
+      project: edgeProject(
+        [rgbPar, cmySpot, beam, bar],
+        washes,
+        stillPresets,
+        stillPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: stillPresets.map((preset) => ({ preview: { mode: 'scenes', scenes: [preset.uuid] }, times: [0, 700, 5000] })),
+    },
+  });
+
+  return write(
+    'channel-values-fans.json',
+    'channelValues',
+    'Values, gradients of colors, positions of moving heads and effects fanned out over the fixtures, in the order of the preset and over the stage',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -3297,6 +3701,7 @@ export function generate() {
     channelValuesPixelStage(),
     channelValuesPixelAudio(),
     channelValuesPixelWhite(),
+    channelValuesFans(),
   ];
 }
 

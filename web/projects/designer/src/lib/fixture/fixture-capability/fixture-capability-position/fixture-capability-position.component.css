@@ -11,3 +11,22 @@
   font-size: 0.75rem;
   line-height: 1.5;
 }
+
+/* the switch of the capability on the left, fanning it out over the fixtures on the right */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.fan-toggle {
+  padding: 0.1rem 0.4rem;
+  line-height: 1.2;
+}
+
+/* fanned out: the switch lights up */
+.fan-toggle.active {
+  color: var(--sd-primary, #fd7e14);
+  box-shadow: inset 0 0 0 1px var(--sd-primary, #fd7e14);
+}

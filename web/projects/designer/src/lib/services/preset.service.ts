@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { FanStop, getFanMiddleValue, isFanned } from '../models/fan';
 import { CachedFixtureCapability } from '../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { Color } from '../models/color';
@@ -654,6 +655,44 @@ export class PresetService {
 
     step.fixtureCapabilityValues.push(fixtureCapabilityValue);
     this.capabilityValuesChanged.next();
+  }
+
+  // The stops a value of the step is fanned out over the fixtures of the preset with (see fan), or undefined if it
+  // isn't fanned
+  getCapabilityFan(step: PresetStep, capabilityType: FixtureCapabilityType, color?: FixtureCapabilityColor, blade?: string): FanStop[] {
+    const value = this.getCapabilityValue(step, capabilityType, color, undefined, undefined, blade);
+
+    return isFanned(value) ? value.fan : undefined;
+  }
+
+  // Fans a value of the step out over the fixtures of the preset with the passed stops, or takes its fan away (no
+  // stops), keeping what else it says. A value the step doesn't have yet is added. The value is saved as the one of the
+  // fixture in the middle, which a player not knowing the fans plays on all of them.
+  setCapabilityFan(
+    step: PresetStep,
+    capabilityType: FixtureCapabilityType,
+    stops: FanStop[],
+    color?: FixtureCapabilityColor,
+    blade?: string
+  ) {
+    if (!step) {
+      return;
+    }
+
+    const existing = this.getCapabilityValue(step, capabilityType, color, undefined, undefined, blade);
+    const value = new FixtureCapabilityValue(existing ? { ...existing } : { type: capabilityType, color, blade });
+    value.type = capabilityType;
+    value.color = color;
+    value.blade = blade;
+
+    if (stops && stops.length > 0) {
+      value.fan = stops.map((stop) => new FanStop(stop));
+      value.valuePercentage = getFanMiddleValue(value.fan);
+    } else {
+      value.fan = undefined;
+    }
+
+    this.putCapabilityValue(step, value);
   }
 
   getCapabilityValue(

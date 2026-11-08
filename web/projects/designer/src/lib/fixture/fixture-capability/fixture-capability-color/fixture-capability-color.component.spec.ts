@@ -15,6 +15,8 @@ import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 import { ProjectService } from '../../../services/project.service';
 import { FixtureCapabilityColorComponent } from './fixture-capability-color.component';
+import { GradientEditorComponent } from '../../../gradient-editor/gradient-editor.component';
+import { ColorPickerComponent } from '../../../color-picker/color-picker.component';
 
 // The color of the step being edited, picked on a color wheel. It sets the red, the green and
 // the blue of the fixtures; switched off, the step leaves their color alone.
@@ -29,7 +31,7 @@ describe('FixtureCapabilityColorComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FixtureCapabilityColorComponent],
+      declarations: [FixtureCapabilityColorComponent, GradientEditorComponent, ColorPickerComponent],
       imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
     }).compileComponents();
@@ -224,5 +226,65 @@ describe('FixtureCapabilityColorComponent', () => {
     presetService.stepsChanged.next();
 
     expect(component.color).toBe('#ffffff');
+  });
+
+  it('spans a gradient of colors over the fixtures, from the color of the step, and takes it away again', async () => {
+    presetService.selectedStep = preset.steps[1];
+    await render();
+
+    (element.querySelector('button[name="gradient"]') as HTMLButtonElement).click();
+    await update();
+
+    // red, green and blue each fanned out with a stop at each place of the gradient: from orange to blue
+    const step = preset.steps[1];
+    const fan = (color: FixtureCapabilityColor) =>
+      presetService
+        .getCapabilityFan(step, FixtureCapabilityType.ColorIntensity, color)
+        .map((stop) => [stop.position, stop.valuePercentage]);
+    expect(fan(FixtureCapabilityColor.Red)).toEqual([
+      [0, 1],
+      [1, 0],
+    ]);
+    expect(fan(FixtureCapabilityColor.Green)).toEqual([
+      [0, 0.2],
+      [1, 0],
+    ]);
+    expect(fan(FixtureCapabilityColor.Blue)).toEqual([
+      [0, 0],
+      [1, 1],
+    ]);
+    expect(component.gradient).toBe(true);
+    expect(component.gradientStops).toEqual([
+      { position: 0, color: '#ff3300' },
+      { position: 1, color: '#0000ff' },
+    ]);
+    expect(element.querySelector('lib-app-gradient-editor')).not.toBeNull();
+    expect((element.querySelector('#color-picker-container') as HTMLElement).hidden).toBe(true);
+    expect(fixtureColorChanged).toHaveBeenCalled();
+
+    // a stop added in the middle of the gradient editor
+    component.setGradient([
+      { position: 0, color: '#ff0000' },
+      { position: 0.5, color: '#00ff00' },
+      { position: 1, color: '#0000ff' },
+    ]);
+    await update();
+    expect(fan(FixtureCapabilityColor.Green)).toEqual([
+      [0, 0],
+      [0.5, 1],
+      [1, 0],
+    ]);
+
+    // the gradient is read back from the step
+    await render();
+    expect(component.gradient).toBe(true);
+    expect(component.gradientStops.map((stop) => stop.color)).toEqual(['#ff0000', '#00ff00', '#0000ff']);
+
+    // taken away: all the fixtures in the color of the one in the middle
+    (element.querySelector('button[name="gradient"]') as HTMLButtonElement).click();
+    await update();
+    expect(component.gradient).toBe(false);
+    expect(rgb(step)).toEqual([0, 1, 0]);
+    expect(presetService.getCapabilityFan(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red)).toBeUndefined();
   });
 });

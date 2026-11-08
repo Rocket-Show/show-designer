@@ -292,4 +292,20 @@ describe('FixtureCapabilityPanTiltComponent', () => {
     expect(component.isActive()).toBe(false);
     expect(component.getDegrees(pan)).toBeUndefined();
   });
+
+  it('fans the heads out from the middle to both ends, or from the first to the last one', async () => {
+    const linear = element.querySelector('button[name="fanShapePan-linear"]') as HTMLButtonElement;
+    expect(linear.classList).toContain('active');
+
+    (element.querySelector('button[name="fanShapePan-center"]') as HTMLButtonElement).click();
+    await update();
+
+    // a fan around the middle, from the middle out to both ends
+    expect(value(FixtureCapabilityType.Pan).fanShape).toBe('center');
+    expect(value(FixtureCapabilityType.Pan).valueDegrees).toBe(0);
+    expect(component.getFanShape(FixtureCapabilityType.Tilt)).toBe('linear');
+
+    component.setFanShape(FixtureCapabilityType.Pan, 'linear');
+    expect(value(FixtureCapabilityType.Pan).fanShape).toBeUndefined();
+  });
 });

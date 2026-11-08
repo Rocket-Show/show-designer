@@ -178,7 +178,13 @@
       "steps-order-random": "Random",
       "steps-seed": "Seed of the random order",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} values only play on: {{models}}"
+      "model-specific": "{{count}} values only play on: {{models}}",
+      "settings-fan-order": "Fan across",
+      "settings-fan-order-preset": "Order of the preset",
+      "settings-fan-order-left-right": "Stage, left to right",
+      "settings-fan-order-front-back": "Stage, front to back",
+      "settings-fan-order-bottom-top": "Stage, bottom to top",
+      "settings-fan-order-hint": "The order fans, gradients and fanned effects follow. On the stage, fixtures at the same place get the same value."
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
@@ -313,7 +319,20 @@
         "polygon": "Polygon",
         "checker": "Checkerboard",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Fan out",
+      "fan-hint": "Fans the value out over the fixtures of the preset, in the fan order of the preset settings",
+      "fan-shape": "Fan",
+      "fan-shape-linear": "First → last",
+      "fan-shape-center": "Middle → ends",
+      "fan-linear-from": "First",
+      "fan-linear-to": "Last",
+      "fan-center-from": "Middle",
+      "fan-center-to": "Ends",
+      "fan-bars-hint": "What each fixture gets, in the order of the fan",
+      "capability-color-gradient": "Gradient",
+      "capability-color-gradient-hint": "Spans a gradient of colors over the fixtures of the preset",
+      "capability-color-gradient-order": "From the first to the last fixture, in the fan order of the preset settings. Fixtures with a color wheel take the closest color."
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -592,11 +611,14 @@
       "pan-tilt-shape-line": "Line",
       "pan-tilt-shape-wave": "Wave",
       "pan-tilt-size": "Size",
-      "pan-tilt-fan": "Fan",
-      "pan-tilt-fan-hint": "Moves each head by its place in the row. From the middle: the first and the last move the whole size, to opposite sides, the middle one stays (a line opens and closes the fan). From the side: the first one stays, the last moves the whole size.",
-      "pan-tilt-fan-none": "Same for all",
-      "pan-tilt-fan-center": "From the middle",
-      "pan-tilt-fan-side": "From the side"
+      "curve-fan": "Fan",
+      "curve-fan-hint": "How far the effect moves each fixture by its place in the fan of the preset. Ends opposite: the first and the last the most, to opposite sides, the middle stays (a line opens and closes a fan). Ends alike: the first and the last the most, the same way. From the first: the first stays, the last moves the most.",
+      "curve-fan-none": "Same for all",
+      "curve-fan-linear": "Ends opposite",
+      "curve-fan-center": "Ends alike",
+      "curve-fan-side": "From the first",
+      "pixel-still": "Still",
+      "pixel-still-hint": "The pattern stands where its phase and the chase put it, e.g. a gradient of the flow over the stage"
     },
     "composition": {
       "new": "Create new composition..."

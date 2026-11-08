@@ -178,7 +178,13 @@
       "steps-order-random": "Casuale",
       "steps-seed": "Seme dell’ordine casuale",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valori funzionano solo su: {{models}}"
+      "model-specific": "{{count}} valori funzionano solo su: {{models}}",
+      "settings-fan-order": "Ventaglio secondo",
+      "settings-fan-order-preset": "Ordine del preset",
+      "settings-fan-order-left-right": "Palco, da sinistra a destra",
+      "settings-fan-order-front-back": "Palco, dal davanti al fondo",
+      "settings-fan-order-bottom-top": "Palco, dal basso in alto",
+      "settings-fan-order-hint": "L’ordine che seguono ventagli, sfumature ed effetti a ventaglio. Sul palco, i fixture nello stesso punto ricevono lo stesso valore."
     },
     "fixture": {
       "no-fixtures": "Aggiungi nuovi fixture al progetto",
@@ -313,7 +319,20 @@
         "polygon": "Poligono",
         "checker": "Scacchiera",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Apri a ventaglio",
+      "fan-hint": "Apre il valore a ventaglio sui fixture del preset, nell’ordine del ventaglio delle impostazioni del preset",
+      "fan-shape": "Ventaglio",
+      "fan-shape-linear": "Primo → ultimo",
+      "fan-shape-center": "Centro → estremi",
+      "fan-linear-from": "Primo",
+      "fan-linear-to": "Ultimo",
+      "fan-center-from": "Centro",
+      "fan-center-to": "Estremi",
+      "fan-bars-hint": "Cosa riceve ogni fixture, nell’ordine del ventaglio",
+      "capability-color-gradient": "Sfumatura",
+      "capability-color-gradient-hint": "Stende una sfumatura di colori sui fixture del preset",
+      "capability-color-gradient-order": "Dal primo all’ultimo fixture, nell’ordine del ventaglio delle impostazioni del preset. I fixture con ruota colori prendono il colore più vicino."
     },
     "fixture-pool": {
       "title": "Pool fixture",
@@ -592,11 +611,14 @@
       "pan-tilt-shape-line": "Linea",
       "pan-tilt-shape-wave": "Onda",
       "pan-tilt-size": "Ampiezza",
-      "pan-tilt-fan": "Ventaglio",
-      "pan-tilt-fan-hint": "Muove ogni testa secondo il suo posto nella fila. Dal centro: la prima e l’ultima si muovono di tutta l’ampiezza, verso lati opposti, quella in mezzo resta ferma (una linea apre e chiude il ventaglio). Da un lato: la prima resta ferma, l’ultima si muove di tutta l’ampiezza.",
-      "pan-tilt-fan-none": "Tutte uguali",
-      "pan-tilt-fan-center": "Dal centro",
-      "pan-tilt-fan-side": "Da un lato"
+      "curve-fan": "Ventaglio",
+      "curve-fan-hint": "Quanto l’effetto muove ogni fixture secondo il suo posto nel ventaglio del preset. Estremi opposti: il primo e l’ultimo di più, verso lati opposti, quello in mezzo resta fermo (una linea apre e chiude un ventaglio). Estremi uguali: il primo e l’ultimo di più, nella stessa direzione. Dal primo: il primo resta fermo, l’ultimo si muove di più.",
+      "curve-fan-none": "Tutti uguali",
+      "curve-fan-linear": "Estremi opposti",
+      "curve-fan-center": "Estremi uguali",
+      "curve-fan-side": "Dal primo",
+      "pixel-still": "Fermo",
+      "pixel-still-hint": "Il pattern resta dove lo mettono la sua fase e il chase, ad es. una sfumatura del flusso sul palco"
     },
     "composition": {
       "new": "Crea nuova composizione..."

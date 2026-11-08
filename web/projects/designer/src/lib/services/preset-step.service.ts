@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
+import { isFanTransition } from '../models/fan';
 import { isPanTiltTransition } from '../models/pan-tilt';
 import { Preset } from '../models/preset';
 import { getAutomaticStartMillis, getStepsLoopMillis, getTransitionEndMillis, layoutSteps, PresetStep } from '../models/preset-step';
@@ -390,9 +391,10 @@ export class PresetStepService {
         continue;
       }
 
-      if (isPanTiltTransition(fromValue, toValue)) {
+      if (isPanTiltTransition(fromValue, toValue) || isFanTransition(fromValue, toValue)) {
         // Where the moving heads point travels for each of them on its own, in degrees: from one fan to the next, from
-        // one spot to the next and from a spot to a position (see pan-tilt).
+        // one spot to the next and from a spot to a position (see pan-tilt). A value fanned out over the fixtures
+        // travels for each of them as well, e.g. from one gradient of colors to the next (see fan).
         const value = new FixtureCapabilityValue(toValue);
         value.transitionFrom = fromValue;
         value.transitionPosition = position;

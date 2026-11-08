@@ -63,33 +63,42 @@ describe('EffectPanTilt', () => {
     expect(panTilt.sizeTiltDegrees).toBe(30);
   });
 
-  it('fans the movement over the fixtures by their place in the row', () => {
-    const fromMiddle = new EffectPanTilt({ uuid: 'fan', shape: 'line', sizePanDegrees: 90, sizeTiltDegrees: 0, fanMode: 'center' });
+  it('fans the movement over the fixtures by their place in the fan', () => {
+    const opposite = new EffectPanTilt({ uuid: 'fan', shape: 'line', sizePanDegrees: 90, sizeTiltDegrees: 0, fanMode: 'linear' });
 
-    expect(fromMiddle.isFanned()).toBe(true);
-    expect(fromMiddle.getFanFactor(0, 3)).toBe(-1);
-    expect(fromMiddle.getFanFactor(1, 3)).toBe(0);
-    expect(fromMiddle.getFanFactor(2, 3)).toBe(1);
+    expect(opposite.isFanned()).toBe(true);
+    expect(opposite.getFanFactor(0)).toBe(-1);
+    expect(opposite.getFanFactor(0.5)).toBe(0);
+    expect(opposite.getFanFactor(1)).toBe(1);
 
     // a quarter of the way: the first and the last head all the way to opposite sides, the one in the middle still
-    expect(fromMiddle.getOffsetAtMillis(625, 0, 3).pan).toBeCloseTo(-45, 9);
-    expect(fromMiddle.getOffsetAtMillis(625, 1, 3).pan).toBeCloseTo(0, 9);
-    expect(fromMiddle.getOffsetAtMillis(625, 2, 3).pan).toBeCloseTo(45, 9);
+    expect(opposite.getOffsetAtMillis(625, 0, 3).pan).toBeCloseTo(-45, 9);
+    expect(opposite.getOffsetAtMillis(625, 1, 3).pan).toBeCloseTo(0, 9);
+    expect(opposite.getOffsetAtMillis(625, 2, 3).pan).toBeCloseTo(45, 9);
     // three quarters: the other way round, which closes the fan of the step and crosses the heads over beyond it
-    expect(fromMiddle.getOffsetAtMillis(1875, 0, 3).pan).toBeCloseTo(45, 9);
-    expect(fromMiddle.getOffsetAtMillis(1875, 2, 3).pan).toBeCloseTo(-45, 9);
+    expect(opposite.getOffsetAtMillis(1875, 0, 3).pan).toBeCloseTo(45, 9);
+    expect(opposite.getOffsetAtMillis(1875, 2, 3).pan).toBeCloseTo(-45, 9);
+
+    // from the middle, the ends the same way
+    const alike = new EffectPanTilt({ uuid: 'alike', shape: 'line', sizePanDegrees: 90, fanMode: 'center' });
+    expect(alike.getOffsetAtMillis(625, 0, 3).pan).toBeCloseTo(45, 9);
+    expect(alike.getOffsetAtMillis(625, 1, 3).pan).toBeCloseTo(0, 9);
+    expect(alike.getOffsetAtMillis(625, 2, 3).pan).toBeCloseTo(45, 9);
 
     // from the side: the first head doesn't move, the last one the whole size
     const fromSide = new EffectPanTilt({ uuid: 'side', shape: 'line', sizePanDegrees: 90, sizeTiltDegrees: 40, fanMode: 'side' });
-    expect(fromSide.getFanFactor(0, 5)).toBe(0);
-    expect(fromSide.getFanFactor(1, 5)).toBe(0.25);
-    expect(fromSide.getFanFactor(4, 5)).toBe(1);
+    expect(fromSide.getFanFactor(0)).toBe(0);
+    expect(fromSide.getFanFactor(0.25)).toBe(0.25);
     expect(fromSide.getOffsetAtMillis(625, 4, 5).tilt).toBeCloseTo(20, 9);
     expect(fromSide.getOffsetAtMillis(625, 1, 5).pan).toBeCloseTo(11.25, 9);
 
-    // a single head is the middle and the first one at once: it stays where the step points it
-    expect(fromMiddle.getFanFactor(0, 1)).toBe(0);
-    expect(fromSide.getFanFactor(0, undefined)).toBe(0);
+    // its place on the stage, if the preset fans by it: NaN where the fixtures can't be told apart, which don't move
+    expect(fromSide.getOffsetAtMillis(625, 0, 5, undefined, 1).pan).toBeCloseTo(45, 9);
+    expect(fromSide.getOffsetAtMillis(625, 4, 5, undefined, NaN).pan).toBe(0);
+
+    // a single head can't be told apart from others: it stays where the step points it
+    expect(opposite.getOffsetAtMillis(625, 0, 1).pan).toBe(0);
+    expect(fromSide.getFanFactor(undefined)).toBe(0);
   });
 
   it('moves all the heads the same way unless it is fanned', () => {
@@ -97,7 +106,7 @@ describe('EffectPanTilt', () => {
 
     expect(panTilt.fanMode).toBe('none');
     expect(panTilt.isFanned()).toBe(false);
-    expect(panTilt.getFanFactor(0, 3)).toBe(1);
+    expect(panTilt.getFanFactor(0)).toBe(1);
     expect(panTilt.getOffsetAtMillis(625, 0, 3)).toEqual(panTilt.getOffsetAtMillis(625, 2, 3));
     expect(new EffectPanTilt().fanMode).toBe('none');
   });

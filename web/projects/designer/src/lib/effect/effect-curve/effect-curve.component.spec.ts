@@ -163,7 +163,7 @@ describe('EffectCurveComponent grid', () => {
   });
 
   it('should mark each head of a fanned movement, all of them moving together', () => {
-    const movement = new EffectPanTilt({ uuid: 'fan', shape: 'line', phasingCycles: 0, fanMode: 'center' });
+    const movement = new EffectPanTilt({ uuid: 'fan', shape: 'line', phasingCycles: 0, fanMode: 'linear' });
     const { component, context } = gridComponent(movement, 5);
 
     component.redraw();
@@ -684,12 +684,38 @@ describe('EffectCurveComponent', () => {
     expect(movement.sizeTiltDegrees).toBe(45);
     expect(previewLive).toHaveBeenCalled();
 
-    // fanned over the heads by their place in the row
+    // fanned over the heads by their place in the fan of the preset
     const fan: HTMLSelectElement = element.querySelector('select[name="fanMode"]');
     expect(fan.value).toBe('none');
-    expect(Array.from(fan.options).map((option) => option.value)).toEqual(['none', 'center', 'side']);
+    expect(Array.from(fan.options).map((option) => option.value)).toEqual(['none', 'linear', 'center', 'side']);
+    await select(fan, 'linear');
+    expect(movement.fanMode).toBe('linear');
+  });
+
+  it('fans a curve out over the fixtures, but not a pixel effect', async () => {
+    curve = new EffectCurve();
+    await render();
+
+    const fan: HTMLSelectElement = element.querySelector('select[name="fanMode"]');
     await select(fan, 'center');
-    expect(movement.fanMode).toBe('center');
+    expect(curve.fanMode).toBe('center');
+    expect(previewLive).toHaveBeenCalled();
+
+    curve = new EffectPixel({ uuid: 'pixels' });
+    await render();
+    expect(element.querySelector('select[name="fanMode"]')).toBeNull();
+  });
+
+  it('stands a pattern of a pixel effect still', async () => {
+    const pixels = new EffectPixel({ uuid: 'pixels' });
+    curve = pixels;
+    await render();
+
+    const still: HTMLInputElement = element.querySelector('input[name="still"]');
+    expect(still.checked).toBe(false);
+    still.click();
+    await fixture.whenStable();
+    expect(pixels.still).toBe(true);
   });
 
   it('edits a pixel effect like a curve, with its pattern and what the pattern lets be set', async () => {

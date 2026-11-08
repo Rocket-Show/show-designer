@@ -151,7 +151,20 @@
     </div>
   </div>
 
-  @if (isMovement) {
+  @if (isPixel) {
+  <!-- the pattern standing where its phase and the chase put it, e.g. a gradient of the flow over the stage -->
+  <div class="form-check mb-1" [title]="'designer.effect.pixel-still-hint' | translate">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      name="still"
+      [id]="'still_' + curve.uuid"
+      [ngModel]="pixelEffect.still"
+      (ngModelChange)="setStill($event)"
+    />
+    <label class="form-check-label" [for]="'still_' + curve.uuid">{{ 'designer.effect.pixel-still' | translate }}</label>
+  </div>
+  } @if (isMovement) {
   <!-- how far the moving heads move on each axis, in degrees -->
   @for (axis of ['Pan', 'Tilt']; track axis) {
   <div class="d-flex">
@@ -180,27 +193,7 @@
     </div>
     <div class="my-auto ml-1">°</div>
   </div>
-  }
-  <!-- how far each head moves by its place in the row: all the same, fanned from the middle or from the first one -->
-  <div class="d-flex">
-    <div class="my-auto" style="width: 100px; float: left" [title]="'designer.effect.pan-tilt-fan-hint' | translate">
-      {{ 'designer.effect.pan-tilt-fan' | translate }}
-    </div>
-    <div class="my-auto">
-      <select
-        name="fanMode"
-        [attr.aria-label]="'designer.effect.pan-tilt-fan' | translate"
-        [title]="'designer.effect.pan-tilt-fan-hint' | translate"
-        [ngModel]="movement.fanMode"
-        (ngModelChange)="setFanMode($event)"
-      >
-        @for (fanMode of fanModes; track fanMode) {
-        <option [value]="fanMode">{{ 'designer.effect.pan-tilt-fan-' + fanMode | translate }}</option>
-        }
-      </select>
-    </div>
-  </div>
-  } @else if (isPixel) {
+  } } @else if (isPixel) {
   <!-- what the pattern lets be set: its size, softness, direction, shape and bounce if it has them -->
   @if (usesSize()) {
   <div class="d-flex">
@@ -553,6 +546,28 @@
       </select>
     </div>
   </div>
+
+  <!-- how far the curve swings on each fixture by its place in the fan of the preset: all the same, or fanned out -->
+  @if (!isPixel) {
+  <div class="d-flex">
+    <div class="my-auto" style="width: 100px; float: left" [title]="'designer.effect.curve-fan-hint' | translate">
+      {{ 'designer.effect.curve-fan' | translate }}
+    </div>
+    <div class="my-auto">
+      <select
+        name="fanMode"
+        [attr.aria-label]="'designer.effect.curve-fan' | translate"
+        [title]="'designer.effect.curve-fan-hint' | translate"
+        [ngModel]="curve.fanMode"
+        (ngModelChange)="setFanMode($event)"
+      >
+        @for (fanMode of fanModes; track fanMode) {
+        <option [value]="fanMode">{{ 'designer.effect.curve-fan-' + fanMode | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  }
 </div>
 
 <!-- a pixel effect lights the colors of the pixels: its palette and how it is blended are picked instead -->

@@ -35,6 +35,7 @@ import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { GoboPatternChoice } from '../models/gobo-pattern-choice';
 import { getHeldMillis } from '../models/composition-hold';
 import { getIdentifyCapabilityValues } from '../models/identify';
+import { FanOrder, getFanPlace, getFixtureFanValues, getStageFanPlaces, isStageFanOrder } from '../models/fan';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
 import { PresetStepService } from './preset-step.service';
@@ -89,6 +90,19 @@ export class PreviewService implements OnDestroy {
       indices: Map<string, number>;
       parts: CachedFixture[];
       views: Map<string, Map<CachedFixture, PixelContext>>;
+    }
+  >();
+
+  // The places of the parts of a preset in its fan, if it fans by where they are on the stage (see fan): worked out
+  // again once the placements, the parts, the chase or the order of the fan changed
+  private stageFanPlaces = new WeakMap<
+    Preset,
+    {
+      placements: Map<string, StagePlacement>;
+      indices: Map<string, number>;
+      parts: CachedFixture[];
+      order: string;
+      places: Map<CachedFixture, number>;
     }
   >();
   private frameAudio = new Map<EffectPixel, PixelAudio>();
@@ -785,7 +799,11 @@ export class PreviewService implements OnDestroy {
                     null
                   )
                 ) {
-                  let value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+                  // swung as far as the place of the fixture in the fan of the preset says
+                  let value = effectCurve.getFannedValue(
+                    effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute),
+                    getFanPlace(context)
+                  );
 
                   // the curve does not apply anymore after it has finished running
                   if (value !== undefined) {
@@ -809,7 +827,10 @@ export class PreviewService implements OnDestroy {
               for (const channel of channelProfile.channels) {
                 for (const cachedChannel of cachedFixture.channels) {
                   if (cachedChannel.name === channel) {
-                    const value = effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+                    const value = effectCurve.getFannedValue(
+                      effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute),
+                      getFanPlace(context)
+                    );
 
                     // the curve does not apply anymore after it has finished running
                     if (value !== undefined) {
@@ -856,7 +877,10 @@ export class PreviewService implements OnDestroy {
 
     const beatsPerMinute = this.getBeatsPerMinute();
     const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
-    const cycles = effect.getCyclesAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
+    // a still pattern stands where its phase and the chase put it
+    const cycles = effect.still
+      ? effect.getStillCycles(fixtureIndex, fixtureCount, beatsPerMinute)
+      : effect.getCyclesAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute);
 
     // the effect does not apply anymore after it has finished running
     if (cycles === undefined) {
@@ -1041,6 +1065,82 @@ export class PreviewService implements OnDestroy {
     return frames || demoAudioFrames;
   }
 
+  // The state of a preset on one of its fixtures: the values fanned out over the fixtures worked out for its place in
+  // the fan (see fan), travelling from the ones of the step before for the fixture on its own. The state itself, if
+  // nothing is fanned.
+  private getFixtureState(state: PresetStepState, context: PanTiltContext): PresetStepState {
+    const capabilityValues = getFixtureFanValues(state.fixtureCapabilityValues, context);
+
+    if (capabilityValues === state.fixtureCapabilityValues) {
+      return state;
+    }
+
+    const fixtureState = new PresetStepState();
+    fixtureState.currentStep = state.currentStep;
+    fixtureState.currentStepProgress = state.currentStepProgress;
+    fixtureState.fixtureChannelValues = state.fixtureChannelValues;
+    fixtureState.fixtureCapabilityValues = capabilityValues;
+    fixtureState.effectAmounts = state.effectAmounts;
+
+    return fixtureState;
+  }
+
+  // Where a part of a fixture is in the fan of a preset fanning by where its parts are on the stage (see fan), worked
+  // out once in a frame for each preset: NaN if they are all at the same place, undefined for a preset fanning in its
+  // own order
+  private getStageFanPlace(preset: Preset, cachedFixture: CachedFixture): number {
+    if (!isStageFanOrder(preset.fanOrder)) {
+      return undefined;
+    }
+
+    const indices = this.frameFixtureIndices.get(preset);
+    let entry = this.stageFanPlaces.get(preset);
+
+    if (
+      !entry ||
+      entry.placements !== this.framePlacements ||
+      entry.indices !== indices ||
+      entry.parts !== this.fixtureService.cachedFixtures ||
+      entry.order !== preset.fanOrder
+    ) {
+      const parts = this.fixtureService.cachedFixtures.filter(
+        (part) => indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0
+      );
+      const places = getStageFanPlaces(
+        parts.map((part) => this.getPartStagePosition(part)),
+        preset.fanOrder as FanOrder
+      );
+
+      entry = {
+        placements: this.framePlacements,
+        indices,
+        parts: this.fixtureService.cachedFixtures,
+        order: preset.fanOrder,
+        places: new Map(),
+      };
+      parts.forEach((part, i) => entry.places.set(part, places[i]));
+      this.stageFanPlaces.set(preset, entry);
+    }
+
+    const place = entry.places.get(cachedFixture);
+
+    return place === undefined ? NaN : place;
+  }
+
+  // where a part of a fixture is on the stage (in cm): its LED on the front of the housing of the fixture, the middle
+  // of the front of a fixture without pixels (see pixel-stage)
+  private getPartStagePosition(part: CachedFixture): number[] {
+    const partPlace = this.fixtureService.getPixelPlace(part);
+    const placement = this.framePlacements.get(part.fixture.uuid) || { position: [0, 0, 0], rotation: [0, 0, 0] };
+
+    return pixelStagePosition(
+      partPlace,
+      pixelHousingSize(part.profile, partPlace.columns, partPlace.rows),
+      placement,
+      part.fixture.positioning
+    );
+  }
+
   // Where a part of a fixture is in the picture of the stage the parts of a preset make up (the ones a pixel effect
   // lights, see pixel-stage), seen from the front or from above. Worked out once in a frame for each preset and view.
   private getStagePixelPlace(preset: Preset, view: string, cachedFixture: CachedFixture): PixelContext {
@@ -1066,17 +1166,7 @@ export class PreviewService implements OnDestroy {
         (part) =>
           indices?.get(this.presetService.getPresetFixtureKey(part.fixture.uuid, part.pixel?.key)) >= 0 && this.lightsPixelEffect(part)
       );
-      const positions = parts.map((part) => {
-        const partPlace = this.fixtureService.getPixelPlace(part);
-        const placement = this.framePlacements.get(part.fixture.uuid) || { position: [0, 0, 0], rotation: [0, 0, 0] };
-
-        return pixelStagePosition(
-          partPlace,
-          pixelHousingSize(part.profile, partPlace.columns, partPlace.rows),
-          placement,
-          part.fixture.positioning
-        );
-      });
+      const positions = parts.map((part) => this.getPartStagePosition(part));
       const contexts = stagePixelPlaces(positions, view);
 
       parts.forEach((part, i) => places.set(part, contexts[i]));
@@ -1149,7 +1239,7 @@ export class PreviewService implements OnDestroy {
   ) {
     const beatsPerMinute = this.getBeatsPerMinute();
     const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, context.fixtureCount, beatsPerMinute);
-    const offset = effect.getOffsetAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute);
+    const offset = effect.getOffsetAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute, context.fanPlace);
 
     // the movement does not apply anymore after it has finished running
     if (!offset) {
@@ -1282,7 +1372,7 @@ export class PreviewService implements OnDestroy {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,
             // if set multiple times)
             const intensityPercentage = this.getPresetIntensity(preset, timeMillis);
-            const state =
+            const presetState =
               presetStates.get(preset) ||
               this.getPresetStepState(
                 preset,
@@ -1294,7 +1384,11 @@ export class PreviewService implements OnDestroy {
               fixtureIndex,
               fixtureCount: fixtureCounts.get(preset.preset),
               placement: placements.get(cachedFixture.fixture.uuid),
+              fanPlace: this.getStageFanPlace(preset.preset, cachedFixture),
             };
+
+            // what the preset puts on this fixture, the fans worked out for its place in them (see fan)
+            const state = this.getFixtureState(presetState, context);
 
             this.mixCapabilityValues(state, cachedFixture, values, intensityPercentage, preset.preset, context);
             this.mixChannelValues(state, cachedFixture, values, intensityPercentage);

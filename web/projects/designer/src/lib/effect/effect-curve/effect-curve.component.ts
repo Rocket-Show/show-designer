@@ -15,6 +15,7 @@ import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
 import { AudioBus, TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
+import { fanModes } from '../../models/fan';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
@@ -126,8 +127,8 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   // the shapes a movement of the moving heads moves in
   public readonly shapes = ['circle', 'figure8', 'line', 'wave'];
 
-  // how far each head moves by its place in the row of the preset (see EffectPanTilt.fanMode)
-  public readonly fanModes = ['none', 'center', 'side'];
+  // how far the curve swings on each fixture by its place in the fan of the preset (see EffectCurve.fanMode)
+  public readonly fanModes = fanModes;
 
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
@@ -388,7 +389,7 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
   }
 
   setFanMode(fanMode: string) {
-    this.movement.fanMode = fanMode;
+    this.curve.fanMode = fanMode;
     this.livePreviewService.previewLive();
   }
 
@@ -919,6 +920,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  // the pattern stands still where its phase and the chase put it (see EffectPixel.still)
+  setStill(still: boolean) {
+    this.pixelEffect.still = still === true;
+    this.livePreviewService.previewLive();
+  }
+
   setMirror(mirror: boolean) {
     this.pixelEffect.mirror = mirror;
     this.livePreviewService.previewLive();
@@ -1096,7 +1103,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     fixtureCount: number,
     base: number[]
   ) {
-    const cycles = effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
+    const cycles = effect.still
+      ? effect.getStillCycles(fixture.index, fixtureCount, this.beatsPerMinute)
+      : effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
     const width = fixture.columns * cell;
     const height = fixture.rows * cell;
     const pad = Math.max(1.5, cell * 0.26);
@@ -1163,7 +1172,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     const cell = Math.max(2, Math.min(pictureWidth / first.columns, first.rows > 1 ? pictureHeight / first.rows : height, 16) * 0.8);
 
     for (const part of stage.parts) {
-      const cycles = effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
+      const cycles = effect.still
+        ? effect.getStillCycles(part.index, stage.count, this.beatsPerMinute)
+        : effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
       const [red, green, blue] = this.partColorOf(effect, part.place, cycles, part.index, base, part.white, true).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
@@ -1438,8 +1449,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return this.timelineService.selectedComposition?.beatsPerMinute ?? EffectCurve.defaultBeatsPerMinute;
   }
 
-  private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {
-    const value = this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute);
+  private drawCurrentValue(
+    currMillis: number,
+    radius: number,
+    lineWidth: number,
+    durationMillis: number,
+    maxHeight: number,
+    fanPlace?: number
+  ) {
+    // a fanned curve swings as far as the place of the fixture in the fan says
+    const value = this.curve.getFannedValue(this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute), fanPlace);
 
     if (value === undefined) {
       // the curve has finished running and left the fixtures to the rest of the preset
@@ -1667,12 +1686,34 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.stroke();
 
+    const phasingCount = this.getPhasingCount();
+
+    if (this.curve.isFanned()) {
+      // each fixture swings as far as its place in the fan says (in the order of the preset), shifted by the chase
+      const count = Math.max(Math.min(phasingCount, 24), 1);
+
+      for (let index = count - 1; index >= 0; index--) {
+        const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(index, phasingCount, this.beatsPerMinute);
+        const place = count > 1 ? index / (count - 1) : undefined;
+
+        this.drawCurrentValue(
+          ((phasedMillis % durationMillis) + durationMillis) % durationMillis,
+          index === 0 ? 5 : 3,
+          width,
+          durationMillis,
+          maxHeight,
+          place
+        );
+      }
+
+      return;
+    }
+
     // draw the current value
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
 
     // draw the phasing values (chase), if required. the fixtures of a group run the same
     // step of the chase, so the grid marks each step once, not each fixture of it.
-    const phasingCount = this.getPhasingCount();
     const stepCount = this.curve.getPhasingStepCount(phasingCount);
 
     if (this.curve.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) === 0) {

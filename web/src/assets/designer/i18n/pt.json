@@ -178,7 +178,13 @@
       "steps-order-random": "Aleatória",
       "steps-seed": "Semente da ordem aleatória",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valores só funcionam em: {{models}}"
+      "model-specific": "{{count}} valores só funcionam em: {{models}}",
+      "settings-fan-order": "Leque segundo",
+      "settings-fan-order-preset": "Ordem da predefinição",
+      "settings-fan-order-left-right": "Palco, da esquerda para a direita",
+      "settings-fan-order-front-back": "Palco, da frente para trás",
+      "settings-fan-order-bottom-top": "Palco, de baixo para cima",
+      "settings-fan-order-hint": "A ordem que seguem os leques, os gradientes e os efeitos em leque. No palco, fixtures no mesmo lugar recebem o mesmo valor."
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
@@ -313,7 +319,20 @@
         "polygon": "Polígono",
         "checker": "Xadrez",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Abrir em leque",
+      "fan-hint": "Abre o valor em leque sobre os fixtures da predefinição, na ordem do leque das definições da predefinição",
+      "fan-shape": "Leque",
+      "fan-shape-linear": "Primeiro → último",
+      "fan-shape-center": "Centro → pontas",
+      "fan-linear-from": "Primeiro",
+      "fan-linear-to": "Último",
+      "fan-center-from": "Centro",
+      "fan-center-to": "Pontas",
+      "fan-bars-hint": "O que cada fixture recebe, na ordem do leque",
+      "capability-color-gradient": "Gradiente",
+      "capability-color-gradient-hint": "Estende um gradiente de cores sobre os fixtures da predefinição",
+      "capability-color-gradient-order": "Do primeiro ao último fixture, na ordem do leque das definições da predefinição. Fixtures com roda de cores ficam com a cor mais próxima."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -592,11 +611,14 @@
       "pan-tilt-shape-line": "Linha",
       "pan-tilt-shape-wave": "Onda",
       "pan-tilt-size": "Tamanho",
-      "pan-tilt-fan": "Leque",
-      "pan-tilt-fan-hint": "Move cada cabeça conforme o seu lugar na fila. A partir do centro: a primeira e a última movem-se o tamanho todo, para lados opostos, a do meio fica parada (uma linha abre e fecha o leque). A partir de um lado: a primeira fica parada, a última move-se o tamanho todo.",
-      "pan-tilt-fan-none": "Todas iguais",
-      "pan-tilt-fan-center": "A partir do centro",
-      "pan-tilt-fan-side": "A partir de um lado"
+      "curve-fan": "Leque",
+      "curve-fan-hint": "Quanto o efeito move cada fixture conforme o seu lugar no leque da predefinição. Pontas opostas: o primeiro e o último o máximo, para lados opostos, o do meio fica parado (uma linha abre e fecha um leque). Pontas iguais: o primeiro e o último o máximo, no mesmo sentido. A partir do primeiro: o primeiro fica parado, o último move-se o máximo.",
+      "curve-fan-none": "Todos iguais",
+      "curve-fan-linear": "Pontas opostas",
+      "curve-fan-center": "Pontas iguais",
+      "curve-fan-side": "A partir do primeiro",
+      "pixel-still": "Parado",
+      "pixel-still-hint": "O padrão fica onde a sua fase e o chase o põem, p. ex. um gradiente do fluxo sobre o palco"
     },
     "composition": {
       "new": "Criar nova composição..."

@@ -35,6 +35,19 @@
     ></lib-app-color-picker>
   </div>
 
+  <!-- the order everything fanned out over the fixtures follows: the one of the preset, or where they are on the stage -->
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label" for="fanOrder">{{ 'designer.preset.settings-fan-order' | translate }}</label>
+    <div class="col-lg-7">
+      <select class="form-control" id="fanOrder" name="fanOrder" [ngModel]="fanOrder" (ngModelChange)="fanOrder = $event">
+        @for (order of fanOrders; track order) {
+        <option [value]="order">{{ 'designer.preset.settings-fan-order-' + order | translate }}</option>
+        }
+      </select>
+      <small class="form-text text-muted">{{ 'designer.preset.settings-fan-order-hint' | translate }}</small>
+    </div>
+  </div>
+
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.preset.settings-start' | translate }}</label>
     <div class="col-lg-8 d-flex align-items-center">

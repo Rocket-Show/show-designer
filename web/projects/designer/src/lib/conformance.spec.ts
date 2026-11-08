@@ -105,6 +105,8 @@ function capabilityOf(value: FixtureCapabilityValue): any {
     'slotNumber',
     'valueDegrees',
     'spreadDegrees',
+    'fanShape',
+    'fan',
     'aimX',
     'aimY',
     'aimZ',

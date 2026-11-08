@@ -3,32 +3,33 @@
 import case0 from './cases/channel-values-capabilities.json';
 import case1 from './cases/channel-values-color-dimmers.json';
 import case2 from './cases/channel-values-edges.json';
-import case3 from './cases/channel-values-library.json';
-import case4 from './cases/channel-values-mixing-edges.json';
-import case5 from './cases/channel-values-movements.json';
-import case6 from './cases/channel-values-pixel-audio.json';
-import case7 from './cases/channel-values-pixel-effects.json';
-import case8 from './cases/channel-values-pixel-stage.json';
-import case9 from './cases/channel-values-pixel-white.json';
-import case10 from './cases/channel-values-scenarios.json';
-import case11 from './cases/channel-values-timing.json';
-import case12 from './cases/default-value.json';
-import case13 from './cases/effect-curve-edges.json';
-import case14 from './cases/effect-curve.json';
-import case15 from './cases/hex-color.json';
-import case16 from './cases/migration-edges.json';
-import case17 from './cases/migration.json';
-import case18 from './cases/mix-colors.json';
-import case19 from './cases/pixel-group.json';
-import case20 from './cases/pixel-pattern.json';
-import case21 from './cases/pixels.json';
-import case22 from './cases/preset-intensity-edges.json';
-import case23 from './cases/preset-intensity.json';
-import case24 from './cases/preset-steps-edges.json';
-import case25 from './cases/preset-steps-orders.json';
-import case26 from './cases/preset-steps.json';
-import case27 from './cases/profile-number.json';
-import case28 from './cases/transition-curve.json';
+import case3 from './cases/channel-values-fans.json';
+import case4 from './cases/channel-values-library.json';
+import case5 from './cases/channel-values-mixing-edges.json';
+import case6 from './cases/channel-values-movements.json';
+import case7 from './cases/channel-values-pixel-audio.json';
+import case8 from './cases/channel-values-pixel-effects.json';
+import case9 from './cases/channel-values-pixel-stage.json';
+import case10 from './cases/channel-values-pixel-white.json';
+import case11 from './cases/channel-values-scenarios.json';
+import case12 from './cases/channel-values-timing.json';
+import case13 from './cases/default-value.json';
+import case14 from './cases/effect-curve-edges.json';
+import case15 from './cases/effect-curve.json';
+import case16 from './cases/hex-color.json';
+import case17 from './cases/migration-edges.json';
+import case18 from './cases/migration.json';
+import case19 from './cases/mix-colors.json';
+import case20 from './cases/pixel-group.json';
+import case21 from './cases/pixel-pattern.json';
+import case22 from './cases/pixels.json';
+import case23 from './cases/preset-intensity-edges.json';
+import case24 from './cases/preset-intensity.json';
+import case25 from './cases/preset-steps-edges.json';
+import case26 from './cases/preset-steps-orders.json';
+import case27 from './cases/preset-steps.json';
+import case28 from './cases/profile-number.json';
+import case29 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -60,32 +61,33 @@ export const caseFiles: { [fileName: string]: any } = {
   'channel-values-capabilities.json': case0,
   'channel-values-color-dimmers.json': case1,
   'channel-values-edges.json': case2,
-  'channel-values-library.json': case3,
-  'channel-values-mixing-edges.json': case4,
-  'channel-values-movements.json': case5,
-  'channel-values-pixel-audio.json': case6,
-  'channel-values-pixel-effects.json': case7,
-  'channel-values-pixel-stage.json': case8,
-  'channel-values-pixel-white.json': case9,
-  'channel-values-scenarios.json': case10,
-  'channel-values-timing.json': case11,
-  'default-value.json': case12,
-  'effect-curve-edges.json': case13,
-  'effect-curve.json': case14,
-  'hex-color.json': case15,
-  'migration-edges.json': case16,
-  'migration.json': case17,
-  'mix-colors.json': case18,
-  'pixel-group.json': case19,
-  'pixel-pattern.json': case20,
-  'pixels.json': case21,
-  'preset-intensity-edges.json': case22,
-  'preset-intensity.json': case23,
-  'preset-steps-edges.json': case24,
-  'preset-steps-orders.json': case25,
-  'preset-steps.json': case26,
-  'profile-number.json': case27,
-  'transition-curve.json': case28,
+  'channel-values-fans.json': case3,
+  'channel-values-library.json': case4,
+  'channel-values-mixing-edges.json': case5,
+  'channel-values-movements.json': case6,
+  'channel-values-pixel-audio.json': case7,
+  'channel-values-pixel-effects.json': case8,
+  'channel-values-pixel-stage.json': case9,
+  'channel-values-pixel-white.json': case10,
+  'channel-values-scenarios.json': case11,
+  'channel-values-timing.json': case12,
+  'default-value.json': case13,
+  'effect-curve-edges.json': case14,
+  'effect-curve.json': case15,
+  'hex-color.json': case16,
+  'migration-edges.json': case17,
+  'migration.json': case18,
+  'mix-colors.json': case19,
+  'pixel-group.json': case20,
+  'pixel-pattern.json': case21,
+  'pixels.json': case22,
+  'preset-intensity-edges.json': case23,
+  'preset-intensity.json': case24,
+  'preset-steps-edges.json': case25,
+  'preset-steps-orders.json': case26,
+  'preset-steps.json': case27,
+  'profile-number.json': case28,
+  'transition-curve.json': case29,
 };
 
 export const profiles: { [name: string]: any } = {

@@ -211,4 +211,20 @@ describe('PresetSettingsComponent', () => {
     expect(presetsChanged).not.toHaveBeenCalled();
     expect(modalRef.hide).toHaveBeenCalled();
   });
+
+  it('sets the order everything fanned out over the fixtures follows', async () => {
+    await fixture.whenStable();
+    const order = element.querySelector('select#fanOrder') as HTMLSelectElement;
+    expect(order.value).toBe('preset');
+    expect(Array.from(order.options).map((option) => option.value)).toEqual(['preset', 'left-right', 'front-back', 'bottom-top']);
+
+    order.value = 'left-right';
+    order.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    // nothing changes until the dialog is confirmed
+    expect(preset.fanOrder).toBe('preset');
+    fixture.componentInstance.ok();
+    expect(preset.fanOrder).toBe('left-right');
+  });
 });
