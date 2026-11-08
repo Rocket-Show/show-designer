@@ -230,4 +230,37 @@ describe('FixtureCapabilityPositionComponent', () => {
     component.changeActive(false);
     expect(step.fixtureCapabilityValues.map((value) => value.blade)).toEqual(['Top']);
   });
+
+  it('flashes the strobe in an effect, keeping it at another speed', async () => {
+    await render(FixtureCapabilityType.ShutterStrobe);
+
+    const effect = element.querySelector('select[name="strobeEffect"]') as HTMLSelectElement;
+    expect(effect.value).toBe('Strobe');
+    expect(Array.from(effect.options).map((option) => option.value)).toContain('Lightning');
+
+    // switched on in the middle of its speed, in the effect picked
+    effect.value = 'Pulse';
+    effect.dispatchEvent(new Event('change'));
+    await update();
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.ShutterStrobe).shutterEffect).toBe('Pulse');
+    expect(valueOf(FixtureCapabilityType.ShutterStrobe)).toBe(0.5);
+    expect(valueOf(FixtureCapabilityType.StrobeSpeed)).toBe(0.5);
+
+    // faster, still pulsing
+    type('80');
+    await update();
+    expect(valueOf(FixtureCapabilityType.ShutterStrobe)).toBe(0.8);
+    expect(component.getStrobeEffect()).toBe('Pulse');
+
+    // a plain strobe again says no effect
+    component.setStrobeEffect('Strobe');
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.ShutterStrobe).shutterEffect).toBeUndefined();
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('offers no effect on anything but the strobe', async () => {
+    await render(FixtureCapabilityType.Zoom);
+
+    expect(element.querySelector('select[name="strobeEffect"]')).toBeNull();
+  });
 });

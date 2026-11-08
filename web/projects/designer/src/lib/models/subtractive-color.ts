@@ -1,6 +1,7 @@
 import { CachedFixtureChannel } from './cached-fixture-channel';
 import { FixtureCapabilityColor, FixtureCapabilityType } from './fixture-capability';
 import { FixtureCapabilityValue } from './fixture-capability-value';
+import { getEmitterValues } from './emitter-color';
 
 // the filter taking away each of the colors a fixture lights with (red, green and blue)
 const filters = new Map<FixtureCapabilityColor, FixtureCapabilityColor>([
@@ -31,10 +32,15 @@ export function mixesSubtractively(channels: CachedFixtureChannel[]): boolean {
 // red, green and blue of a preset as the filters taking away what it doesn't light (full red is no cyan, full magenta
 // and full yellow), so a preset lights it in its colors as well. Rocket Show plays them the very same way
 // (SubtractiveColors).
+// The colors play on the emitters besides red, green and blue first (see emitter-color): the white part of them on the
+// white LEDs, if the preset asks for it, and the color temperature on a warm and a cold white.
 export function getFixtureCapabilityValues(
-  capabilityValues: FixtureCapabilityValue[],
-  channels: CachedFixtureChannel[]
+  values: FixtureCapabilityValue[],
+  channels: CachedFixtureChannel[],
+  emittersFromColor = false
 ): FixtureCapabilityValue[] {
+  const capabilityValues = getEmitterValues(values, channels, emittersFromColor);
+
   if (!mixesSubtractively(channels)) {
     return capabilityValues;
   }

@@ -34,9 +34,37 @@
 
   <div class="card-body h-100">
     <div id="color-picker-container" [hidden]="gradient"></div>
-    @if (gradient) {
+    <!-- the white part of the colors on the white LEDs of the fixtures having them (belongs to the whole preset) -->
+    @if (hasWhite()) {
+    <div class="form-check mt-2" [title]="'designer.fixture.capability-color-white-hint' | translate">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        id="capabilityColorWhite"
+        name="emittersFromColor"
+        [ngModel]="getEmittersFromColor()"
+        (ngModelChange)="setEmittersFromColor($event)"
+      />
+      <label class="form-check-label" for="capabilityColorWhite">{{ 'designer.fixture.capability-color-white' | translate }}</label>
+    </div>
+    } @if (gradient) {
     <div class="color-gradient">
       <lib-app-gradient-editor [stops]="gradientStops" (stopsChange)="setGradient($event)"></lib-app-gradient-editor>
+      <!-- blended from one color to the next, or each fixture in one of the colors -->
+      <div class="btn-group btn-group-sm mt-2 gradient-between" role="group">
+        @for (between of ['smooth', 'steps']; track between) {
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [attr.name]="'gradient-' + between"
+          [class.active]="getGradientBetween() === between"
+          [attr.aria-pressed]="getGradientBetween() === between"
+          (click)="setGradientBetween(between)"
+        >
+          {{ 'designer.fixture.capability-color-gradient-' + between | translate }}
+        </button>
+        }
+      </div>
       <div class="color-gradient-hint text-muted mt-2">{{ 'designer.fixture.capability-color-gradient-order' | translate }}</div>
     </div>
     }

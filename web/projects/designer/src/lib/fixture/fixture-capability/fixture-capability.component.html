@@ -56,10 +56,26 @@
         <lib-app-fixture-capability-position [type]="panel.type" [blade]="panel.blade"></lib-app-fixture-capability-position>
       </div>
       }
-      <!-- Gobo wheels -->
+      <!-- A gobo for the gobo wheels of all models at once -->
+      @if (multiModelGoboWheels.length > 0) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-gobos [wheels]="multiModelGoboWheels"></lib-app-fixture-capability-gobos>
+      </div>
+      }
+      <!-- Gobo, prism, frost and animation wheels -->
       @for (entry of goboWheelChannels; track $index) {
       <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
-        <lib-app-fixture-capability-gobo-wheel [profile]="entry.profile" [channel]="entry.channel"></lib-app-fixture-capability-gobo-wheel>
+        <lib-app-fixture-capability-gobo-wheel
+          [profile]="entry.profile"
+          [channel]="entry.channel"
+          [fixtureChannels]="entry.fixtureChannels"
+        ></lib-app-fixture-capability-gobo-wheel>
+      </div>
+      }
+      <!-- The programs of the fixtures, and asking them to reset or to switch their lamp -->
+      @for (kind of commandKinds; track kind) {
+      <div class="col col-auto p-0 my-3 mr-3" style="height: calc(100% - 2rem)">
+        <lib-app-fixture-capability-command [kind]="kind"></lib-app-fixture-capability-command>
       </div>
       }
       <!-- Fix spacing at the end -->

@@ -275,6 +275,16 @@ describe('FixtureCapabilityColorComponent', () => {
       [1, 0],
     ]);
 
+    // in steps: each fixture in one of the colors
+    (element.querySelector('button[name="gradient-steps"]') as HTMLButtonElement).click();
+    await update();
+    expect(component.getGradientBetween()).toBe('steps');
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Blue).fanBetween).toBe(
+      'steps'
+    );
+    component.setGradientBetween('smooth');
+    expect(component.getGradientBetween()).toBe('smooth');
+
     // the gradient is read back from the step
     await render();
     expect(component.gradient).toBe(true);
@@ -286,5 +296,22 @@ describe('FixtureCapabilityColorComponent', () => {
     expect(component.gradient).toBe(false);
     expect(rgb(step)).toEqual([0, 1, 0]);
     expect(presetService.getCapabilityFan(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red)).toBeUndefined();
+  });
+
+  it('lights the white LEDs with the white part of the colors, for the whole preset', async () => {
+    await render();
+
+    // a preset without a fixture with white LEDs doesn't offer it
+    expect(element.querySelector('input[name="emittersFromColor"]')).toBeNull();
+
+    spyOn(presetService, 'hasCapabilityType').and.returnValue(true);
+    await update();
+    const white = element.querySelector('input[name="emittersFromColor"]') as HTMLInputElement;
+    expect(white.checked).toBe(false);
+
+    white.click();
+    await update();
+    expect(preset.emittersFromColor).toBe(true);
+    expect(component.getEmittersFromColor()).toBe(true);
   });
 });

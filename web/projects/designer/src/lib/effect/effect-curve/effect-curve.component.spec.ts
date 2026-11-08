@@ -706,6 +706,21 @@ describe('EffectCurveComponent', () => {
     expect(element.querySelector('select[name="fanMode"]')).toBeNull();
   });
 
+  it('turns the heads by the same degrees on every model, for a curve on the pan or the tilt', async () => {
+    curve = new EffectCurve();
+    await render();
+    expect(element.querySelector('input[name="panTiltInDegrees"]')).toBeNull();
+
+    curve.capabilities = [new FixtureCapability({ type: FixtureCapabilityType.Pan })];
+    await render();
+    const degrees = element.querySelector('input[name="panTiltInDegrees"]') as HTMLInputElement;
+    expect(degrees.checked).toBe(false);
+
+    degrees.click();
+    await update();
+    expect(curve.panTiltInDegrees).toBe(true);
+  });
+
   it('stands a pattern of a pixel effect still', async () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;
@@ -1271,16 +1286,22 @@ describe('EffectCurveComponent', () => {
   it('offers the capabilities of the fixtures of the preset', async () => {
     await render();
 
+    // the dimmer, the colors and the strobe of the par, which play the same on every model
     expect(labels(0)).toEqual([
       intensity,
       red,
       'designer.fixtureCapabilityType.ColorIntensity, designer.fixtureCapabilityColor.Green',
       'designer.fixtureCapabilityType.ColorIntensity, designer.fixtureCapabilityColor.Blue',
+      'designer.fixtureCapabilityType.ShutterStrobe',
     ]);
 
     await addMovingHead();
 
-    expect(labels(0).slice(4)).toEqual(['designer.fixtureCapabilityType.Pan', 'designer.fixtureCapabilityType.Tilt']);
+    expect(labels(0).slice(4)).toEqual([
+      'designer.fixtureCapabilityType.Pan',
+      'designer.fixtureCapabilityType.Tilt',
+      'designer.fixtureCapabilityType.ShutterStrobe',
+    ]);
   });
 
   it('offers nothing to drive while no preset is being edited', async () => {
@@ -1298,7 +1319,8 @@ describe('EffectCurveComponent', () => {
     // the fixtures of the preset change before the curve is handed over
     presetService.fixtureSelectionChanged.next();
 
-    expect(component.capabilityOptions.length).toBe(4);
+    // the dimmer, the colors and the strobe of the par
+    expect(component.capabilityOptions.length).toBe(5);
     expect(component.capabilityOptions.some((option) => option.checked)).toBe(false);
     expect(component.channelOptions.length).toBe(5);
     expect(component.channelOptions.some((option) => option.checked)).toBe(false);
@@ -1308,7 +1330,7 @@ describe('EffectCurveComponent', () => {
     curve.capabilities = [new FixtureCapability({ type: FixtureCapabilityType.ColorIntensity, color: FixtureCapabilityColor.Red })];
     await render();
 
-    expect(checkboxes(0).map((checkbox) => checkbox.checked)).toEqual([false, true, false, false]);
+    expect(checkboxes(0).map((checkbox) => checkbox.checked)).toEqual([false, true, false, false, false]);
   });
 
   it('drives a capability checked, and stops driving it once unchecked', async () => {
@@ -1653,6 +1675,6 @@ describe('EffectCurveComponent', () => {
     presetService.selectedPreset.fixtures.push(new PresetFixture({ fixtureUuid: 'head' }));
     presetService.fixtureSelectionChanged.next();
 
-    expect(component.capabilityOptions.length).toBe(4);
+    expect(component.capabilityOptions.length).toBe(5);
   });
 });

@@ -3676,6 +3676,423 @@ function channelValuesFans() {
   );
 }
 
+// ---- attributes: strobe effects, white and color temperature on the emitters, curves, fine channels ----
+
+// The effects a strobe flashes in, each on a strobe having it and on one falling back to the closest one it has (a par
+// with a regular strobe only); white from the colors and the color temperature on the emitters of a fixture; curves on
+// the dimmer within its range, on emitters, positions and the pan and the tilt in degrees; a channel of 16 bits whose
+// profile writes its values in 8 bits
+function channelValuesAttributes() {
+  const cases = [];
+  const effectsStrobe = 'test/effects-strobe';
+  const strobePar = 'test/strobe-par';
+  const bicolor = 'test/bicolor';
+  const fineDimmer = 'test/fine-dimmer';
+  const sharedDimmer = 'test/shared-dimmer';
+  const beam = 'test/beam';
+  const wideMover = 'test/wide-mover';
+  const movingHead = 'test/moving-head';
+
+  // strobe effects
+  const strobes = [edgeFixture('effects', effectsStrobe, '2ch', 0), edgeFixture('par', strobePar, '8ch', 1)];
+  const strobeFixtures = strobes.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const effects = [
+    'Strobe',
+    'Random',
+    'Pulse',
+    'RampUp',
+    'RampDown',
+    'RampUpDown',
+    'Lightning',
+    'Spikes',
+    'Burst',
+    'Sound',
+    'Closed',
+    'Unknown',
+  ];
+  const strobePresets = effects.map((shutterEffect) =>
+    edgePreset('strobe-' + shutterEffect, strobeFixtures, {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        capability('ShutterStrobe', 0.25, shutterEffect === 'Strobe' ? {} : { shutterEffect }),
+        capability('StrobeSpeed', 0.25),
+      ],
+    })
+  );
+  // an effect asked for with the strobe at 0: the shutter open
+  strobePresets.push(
+    edgePreset('strobe-open', strobeFixtures, {
+      fixtureCapabilityValues: [capability('Intensity', 1), capability('ShutterStrobe', 0, { shutterEffect: 'Pulse' })],
+    })
+  );
+
+  cases.push({
+    name: 'strobes flashing in an effect, or in the closest one a fixture has',
+    input: {
+      project: edgeProject(
+        [effectsStrobe, strobePar],
+        strobes,
+        strobePresets,
+        strobePresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: strobePresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // white from the colors and the color temperature on a warm and a cold white
+  const washes = [
+    edgeFixture('rgbw', strobePar, '8ch', 0),
+    edgeFixture('bicolor', bicolor, '3ch', 1),
+    edgeFixture('beam', beam, '11ch', 2),
+  ];
+  const washFixtures = washes.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const whitePresets = [
+    {
+      ...edgePreset('white', washFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.6, 0.4)] }),
+      emittersFromColor: true,
+    },
+    edgePreset('no-white', washFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.6, 0.4)] }),
+    // the white set by the step itself wins
+    {
+      ...edgePreset('own-white', washFixtures, {
+        fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.6, 0.4), capability('ColorIntensity', 0.1, { color: 'White' })],
+      }),
+      emittersFromColor: true,
+    },
+    ...[0, 0.25, 0.5, 1].map((temperature) =>
+      edgePreset('temperature-' + temperature, washFixtures, {
+        fixtureCapabilityValues: [capability('Intensity', 1), capability('ColorTemperature', temperature)],
+      })
+    ),
+    // a warm white set by the step itself wins over the temperature
+    edgePreset('own-warm', washFixtures, {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        capability('ColorTemperature', 1),
+        capability('ColorIntensity', 0.3, { color: 'Warm White' }),
+      ],
+    }),
+  ];
+
+  cases.push({
+    name: 'white from the colors on the white LEDs and the color temperature on a warm and a cold white',
+    input: {
+      project: edgeProject(
+        [strobePar, bicolor, beam],
+        washes,
+        whitePresets,
+        whitePresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: whitePresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // curves on the dimmer within the range giving the brightness, on an emitter, a zoom, a strobe, the color
+  // temperature, and on the pan and the tilt in degrees (mirrored as well) and as a share of the range of a head
+  const curved = [
+    edgeFixture('shared', sharedDimmer, '10ch', 0),
+    edgeFixture('par', strobePar, '8ch', 1),
+    edgeFixture('beam', beam, '11ch', 2),
+    edgeFixture('wide', wideMover, '5ch', 3),
+    edgeFixture('head', movingHead, '6ch', 4),
+    edgeFixture('fine', fineDimmer, '4ch', 5),
+  ];
+  const curvedFixtures = curved.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const curve = (uuid, capabilities, extra = {}) => ({
+    type: 'curve',
+    uuid,
+    curveType: 'sine',
+    lengthMillis: 2000,
+    position: 0.5,
+    amplitude: 1,
+    capabilities,
+    channels: [],
+    ...extra,
+  });
+  const curvePresets = [
+    { ...edgePreset('dimmer-curve', curvedFixtures, {}), effects: [curve('dimmer', [{ type: 'Intensity' }])] },
+    {
+      ...edgePreset('emitter-curve', curvedFixtures, { fixtureCapabilityValues: [capability('Intensity', 1)] }),
+      effects: [
+        curve('white', [
+          { type: 'ColorIntensity', color: 'White' },
+          { type: 'ColorIntensity', color: 'UV' },
+        ]),
+      ],
+    },
+    {
+      ...edgePreset('position-curves', curvedFixtures, { fixtureCapabilityValues: [capability('Intensity', 1)] }),
+      effects: [curve('positions', [{ type: 'Zoom' }, { type: 'ShutterStrobe' }, { type: 'ColorTemperature' }, { type: 'Focus' }])],
+    },
+    {
+      ...edgePreset('pan-degrees', curvedFixtures, {}),
+      effects: [curve('degrees', [{ type: 'Pan' }, { type: 'Tilt' }], { panTiltInDegrees: true, amplitude: 0.4 })],
+    },
+    {
+      ...edgePreset('pan-degrees-mirrored', curvedFixtures, {}),
+      effects: [curve('degrees', [{ type: 'Pan' }, { type: 'Tilt' }], { panTiltInDegrees: true, amplitude: 0.4 })],
+      mirrorPan: true,
+    },
+    { ...edgePreset('pan-share', curvedFixtures, {}), effects: [curve('share', [{ type: 'Pan' }, { type: 'Tilt' }], { amplitude: 0.4 })] },
+  ];
+  const curveScenes = curvePresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }));
+
+  cases.push({
+    name: 'curves on the dimmer within its range, on emitters, positions and the pan and the tilt in degrees',
+    input: {
+      project: edgeProject([sharedDimmer, strobePar, beam, wideMover, movingHead, fineDimmer], curved, curvePresets, curveScenes),
+      runs: curveScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 250, 500, 1000, 1500] })),
+    },
+  });
+
+  // a channel of 16 bits written in 8 bits: its default value, its ranges of brightness and of the strobe, with and
+  // without its fine channel; next to a zoom of 16 bits written in 16 bits
+  const fine = [edgeFixture('fine-4ch', fineDimmer, '4ch', 0), edgeFixture('fine-2ch', fineDimmer, '2ch', 1)];
+  const fineFixtures = fine.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const finePresets = [
+    edgePreset('fine-dimmer', fineFixtures, { fixtureCapabilityValues: [capability('Intensity', 0.5)] }),
+    edgePreset('fine-full', fineFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), capability('Zoom', 0.25)] }),
+    edgePreset('fine-strobe', fineFixtures, { fixtureCapabilityValues: [capability('ShutterStrobe', 0.5)] }),
+  ];
+
+  cases.push({
+    name: 'a channel of 16 bits whose profile writes its values in 8 bits',
+    input: {
+      project: edgeProject(
+        [fineDimmer],
+        fine,
+        finePresets,
+        finePresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: [{ preview: { mode: 'scenes', scenes: [] }, times: [0] }, ...finePresets.flatMap((preset) => previewScenes([preset.uuid]))],
+    },
+  });
+
+  return write(
+    'channel-values-attributes.json',
+    'channelValues',
+    'Strobes flashing in effects, white and color temperature on the emitters, curves on any capability within its ranges, and channels of 16 bits written in 8 bits',
+    cases
+  );
+}
+
+// ---- patterns, gobo wheels turning, programs, maintenance and the emitters of a show ---------
+
+// Fans and chases following the pattern of the preset (groups, wings, every so many), a gradient in steps; the gobo
+// wheels of a spot turning on their own (and to an angle) next to a rotation of all of them; its programs by their
+// number, to the sound and at a speed; resetting it and switching its lamp on and off from a preset; white and amber
+// from the colors and the color temperature as a color
+function channelValuesShow() {
+  const cases = [];
+  const rgbPar = 'test/rgb-par';
+  const strobePar = 'test/strobe-par';
+  const programSpot = 'test/program-spot';
+  const wideMover = 'test/wide-mover';
+  const fan = (type, stops, extra = {}) => ({
+    type,
+    valuePercentage: stops[0][1],
+    fan: stops.map(([position, valuePercentage]) => ({ position, valuePercentage })),
+    ...extra,
+  });
+
+  // patterns
+  const pars = [0, 1, 2, 3, 4, 5].map((index) => edgeFixture('par-' + index, rgbPar, '6ch', index));
+  const parFixtures = pars.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const dimmerFan = fan('Intensity', [
+    [0, 0],
+    [1, 1],
+  ]);
+  const twoColors = (between) => [
+    fan(
+      'ColorIntensity',
+      [
+        [0, 1],
+        [1, 0],
+      ],
+      { color: 'Red', fanBetween: between }
+    ),
+    fan(
+      'ColorIntensity',
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      { color: 'Green', fanBetween: between }
+    ),
+    fan(
+      'ColorIntensity',
+      [
+        [0, 0],
+        [1, 1],
+      ],
+      { color: 'Blue', fanBetween: between }
+    ),
+  ];
+  const chase = {
+    type: 'curve',
+    uuid: 'chase',
+    curveType: 'sine',
+    lengthMillis: 2000,
+    position: 0.5,
+    amplitude: 1,
+    phasingMode: 'spread',
+    phasingCycles: 1,
+    capabilities: [{ type: 'ColorIntensity', color: 'Green' }],
+    channels: [],
+  };
+  const patternPresets = [
+    { ...edgePreset('wings', parFixtures, { fixtureCapabilityValues: [dimmerFan] }), patternWings: 2 },
+    { ...edgePreset('groups', parFixtures, { fixtureCapabilityValues: [dimmerFan] }), patternGroupSize: 2 },
+    {
+      ...edgePreset('every-other', parFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), ...twoColors('steps')] }),
+      patternEvery: 2,
+    },
+    edgePreset('steps', parFixtures, {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        fan(
+          'ColorIntensity',
+          [
+            [0, 1],
+            [0.5, 0],
+            [1, 0],
+          ],
+          { color: 'Red', fanBetween: 'steps' }
+        ),
+        fan(
+          'ColorIntensity',
+          [
+            [0, 0],
+            [0.5, 1],
+            [1, 0],
+          ],
+          { color: 'Green', fanBetween: 'steps' }
+        ),
+        fan(
+          'ColorIntensity',
+          [
+            [0, 0],
+            [0.5, 0],
+            [1, 1],
+          ],
+          { color: 'Blue', fanBetween: 'steps' }
+        ),
+      ],
+    }),
+    {
+      ...edgePreset('chase-wings', parFixtures, { fixtureCapabilityValues: [capability('Intensity', 1)] }),
+      effects: [chase],
+      patternWings: 2,
+      patternGroupSize: 2,
+    },
+    { ...edgePreset('all', parFixtures, { fixtureCapabilityValues: [dimmerFan] }), patternGroupSize: 3, patternWings: 2, patternEvery: 2 },
+  ];
+
+  cases.push({
+    name: 'fans and chases following the pattern of the preset, and a gradient in steps',
+    input: {
+      project: edgeProject(
+        [rgbPar],
+        pars,
+        patternPresets,
+        patternPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: patternPresets.map((preset) => ({ preview: { mode: 'scenes', scenes: [preset.uuid] }, times: [0, 500, 1250] })),
+    },
+  });
+
+  // the gobo wheels turning, the programs and the maintenance of a spot (next to a moving head with a reset and a lamp)
+  const spots = [edgeFixture('spot', programSpot, '9ch', 0), edgeFixture('mover', wideMover, '5ch', 1)];
+  const spotFixtures = spots.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const rotation = (extra) => ({ type: 'WheelSlotRotation', ...extra });
+  const program = (programNumber, extra = {}) => ({ type: 'Effect', valuePercentage: 0.25, programNumber, ...extra });
+  const spotPresets = [
+    edgePreset('turning', spotFixtures, {
+      fixtureCapabilityValues: [
+        rotation({ valuePercentage: 0.2 }),
+        rotation({ valuePercentage: 0.9, wheel: 'Gobo Wheel 1', profileUuid: programSpot }),
+        rotation({ valueDegrees: 90, wheel: 'Gobo Wheel 2', profileUuid: programSpot }),
+      ],
+    }),
+    edgePreset('indexed', spotFixtures, {
+      fixtureCapabilityValues: [
+        rotation({ valueDegrees: 270, wheel: 'Gobo Wheel 1', profileUuid: programSpot }),
+        rotation({ valueDegrees: 400, wheel: 'Gobo Wheel 2', profileUuid: programSpot }),
+      ],
+    }),
+    ...[0, 1, 2, 3, 4].map((number) =>
+      edgePreset('program-' + number, spotFixtures, { fixtureCapabilityValues: [program(number), capability('EffectSpeed', 0.75)] })
+    ),
+    edgePreset('program-sound', spotFixtures, { fixtureCapabilityValues: [program(1, { soundControlled: true })] }),
+    ...['reset', 'lamp-on', 'lamp-off', 'unknown'].map((maintenanceAction) =>
+      edgePreset('maintenance-' + maintenanceAction, spotFixtures, {
+        fixtureCapabilityValues: [{ type: 'Maintenance', valuePercentage: 1, maintenanceAction }],
+      })
+    ),
+  ];
+
+  cases.push({
+    name: 'gobo wheels turning on their own and to an angle, programs and maintenance of a show',
+    input: {
+      project: edgeProject(
+        [programSpot, wideMover],
+        spots,
+        spotPresets,
+        spotPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: spotPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  // white and amber from the colors, the color temperature as a color
+  const washes = [edgeFixture('rgbwa', strobePar, '8ch', 0), edgeFixture('rgb', rgbPar, '6ch', 1)];
+  const washFixtures = washes.map((fixture) => ({ fixtureUuid: fixture.uuid }));
+  const emitterPresets = [
+    {
+      ...edgePreset('orange', washFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.6, 0.2)] }),
+      emittersFromColor: true,
+    },
+    {
+      ...edgePreset('amber', washFixtures, { fixtureCapabilityValues: [capability('Intensity', 1), ...rgb(1, 0.75, 0)] }),
+      emittersFromColor: true,
+    },
+    ...[0, 0.25, 0.5, 0.75, 1].map((temperature) => ({
+      ...edgePreset('temperature-' + temperature, washFixtures, {
+        fixtureCapabilityValues: [capability('Intensity', 1), capability('ColorTemperature', temperature)],
+      }),
+      emittersFromColor: true,
+    })),
+    // a color of the step itself wins over the temperature
+    edgePreset('own-color', washFixtures, {
+      fixtureCapabilityValues: [
+        capability('Intensity', 1),
+        capability('ColorTemperature', 0),
+        capability('ColorIntensity', 0.5, { color: 'Blue' }),
+      ],
+    }),
+  ];
+
+  cases.push({
+    name: 'white and amber from the colors, and the color temperature as a color',
+    input: {
+      project: edgeProject(
+        [strobePar, rgbPar],
+        washes,
+        emitterPresets,
+        emitterPresets.map((preset) => ({ uuid: preset.uuid, name: preset.uuid, presetUuids: [preset.uuid] }))
+      ),
+      runs: emitterPresets.flatMap((preset) => previewScenes([preset.uuid])),
+    },
+  });
+
+  return write(
+    'channel-values-show.json',
+    'channelValues',
+    'Patterns of fans and chases, gradients in steps, gobo wheels turning on their own, programs, maintenance, white and amber from the colors and the color temperature as a color',
+    cases
+  );
+}
+
 export function generate() {
   return [
     transitionCurves(),
@@ -3702,6 +4119,8 @@ export function generate() {
     channelValuesPixelAudio(),
     channelValuesPixelWhite(),
     channelValuesFans(),
+    channelValuesAttributes(),
+    channelValuesShow(),
   ];
 }
 

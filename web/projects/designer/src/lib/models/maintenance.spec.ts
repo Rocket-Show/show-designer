@@ -44,4 +44,21 @@ describe('maintenance', () => {
     expect(getMaintenanceHoldMillis(getMaintenanceCapability(channels, 'reset').capability)).toBe(500);
     expect(getMaintenanceHoldMillis(channels[1].capabilities[1])).toBe(0);
   });
+
+  it('should switch the lamp off, and find nothing for an action it does not know', () => {
+    const lamp = channelsOf({
+      Control: {
+        capabilities: [
+          { dmxRange: [0, 9], type: 'NoFunction' },
+          { dmxRange: [10, 19], type: 'Maintenance', comment: 'Lamp on' },
+          { dmxRange: [20, 29], type: 'Maintenance', comment: 'Lamp off' },
+          { dmxRange: [30, 39], type: 'Maintenance', comment: 'Lamp off and reset' },
+        ],
+      },
+    });
+
+    expect(getMaintenanceCapability(lamp, 'lamp-off').capability.capability.dmxRange).toEqual([20, 29]);
+    expect(getMaintenanceCapability(lamp, 'lamp-on').capability.capability.dmxRange).toEqual([10, 19]);
+    expect(getMaintenanceCapability(lamp, 'unknown' as any)).toBeUndefined();
+  });
 });

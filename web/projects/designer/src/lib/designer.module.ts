@@ -29,6 +29,8 @@ import { FixtureCapabilityDimmerComponent } from './fixture/fixture-capability/f
 import { FixtureCapabilityPanTiltComponent } from './fixture/fixture-capability/fixture-capability-pan-tilt/fixture-capability-pan-tilt.component';
 import { FixtureCapabilityPositionComponent } from './fixture/fixture-capability/fixture-capability-position/fixture-capability-position.component';
 import { FixtureCapabilityFanComponent } from './fixture/fixture-capability/fixture-capability-fan/fixture-capability-fan.component';
+import { FixtureCapabilityGobosComponent } from './fixture/fixture-capability/fixture-capability-gobos/fixture-capability-gobos.component';
+import { FixtureCapabilityCommandComponent } from './fixture/fixture-capability/fixture-capability-command/fixture-capability-command.component';
 import { FixtureCapabilityGoboWheelComponent } from './fixture/fixture-capability/fixture-capability-gobo-wheel/fixture-capability-gobo-wheel.component';
 import { FixtureCapabilityComponent } from './fixture/fixture-capability/fixture-capability.component';
 import { FixtureChannelComponent } from './fixture/fixture-channel/fixture-channel.component';
@@ -100,6 +102,8 @@ import { keepSliderValues } from './slider-value';
     FixtureCapabilityPanTiltComponent,
     FixtureCapabilityPositionComponent,
     FixtureCapabilityFanComponent,
+    FixtureCapabilityGobosComponent,
+    FixtureCapabilityCommandComponent,
     FixtureCapabilityGoboWheelComponent,
     FixtureCapabilityChannelComponent,
     FixtureChannelComponent,

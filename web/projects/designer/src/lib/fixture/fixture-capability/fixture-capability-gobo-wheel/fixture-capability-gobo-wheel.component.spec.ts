@@ -1,3 +1,5 @@
+import { FixturePixelGroupResolveService } from '../../../services/fixture-pixel-group-resolve.service';
+import { FixtureProfile } from '../../../models/fixture-profile';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -257,5 +259,54 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
       expect(component.getPatternName('breakup-32')).toBe('designer.fixture.gobo-family.breakup 2');
       expect(component.getPatternName('unknown')).toBe('');
     });
+  });
+
+  it('turns the gobos of its own wheel at a speed or to an angle, leaving a rotation of all wheels alone', async () => {
+    // no channel turning the wheel: nothing to turn
+    expect(component.canRotate()).toBe(false);
+
+    const rotation = new FixtureService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      new FixturePixelGroupResolveService()
+    ).getCachedChannels(
+      new FixtureProfile({
+        uuid: 'spot',
+        availableChannels: {
+          Rotation: {
+            capabilities: [
+              { dmxRange: [0, 127], type: 'WheelSlotRotation', wheel: 'Gobo Wheel', speedStart: 'slow CW', speedEnd: 'fast CW' },
+              { dmxRange: [128, 255], type: 'WheelSlotRotation', wheel: 'Gobo Wheel', angleStart: '0deg', angleEnd: '360deg' },
+            ],
+          },
+        },
+        modes: [{ name: 'Mode', shortName: 'mode', channels: ['Rotation'] }],
+      }),
+      new FixtureProfile({ modes: [{ name: 'Mode', shortName: 'mode', channels: ['Rotation'] }] }).modes[0],
+      null
+    );
+    fixture.componentRef.setInput('fixtureChannels', [...spot.channels, ...rotation]);
+    await update();
+    expect(component.canRotate()).toBe(true);
+    expect(component.canIndex()).toBe(true);
+    expect(component.getRotation()).toBe(0.5);
+
+    // a rotation of all wheels, which this one leaves alone
+    presetService.setCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, 0.1);
+
+    component.setRotation(0.8);
+    component.setAngle(90);
+    const own = presetService.getExactCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, 'Gobo Wheel', 'spot');
+    expect(own.valueDegrees).toBe(90);
+    expect(own.valuePercentage).toBeUndefined();
+    expect(component.getAngle()).toBe(90);
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation).valuePercentage).toBe(0.1);
+
+    component.stopRotation();
+    expect(component.isRotating()).toBe(false);
+    expect(step.fixtureCapabilityValues.length).toBe(1);
   });
 });

@@ -80,12 +80,18 @@ export function isFanned(value: FixtureCapabilityValue): boolean {
   return !!value && Array.isArray(value.fan) && value.fan.length > 0;
 }
 
-// The value of a fan at a place along it: the one of a stop right there, in between the stops around it, the first and
+// The value of a fan at a place along it ('steps' between them: the stop of the share of the fan the place is in): the
+// one of a stop right there, in between the stops around it, the first and
 // the last one beyond them. Of two stops at the same place (a hard edge), the first one is taken right there. A fixture
 // which can't be told apart from the others is in the middle.
-export function getFanValue(stops: FanStop[], place: number): number {
+export function getFanValue(stops: FanStop[], place: number, between?: string): number {
   const position = place === undefined ? 0.5 : place;
   const sorted = stops.slice().sort((stop1, stop2) => stop1.position - stop2.position);
+
+  if (between === 'steps') {
+    // each stop takes as much of the fan as the others, without blending into the next one
+    return sorted[Math.min(sorted.length - 1, Math.floor(position * sorted.length))].valuePercentage;
+  }
 
   if (position <= sorted[0].position) {
     return sorted[0].valuePercentage;
@@ -203,7 +209,7 @@ export function isFanTransition(from: FixtureCapabilityValue, to: FixtureCapabil
 
 // the percentage a value puts on a fixture at a place in the fan: of its stops, if it is fanned
 function getPlacedPercentage(value: FixtureCapabilityValue, place: number): number {
-  return isFanned(value) ? getFanValue(value.fan, place) : value.valuePercentage;
+  return isFanned(value) ? getFanValue(value.fan, place, value.fanBetween) : value.valuePercentage;
 }
 
 // Does the value need to be worked out for each fixture on its own: a fan, or travelling from or into one? Not the pan
@@ -233,13 +239,14 @@ export function getFixtureFanValues(values: FixtureCapabilityValue[], context: F
 
     const placed = new FixtureCapabilityValue(value);
     placed.fan = undefined;
+    placed.fanBetween = undefined;
 
     if (value.transitionFrom) {
       const from = getPlacedPercentage(value.transitionFrom, place);
       const to = getPlacedPercentage(value, place);
       placed.valuePercentage = from + (to - from) * value.transitionPosition;
     } else {
-      placed.valuePercentage = getFanValue(value.fan, place);
+      placed.valuePercentage = getFanValue(value.fan, place, value.fanBetween);
     }
 
     return placed;
