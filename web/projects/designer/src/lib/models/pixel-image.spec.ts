@@ -1,4 +1,13 @@
-import { averagedPixels, fittedPixelImageSize, imageBitmapOf, pixelImageBytes, pixelImageSize, PixelPicture } from './pixel-image';
+import {
+  animationMillis,
+  averagedPixels,
+  fittedPixelImageSize,
+  imageBitmapOf,
+  pixelImageBytes,
+  pixelImageSize,
+  PixelPicture,
+} from './pixel-image';
+import { PixelBitmap } from './pixel-bitmap';
 
 // a picture of square pixels
 const matrix = (columns: number, rows: number): PixelPicture => ({
@@ -67,5 +76,18 @@ describe('pixel images', () => {
     expect(bitmap.value(frame, 5, 4, 0)).toBe(0);
     // 8 x 8 pixels of red, green and blue in base 64
     expect(pixelImageBytes(bitmap)).toBe(256);
+  });
+
+  it('runs an animation as long as its frames last, a frame without a time a tenth of a second', () => {
+    expect(animationMillis(new PixelBitmap({ width: 1, height: 1, channels: 3, frames: ['AAAA'] }))).toBe(0);
+    expect(
+      animationMillis(new PixelBitmap({ width: 1, height: 1, channels: 3, frames: ['AAAA', 'AAAA', 'AAAA'], durations: [50, 0] }))
+    ).toBe(250);
+  });
+
+  it('takes a picture without an aspect as wide as its columns are many', () => {
+    expect(fittedPixelImageSize(400, 400, [{ columns: 10, rows: 2, aspectX: 1, aspectY: 0 }])).toEqual(
+      fittedPixelImageSize(400, 400, [{ columns: 10, rows: 2, aspectX: 10, aspectY: 1 }])
+    );
   });
 });

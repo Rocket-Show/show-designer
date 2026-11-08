@@ -15,6 +15,9 @@ import { SceneService } from '../services/scene.service';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
 import { PresetSettingsComponent } from '../preset/preset-settings/preset-settings.component';
 import { SceneSettingsComponent } from './scene-settings/scene-settings.component';
+import { AiLooksComponent } from '../ai/ai-looks/ai-looks.component';
+import { ConfigService } from '../services/config.service';
+import { UserEnsureLoginService } from '../services/user-ensure-login.service';
 
 @Component({
   selector: 'lib-app-scene',
@@ -49,7 +52,9 @@ export class SceneComponent implements OnInit, OnDestroy {
     private translateService: TranslateService,
     private modalService: BsModalService,
     private livePreviewService: LivePreviewService,
-    public introService: IntroService
+    public introService: IntroService,
+    public configService: ConfigService,
+    private userEnsureLoginService: UserEnsureLoginService
   ) {}
 
   ngOnInit() {
@@ -517,6 +522,14 @@ export class SceneComponent implements OnInit, OnDestroy {
       ignoreBackdropClick: false,
       class: '',
       initialState: { scene },
+    });
+  }
+
+  // Let the AI design presets and scenes for the fixtures of the project. Like saving a project, it needs a logged in
+  // user: one who isn't is asked to log in (or to register) first.
+  designWithAi() {
+    this.userEnsureLoginService.login().subscribe(() => {
+      this.modalService.show(AiLooksComponent, { keyboard: true, ignoreBackdropClick: true, class: 'modal-lg' });
     });
   }
 }

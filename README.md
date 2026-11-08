@@ -84,11 +84,29 @@ npm run e2e
 
 ### The API
 
-The API of the online designer (`api/`) is tested over HTTP on a database of its own, see `api-test/README.md`:
+The PHP API of the online designer, its database schema and its tests live in the
+[spark](https://github.com/Rocket-Show/spark) repository (`show-designer-api/`, `show-designer-database/` and
+`show-designer-api-test/`).
 
-```shell
-node --test 'api-test/*.test.mjs'
-```
+### The AI looks
+
+With `[aiLooks]="true"` (the online designer), the scenes panel offers to design scenes with AI (the magic wand). The AI
+designs presets and scenes for the fixtures of the project through the `ai-looks` endpoint of the API (see the README of
+the spark repository for its settings and the API key), so the user has to be logged in, like for saving: a visitor is
+asked to log in or to register first. A Rocket Show device has no such endpoint and leaves it off.
+
+- `models/ai-rig.ts` describes the fixtures in groups (a folder of the fixture pool, or each model and place on the
+  stage) with what they can do.
+- `models/ai-looks-compiler.ts` turns the looks the AI answers into presets and scenes with the attributes of the
+  designer: dimmers, colors and zooms, fanned out or as gradients, color sequences in steps following the beat, moving
+  heads aimed at a spot and fanned, movements, dimmer curves, pixel effects, the prism, gobos and the strobe in its
+  effect, as fast on every model as asked (`AiLooksService.getStrobeValues`). The AI picks a gobo by its kind (dots,
+  rays, a breakup, ...), never by a slot: the rig tells the kinds the wheels have, as the preview draws them (the
+  pattern matched to a gobo in its wheel, or else the one its name brings), and each model puts its wheel on the slot of
+  that kind, or else on its first gobo (`AiLooksService.getGoboValues`).
+- `ai/ai-looks` is the dialog: what the user asks for (the output, colors or a palette, the mood, the energy, the
+  tempo, the movement, the contrast, the strobe), the scenes the AI designed, changing them, and adding them to the
+  project in folders named after them, as one step to undo.
 
 ## Build & publish as NPM package
 

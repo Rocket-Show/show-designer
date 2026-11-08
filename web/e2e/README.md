@@ -36,10 +36,11 @@ report of a failed run as the artifact `playwright-report`.
 
 ## The fake API
 
-The online designer talks to its PHP API (`api/`), which the app served for the tests (`ng serve --configuration e2e`)
-reaches at `http://localhost:8080/api/` (`src/environments/environment.e2e.ts`), wherever `environment.ts` points the
-dev build at. The tests don't need it: `fake-api.ts` answers the requests in the browser
-(`context.route`), like the real endpoints do (see `api/*.php` for what they answer):
+The online designer talks to its PHP API (`show-designer-api/` in the [spark](https://github.com/Rocket-Show/spark)
+repository), which the app served for the tests (`ng serve --configuration e2e`) reaches at `http://localhost:8080/api/`
+(`src/environments/environment.e2e.ts`), wherever `environment.ts` points the dev build at. The tests don't need it:
+`fake-api.ts` answers the requests in the browser (`context.route`), like the real endpoints do (see
+`show-designer-api/*.php` for what they answer):
 
 - `project` serves the template (id 1, which every new project starts from: one preset in one scene, no fixtures) and
   the saved projects to their owner or with their share token, and saves a project for a user who is signed in,
@@ -47,6 +48,9 @@ dev build at. The tests don't need it: `fake-api.ts` answers the requests in the
 - `fixtures` lists the profiles of the fixture library (the test profiles of the conformance cases in
   `projects/designer/conformance/profiles/test`), `fixture?uuid=` serves one.
 - `register` and `login` keep the users and their sessions (the token in the `Authorization` header).
+- `ai-looks` answers the AI looks for a user who is signed in: the looks a test sets (`aiLooks`, one for each request),
+  as many requests a day as `aiRequestsPerUserPerDay` allows, after `aiDelayMillis`, or none (`aiAvailable`). No
+  request reaches the AI.
 
 Each test gets a fake API of its own, which already knows the user Jane (`designer.ts`). A test sets up what the API
 holds before the designer opens (`addProject`, `patchTemplate` for a template with fixtures, `fail` for an endpoint

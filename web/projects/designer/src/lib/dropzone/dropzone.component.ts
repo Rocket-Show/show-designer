@@ -56,7 +56,8 @@ export class DropzoneComponent {
   }
 
   updateConfig() {
-    // the audio file of a saved project is only taken from a user who may change it (see api/file-upload.php)
+    // the audio file of a saved project is only taken from a user who may change it (see
+    // show-designer-api/file-upload.php in the spark repository)
     const headers = this.userService.getHeaders();
 
     this.dropzoneConfig = {

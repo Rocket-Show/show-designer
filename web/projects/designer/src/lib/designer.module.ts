@@ -54,6 +54,7 @@ import { PreviewComponent } from './preview/preview.component';
 import { ProjectBrowserComponent } from './project/project-browser/project-browser.component';
 import { ProjectImportComponent } from './project/project-import/project-import.component';
 import { ProjectSaveComponent } from './project/project-save/project-save.component';
+import { AiLooksComponent } from './ai/ai-looks/ai-looks.component';
 import { ProjectShareComponent } from './project/project-share/project-share.component';
 import { SceneSettingsComponent } from './scene/scene-settings/scene-settings.component';
 import { SceneComponent } from './scene/scene.component';
@@ -123,6 +124,7 @@ import { keepSliderValues } from './slider-value';
     PresetStepsSettingsComponent,
     SceneSettingsComponent,
     ProjectSaveComponent,
+    AiLooksComponent,
     FixturePoolCreateFromFileComponent,
     FixturePoolEditUniversesComponent,
     DropzoneComponent,

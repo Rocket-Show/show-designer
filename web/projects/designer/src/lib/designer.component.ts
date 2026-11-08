@@ -104,6 +104,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   @Input()
+  set aiLooks(value: boolean) {
+    this.configService.aiLooks = value;
+  }
+
+  @Input()
   set uniqueProjectNames(value: boolean) {
     this.configService.uniqueProjectNames = value;
   }
