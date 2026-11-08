@@ -125,6 +125,9 @@ test.describe('AI looks', () => {
     test.use({ signedIn: true });
 
     test('designs scenes for the fixtures and adds them to the project, ready to trigger', async ({ designer, api, page }) => {
+      // the whole flow, and the 3D preview looked at twice: slower than most on the machines of CI
+      test.slow();
+
       await designer.open();
       await openAiLooks(designer);
       const dialog = designer.dialog('Design with AI');
