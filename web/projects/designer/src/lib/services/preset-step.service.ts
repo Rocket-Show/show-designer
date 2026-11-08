@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
+import { isFanTransition } from '../models/fan';
+import { isPanTiltTransition } from '../models/pan-tilt';
 import { Preset } from '../models/preset';
 import { getAutomaticStartMillis, getStepsLoopMillis, getTransitionEndMillis, layoutSteps, PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
@@ -325,12 +327,14 @@ export class PresetStepService {
   }
 
   private capabilityValuesMatch(value1: FixtureCapabilityValue, value2: FixtureCapabilityValue): boolean {
-    // a capability value is identified by what it drives, not by the value it holds
+    // a capability value is identified by what it drives, not by the value it holds: each blade of a framing shutter
+    // travels on its own
     return (
       value1.type === value2.type &&
       (value1.color ?? undefined) === (value2.color ?? undefined) &&
       (value1.wheel ?? undefined) === (value2.wheel ?? undefined) &&
-      (value1.profileUuid ?? undefined) === (value2.profileUuid ?? undefined)
+      (value1.profileUuid ?? undefined) === (value2.profileUuid ?? undefined) &&
+      (value1.blade ?? undefined) === (value2.blade ?? undefined)
     );
   }
 
@@ -384,6 +388,17 @@ export class PresetStepService {
 
       if (!fromValue) {
         state.fixtureCapabilityValues.push(toValue);
+        continue;
+      }
+
+      if (isPanTiltTransition(fromValue, toValue) || isFanTransition(fromValue, toValue)) {
+        // Where the moving heads point travels for each of them on its own, in degrees: from one fan to the next, from
+        // one spot to the next and from a spot to a position (see pan-tilt). A value fanned out over the fixtures
+        // travels for each of them as well, e.g. from one gradient of colors to the next (see fan).
+        const value = new FixtureCapabilityValue(toValue);
+        value.transitionFrom = fromValue;
+        value.transitionPosition = position;
+        state.fixtureCapabilityValues.push(value);
         continue;
       }
 

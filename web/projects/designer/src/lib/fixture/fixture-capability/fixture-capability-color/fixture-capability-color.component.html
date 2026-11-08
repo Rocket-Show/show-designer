@@ -12,12 +12,33 @@
         <label class="form-check-label" for="capabilityColorActive">{{ 'designer.fixture.capability-color' | translate }}</label>
       </div>
     </div>
-    <div class="pull-right">
-      <input type="text" [ngModel]="color" (ngModelChange)="typeColor($event)" class="sd-value-input sd-value-input-hex" />
+    <div class="pull-right d-flex align-items-center">
+      <!-- a gradient of colors spanned over the fixtures of the preset, or one color for all of them -->
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm gradient-toggle"
+        name="gradient"
+        [class.active]="gradient"
+        [attr.aria-pressed]="gradient"
+        [title]="'designer.fixture.capability-color-gradient-hint' | translate"
+        [attr.aria-label]="'designer.fixture.capability-color-gradient' | translate"
+        (click)="toggleGradient()"
+      >
+        <span class="gradient-toggle-swatch" aria-hidden="true"></span>
+      </button>
+      @if (!gradient) {
+      <input type="text" [ngModel]="color" (ngModelChange)="typeColor($event)" class="sd-value-input sd-value-input-hex ml-2" />
+      }
     </div>
   </div>
 
   <div class="card-body h-100">
-    <div id="color-picker-container"></div>
+    <div id="color-picker-container" [hidden]="gradient"></div>
+    @if (gradient) {
+    <div class="color-gradient">
+      <lib-app-gradient-editor [stops]="gradientStops" (stopsChange)="setGradient($event)"></lib-app-gradient-editor>
+      <div class="color-gradient-hint text-muted mt-2">{{ 'designer.fixture.capability-color-gradient-order' | translate }}</div>
+    </div>
+    }
   </div>
 </div>

@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { getFanStops } from '../../../models/fan';
 import { FixtureCapabilityType } from '../../../models/fixture-capability';
 import { PresetService } from '../../../services/preset.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
@@ -44,6 +45,24 @@ export class FixtureCapabilityDimmerComponent implements OnInit {
     }
 
     this.presetService.setCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity, value);
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
+  readonly types = [FixtureCapabilityType.Intensity];
+
+  // is the dimmer fanned out over the fixtures of the preset (see fan)?
+  isFanned(): boolean {
+    return !!this.presetService.getCapabilityFan(this.presetService.selectedStep, FixtureCapabilityType.Intensity);
+  }
+
+  // fan the dimmer out from none on the first fixture to what it is on the last one (all of them at full, if it's
+  // off), or bring all of them to the one in the middle again
+  toggleFan() {
+    const value = this.getValue();
+    const stops = this.isFanned() ? undefined : getFanStops('linear', 0, value > 0 ? value : 1);
+
+    this.presetService.setCapabilityFan(this.presetService.selectedStep, FixtureCapabilityType.Intensity, stops);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }

@@ -178,7 +178,13 @@
       "steps-order-random": "Zufällig",
       "steps-seed": "Startwert der zufälligen Reihenfolge",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} Werte spielen nur auf: {{models}}"
+      "model-specific": "{{count}} Werte spielen nur auf: {{models}}",
+      "settings-fan-order": "Fächern über",
+      "settings-fan-order-preset": "Reihenfolge des Presets",
+      "settings-fan-order-left-right": "Bühne, links nach rechts",
+      "settings-fan-order-front-back": "Bühne, vorne nach hinten",
+      "settings-fan-order-bottom-top": "Bühne, unten nach oben",
+      "settings-fan-order-hint": "Die Reihenfolge, der Fächer, Verläufe und gefächerte Effekte folgen. Auf der Bühne bekommen Fixtures am selben Ort denselben Wert."
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
@@ -313,7 +319,20 @@
         "polygon": "Vieleck",
         "checker": "Schachbrett",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Auffächern",
+      "fan-hint": "Fächert den Wert über die Fixtures des Presets auf, in der Fächer-Reihenfolge der Preset-Einstellungen",
+      "fan-shape": "Fächer",
+      "fan-shape-linear": "Erste → letzte",
+      "fan-shape-center": "Mitte → Enden",
+      "fan-linear-from": "Erste",
+      "fan-linear-to": "Letzte",
+      "fan-center-from": "Mitte",
+      "fan-center-to": "Enden",
+      "fan-bars-hint": "Was jede Fixture bekommt, in der Reihenfolge des Fächers",
+      "capability-color-gradient": "Verlauf",
+      "capability-color-gradient-hint": "Spannt einen Farbverlauf über die Fixtures des Presets",
+      "capability-color-gradient-order": "Von der ersten bis zur letzten Fixture, in der Fächer-Reihenfolge der Preset-Einstellungen. Fixtures mit Farbrad nehmen die nächstgelegene Farbe."
     },
     "fixture-pool": {
       "title": "Fixture Pool",
@@ -592,7 +611,15 @@
       "pan-tilt-shape-figure8": "Acht",
       "pan-tilt-shape-line": "Linie",
       "pan-tilt-shape-wave": "Welle",
-      "pan-tilt-size": "Grösse"
+      "pan-tilt-size": "Grösse",
+      "curve-fan": "Fächer",
+      "curve-fan-hint": "Wie weit der Effekt jede Fixture nach ihrem Platz im Fächer des Presets bewegt. Enden gegenläufig: die erste und die letzte am meisten, zu entgegengesetzten Seiten, die mittlere bleibt stehen (eine Linie öffnet und schliesst einen Fächer). Enden gleich: die erste und die letzte am meisten, in dieselbe Richtung. Ab der ersten: die erste bleibt stehen, die letzte bewegt sich am meisten.",
+      "curve-fan-none": "Alle gleich",
+      "curve-fan-linear": "Enden gegenläufig",
+      "curve-fan-center": "Enden gleich",
+      "curve-fan-side": "Ab der ersten",
+      "pixel-still": "Stehend",
+      "pixel-still-hint": "Das Muster steht dort, wo seine Phase und der Chase es hinsetzen, z. B. ein Verlauf des Flusses über die Bühne"
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

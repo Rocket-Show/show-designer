@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, Input } from '@angular/core';
 import { isRotationCapabilityType } from '../../../models/capability-position';
+import { getFanStops } from '../../../models/fan';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../../models/fixture-capability';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
@@ -81,7 +82,7 @@ export class FixtureCapabilityPositionComponent {
   }
 
   // The strobe drives the speed of a fixture with a channel of its own for it (see StrobeSpeed) as well
-  private get types(): FixtureCapabilityType[] {
+  get types(): FixtureCapabilityType[] {
     return this.type === FixtureCapabilityType.ShutterStrobe ? [this.type, FixtureCapabilityType.StrobeSpeed] : [this.type];
   }
 
@@ -138,6 +139,25 @@ export class FixtureCapabilityPositionComponent {
         undefined,
         this.blade
       );
+    }
+
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
+  // is the value fanned out over the fixtures of the preset (see fan)?
+  isFanned(): boolean {
+    return !this.isSwitch && !!this.presetService.getCapabilityFan(this.presetService.selectedStep, this.type, this.color, this.blade);
+  }
+
+  // fan the value out from the low end on the first fixture to what it is on the last one (the high end, if it's at
+  // the low one), or bring all of them to the one in the middle again
+  toggleFan() {
+    const value = this.getValue();
+    const stops = this.isFanned() ? undefined : getFanStops('linear', 0, value > 0 ? value : 1);
+
+    for (const type of this.types) {
+      this.presetService.setCapabilityFan(this.presetService.selectedStep, type, stops, this.color, this.blade);
     }
 
     this.changeDetectorRef.detectChanges();

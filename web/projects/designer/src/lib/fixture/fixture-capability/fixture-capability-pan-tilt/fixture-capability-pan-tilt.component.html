@@ -97,6 +97,31 @@
           (ngModelChange)="setSpread(tilt, $event)"
         />
 
+        <!-- the fan from the first to the last head, or from the one in the middle out to both ends -->
+        <span class="pan-tilt-label">{{ 'designer.fixture.fan-shape' | translate }}</span>
+        @for (axis of [pan, tilt]; track axis) {
+        <div class="btn-group btn-group-sm pan-tilt-shape" role="group">
+          @for (fanShape of fanShapes; track fanShape) {
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [attr.name]="'fanShape' + axis + '-' + fanShape"
+            [class.active]="getFanShape(axis) === fanShape"
+            [attr.aria-pressed]="getFanShape(axis) === fanShape"
+            [title]="
+              ('designer.fixture.fan-shape-' + fanShape | translate) + ' (' + ('designer.fixtureCapabilityType.' + axis | translate) + ')'
+            "
+            [attr.aria-label]="
+              ('designer.fixture.fan-shape-' + fanShape | translate) + ' ' + ('designer.fixtureCapabilityType.' + axis | translate)
+            "
+            (click)="setFanShape(axis, fanShape)"
+          >
+            <span class="fan-shape-icon fan-shape-icon-{{ fanShape }}" aria-hidden="true"></span>
+          </button>
+          }
+        </div>
+        }
+
         <span class="pan-tilt-label">{{ 'designer.fixture.capability-pan-tilt-mirror' | translate }}</span>
         <span class="pan-tilt-check">
           <input

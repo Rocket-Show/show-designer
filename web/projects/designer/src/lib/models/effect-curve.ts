@@ -1,6 +1,7 @@
 import { cycleSine } from './cycle-sine';
 import { Effect } from './effect';
 import { EffectCurveProfileChannels } from './effect-curve-profile-channel';
+import { getFanFactor } from './fan';
 import { FixtureCapability } from './fixture-capability';
 
 export class EffectCurve extends Effect {
@@ -71,6 +72,13 @@ export class EffectCurve extends Effect {
   // how many fixtures share the same chase step (1 = each fixture on its own)
   phasingGroupSize = 1;
 
+  // How far the curve swings on each fixture by its place in the fan of the preset (see fan): 'none' as far on all of
+  // them, 'linear' the most on the first and the last one, the other way round on the one than on the other, 'center'
+  // the most on the first and the last one, the same way, 'side' from not at all on the first one to the most on the
+  // last one. The one in the middle stands still, except from the first one. A movement of the moving heads moves as
+  // far (a line fanned 'linear' opens and closes the fan of the heads).
+  fanMode = 'none';
+
   // a movement of the pan and the tilt runs on the timing of a curve as well (see EffectPanTilt)
   constructor(data?: any, type = 'curve') {
     super(type, data);
@@ -116,6 +124,29 @@ export class EffectCurve extends Effect {
     this.runCycles = data.runCycles ?? 1;
     this.runDurationMillis = data.runDurationMillis ?? 5000;
     this.endMode = data.endMode || 'hold';
+
+    // curves used to swing as far on all the fixtures
+    this.fanMode = data.fanMode || 'none';
+  }
+
+  // whether the curve swings as far as the place of each fixture in the fan says
+  public isFanned(): boolean {
+    return this.fanMode === 'linear' || this.fanMode === 'center' || this.fanMode === 'side';
+  }
+
+  // how far the curve swings on a fixture at the passed place in the fan (see fan), from -1 to 1
+  public getFanFactor(place: number): number {
+    return getFanFactor(this.fanMode, place);
+  }
+
+  // The value of the curve on a fixture at the passed place in the fan, swung around its position as far as the place
+  // says, or undefined if it doesn't apply at this moment
+  public getFannedValue(value: number, place: number): number {
+    if (value === undefined || !this.isFanned()) {
+      return value;
+    }
+
+    return this.position + (value - this.position) * this.getFanFactor(place);
   }
 
   // how long a beat lasts at the passed tempo

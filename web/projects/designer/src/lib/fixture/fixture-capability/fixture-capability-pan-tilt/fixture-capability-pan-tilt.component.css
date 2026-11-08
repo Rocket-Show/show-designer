@@ -115,3 +115,36 @@
 .pan-tilt-spot-field .sd-value-input {
   width: 100%;
 }
+
+.pan-tilt-shape {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.pan-tilt-shape .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.2rem 0;
+}
+
+.pan-tilt-shape .btn.active .fan-shape-icon {
+  background-color: var(--sd-primary, #fd7e14);
+}
+
+/* a ramp from the first to the last head, and a V from the middle out to both ends (see FixtureCapabilityFanComponent) */
+.fan-shape-icon {
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  background-color: currentColor;
+  vertical-align: middle;
+}
+
+.fan-shape-icon-linear {
+  clip-path: polygon(0 100%, 100% 0, 100% 100%);
+}
+
+.fan-shape-icon-center {
+  clip-path: polygon(0 0, 50% 70%, 100% 0, 100% 100%, 0 100%);
+}

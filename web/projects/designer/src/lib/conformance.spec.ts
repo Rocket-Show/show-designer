@@ -91,14 +91,35 @@ function resolveProfiles(project: any): any {
   return resolved;
 }
 
-// a capability value as the designer writes it, without the properties missing
+// a capability value as the designer writes it, without the properties missing. A pan or tilt value between two steps
+// names the value it travels from and how far it has come (see pan-tilt).
 function capabilityOf(value: FixtureCapabilityValue): any {
   const capability = {};
 
-  for (const property of ['type', 'color', 'wheel', 'profileUuid', 'valuePercentage', 'slotNumber']) {
+  for (const property of [
+    'type',
+    'color',
+    'wheel',
+    'profileUuid',
+    'valuePercentage',
+    'slotNumber',
+    'valueDegrees',
+    'spreadDegrees',
+    'fanShape',
+    'fan',
+    'aimX',
+    'aimY',
+    'aimZ',
+    'blade',
+  ]) {
     if (value[property] !== undefined && value[property] !== null) {
       capability[property] = value[property];
     }
+  }
+
+  if (value.transitionFrom) {
+    capability['transitionFrom'] = capabilityOf(value.transitionFrom);
+    capability['transitionPosition'] = value.transitionPosition;
   }
 
   return capability;

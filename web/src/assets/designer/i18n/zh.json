@@ -178,7 +178,13 @@
       "steps-order-random": "随机",
       "steps-seed": "随机顺序的种子",
       "steps-chase": "追逐",
-      "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}"
+      "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}",
+      "settings-fan-order": "扇形顺序",
+      "settings-fan-order-preset": "预设中的顺序",
+      "settings-fan-order-left-right": "舞台，从左到右",
+      "settings-fan-order-front-back": "舞台，从前到后",
+      "settings-fan-order-bottom-top": "舞台，从下到上",
+      "settings-fan-order-hint": "扇形、渐变和扇形效果遵循的顺序。在舞台上，位置相同的灯具得到相同的值。"
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
@@ -313,7 +319,20 @@
         "polygon": "多边形",
         "checker": "棋盘",
         "breakup": "碎片"
-      }
+      },
+      "fan": "扇形展开",
+      "fan-hint": "按预设设置中的扇形顺序，将该值在预设的灯具上扇形展开",
+      "fan-shape": "扇形",
+      "fan-shape-linear": "第一台 → 最后一台",
+      "fan-shape-center": "中间 → 两端",
+      "fan-linear-from": "第一台",
+      "fan-linear-to": "最后一台",
+      "fan-center-from": "中间",
+      "fan-center-to": "两端",
+      "fan-bars-hint": "每台灯具得到的值，按扇形顺序",
+      "capability-color-gradient": "渐变",
+      "capability-color-gradient-hint": "在预设的灯具上铺开颜色渐变",
+      "capability-color-gradient-order": "从第一台到最后一台灯具，按预设设置中的扇形顺序。带颜色轮的灯具取最接近的颜色。"
     },
     "fixture-pool": {
       "title": "灯具库",
@@ -591,7 +610,15 @@
       "pan-tilt-shape-figure8": "8 字形",
       "pan-tilt-shape-line": "直线",
       "pan-tilt-shape-wave": "波浪",
-      "pan-tilt-size": "幅度"
+      "pan-tilt-size": "幅度",
+      "curve-fan": "扇形",
+      "curve-fan-hint": "效果按每台灯具在预设扇形中的位置移动多远。两端相反：第一台和最后一台移动最多，方向相反，中间的不动（直线会让扇形张开又收拢）。两端相同：第一台和最后一台移动最多，方向相同。从第一台起：第一台不动，最后一台移动最多。",
+      "curve-fan-none": "全部相同",
+      "curve-fan-linear": "两端相反",
+      "curve-fan-center": "两端相同",
+      "curve-fan-side": "从第一台起",
+      "pixel-still": "静止",
+      "pixel-still-hint": "图案停在其相位和追逐所放的位置，例如流动图案在舞台上的渐变"
     },
     "composition": {
       "new": "创建新合成..."

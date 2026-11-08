@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
+import { fanOrders } from '../../models/fan';
 import { TransitionCurveType, transitionCurveTypes } from '../../models/transition-curve';
 import { Preset } from '../../models/preset';
 import { ColorService } from '../../services/color.service';
@@ -37,6 +38,10 @@ export class PresetSettingsComponent implements OnInit {
 
   palette: string[];
 
+  // the order everything fanned out over the fixtures of the preset follows (see fan)
+  readonly fanOrders = fanOrders;
+  fanOrder = 'preset';
+
   constructor(public bsModalRef: BsModalRef, private colorService: ColorService, private presetService: PresetService) {}
 
   ngOnInit() {
@@ -52,6 +57,7 @@ export class PresetSettingsComponent implements OnInit {
     this.fadeOutPost = this.preset.fadeOutPost;
     this.fadeInCurve = this.preset.fadeInCurve;
     this.fadeOutCurve = this.preset.fadeOutCurve;
+    this.fanOrder = this.preset.fanOrder || 'preset';
 
     this.derivedColor = this.colorService.getDerivedPresetColor(this.preset);
     this.palette = this.colorService.pickerColors;
@@ -90,6 +96,7 @@ export class PresetSettingsComponent implements OnInit {
     this.preset.fadeOutPost = this.fadeOutPost;
     this.preset.fadeInCurve = this.fadeInCurve;
     this.preset.fadeOutCurve = this.fadeOutCurve;
+    this.preset.fanOrder = this.fanOrder;
 
     // the icon and the color of the preset are part of the lists, which are only built
     // again when the presets change

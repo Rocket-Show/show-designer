@@ -70,6 +70,10 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings, Pi
   // it is), 'add' to it or take the 'max' of both on each of red, green and blue
   blend = 'replace';
 
+  // A still pattern stands where its phase and the chase put it at the start of its period, e.g. a gradient of the flow
+  // spread over the stage, moved along with the phase. It doesn't run, so it never stops either.
+  still = false;
+
   constructor(data?: any) {
     super(data, 'pixel');
 
@@ -110,5 +114,14 @@ export class EffectPixel extends EffectCurve implements PixelPatternSettings, Pi
     this.textHeight = data.textHeight ?? 8;
     this.imageName = data.imageName ?? '';
     this.blend = data.blend || 'replace';
+    this.still = data.still === true;
+  }
+
+  // How many periods a still pattern stands at on the passed fixture (see still): where its phase and the chase put it
+  // at the start of its period, like a running one is there at its start
+  public getStillCycles(fixtureIndex?: number, fixtureCount?: number, beatsPerMinute?: number): number {
+    const phase = this.getPhaseMillis(beatsPerMinute) + this.getPhasingMillis(fixtureIndex, fixtureCount, beatsPerMinute);
+
+    return (0 - phase) / this.getLengthMillis(beatsPerMinute);
   }
 }

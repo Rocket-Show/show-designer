@@ -100,6 +100,11 @@ export class Preset {
   mirrorPan = false;
   mirrorTilt = false;
 
+  // How the fixtures of the preset are put in the order of a fan, which everything fanned out over them follows (the
+  // values of the steps, a gradient of colors and the effects, see fan): in the order of the preset, or by where they
+  // are on the stage, from the left to the right, from the front to the back or from the bottom to the top.
+  fanOrder = 'preset';
+
   // position offset, relative to the scene start
   // (undefined = start/end of the scene itself)
   startMillis: number;
@@ -196,6 +201,9 @@ export class Preset {
     // a preset written before the designer knew the mirror does not mirror anything
     this.mirrorPan = data.mirrorPan === true;
     this.mirrorTilt = data.mirrorTilt === true;
+
+    // a preset written before the fans followed the stage fans in its own order
+    this.fanOrder = data.fanOrder || 'preset';
 
     // a value missing or null keeps the default, like in Rocket Show
     this.startMillis = data.startMillis ?? undefined;

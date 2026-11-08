@@ -14,8 +14,26 @@
         </label>
       </div>
     </div>
+    <!-- fanned out over the fixtures of the preset -->
+    <button
+      type="button"
+      class="btn btn-secondary btn-sm fan-toggle"
+      name="fan"
+      [class.active]="isFanned()"
+      [attr.aria-pressed]="isFanned()"
+      [title]="'designer.fixture.fan-hint' | translate"
+      [attr.aria-label]="'designer.fixture.fan' | translate"
+      (click)="toggleFan()"
+    >
+      <i class="fa fa-signal" aria-hidden="true"></i>
+    </button>
   </div>
 
+  @if (isFanned()) {
+  <div class="card-body h-100 d-flex" style="flex-direction: column">
+    <lib-app-fixture-capability-fan [types]="types"></lib-app-fixture-capability-fan>
+  </div>
+  } @else {
   <div class="card-body h-100 d-flex" style="flex-direction: column">
     <div class="mb-4 w-100 d-flex">
       <input
@@ -41,4 +59,5 @@
       ></mv-slider>
     </div>
   </div>
+  }
 </div>

@@ -178,7 +178,13 @@
       "steps-order-random": "Aleatorio",
       "steps-seed": "Semilla del orden aleatorio",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valores solo funcionan en: {{models}}"
+      "model-specific": "{{count}} valores solo funcionan en: {{models}}",
+      "settings-fan-order": "Abanico según",
+      "settings-fan-order-preset": "Orden del preajuste",
+      "settings-fan-order-left-right": "Escenario, de izquierda a derecha",
+      "settings-fan-order-front-back": "Escenario, de delante hacia atrás",
+      "settings-fan-order-bottom-top": "Escenario, de abajo hacia arriba",
+      "settings-fan-order-hint": "El orden que siguen los abanicos, los degradados y los efectos en abanico. En el escenario, los fixtures en el mismo lugar reciben el mismo valor."
     },
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",
@@ -313,7 +319,20 @@
         "polygon": "Polígono",
         "checker": "Damero",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Abrir en abanico",
+      "fan-hint": "Abre el valor en abanico sobre los fixtures del preajuste, en el orden de abanico de los ajustes del preajuste",
+      "fan-shape": "Abanico",
+      "fan-shape-linear": "Primero → último",
+      "fan-shape-center": "Centro → extremos",
+      "fan-linear-from": "Primero",
+      "fan-linear-to": "Último",
+      "fan-center-from": "Centro",
+      "fan-center-to": "Extremos",
+      "fan-bars-hint": "Lo que recibe cada fixture, en el orden del abanico",
+      "capability-color-gradient": "Degradado",
+      "capability-color-gradient-hint": "Extiende un degradado de colores sobre los fixtures del preajuste",
+      "capability-color-gradient-order": "Del primer al último fixture, en el orden de abanico de los ajustes del preajuste. Los fixtures con rueda de color toman el color más cercano."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -591,7 +610,15 @@
       "pan-tilt-shape-figure8": "Ocho",
       "pan-tilt-shape-line": "Línea",
       "pan-tilt-shape-wave": "Ola",
-      "pan-tilt-size": "Tamaño"
+      "pan-tilt-size": "Tamaño",
+      "curve-fan": "Abanico",
+      "curve-fan-hint": "Cuánto mueve el efecto cada fixture según su lugar en el abanico del preajuste. Extremos opuestos: el primero y el último lo máximo, hacia lados opuestos, el del medio se queda (una línea abre y cierra un abanico). Extremos iguales: el primero y el último lo máximo, en el mismo sentido. Desde el primero: el primero se queda, el último se mueve lo máximo.",
+      "curve-fan-none": "Todos igual",
+      "curve-fan-linear": "Extremos opuestos",
+      "curve-fan-center": "Extremos iguales",
+      "curve-fan-side": "Desde el primero",
+      "pixel-still": "Quieto",
+      "pixel-still-hint": "El patrón se queda donde lo ponen su fase y el chase, p. ej. un degradado del flujo sobre el escenario"
     },
     "composition": {
       "new": "Crear nueva composición..."

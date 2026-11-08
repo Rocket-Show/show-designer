@@ -178,7 +178,13 @@
       "steps-order-random": "Aléatoire",
       "steps-seed": "Graine de l’ordre aléatoire",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}"
+      "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}",
+      "settings-fan-order": "Éventail selon",
+      "settings-fan-order-preset": "Ordre du préréglage",
+      "settings-fan-order-left-right": "Scène, de gauche à droite",
+      "settings-fan-order-front-back": "Scène, de l’avant vers l’arrière",
+      "settings-fan-order-bottom-top": "Scène, de bas en haut",
+      "settings-fan-order-hint": "L’ordre que suivent les éventails, les dégradés et les effets en éventail. Sur la scène, les fixtures au même endroit reçoivent la même valeur."
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",
@@ -313,7 +319,20 @@
         "polygon": "Polygone",
         "checker": "Damier",
         "breakup": "Breakup"
-      }
+      },
+      "fan": "Éventail",
+      "fan-hint": "Déploie la valeur en éventail sur les fixtures du préréglage, dans l’ordre d’éventail des réglages du préréglage",
+      "fan-shape": "Éventail",
+      "fan-shape-linear": "Premier → dernier",
+      "fan-shape-center": "Milieu → bords",
+      "fan-linear-from": "Premier",
+      "fan-linear-to": "Dernier",
+      "fan-center-from": "Milieu",
+      "fan-center-to": "Bords",
+      "fan-bars-hint": "Ce que reçoit chaque fixture, dans l’ordre de l’éventail",
+      "capability-color-gradient": "Dégradé",
+      "capability-color-gradient-hint": "Étend un dégradé de couleurs sur les fixtures du préréglage",
+      "capability-color-gradient-order": "Du premier au dernier fixture, dans l’ordre d’éventail des réglages du préréglage. Les fixtures avec une roue de couleurs prennent la couleur la plus proche."
     },
     "fixture-pool": {
       "title": "Parc de fixtures",
@@ -591,7 +610,15 @@
       "pan-tilt-shape-figure8": "Huit",
       "pan-tilt-shape-line": "Ligne",
       "pan-tilt-shape-wave": "Vague",
-      "pan-tilt-size": "Taille"
+      "pan-tilt-size": "Taille",
+      "curve-fan": "Éventail",
+      "curve-fan-hint": "Jusqu’où l’effet déplace chaque fixture selon sa place dans l’éventail du préréglage. Bords opposés : le premier et le dernier le plus, de côtés opposés, celui du milieu reste (une ligne ouvre et ferme un éventail). Bords pareils : le premier et le dernier le plus, dans le même sens. Depuis le premier : le premier reste, le dernier se déplace le plus.",
+      "curve-fan-none": "Tous pareils",
+      "curve-fan-linear": "Bords opposés",
+      "curve-fan-center": "Bords pareils",
+      "curve-fan-side": "Depuis le premier",
+      "pixel-still": "Immobile",
+      "pixel-still-hint": "Le motif reste là où sa phase et le chase le placent, p. ex. un dégradé du flux sur la scène"
     },
     "composition": {
       "new": "Créer une nouvelle composition..."
