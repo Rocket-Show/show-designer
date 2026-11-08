@@ -47,6 +47,7 @@
       "settings": "Definições",
       "help": "Ajuda",
       "fixture-pool": "Grupo de fixtures",
+      "dmx-channels": "Canais DMX",
       "stage": "Palco",
       "project-new": "Novo",
       "project-save": "Guardar",
@@ -168,8 +169,22 @@
       "steps-length": "Duração de um passo",
       "steps-loop": "Repetir os passos",
       "steps-loop-length": "Duração do ciclo",
+      "steps-length-mode": "Duração do passo em",
+      "steps-beats-hint": "Os passos seguem o tempo a que são tocados. Os seus tempos estão escritos a {{bpm}} BPM.",
+      "steps-order": "Ordem",
+      "steps-order-forward": "Para a frente",
+      "steps-order-backward": "Para trás",
+      "steps-order-pingpong": "Ida e volta",
+      "steps-order-random": "Aleatória",
+      "steps-seed": "Semente da ordem aleatória",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valores só funcionam em: {{models}}"
+      "model-specific": "{{count}} valores só funcionam em: {{models}}",
+      "settings-fan-order": "Leque segundo",
+      "settings-fan-order-preset": "Ordem da predefinição",
+      "settings-fan-order-left-right": "Palco, da esquerda para a direita",
+      "settings-fan-order-front-back": "Palco, da frente para trás",
+      "settings-fan-order-bottom-top": "Palco, de baixo para cima",
+      "settings-fan-order-hint": "A ordem que seguem os leques, os gradientes e os efeitos em leque. No palco, fixtures no mesmo lugar recebem o mesmo valor."
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
@@ -275,6 +290,9 @@
       "capability-pan-tilt-aim-stop": "Deixar de apontar",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Desligado",
+      "capability-gobo-pattern": "Na pré-visualização",
+      "capability-gobo-pattern-auto": "Pelo nome",
+      "capability-gobo-pattern-pick": "Associar um padrão ao gobo",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Lâmina superior",
@@ -288,7 +306,33 @@
           "Bottom": "Ângulo da lâmina inferior",
           "Left": "Ângulo da lâmina esquerda"
         }
-      }
+      },
+      "gobo-family": {
+        "dots": "Pontos",
+        "star": "Estrela",
+        "rays": "Raios",
+        "bars": "Barras",
+        "grid": "Grelha",
+        "rings": "Anéis",
+        "spiral": "Espiral",
+        "flower": "Flor",
+        "polygon": "Polígono",
+        "checker": "Xadrez",
+        "breakup": "Breakup"
+      },
+      "fan": "Abrir em leque",
+      "fan-hint": "Abre o valor em leque sobre os fixtures da predefinição, na ordem do leque das definições da predefinição",
+      "fan-shape": "Leque",
+      "fan-shape-linear": "Primeiro → último",
+      "fan-shape-center": "Centro → pontas",
+      "fan-linear-from": "Primeiro",
+      "fan-linear-to": "Último",
+      "fan-center-from": "Centro",
+      "fan-center-to": "Pontas",
+      "fan-bars-hint": "O que cada fixture recebe, na ordem do leque",
+      "capability-color-gradient": "Gradiente",
+      "capability-color-gradient-hint": "Estende um gradiente de cores sobre os fixtures da predefinição",
+      "capability-color-gradient-order": "Do primeiro ao último fixture, na ordem do leque das definições da predefinição. Fixtures com roda de cores ficam com a cor mais próxima."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -340,6 +384,17 @@
       "reset-hint": "Pede ao aparelho no palco que se reinicie, p. ex. uma cabeça móvel que perdeu a posição",
       "lamp-on": "Lâmpada acesa",
       "lamp-on-hint": "Acende a lâmpada do aparelho no palco"
+    },
+    "dmx": {
+      "title": "Canais DMX",
+      "universe": "Universo",
+      "show-unpatched": "Mostrar os canais sem fixture",
+      "release-all": "Soltar todos os faders",
+      "release": "Soltar o fader: o canal volta a enviar o que os presets definem",
+      "unpatched": "Não atribuído",
+      "hint": "O valor enviado em cada canal, depois do dimmer geral. Um fader mantém o seu canal no seu valor, por cima do que os presets definem, até ser solto. Fechar esta página solta todos os faders.",
+      "no-universe": "Ainda não há nenhum universo. Adicione um no Grupo de fixtures.",
+      "no-fixtures": "Ainda não há nenhum fixture atribuído a este universo."
     },
     "gradient": {
       "color": "Cor como valor hexadecimal",
@@ -555,7 +610,15 @@
       "pan-tilt-shape-figure8": "Oito",
       "pan-tilt-shape-line": "Linha",
       "pan-tilt-shape-wave": "Onda",
-      "pan-tilt-size": "Tamanho"
+      "pan-tilt-size": "Tamanho",
+      "curve-fan": "Leque",
+      "curve-fan-hint": "Quanto o efeito move cada fixture conforme o seu lugar no leque da predefinição. Pontas opostas: o primeiro e o último o máximo, para lados opostos, o do meio fica parado (uma linha abre e fecha um leque). Pontas iguais: o primeiro e o último o máximo, no mesmo sentido. A partir do primeiro: o primeiro fica parado, o último move-se o máximo.",
+      "curve-fan-none": "Todos iguais",
+      "curve-fan-linear": "Pontas opostas",
+      "curve-fan-center": "Pontas iguais",
+      "curve-fan-side": "A partir do primeiro",
+      "pixel-still": "Parado",
+      "pixel-still-hint": "O padrão fica onde a sua fase e o chase o põem, p. ex. um gradiente do fluxo sobre o palco"
     },
     "composition": {
       "new": "Criar nova composição..."
@@ -594,6 +657,23 @@
       "show-track": "Mostrar novamente a faixa na pré-visualização",
       "solo-track": "Solo: reproduzir apenas as faixas em solo na pré-visualização",
       "no-tracks": "Arraste uma cena para cá, ou desenhe a selecionada, para reproduzi-la numa faixa",
+      "markers": "Marcadores",
+      "marker": "Marcador",
+      "add-label": "Adicionar uma etiqueta na posição de reprodução",
+      "add-hold": "Adicionar um ponto de espera na posição de reprodução: a reprodução para ali até ao GO",
+      "marker-settings": "Definições do marcador selecionado",
+      "marker-name": "Nome",
+      "marker-type": "Tipo",
+      "marker-type-label": "Etiqueta",
+      "marker-type-hold": "Ponto de espera",
+      "marker-type-label-hint": "Marca um ponto da composição, p. ex. onde começa o refrão.",
+      "marker-type-hold-hint": "A reprodução para aqui e espera pelo GO. Os efeitos das cenas em curso continuam.",
+      "marker-position": "Posição em milissegundos",
+      "remove-marker": "Remover",
+      "new-label": "Etiqueta",
+      "new-hold": "Espera",
+      "go": "GO",
+      "go-hint": "Continuar a partir do ponto de espera {{name}} (barra de espaços)",
       "actions": "Ações",
       "action-type": {
         "NULL": "Nulo",

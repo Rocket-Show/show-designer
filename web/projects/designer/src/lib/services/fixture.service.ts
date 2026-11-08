@@ -419,7 +419,7 @@ export class FixtureService {
 
   // the name of a template channel for a pixel: every $pixelKey replaced with the key (a channel
   // without a pixel keeps its name), like in Rocket Show
-  private getChannelNameWithPixelKey(templateChannelName: string, pixelKey: string) {
+  getChannelNameWithPixelKey(templateChannelName: string, pixelKey: string) {
     if (!pixelKey) {
       return templateChannelName;
     }
@@ -439,6 +439,7 @@ export class FixtureService {
 
     cachedFixtureChannel.channel = channel;
     cachedFixtureChannel.name = channelName;
+    cachedFixtureChannel.pixelKey = pixelKey || undefined;
     cachedFixtureChannel.capabilities = this.getCapabilitiesByChannel(cachedFixtureChannel.channel, channelName, profile);
     const defaultValue = this.getDefaultValueByChannel(cachedFixtureChannel.channel);
     if (defaultValue !== undefined) {

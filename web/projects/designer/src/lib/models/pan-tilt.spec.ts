@@ -17,6 +17,7 @@ import {
   hasAim,
   hasPanTiltValue,
   isPanTilt,
+  isPanTiltTransition,
 } from './pan-tilt';
 import { PresetFixture } from './preset-fixture';
 
@@ -191,5 +192,65 @@ describe('pan-tilt', () => {
     expect(getPresetPanTiltDegrees(values, FixtureCapabilityType.Pan, 'profile', 540, true, undefined)).toBe(-30);
     expect(getPresetPanTiltDegrees(values, FixtureCapabilityType.Tilt, 'profile', 270, false, undefined)).toBe(40);
     expect(getPresetPanTiltDegrees([], FixtureCapabilityType.Tilt, 'profile', 270, false, undefined)).toBeUndefined();
+  });
+
+  // a value travelling from the one of the step before, like a preset shows it between two of its steps
+  function travelling(from: FixtureCapabilityValue, to: FixtureCapabilityValue, position: number): FixtureCapabilityValue {
+    const between = new FixtureCapabilityValue(to);
+    between.transitionFrom = from;
+    between.transitionPosition = position;
+    return between;
+  }
+
+  it('should tell which values travel for each fixture on its own', () => {
+    const percentage = value('Pan', { valuePercentage: 0.3 });
+
+    // two percentages of the range alone travel like any other percentage
+    expect(isPanTiltTransition(percentage, value('Pan', { valuePercentage: 0.6 }))).toBe(false);
+    // degrees, a fan and a spot travel for each fixture
+    expect(isPanTiltTransition(percentage, value('Pan', { valueDegrees: 10 }))).toBe(true);
+    expect(isPanTiltTransition(percentage, value('Pan', { valuePercentage: 0.3, spreadDegrees: 40 }))).toBe(true);
+    expect(isPanTiltTransition(value('Tilt', { aimX: 0, aimY: 0, aimZ: 0 }), value('Tilt', { valueDegrees: 0 }))).toBe(true);
+    // a value saying nothing is taken as soon as the transition starts, and a dimmer isn't a position at all
+    expect(isPanTiltTransition(value('Pan', {}), value('Pan', { valueDegrees: 10 }))).toBe(false);
+    expect(isPanTiltTransition(value('Intensity', { valuePercentage: 0 }), value('Intensity', { valuePercentage: 1 }))).toBe(false);
+  });
+
+  it('should open the fan for each fixture on its own between two steps', () => {
+    const ahead = value('Pan', { valueDegrees: 0 });
+    const fanned = value('Pan', { valueDegrees: 20, spreadDegrees: 120 });
+    const first = { fixtureIndex: 0, fixtureCount: 3 };
+    const middle = { fixtureIndex: 1, fixtureCount: 3 };
+    const last = { fixtureIndex: 2, fixtureCount: 3 };
+
+    // halfway: the heads point halfway to the middle of the fan, the first and the last one halfway out to its sides
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 0.5), 540, false, first)).toBeCloseTo(-20, 9);
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 0.5), 540, false, middle)).toBeCloseTo(10, 9);
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 0.5), 540, false, last)).toBeCloseTo(40, 9);
+
+    // from where they start to where they end up, mirrored with the preset
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 0), 540, false, last)).toBe(0);
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 1), 540, false, last)).toBe(80);
+    expect(getPanTiltDegrees(travelling(ahead, fanned, 0.25), 540, true, last)).toBeCloseTo(-20, 9);
+
+    // the channel follows the head, a percentage of the range included
+    const fromPercentage = travelling(value('Pan', { valuePercentage: 0.5 }), fanned, 0.5);
+    expect(getPanTiltChannelValue(fromPercentage, wide, false, last)).toBeCloseTo(255 * (0.5 + 40 / 630), 9);
+  });
+
+  it('should turn the fixtures from a spot to a position, or to whatever can tell where to point', () => {
+    const hanging = { position: [0, 405.4, 0], rotation: [0, 0, 0] };
+    const spot = value('Tilt', { aimX: 0, aimY: 0, aimZ: 400 });
+    const down = value('Tilt', { valueDegrees: 0 });
+    const placed = { fixtureIndex: 0, fixtureCount: 1, placement: hanging };
+
+    // from 45° up to the front down to straight down
+    expect(getPanTiltDegrees(travelling(spot, down, 0.5), 270, false, placed)).toBeCloseTo(-22.5, 9);
+
+    // without knowing where the fixture hangs, it turns to the position as soon as the transition starts
+    expect(getPanTiltDegrees(travelling(spot, down, 0), 270, false, undefined)).toBeUndefined();
+    expect(getPanTiltDegrees(travelling(spot, down, 0.01), 270, false, undefined)).toBe(0);
+    expect(getPanTiltDegrees(travelling(down, spot, 0), 270, false, undefined)).toBe(0);
+    expect(getPanTiltDegrees(travelling(down, spot, 0.5), 270, false, undefined)).toBeUndefined();
   });
 });

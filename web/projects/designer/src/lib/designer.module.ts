@@ -21,12 +21,14 @@ import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool/fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { FixturePoolEditUniversesComponent } from './fixture-pool/fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { FixturePoolComponent } from './fixture-pool/fixture-pool.component';
+import { DmxChannelsComponent } from './dmx-channels/dmx-channels.component';
 import { FixtureCapabilityChannelComponent } from './fixture/fixture-capability/fixture-capability-channel/fixture-capability-channel.component';
 import { FixtureCapabilityColorWheelComponent } from './fixture/fixture-capability/fixture-capability-color-wheel/fixture-capability-color-wheel.component';
 import { FixtureCapabilityColorComponent } from './fixture/fixture-capability/fixture-capability-color/fixture-capability-color.component';
 import { FixtureCapabilityDimmerComponent } from './fixture/fixture-capability/fixture-capability-dimmer/fixture-capability-dimmer.component';
 import { FixtureCapabilityPanTiltComponent } from './fixture/fixture-capability/fixture-capability-pan-tilt/fixture-capability-pan-tilt.component';
 import { FixtureCapabilityPositionComponent } from './fixture/fixture-capability/fixture-capability-position/fixture-capability-position.component';
+import { FixtureCapabilityFanComponent } from './fixture/fixture-capability/fixture-capability-fan/fixture-capability-fan.component';
 import { FixtureCapabilityGoboWheelComponent } from './fixture/fixture-capability/fixture-capability-gobo-wheel/fixture-capability-gobo-wheel.component';
 import { FixtureCapabilityComponent } from './fixture/fixture-capability/fixture-capability.component';
 import { FixtureChannelComponent } from './fixture/fixture-channel/fixture-channel.component';
@@ -55,6 +57,7 @@ import { SceneSettingsComponent } from './scene/scene-settings/scene-settings.co
 import { SceneComponent } from './scene/scene.component';
 import { CompositionSettingsComponent } from './timeline/composition-settings/composition-settings.component';
 import { TimelineGridComponent } from './timeline/timeline-grid/timeline-grid.component';
+import { MarkerSettingsComponent } from './timeline/marker-settings/marker-settings.component';
 import { TimelineComponent } from './timeline/timeline.component';
 import { UserLoginComponent } from './user/user-login/user-login.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
@@ -86,14 +89,17 @@ import { keepSliderValues } from './slider-value';
     FixtureSettingsComponent,
     EffectComponent,
     FixturePoolComponent,
+    DmxChannelsComponent,
     PresetComponent,
     MasterDimmerComponent,
     FixtureCapabilityDimmerComponent,
     TimelineGridComponent,
+    MarkerSettingsComponent,
     CompositionSettingsComponent,
     ArraySortPipe,
     FixtureCapabilityPanTiltComponent,
     FixtureCapabilityPositionComponent,
+    FixtureCapabilityFanComponent,
     FixtureCapabilityGoboWheelComponent,
     FixtureCapabilityChannelComponent,
     FixtureChannelComponent,

@@ -1,3 +1,4 @@
+import { FanStop } from './fan-stop';
 import { FixtureCapabilityColor, FixtureCapabilityType } from './fixture-capability';
 
 export class FixtureCapabilityValue {
@@ -16,8 +17,15 @@ export class FixtureCapabilityValue {
   // given as a percentage of the range instead.
   valueDegrees: number;
 
-  // pan and tilt: the degrees the fixtures of the preset are fanned out over, from the first to the last of them
+  // pan and tilt: the degrees the fixtures of the preset are fanned out over, from the first to the last of them, or
+  // from the one in the middle out to both ends ('center' as the shape of the fan, see fan)
   spreadDegrees: number;
+  fanShape: string;
+
+  // A value with a percentage fanned out over the fixtures of the preset: the value of each fixture by its place along
+  // the fan (see fan). The percentage is the one in between, which a player not knowing the fans plays. Red, green and
+  // blue fanned with stops at the same places make up a gradient of colors.
+  fan: FanStop[];
 
   // pan and tilt: the spot on the stage (in cm) every moving head of the preset points at, from wherever it hangs
   aimX: number;
@@ -26,6 +34,13 @@ export class FixtureCapabilityValue {
 
   // the blade of a framing shutter: Top, Right, Bottom or Left
   blade: string;
+
+  // pan and tilt, while a preset travels from one step into the next: the value of the step it travels from and how
+  // far it has come (between 0 and 1). Each moving head travels from where the one value points it to where the other
+  // does, so the heads fan in and out, follow a spot moving over the stage and turn from a spot to a position alike
+  // (see pan-tilt). Only the values a preset shows between two of its steps hold this, it is never saved.
+  transitionFrom: FixtureCapabilityValue;
+  transitionPosition: number;
 
   constructor(data?: any) {
     if (!data) {
@@ -41,6 +56,8 @@ export class FixtureCapabilityValue {
     this.slotNumber = data.slotNumber ?? undefined;
     this.valueDegrees = data.valueDegrees ?? undefined;
     this.spreadDegrees = data.spreadDegrees ?? undefined;
+    this.fanShape = data.fanShape ?? undefined;
+    this.fan = Array.isArray(data.fan) && data.fan.length > 0 ? data.fan.map((stop: any) => new FanStop(stop)) : undefined;
     this.aimX = data.aimX ?? undefined;
     this.aimY = data.aimY ?? undefined;
     this.aimZ = data.aimZ ?? undefined;

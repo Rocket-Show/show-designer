@@ -68,7 +68,7 @@ describe('PresetStepsSettingsComponent', () => {
   }
 
   function selectMode(mode: string) {
-    const select: HTMLSelectElement = element.querySelector('select');
+    const select: HTMLSelectElement = element.querySelector('#stepsPhasingMode');
     select.value = mode;
     select.dispatchEvent(new Event('change'));
   }
@@ -170,6 +170,41 @@ describe('PresetStepsSettingsComponent', () => {
     expect(preset.stepsPhasingMode).toBe('spread');
     expect(preset.stepsPhasingMillis).toBe(250);
     expect(preset.stepsPhasingCycles).toBe(-1);
+  });
+
+  it('plays the steps in the order picked, a random one from a whole seed', async () => {
+    const order: HTMLSelectElement = element.querySelector('#stepsOrder');
+    expect(order.value).toBe('forward');
+
+    order.value = 'random';
+    order.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const seed: HTMLInputElement = element.querySelector('input[aria-label="designer.preset.steps-seed"]');
+    type(seed, '7.4');
+    ok();
+
+    expect(preset.stepsOrder).toBe('random');
+    expect(preset.stepsSeed).toBe(7);
+  });
+
+  it('times the steps in beats, written down at the tempo of the composition open, which they follow', async () => {
+    const mode: HTMLSelectElement = element.querySelector('#stepsLengthMode');
+    mode.value = 'beats';
+    mode.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // a second at 120 BPM (no composition open) is two beats
+    expect(inputs()[0].value).toBe('2');
+
+    type(inputs()[0], '1');
+    ok();
+
+    expect(preset.stepsLengthMode).toBe('beats');
+    expect(preset.stepsBeatsPerMinute).toBe(120);
+    expect(preset.stepsLengthMillis).toBe(500);
   });
 
   it('keeps the chase for anything which is no number', () => {

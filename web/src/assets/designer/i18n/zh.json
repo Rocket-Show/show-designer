@@ -47,6 +47,7 @@
       "settings": "设置",
       "help": "帮助",
       "fixture-pool": "灯具库",
+      "dmx-channels": "DMX 通道",
       "stage": "舞台",
       "project-new": "新建",
       "project-save": "保存",
@@ -168,8 +169,22 @@
       "steps-length": "步骤时长",
       "steps-loop": "循环步骤",
       "steps-loop-length": "循环长度",
+      "steps-length-mode": "步长单位",
+      "steps-beats-hint": "步骤跟随播放时的速度。其时间按 {{bpm}} BPM 记录。",
+      "steps-order": "顺序",
+      "steps-order-forward": "正向",
+      "steps-order-backward": "反向",
+      "steps-order-pingpong": "往返",
+      "steps-order-random": "随机",
+      "steps-seed": "随机顺序的种子",
       "steps-chase": "追逐",
-      "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}"
+      "model-specific": "{{count}} 个值仅在以下型号上播放：{{models}}",
+      "settings-fan-order": "扇形顺序",
+      "settings-fan-order-preset": "预设中的顺序",
+      "settings-fan-order-left-right": "舞台，从左到右",
+      "settings-fan-order-front-back": "舞台，从前到后",
+      "settings-fan-order-bottom-top": "舞台，从下到上",
+      "settings-fan-order-hint": "扇形、渐变和扇形效果遵循的顺序。在舞台上，位置相同的灯具得到相同的值。"
     },
     "fixture": {
       "no-fixtures": "向项目添加新灯具",
@@ -275,6 +290,9 @@
       "capability-pan-tilt-aim-stop": "停止瞄准",
       "capability-gobo-shake": "抖动",
       "capability-gobo-shake-off": "关",
+      "capability-gobo-pattern": "预览中",
+      "capability-gobo-pattern-auto": "按名称",
+      "capability-gobo-pattern-pick": "为图案片匹配图案",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "上切光片",
@@ -288,7 +306,33 @@
           "Bottom": "下切光片角度",
           "Left": "左切光片角度"
         }
-      }
+      },
+      "gobo-family": {
+        "dots": "圆点",
+        "star": "星形",
+        "rays": "光芒",
+        "bars": "条纹",
+        "grid": "网格",
+        "rings": "圆环",
+        "spiral": "螺旋",
+        "flower": "花朵",
+        "polygon": "多边形",
+        "checker": "棋盘",
+        "breakup": "碎片"
+      },
+      "fan": "扇形展开",
+      "fan-hint": "按预设设置中的扇形顺序，将该值在预设的灯具上扇形展开",
+      "fan-shape": "扇形",
+      "fan-shape-linear": "第一台 → 最后一台",
+      "fan-shape-center": "中间 → 两端",
+      "fan-linear-from": "第一台",
+      "fan-linear-to": "最后一台",
+      "fan-center-from": "中间",
+      "fan-center-to": "两端",
+      "fan-bars-hint": "每台灯具得到的值，按扇形顺序",
+      "capability-color-gradient": "渐变",
+      "capability-color-gradient-hint": "在预设的灯具上铺开颜色渐变",
+      "capability-color-gradient-order": "从第一台到最后一台灯具，按预设设置中的扇形顺序。带颜色轮的灯具取最接近的颜色。"
     },
     "fixture-pool": {
       "title": "灯具库",
@@ -340,6 +384,17 @@
       "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
       "lamp-on": "开灯泡",
       "lamp-on-hint": "打开舞台上灯具的灯泡"
+    },
+    "dmx": {
+      "title": "DMX 通道",
+      "universe": "域",
+      "show-unpatched": "显示未配接灯具的通道",
+      "release-all": "松开所有推子",
+      "release": "松开推子：通道重新发送预设设定的值",
+      "unpatched": "未配接",
+      "hint": "每个通道发送的值（经过总调光之后）。推子会将其通道保持在推子的值上，覆盖预设设定的值，直到松开为止。关闭此页面会松开所有推子。",
+      "no-universe": "还没有域。请在灯具库中添加一个。",
+      "no-fixtures": "还没有灯具配接到此域。"
     },
     "gradient": {
       "color": "颜色的十六进制值",
@@ -555,7 +610,15 @@
       "pan-tilt-shape-figure8": "8 字形",
       "pan-tilt-shape-line": "直线",
       "pan-tilt-shape-wave": "波浪",
-      "pan-tilt-size": "幅度"
+      "pan-tilt-size": "幅度",
+      "curve-fan": "扇形",
+      "curve-fan-hint": "效果按每台灯具在预设扇形中的位置移动多远。两端相反：第一台和最后一台移动最多，方向相反，中间的不动（直线会让扇形张开又收拢）。两端相同：第一台和最后一台移动最多，方向相同。从第一台起：第一台不动，最后一台移动最多。",
+      "curve-fan-none": "全部相同",
+      "curve-fan-linear": "两端相反",
+      "curve-fan-center": "两端相同",
+      "curve-fan-side": "从第一台起",
+      "pixel-still": "静止",
+      "pixel-still-hint": "图案停在其相位和追逐所放的位置，例如流动图案在舞台上的渐变"
     },
     "composition": {
       "new": "创建新合成..."
@@ -594,6 +657,23 @@
       "show-track": "在预览中重新显示此轨道",
       "solo-track": "独奏：预览中只播放独奏的轨道",
       "no-tracks": "将场景拖到这里，或绘制所选场景，即可在轨道上播放",
+      "markers": "标记",
+      "marker": "标记",
+      "add-label": "在播放位置添加标签",
+      "add-hold": "在播放位置添加停顿点：播放在此停止，直到 GO",
+      "marker-settings": "所选标记的设置",
+      "marker-name": "名称",
+      "marker-type": "类型",
+      "marker-type-label": "标签",
+      "marker-type-hold": "停顿点",
+      "marker-type-label-hint": "标记合成中的某个位置，例如副歌开始处。",
+      "marker-type-hold-hint": "播放在此停止并等待 GO。正在播放的场景的效果继续运行。",
+      "marker-position": "位置（毫秒）",
+      "remove-marker": "删除",
+      "new-label": "标签",
+      "new-hold": "停顿",
+      "go": "GO",
+      "go-hint": "从停顿点 {{name}} 继续（空格键）",
       "actions": "动作",
       "action-type": {
         "NULL": "空",

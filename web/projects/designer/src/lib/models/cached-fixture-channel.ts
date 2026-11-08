@@ -9,6 +9,10 @@ export class CachedFixtureChannel {
   // the name of the channel
   name: string;
 
+  // the pixel (or pixel group) the name of a template channel was made for, which its fine channels are named after
+  // as well (undefined for a channel of no pixel)
+  pixelKey: string;
+
   // all channel capabilities
   capabilities: CachedFixtureCapability[] = [];
 

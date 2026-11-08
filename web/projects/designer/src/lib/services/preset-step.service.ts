@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
+import { isFanTransition } from '../models/fan';
+import { isPanTiltTransition } from '../models/pan-tilt';
 import { Preset } from '../models/preset';
 import { getAutomaticStartMillis, getStepsLoopMillis, getTransitionEndMillis, layoutSteps, PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
+import { getStepLengths, getStepsOrderIndices, getStepsPassMillis, isStepsOrdered } from '../models/preset-steps-order';
 import { applyTransitionCurve } from '../models/transition-curve';
 import { UuidService } from './uuid.service';
 
@@ -85,6 +88,24 @@ export class PresetStepService {
     return getStepsLoopMillis(preset.steps, preset.stepsLoopMillis);
   }
 
+  // the length of one pass through the steps in the order they are played in (see preset-steps-order), which is what
+  // a sequence which loops starts over after
+  public getStepsPassMillis(preset: Preset): number {
+    return getStepsPassMillis(preset);
+  }
+
+  // Whether the passed step opens the sequence with nothing to travel from: the first one played by a sequence which
+  // doesn't start over. Every other step travels from the one played before it.
+  public opensSequence(preset: Preset, step: PresetStep): boolean {
+    if (preset.stepsLoop) {
+      return false;
+    }
+
+    const order = isStepsOrdered(preset) ? getStepsOrderIndices(preset) : [0];
+
+    return order.length > 0 && preset.steps[order[0]] === step;
+  }
+
   // When the step at the passed index gives way to the next one. The last step holds
   // for as long as a pass of the sequence would have given it, which is what a looping
   // preset starts over after and what one which does not loop stands still on.
@@ -129,7 +150,7 @@ export class PresetStepService {
     if (preset.stepsPhasingMode === 'spread') {
       // distribute the passes over all chase steps of the preset
       const steps = Math.max(Math.ceil((fixtureCount || 1) / groupSize), 1);
-      return (step / steps) * preset.stepsPhasingCycles * this.getStepsLoopMillis(preset);
+      return (step / steps) * preset.stepsPhasingCycles * this.getStepsPassMillis(preset);
     }
 
     return step * preset.stepsPhasingMillis;
@@ -169,6 +190,10 @@ export class PresetStepService {
 
     if (steps.length === 1) {
       return this.getStepState(steps[0]);
+    }
+
+    if (isStepsOrdered(preset)) {
+      return this.getOrderedStateAtMillis(preset, presetTimeMillis);
     }
 
     const first = steps[0];
@@ -230,13 +255,86 @@ export class PresetStepService {
     return state;
   }
 
+  // The values a preset playing its steps in another order than they are written down in applies at the passed time,
+  // relative to its own start: each step lasts as long as it does written down, and travels from the step played
+  // before it, over the time of its own transition.
+  private getOrderedStateAtMillis(preset: Preset, presetTimeMillis: number): PresetStepState {
+    const steps = preset.steps;
+    const lengths = getStepLengths(preset);
+    const passMillis = this.getStepsPassMillis(preset);
+    const loops = preset.stepsLoop && passMillis > 0;
+    let offsetMillis = presetTimeMillis - steps[0].startMillis;
+    let pass = 0;
+
+    if (loops) {
+      // fold the time into the pass it is in
+      pass = Math.floor(offsetMillis / passMillis);
+      offsetMillis = Math.max(offsetMillis - pass * passMillis, 0);
+    }
+
+    const order = getStepsOrderIndices(preset, pass);
+
+    if (order.length === 0) {
+      // none of the steps lasts any time
+      return this.getStepState(steps[0]);
+    }
+
+    if (offsetMillis < 0) {
+      // before the sequence starts: the step it opens with is what the preset starts out with
+      return this.getStepState(steps[order[0]]);
+    }
+
+    // the step played at that time, and where it starts in the pass. The last one holds, if the sequence doesn't loop.
+    let position = 0;
+    let startMillis = 0;
+
+    while (position < order.length - 1 && startMillis + lengths[order[position]] <= offsetMillis) {
+      startMillis += lengths[order[position]];
+      position++;
+    }
+
+    const current = steps[order[position]];
+    const endMillis = startMillis + lengths[order[position]];
+
+    // The step travelled from: the one played before it, which is the last one of the pass before once the sequence
+    // starts over. The first step of a sequence which does not loop has nothing to travel from.
+    let previous: PresetStep;
+
+    if (position > 0) {
+      previous = steps[order[position - 1]];
+    } else if (loops) {
+      const previousOrder = getStepsOrderIndices(preset, pass - 1);
+      previous = steps[previousOrder[previousOrder.length - 1]];
+    }
+
+    const transitionEndMillis = getTransitionEndMillis(current, startMillis, endMillis);
+    let state: PresetStepState;
+
+    if (!previous || offsetMillis >= transitionEndMillis) {
+      state = this.getStepState(current);
+    } else {
+      const curvePosition = applyTransitionCurve(
+        current.transitionCurve,
+        (offsetMillis - startMillis) / (transitionEndMillis - startMillis)
+      );
+
+      state = this.interpolate(previous, current, curvePosition);
+    }
+
+    state.currentStepProgress = Math.min((offsetMillis - startMillis) / (endMillis - startMillis), 1);
+
+    return state;
+  }
+
   private capabilityValuesMatch(value1: FixtureCapabilityValue, value2: FixtureCapabilityValue): boolean {
-    // a capability value is identified by what it drives, not by the value it holds
+    // a capability value is identified by what it drives, not by the value it holds: each blade of a framing shutter
+    // travels on its own
     return (
       value1.type === value2.type &&
       (value1.color ?? undefined) === (value2.color ?? undefined) &&
       (value1.wheel ?? undefined) === (value2.wheel ?? undefined) &&
-      (value1.profileUuid ?? undefined) === (value2.profileUuid ?? undefined)
+      (value1.profileUuid ?? undefined) === (value2.profileUuid ?? undefined) &&
+      (value1.blade ?? undefined) === (value2.blade ?? undefined)
     );
   }
 
@@ -290,6 +388,17 @@ export class PresetStepService {
 
       if (!fromValue) {
         state.fixtureCapabilityValues.push(toValue);
+        continue;
+      }
+
+      if (isPanTiltTransition(fromValue, toValue) || isFanTransition(fromValue, toValue)) {
+        // Where the moving heads point travels for each of them on its own, in degrees: from one fan to the next, from
+        // one spot to the next and from a spot to a position (see pan-tilt). A value fanned out over the fixtures
+        // travels for each of them as well, e.g. from one gradient of colors to the next (see fan).
+        const value = new FixtureCapabilityValue(toValue);
+        value.transitionFrom = fromValue;
+        value.transitionPosition = position;
+        state.fixtureCapabilityValues.push(value);
         continue;
       }
 

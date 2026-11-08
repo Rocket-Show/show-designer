@@ -20,7 +20,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npx ng serve --port 4300',
+    // with the API where the tests fake it (src/environments/environment.e2e.ts)
+    command: 'npx ng serve --port 4300 --configuration e2e',
     cwd: '..',
     url: 'http://localhost:4300',
     reuseExistingServer: !process.env.CI,

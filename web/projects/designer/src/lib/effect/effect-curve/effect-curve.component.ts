@@ -1,3 +1,4 @@
+import { followFloatingPicker, placeFloatingPicker } from '../../floating-picker';
 import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
@@ -14,6 +15,7 @@ import { EffectService } from '../../services/effect.service';
 import { LivePreviewService } from '../../services/live-preview.service';
 import { AudioBus, TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
+import { fanModes } from '../../models/fan';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
@@ -100,12 +102,6 @@ export interface CurveChannelOption {
   channel: CachedFixtureChannel;
 }
 
-// how tall the tiles to pick a pattern from are at least (two rows), how far they keep from the pattern picked and from
-// the edges of the window, in CSS pixels
-const PICKER_MIN_HEIGHT = 180;
-const PICKER_GAP = 4;
-const PICKER_MARGIN = 8;
-
 @Component({
   selector: 'lib-app-effect-curve',
   templateUrl: './effect-curve.component.html',
@@ -130,6 +126,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
   // the shapes a movement of the moving heads moves in
   public readonly shapes = ['circle', 'figure8', 'line', 'wave'];
+
+  // how far the curve swings on each fixture by its place in the fan of the preset (see EffectCurve.fanMode)
+  public readonly fanModes = fanModes;
 
   public lengthMillisMin = 20;
   public lengthMillisMax = 8000;
@@ -389,6 +388,11 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  setFanMode(fanMode: string) {
+    this.curve.fanMode = fanMode;
+    this.livePreviewService.previewLive();
+  }
+
   // A pixel effect runs on the timing of a curve as well, with its pattern, its palette and how it is blended in place of
   // the curve and the capabilities and channels it drives (see EffectPixel)
   get isPixel(): boolean {
@@ -504,66 +508,22 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.setPattern(pattern);
   }
 
-  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside.
-  // Where less than two rows are left below it, but more above it, they open above it.
+  // The tiles open over the panels, below the pattern picked and as far down as the window shows them, scrolling inside
+  // (see placeFloatingPicker).
   placePicker() {
-    const picker = this.pickerElement;
-    const toggle = this.pickerToggle?.nativeElement;
-
-    if (!picker || !toggle) {
-      return;
-    }
-
-    const anchor = toggle.getBoundingClientRect();
-    const width = Math.min(picker.offsetWidth, window.innerWidth - 2 * PICKER_MARGIN);
-    const below = Math.floor(window.innerHeight - anchor.bottom - PICKER_GAP - PICKER_MARGIN);
-    const above = Math.floor(anchor.top - PICKER_GAP - PICKER_MARGIN);
-    const upwards = below < PICKER_MIN_HEIGHT && above > below;
-
-    picker.style.left = Math.max(PICKER_MARGIN, Math.min(anchor.left, window.innerWidth - width - PICKER_MARGIN)) + 'px';
-
-    if (upwards) {
-      picker.style.top = '';
-      picker.style.bottom = window.innerHeight - anchor.top + PICKER_GAP + 'px';
-    } else {
-      picker.style.top = anchor.bottom + PICKER_GAP + 'px';
-      picker.style.bottom = '';
-    }
-
-    picker.style.maxHeight = Math.max(upwards ? above : below, 0) + 'px';
+    placeFloatingPicker(this.pickerElement, this.pickerToggle?.nativeElement);
   }
 
   private addPickerListeners() {
-    this.ngZone.runOutsideAngular(() => {
-      const place = () => this.placePicker();
+    const remove = followFloatingPicker(
+      this.ngZone,
+      () => this.pickerElement,
+      () => this.pickerToggle?.nativeElement,
+      () => this.placePicker(),
+      () => this.closePicker()
+    );
 
-      // a click anywhere but on the tiles and on the pattern picked (which closes them itself)
-      const pointerDown = (event: Event) => {
-        const target = event.target as Node;
-
-        if (!this.pickerElement?.contains(target) && !this.pickerToggle?.nativeElement.contains(target)) {
-          this.ngZone.run(() => this.closePicker());
-        }
-      };
-      const keyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          this.ngZone.run(() => this.closePicker());
-        }
-      };
-
-      // the scroll of any panel, which does not bubble up
-      window.addEventListener('scroll', place, true);
-      window.addEventListener('resize', place);
-      document.addEventListener('pointerdown', pointerDown, true);
-      document.addEventListener('keydown', keyDown);
-
-      this.pickerListeners = [
-        () => window.removeEventListener('scroll', place, true),
-        () => window.removeEventListener('resize', place),
-        () => document.removeEventListener('pointerdown', pointerDown, true),
-        () => document.removeEventListener('keydown', keyDown),
-      ];
-    });
+    this.pickerListeners = [remove];
   }
 
   private removePickerListeners() {
@@ -960,6 +920,12 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     }
   }
 
+  // the pattern stands still where its phase and the chase put it (see EffectPixel.still)
+  setStill(still: boolean) {
+    this.pixelEffect.still = still === true;
+    this.livePreviewService.previewLive();
+  }
+
   setMirror(mirror: boolean) {
     this.pixelEffect.mirror = mirror;
     this.livePreviewService.previewLive();
@@ -1137,7 +1103,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     fixtureCount: number,
     base: number[]
   ) {
-    const cycles = effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
+    const cycles = effect.still
+      ? effect.getStillCycles(fixture.index, fixtureCount, this.beatsPerMinute)
+      : effect.getCyclesAtMillis(timeMillis, fixture.index, fixtureCount, this.beatsPerMinute);
     const width = fixture.columns * cell;
     const height = fixture.rows * cell;
     const pad = Math.max(1.5, cell * 0.26);
@@ -1204,7 +1172,9 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     const cell = Math.max(2, Math.min(pictureWidth / first.columns, first.rows > 1 ? pictureHeight / first.rows : height, 16) * 0.8);
 
     for (const part of stage.parts) {
-      const cycles = effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
+      const cycles = effect.still
+        ? effect.getStillCycles(part.index, stage.count, this.beatsPerMinute)
+        : effect.getCyclesAtMillis(timeMillis, part.index, stage.count, this.beatsPerMinute);
       const [red, green, blue] = this.partColorOf(effect, part.place, cycles, part.index, base, part.white, true).map((component) =>
         Math.round(Math.min(Math.max(component, 0), 1) * 255)
       );
@@ -1479,8 +1449,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     return this.timelineService.selectedComposition?.beatsPerMinute ?? EffectCurve.defaultBeatsPerMinute;
   }
 
-  private drawCurrentValue(currMillis: number, radius: number, lineWidth: number, durationMillis: number, maxHeight: number) {
-    const value = this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute);
+  private drawCurrentValue(
+    currMillis: number,
+    radius: number,
+    lineWidth: number,
+    durationMillis: number,
+    maxHeight: number,
+    fanPlace?: number
+  ) {
+    // a fanned curve swings as far as the place of the fixture in the fan says
+    const value = this.curve.getFannedValue(this.curve.getValueAtMillis(currMillis, undefined, undefined, this.beatsPerMinute), fanPlace);
 
     if (value === undefined) {
       // the curve has finished running and left the fixtures to the rest of the preset
@@ -1612,13 +1590,15 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.stroke();
 
-    // where the heads are now, each step of the chase on its own, the first one bigger
+    // where the heads are now, each step of the chase on its own, the first one bigger. A fanned movement moves each
+    // head by its place in the row, which shows all of them.
     const phasingCount = this.getPhasingCount();
     const loopMillis = movement.getRunLoopMillis(phasingCount, this.beatsPerMinute);
     const timeMillis = loopMillis === undefined ? this.animationService.timeMillis : this.animationService.timeMillis % loopMillis;
     const chased = movement.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) !== 0;
-    const stepCount = chased ? movement.getPhasingStepCount(phasingCount) : 1;
-    const groupSize = Math.max(Math.round(movement.phasingGroupSize), 1);
+    const fanned = movement.isFanned();
+    const groupSize = fanned ? 1 : Math.max(Math.round(movement.phasingGroupSize), 1);
+    const stepCount = fanned ? Math.max(phasingCount, 1) : chased ? movement.getPhasingStepCount(phasingCount) : 1;
 
     for (let step = stepCount - 1; step >= 0; step--) {
       const offset = movement.getOffsetAtMillis(timeMillis, step * groupSize, phasingCount, this.beatsPerMinute);
@@ -1706,12 +1686,34 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
 
     this.ctx.stroke();
 
+    const phasingCount = this.getPhasingCount();
+
+    if (this.curve.isFanned()) {
+      // each fixture swings as far as its place in the fan says (in the order of the preset), shifted by the chase
+      const count = Math.max(Math.min(phasingCount, 24), 1);
+
+      for (let index = count - 1; index >= 0; index--) {
+        const phasedMillis = this.animationService.timeMillis - this.curve.getPhasingMillis(index, phasingCount, this.beatsPerMinute);
+        const place = count > 1 ? index / (count - 1) : undefined;
+
+        this.drawCurrentValue(
+          ((phasedMillis % durationMillis) + durationMillis) % durationMillis,
+          index === 0 ? 5 : 3,
+          width,
+          durationMillis,
+          maxHeight,
+          place
+        );
+      }
+
+      return;
+    }
+
     // draw the current value
     this.drawCurrentValue(this.animationService.timeMillis % durationMillis, 5, width, durationMillis, maxHeight);
 
     // draw the phasing values (chase), if required. the fixtures of a group run the same
     // step of the chase, so the grid marks each step once, not each fixture of it.
-    const phasingCount = this.getPhasingCount();
     const stepCount = this.curve.getPhasingStepCount(phasingCount);
 
     if (this.curve.getPhasingStepMillis(1, phasingCount, this.beatsPerMinute) === 0) {

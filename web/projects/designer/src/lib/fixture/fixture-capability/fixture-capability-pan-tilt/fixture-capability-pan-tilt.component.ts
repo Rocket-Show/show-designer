@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { fanShapes } from '../../../models/fan';
 import { FixtureCapabilityType } from '../../../models/fixture-capability';
 import { FixtureCapabilityValue } from '../../../models/fixture-capability-value';
 import { defaultPanRangeDegrees, defaultTiltRangeDegrees, getAxisRange, hasAim } from '../../../models/pan-tilt';
@@ -25,6 +26,7 @@ export class FixtureCapabilityPanTiltComponent implements OnInit, OnDestroy {
   readonly pan = FixtureCapabilityType.Pan;
   readonly tilt = FixtureCapabilityType.Tilt;
   readonly padSize = padSize;
+  readonly fanShapes = fanShapes;
 
   // what the square reaches on each axis: the most any moving head of the preset reaches, in degrees
   panRange = defaultPanRangeDegrees;
@@ -160,6 +162,21 @@ export class FixtureCapabilityPanTiltComponent implements OnInit, OnDestroy {
     }
 
     this.change(type, (value) => (value.spreadDegrees = number === 0 ? undefined : number));
+  }
+
+  // how the heads are fanned out on an axis: from the first to the last one, or from the one in the middle out to both
+  // ends (see fan)
+  getFanShape(type: FixtureCapabilityType): string {
+    return this.getValue(type)?.fanShape || 'linear';
+  }
+
+  setFanShape(type: FixtureCapabilityType, shape: string) {
+    if (!this.getValue(type)) {
+      // a fan around the middle
+      this.change(type, (value) => (value.valueDegrees = 0));
+    }
+
+    this.change(type, (value) => (value.fanShape = shape === 'center' ? 'center' : undefined));
   }
 
   // ---- the square ----

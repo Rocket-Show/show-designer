@@ -5,6 +5,8 @@ import { map } from 'rxjs/operators';
 import WaveSurfer from 'wavesurfer.js';
 import { guess } from 'web-audio-beat-detector';
 import { Composition } from '../models/composition';
+import { CompositionHold } from '../models/composition-hold';
+import { CompositionMarker } from '../models/composition-marker';
 import { ExternalAudioFile, ExternalComposition } from '../models/external-composition';
 import { getPresetTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { Scene } from '../models/scene';
@@ -41,6 +43,10 @@ export class TimelineService {
 
   // the shortest clip, so that a click on a track does not leave an invisible one behind
   static readonly minRegionMillis = 100;
+
+  // a hold point this close past where the playback starts or goes on from is not held at: it is the one just held at,
+  // or the playback has been started on it (a song moved onto it may stand a fraction of a millisecond in front of it)
+  static readonly holdToleranceMillis = 1;
 
   // WaveSurfer loads, decodes and plays the audio file. The timeline draws the waveform,
   // the tracks and the clips on them itself.
@@ -86,6 +92,22 @@ export class TimelineService {
 
   // the position of the playback moved (outside of the Angular zone while playing)
   public positionChanged: Subject<number> = new Subject();
+
+  // the hold points the timeline played through since it was started, the one it holds at last with the time held so
+  // far: the effects and the steps of the clips spanning them keep running (see getHeldMillis)
+  public holds: CompositionHold[] = [];
+
+  // the hold point the playback stands at, waiting for GO, the hold it adds to the holds and when it got there (all
+  // undefined unless it holds)
+  private holdMarker: CompositionMarker;
+  private currentHold: CompositionHold;
+  private holdStartedAt: number;
+
+  // how far the playback has come since it has been started or moved: the hold points up to here are passed
+  private passedMillis = 0;
+
+  // the marker selected on the timeline, by its uuid: it stays selected through an undo
+  public selectedMarkerUuid: string;
 
   // can we add new compositions based on an external pool and
   // should new compositions not available in this pool be added there?
@@ -260,11 +282,29 @@ export class TimelineService {
     // Avoid triggering change detection with each animation frame -> run outside zone
     this.ngZone.runOutsideAngular(() => {
       const timeUpdater = timer(0, 40);
-      this.timeUpdateSubscription = timeUpdater.subscribe(() => {
-        this.updateCurrentTime();
-        this.stopClockAtTheEnd();
-      });
+      this.timeUpdateSubscription = timeUpdater.subscribe(() => this.followPlayback());
     });
+  }
+
+  // Show where the playback is, and stop it at the next hold point it comes to (on the way to the end of the
+  // composition) or at the end. While it holds, only the time held there grows.
+  private followPlayback() {
+    if (this.holding) {
+      this.updateHeldMillis();
+      return;
+    }
+
+    const millis = this.getCurrentMillis();
+    const marker = this.getHoldMarkerReached(Math.min(millis, this.getEndMillis()));
+
+    if (marker) {
+      this.ngZone.run(() => this.startHold(marker));
+      return;
+    }
+
+    this.passedMillis = Math.max(this.passedMillis, millis);
+    this.updateCurrentTime();
+    this.stopClockAtTheEnd();
   }
 
   private stopTimeUpdater() {
@@ -302,25 +342,34 @@ export class TimelineService {
     this.updateCurrentTime();
   }
 
-  // jump to a point in time of the composition, e.g. when the ruler is clicked
+  // Jump to a point in time of the composition, e.g. when the ruler is clicked. The holds start over from there. While
+  // the playback holds at a hold point, it stops holding and stands where it has been moved to, until it is played.
   seekToMillis(millis: number) {
     if (!this.selectedComposition) {
       return;
     }
 
-    if (this.playsAudioFile()) {
-      if (!this.isWaveSurferReady() || !this.audioDurationMillis) {
-        return;
-      }
+    if (this.playsAudioFile() && (!this.isWaveSurferReady() || !this.audioDurationMillis)) {
+      return;
+    }
 
+    if (this.holding) {
+      this.pause();
+    }
+
+    this.clearHolds();
+
+    if (this.playsAudioFile()) {
       const progress = Math.min(1, Math.max(0, millis / this.audioDurationMillis));
 
       this.waveSurfer.seekTo(progress);
+      this.passedMillis = progress * this.audioDurationMillis + TimelineService.holdToleranceMillis;
       this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(progress * this.audioDurationMillis));
       return;
     }
 
     this.clockMillis = Math.max(0, millis);
+    this.passedMillis = this.clockMillis + TimelineService.holdToleranceMillis;
 
     if (this.clockStartedAt !== undefined) {
       this.clockStartedAt = performance.now();
@@ -332,7 +381,15 @@ export class TimelineService {
 
   // ---- playing ----------------------------------------------------------------
 
+  // Play from where the playback stands. Played from the start (or from the end, which plays it from the start again),
+  // the holds start over; played on from where it has been paused, they stay. While it holds at a hold point, this is
+  // GO.
   play() {
+    if (this.holding) {
+      this.go();
+      return;
+    }
+
     if (!this.selectedComposition || (this.playsAudioFile() && !this.isWaveSurferReady())) {
       return;
     }
@@ -342,8 +399,19 @@ export class TimelineService {
       this.clockMillis = 0;
     }
 
+    const audioAtTheEnd = this.playsAudioFile() && this.getCurrentMillis() >= this.audioDurationMillis;
+    const startMillis = audioAtTheEnd ? 0 : this.getCurrentMillis();
+
+    if (startMillis <= 0) {
+      this.clearHolds();
+    }
+
+    // a hold point right where it starts is not held at
+    this.passedMillis = startMillis + TimelineService.holdToleranceMillis;
+
     this.playState = 'playing';
-    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(this.getCurrentMillis()));
+    this.previewHolds();
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(startMillis));
 
     if (this.playsAudioFile()) {
       this.waveSurfer.play();
@@ -354,7 +422,10 @@ export class TimelineService {
     this.startTimeUpdater();
   }
 
+  // pause where the playback is. Paused while it holds at a hold point, it stops holding there.
   pause() {
+    this.endHold();
+    this.previewHolds();
     this.playState = 'paused';
     this.livePreviewService.stopPreviewPlay();
 
@@ -363,15 +434,18 @@ export class TimelineService {
         this.waveSurfer.pause();
       }
 
+      this.stopTimeUpdater();
       return;
     }
 
     this.stopClock(this.getCurrentMillis());
   }
 
-  // stop and go back to the start
+  // stop and go back to the start, where the holds start over
   rewind() {
     this.pause();
+    this.clearHolds();
+    this.passedMillis = 0;
 
     if (this.playsAudioFile()) {
       if (this.isWaveSurferReady()) {
@@ -382,6 +456,121 @@ export class TimelineService {
     }
 
     this.stopClock(0);
+  }
+
+  // ---- holding at the hold points ---------------------------------------------
+
+  // The playback stands at a hold point of the composition, waiting for GO. The position stays where it is, the
+  // effects and the steps of the clips spanning it keep running (see holds).
+  get holding(): boolean {
+    return this.currentHold !== undefined;
+  }
+
+  // the hold point the playback stands at (undefined unless it holds)
+  get heldMarker(): CompositionMarker {
+    return this.holdMarker;
+  }
+
+  // The time held at the hold point the playback stands at grows with the clock. The preview asks for it in each frame
+  // it draws, so that the effects run on smoothly; the playback itself only follows it every few frames.
+  updateHeldMillis() {
+    if (this.holding) {
+      this.currentHold.heldMillis = Math.max(0, performance.now() - this.holdStartedAt);
+    }
+  }
+
+  // the first hold point the playback has come to on its way from where it had passed to the passed point in time
+  private getHoldMarkerReached(millis: number): CompositionMarker {
+    let reached: CompositionMarker;
+
+    for (const marker of this.selectedComposition ? this.selectedComposition.markers : []) {
+      if (
+        marker.type === 'hold' &&
+        marker.positionMillis > this.passedMillis &&
+        marker.positionMillis <= millis &&
+        (!reached || marker.positionMillis < reached.positionMillis)
+      ) {
+        reached = marker;
+      }
+    }
+
+    return reached;
+  }
+
+  // Stop at a hold point: the song pauses (or the clock stands still) right on it, until GO. The time held there is
+  // added to the holds, so that the clips spanning it play on.
+  private startHold(marker: CompositionMarker) {
+    const positionMillis = marker.positionMillis;
+
+    this.holdMarker = marker;
+    this.currentHold = { positionMillis, heldMillis: 0 };
+    this.holdStartedAt = performance.now();
+    this.holds.push(this.currentHold);
+    this.passedMillis = positionMillis;
+
+    if (this.playsAudioFile()) {
+      this.waveSurfer.pause();
+      this.waveSurfer.seekTo(Math.min(1, positionMillis / this.audioDurationMillis));
+    } else {
+      this.clockMillis = positionMillis;
+      this.clockStartedAt = undefined;
+    }
+
+    this.updateCurrentTime();
+    this.previewHolds();
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(positionMillis));
+    this.detectChanges.next();
+  }
+
+  // GO: the playback goes on from the hold point it stands at. The time held there stays as long as it has been.
+  go() {
+    if (!this.holding) {
+      return;
+    }
+
+    const positionMillis = this.currentHold.positionMillis;
+    this.endHold();
+    this.passedMillis = positionMillis + TimelineService.holdToleranceMillis;
+
+    if (this.playsAudioFile()) {
+      this.waveSurfer.play();
+    } else {
+      this.clockMillis = positionMillis;
+      this.clockStartedAt = performance.now();
+    }
+
+    this.previewHolds();
+    this.livePreviewService.previewLive(this.selectedComposition.name, Math.round(positionMillis));
+    this.detectChanges.next();
+  }
+
+  // stop holding at the hold point, with the time held there as it is now
+  private endHold() {
+    if (!this.holding) {
+      return;
+    }
+
+    this.updateHeldMillis();
+    this.holdMarker = undefined;
+    this.currentHold = undefined;
+    this.holdStartedAt = undefined;
+  }
+
+  // the playback starts over from the start or has been moved: no hold point has been held at on the way there
+  private clearHolds() {
+    this.endHold();
+    this.holds = [];
+    this.previewHolds();
+  }
+
+  // the live preview holds where the playback holds, see Project.previewHolds
+  private previewHolds() {
+    const project = this.projectService.project;
+
+    if (project) {
+      project.previewHolds = this.holds;
+      project.previewHolding = this.holding;
+    }
   }
 
   applyZoom(zoom: any) {
@@ -547,6 +736,7 @@ export class TimelineService {
 
     this.selectedPlaybackRegion = region;
     this.selectedTrackUuid = region.trackUuid;
+    this.selectedMarkerUuid = undefined;
     this.detectChanges.next();
   }
 
@@ -625,6 +815,93 @@ export class TimelineService {
     this.regionChanged();
   }
 
+  // ---- markers ----------------------------------------------------------------
+
+  // the marker selected on the timeline (undefined if none is, or it is not in the composition anymore)
+  get selectedMarker(): CompositionMarker {
+    const composition = this.selectedComposition;
+
+    return composition && this.selectedMarkerUuid
+      ? composition.markers.find((marker) => marker.uuid === this.selectedMarkerUuid)
+      : undefined;
+  }
+
+  // select a marker (none, if none is passed) instead of a clip
+  selectMarker(marker: CompositionMarker) {
+    this.selectedMarkerUuid = marker ? marker.uuid : undefined;
+
+    if (marker) {
+      this.selectedPlaybackRegion = undefined;
+    }
+
+    this.detectChanges.next();
+  }
+
+  // Put a label or a hold point at the position of the playback (on the grid, if the clips snap to it), named after
+  // its kind and numbered on from the ones there are. A marker of the kind which is there already is selected instead.
+  addMarker(type: 'label' | 'hold', baseName: string): CompositionMarker {
+    const composition = this.selectedComposition;
+
+    if (!composition) {
+      return undefined;
+    }
+
+    const positionMillis = Math.max(0, this.snapMillis(this.getCurrentMillis()));
+    let marker = composition.markers.find((candidate) => candidate.type === type && candidate.positionMillis === positionMillis);
+
+    if (!marker) {
+      marker = new CompositionMarker();
+      marker.uuid = this.uuidService.getUuid();
+      marker.name = this.getNewMarkerName(composition, baseName);
+      marker.positionMillis = positionMillis;
+      marker.type = type;
+      composition.markers.push(marker);
+      this.livePreviewService.previewLive();
+    }
+
+    this.selectMarker(marker);
+
+    return marker;
+  }
+
+  private getNewMarkerName(composition: Composition, baseName: string): string {
+    let number = 1;
+
+    while (composition.markers.some((marker) => marker.name === baseName + ' ' + number)) {
+      number++;
+    }
+
+    return baseName + ' ' + number;
+  }
+
+  // move a marker to a point in time (on the grid, if the clips snap to it), not before the start, while it is dragged
+  moveMarker(marker: CompositionMarker, millis: number) {
+    marker.positionMillis = Math.max(0, this.snapMillis(millis));
+  }
+
+  // a marker has been moved, renamed or turned into the other kind
+  markerChanged() {
+    this.detectChanges.next();
+    this.livePreviewService.previewLive();
+  }
+
+  removeMarker(marker: CompositionMarker) {
+    const composition = this.selectedComposition;
+    const index = composition ? composition.markers.indexOf(marker) : -1;
+
+    if (index < 0) {
+      return;
+    }
+
+    composition.markers.splice(index, 1);
+
+    if (this.selectedMarkerUuid === marker.uuid) {
+      this.selectedMarkerUuid = undefined;
+    }
+
+    this.markerChanged();
+  }
+
   // ---- playback -------------------------------------------------------------
 
   getPresetsInTime(timeMillis: number): PresetRegionScene[] {
@@ -701,6 +978,8 @@ export class TimelineService {
     }
 
     this.stopTimeUpdater();
+    this.clearHolds();
+    this.passedMillis = 0;
     this.clockMillis = 0;
     this.clockStartedAt = undefined;
     this.audioDurationMillis = 0;
@@ -911,8 +1190,12 @@ export class TimelineService {
         this.startTimeUpdater();
       });
 
+      // the song pauses at a hold point as well, where the time held keeps growing
       this.waveSurfer.on('pause', () => {
-        this.stopTimeUpdater();
+        if (!this.holding) {
+          this.stopTimeUpdater();
+        }
+
         this.updateCurrentTime();
       });
 
@@ -978,6 +1261,7 @@ export class TimelineService {
     this.selectedCompositionIndex = index;
     this.projectService.project.selectedCompositionUuid = this.selectedComposition.uuid;
     this.selectedPlaybackRegion = undefined;
+    this.selectedMarkerUuid = undefined;
     this.ensureTracks(this.selectedComposition);
     this.loadExternalComposition();
     this.createWaveSurfer();

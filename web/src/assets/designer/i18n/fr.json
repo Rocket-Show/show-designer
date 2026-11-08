@@ -47,6 +47,7 @@
       "settings": "Paramètres",
       "help": "Aide",
       "fixture-pool": "Parc de fixtures",
+      "dmx-channels": "Canaux DMX",
       "stage": "Scène",
       "project-new": "Nouveau",
       "project-save": "Enregistrer",
@@ -168,8 +169,22 @@
       "steps-length": "Durée d'une étape",
       "steps-loop": "Répéter les étapes",
       "steps-loop-length": "Durée de la boucle",
+      "steps-length-mode": "Durée du pas en",
+      "steps-beats-hint": "Les pas suivent le tempo auquel ils sont joués. Leurs temps sont notés à {{bpm}} BPM.",
+      "steps-order": "Ordre",
+      "steps-order-forward": "En avant",
+      "steps-order-backward": "En arrière",
+      "steps-order-pingpong": "Aller-retour",
+      "steps-order-random": "Aléatoire",
+      "steps-seed": "Graine de l’ordre aléatoire",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}"
+      "model-specific": "{{count}} valeurs ne fonctionnent que sur : {{models}}",
+      "settings-fan-order": "Éventail selon",
+      "settings-fan-order-preset": "Ordre du préréglage",
+      "settings-fan-order-left-right": "Scène, de gauche à droite",
+      "settings-fan-order-front-back": "Scène, de l’avant vers l’arrière",
+      "settings-fan-order-bottom-top": "Scène, de bas en haut",
+      "settings-fan-order-hint": "L’ordre que suivent les éventails, les dégradés et les effets en éventail. Sur la scène, les fixtures au même endroit reçoivent la même valeur."
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",
@@ -275,6 +290,9 @@
       "capability-pan-tilt-aim-stop": "Ne plus viser",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Arrêt",
+      "capability-gobo-pattern": "Dans l’aperçu",
+      "capability-gobo-pattern-auto": "D’après son nom",
+      "capability-gobo-pattern-pick": "Associer un motif au gobo",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Couteau haut",
@@ -288,7 +306,33 @@
           "Bottom": "Angle du couteau bas",
           "Left": "Angle du couteau gauche"
         }
-      }
+      },
+      "gobo-family": {
+        "dots": "Points",
+        "star": "Étoile",
+        "rays": "Rayons",
+        "bars": "Barres",
+        "grid": "Grille",
+        "rings": "Anneaux",
+        "spiral": "Spirale",
+        "flower": "Fleur",
+        "polygon": "Polygone",
+        "checker": "Damier",
+        "breakup": "Breakup"
+      },
+      "fan": "Éventail",
+      "fan-hint": "Déploie la valeur en éventail sur les fixtures du préréglage, dans l’ordre d’éventail des réglages du préréglage",
+      "fan-shape": "Éventail",
+      "fan-shape-linear": "Premier → dernier",
+      "fan-shape-center": "Milieu → bords",
+      "fan-linear-from": "Premier",
+      "fan-linear-to": "Dernier",
+      "fan-center-from": "Milieu",
+      "fan-center-to": "Bords",
+      "fan-bars-hint": "Ce que reçoit chaque fixture, dans l’ordre de l’éventail",
+      "capability-color-gradient": "Dégradé",
+      "capability-color-gradient-hint": "Étend un dégradé de couleurs sur les fixtures du préréglage",
+      "capability-color-gradient-order": "Du premier au dernier fixture, dans l’ordre d’éventail des réglages du préréglage. Les fixtures avec une roue de couleurs prennent la couleur la plus proche."
     },
     "fixture-pool": {
       "title": "Parc de fixtures",
@@ -340,6 +384,17 @@
       "reset-hint": "Demande à l’appareil sur scène de se réinitialiser, p. ex. une lyre qui a perdu sa position",
       "lamp-on": "Lampe allumée",
       "lamp-on-hint": "Allume la lampe de l’appareil sur scène"
+    },
+    "dmx": {
+      "title": "Canaux DMX",
+      "universe": "Univers",
+      "show-unpatched": "Afficher les canaux sans fixture",
+      "release-all": "Relâcher tous les faders",
+      "release": "Relâcher le fader : le canal envoie à nouveau ce que mettent les presets",
+      "unpatched": "Non patché",
+      "hint": "La valeur envoyée sur chaque canal, après le gradateur général. Un fader maintient son canal à sa valeur, par-dessus ce que mettent les presets, jusqu’à ce qu’il soit relâché. Fermer cette page relâche tous les faders.",
+      "no-universe": "Il n’y a pas encore d’univers. Ajoutez-en un dans le Parc de fixtures.",
+      "no-fixtures": "Aucune fixture n’est encore patchée sur cet univers."
     },
     "gradient": {
       "color": "Couleur en valeur hexadécimale",
@@ -555,7 +610,15 @@
       "pan-tilt-shape-figure8": "Huit",
       "pan-tilt-shape-line": "Ligne",
       "pan-tilt-shape-wave": "Vague",
-      "pan-tilt-size": "Taille"
+      "pan-tilt-size": "Taille",
+      "curve-fan": "Éventail",
+      "curve-fan-hint": "Jusqu’où l’effet déplace chaque fixture selon sa place dans l’éventail du préréglage. Bords opposés : le premier et le dernier le plus, de côtés opposés, celui du milieu reste (une ligne ouvre et ferme un éventail). Bords pareils : le premier et le dernier le plus, dans le même sens. Depuis le premier : le premier reste, le dernier se déplace le plus.",
+      "curve-fan-none": "Tous pareils",
+      "curve-fan-linear": "Bords opposés",
+      "curve-fan-center": "Bords pareils",
+      "curve-fan-side": "Depuis le premier",
+      "pixel-still": "Immobile",
+      "pixel-still-hint": "Le motif reste là où sa phase et le chase le placent, p. ex. un dégradé du flux sur la scène"
     },
     "composition": {
       "new": "Créer une nouvelle composition..."
@@ -594,6 +657,23 @@
       "show-track": "Afficher de nouveau la piste dans l'aperçu",
       "solo-track": "Solo : ne jouer que les pistes en solo dans l'aperçu",
       "no-tracks": "Faites glisser une scène ici, ou dessinez celle qui est sélectionnée, pour la jouer sur une piste",
+      "markers": "Marqueurs",
+      "marker": "Marqueur",
+      "add-label": "Ajouter un repère à la position de lecture",
+      "add-hold": "Ajouter un point d'arrêt à la position de lecture : la lecture s'y arrête jusqu'au GO",
+      "marker-settings": "Paramètres du marqueur sélectionné",
+      "marker-name": "Nom",
+      "marker-type": "Type",
+      "marker-type-label": "Repère",
+      "marker-type-hold": "Point d'arrêt",
+      "marker-type-label-hint": "Marque un endroit de la composition, p. ex. le début du refrain.",
+      "marker-type-hold-hint": "La lecture s'arrête ici et attend le GO. Les effets des scènes en cours continuent de tourner.",
+      "marker-position": "Position en millisecondes",
+      "remove-marker": "Supprimer",
+      "new-label": "Repère",
+      "new-hold": "Arrêt",
+      "go": "GO",
+      "go-hint": "Reprendre depuis le point d'arrêt {{name}} (barre d'espace)",
       "actions": "Actions",
       "action-type": {
         "NULL": "Nul",

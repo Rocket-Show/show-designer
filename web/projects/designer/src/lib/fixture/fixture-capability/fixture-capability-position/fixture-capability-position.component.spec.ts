@@ -13,6 +13,7 @@ import { PresetStep } from '../../../models/preset-step';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 import { FixtureCapabilityPositionComponent } from './fixture-capability-position.component';
+import { FixtureCapabilityFanComponent } from '../fixture-capability-fan/fixture-capability-fan.component';
 
 // A capability of the step being edited which plays the same on every model of fixture: a position between the ends
 // of what a fixture does (e.g. the zoom from narrow to wide), the prism in or out and an emitter (e.g. white). Switched
@@ -27,7 +28,7 @@ describe('FixtureCapabilityPositionComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FixtureCapabilityPositionComponent],
+      declarations: [FixtureCapabilityPositionComponent, FixtureCapabilityFanComponent],
       imports: [FormsModule, NgxBootstrapSliderModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
     }).compileComponents();

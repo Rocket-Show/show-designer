@@ -47,6 +47,7 @@
       "settings": "Settings",
       "help": "Help",
       "fixture-pool": "Fixture pool",
+      "dmx-channels": "DMX channels",
       "stage": "Stage",
       "project-new": "New",
       "project-save": "Save",
@@ -168,8 +169,22 @@
       "steps-length": "Step length",
       "steps-loop": "Loop the steps",
       "steps-loop-length": "Loop length",
+      "steps-length-mode": "Step length in",
+      "steps-beats-hint": "The steps follow the tempo they are played at. Their times are written down at {{bpm}} BPM.",
+      "steps-order": "Order",
+      "steps-order-forward": "Forward",
+      "steps-order-backward": "Backward",
+      "steps-order-pingpong": "Forward and back",
+      "steps-order-random": "Random",
+      "steps-seed": "Seed of the random order",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} values only play on: {{models}}"
+      "model-specific": "{{count}} values only play on: {{models}}",
+      "settings-fan-order": "Fan across",
+      "settings-fan-order-preset": "Order of the preset",
+      "settings-fan-order-left-right": "Stage, left to right",
+      "settings-fan-order-front-back": "Stage, front to back",
+      "settings-fan-order-bottom-top": "Stage, bottom to top",
+      "settings-fan-order-hint": "The order fans, gradients and fanned effects follow. On the stage, fixtures at the same place get the same value."
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
@@ -275,6 +290,9 @@
       "capability-pan-tilt-aim-stop": "Stop aiming",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Off",
+      "capability-gobo-pattern": "In the preview",
+      "capability-gobo-pattern-auto": "From its name",
+      "capability-gobo-pattern-pick": "Match the gobo with a pattern",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Blade top",
@@ -288,7 +306,33 @@
           "Bottom": "Blade bottom angle",
           "Left": "Blade left angle"
         }
-      }
+      },
+      "gobo-family": {
+        "dots": "Dots",
+        "star": "Star",
+        "rays": "Rays",
+        "bars": "Bars",
+        "grid": "Grid",
+        "rings": "Rings",
+        "spiral": "Spiral",
+        "flower": "Flower",
+        "polygon": "Polygon",
+        "checker": "Checkerboard",
+        "breakup": "Breakup"
+      },
+      "fan": "Fan out",
+      "fan-hint": "Fans the value out over the fixtures of the preset, in the fan order of the preset settings",
+      "fan-shape": "Fan",
+      "fan-shape-linear": "First → last",
+      "fan-shape-center": "Middle → ends",
+      "fan-linear-from": "First",
+      "fan-linear-to": "Last",
+      "fan-center-from": "Middle",
+      "fan-center-to": "Ends",
+      "fan-bars-hint": "What each fixture gets, in the order of the fan",
+      "capability-color-gradient": "Gradient",
+      "capability-color-gradient-hint": "Spans a gradient of colors over the fixtures of the preset",
+      "capability-color-gradient-order": "From the first to the last fixture, in the fan order of the preset settings. Fixtures with a color wheel take the closest color."
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -340,6 +384,17 @@
       "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
       "lamp-on": "Lamp on",
       "lamp-on-hint": "Switches the lamp of the fixture on stage on"
+    },
+    "dmx": {
+      "title": "DMX channels",
+      "universe": "Universe",
+      "show-unpatched": "Show the channels no fixture is patched to",
+      "release-all": "Let go of all faders",
+      "release": "Let go of the fader: the channel sends what the presets put on it again",
+      "unpatched": "Not patched",
+      "hint": "The value sent on each channel, after the master dimmer. A fader holds its channel at its value, over what the presets put on it, until it is let go. Closing this page lets go of all faders.",
+      "no-universe": "There is no universe yet. Add one in the fixture pool.",
+      "no-fixtures": "No fixture is patched to this universe yet."
     },
     "gradient": {
       "color": "Color as a hex value",
@@ -555,7 +610,15 @@
       "pan-tilt-shape-figure8": "Figure 8",
       "pan-tilt-shape-line": "Line",
       "pan-tilt-shape-wave": "Wave",
-      "pan-tilt-size": "Size"
+      "pan-tilt-size": "Size",
+      "curve-fan": "Fan",
+      "curve-fan-hint": "How far the effect moves each fixture by its place in the fan of the preset. Ends opposite: the first and the last the most, to opposite sides, the middle stays (a line opens and closes a fan). Ends alike: the first and the last the most, the same way. From the first: the first stays, the last moves the most.",
+      "curve-fan-none": "Same for all",
+      "curve-fan-linear": "Ends opposite",
+      "curve-fan-center": "Ends alike",
+      "curve-fan-side": "From the first",
+      "pixel-still": "Still",
+      "pixel-still-hint": "The pattern stands where its phase and the chase put it, e.g. a gradient of the flow over the stage"
     },
     "composition": {
       "new": "Create new composition..."
@@ -594,6 +657,23 @@
       "show-track": "Show the track in the preview again",
       "solo-track": "Solo: play only the soloed tracks in the preview",
       "no-tracks": "Drag a scene here, or draw the selected one, to play it on a track",
+      "markers": "Markers",
+      "marker": "Marker",
+      "add-label": "Add a label where the playback is",
+      "add-hold": "Add a hold point where the playback is: it stops there until GO",
+      "marker-settings": "Settings of the selected marker",
+      "marker-name": "Name",
+      "marker-type": "Type",
+      "marker-type-label": "Label",
+      "marker-type-hold": "Hold point",
+      "marker-type-label-hint": "Marks a point of the composition, e.g. where the chorus starts.",
+      "marker-type-hold-hint": "The playback stops here and waits for GO. The effects of the scenes playing keep running.",
+      "marker-position": "Position in milliseconds",
+      "remove-marker": "Remove",
+      "new-label": "Label",
+      "new-hold": "Hold",
+      "go": "GO",
+      "go-hint": "Go on from the hold point {{name}} (space bar)",
       "actions": "Actions",
       "action-type": {
         "NULL": "Null",

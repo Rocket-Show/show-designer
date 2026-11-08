@@ -47,13 +47,25 @@
           <a href="#" class="btn btn-primary m-0 p-1" (click)="rewind(); (false)"
             ><i class="fa fa-step-backward fa-fw" aria-hidden="true"></i
           ></a>
-          @if (timelineService.playState == 'paused') {
+          <!-- standing at a hold point, play goes on from there (GO) -->
+          @if (timelineService.playState == 'paused' || timelineService.holding) {
           <a href="#" class="btn btn-primary m-0 p-1" (click)="play(); (false)"><i class="fa fa-play fa-fw" aria-hidden="true"></i></a>
-          } @if (timelineService.playState == 'playing') {
+          } @else {
           <a href="#" class="btn btn-primary m-0 p-1" (click)="pause(); (false)"><i class="fa fa-pause fa-fw" aria-hidden="true"></i></a>
           }
         </div>
-        }
+        @if (timelineService.holding) {
+        <a
+          href="#"
+          class="btn btn-success m-0 ml-2 py-1 tl-go"
+          (click)="go(); (false)"
+          [popover]="'designer.timeline.go-hint' | translate : { name: timelineService.heldMarker.name }"
+          container="body"
+          placement="top"
+          triggers="mouseenter:mouseleave"
+          >{{ 'designer.timeline.go' | translate }}</a
+        >
+        } }
       </div>
 
       @if (timelineService.selectedComposition) {
@@ -97,6 +109,41 @@
           />
         </div>
         }
+        <!-- the markers: a label or a hold point where the playback is, and the settings of the selected one -->
+        <div class="btn-group mr-3" role="group">
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="addMarker('label'); (false)"
+            popover="{{ 'designer.timeline.add-label' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-flag-o" aria-hidden="true"></i
+          ></a>
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="addMarker('hold'); (false)"
+            popover="{{ 'designer.timeline.add-hold' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-hand-paper-o" aria-hidden="true"></i
+          ></a>
+          @if (timelineService.selectedMarker) {
+          <a
+            href="#"
+            class="btn btn-secondary m-0 py-1"
+            (click)="editMarker(timelineService.selectedMarker); (false)"
+            popover="{{ 'designer.timeline.marker-settings' | translate }}"
+            container="body"
+            placement="top"
+            triggers="mouseenter:mouseleave"
+            ><i class="fa fa-pencil" aria-hidden="true"></i
+          ></a>
+          }
+        </div>
         <div class="btn-group mr-3" role="group">
           <a
             href="#"
@@ -152,6 +199,7 @@
       #frame
       class="tl-frame"
       [class.tl-no-audio]="timelineService.selectedComposition.syncType === 'none'"
+      [class.tl-has-markers]="markerViews.length > 0"
       tabindex="0"
       (keydown)="onKeyDown($event)"
     >
@@ -189,6 +237,38 @@
             </div>
             <div class="tl-lane tl-wave" [ngStyle]="gridStyle" (mousedown)="onSeekStart($event)">
               <canvas #waveCanvas class="tl-canvas"></canvas>
+            </div>
+          </div>
+          }
+
+          <!-- the markers of the composition: labels, and hold points the playback stops at until GO. Click one to
+               select it, drag it to move it, double click it for its settings. -->
+          @if (markerViews.length > 0) {
+          <div class="tl-row tl-markers-row">
+            <div class="tl-head tl-markers-head">
+              <i class="fa fa-flag-o fa-fw tl-dim" aria-hidden="true"></i>
+              <span>{{ 'designer.timeline.markers' | translate }}</span>
+            </div>
+            <div class="tl-lane tl-markers" (mousedown)="onSeekStart($event)">
+              @for (view of markerViews; track view.marker.uuid) {
+              <div
+                class="tl-marker"
+                [class.tl-marker-hold]="view.hold"
+                [class.tl-marker-selected]="view.selected"
+                [style.left.px]="view.leftPx"
+                [title]="
+                  view.time +
+                  ' · ' +
+                  ((view.hold ? 'designer.timeline.marker-type-hold' : 'designer.timeline.marker-type-label') | translate)
+                "
+                (mousedown)="onMarkerMouseDown($event, view)"
+                (dblclick)="editMarker(view.marker)"
+              >
+                @if (view.labelWidthPx >= 24) {
+                <span class="tl-marker-label" [style.max-width.px]="view.labelWidthPx">{{ view.marker.name }}</span>
+                }
+              </div>
+              }
             </div>
           </div>
           }
@@ -311,6 +391,11 @@
               }
             </div>
           </div>
+
+          <!-- the playback stops at the hold points: they are drawn across the tracks -->
+          @for (view of markerViews; track view.marker.uuid) { @if (view.hold) {
+          <div class="tl-hold-line" [style.left.px]="headerWidthPx + view.leftPx"></div>
+          } }
 
           <!-- past the end of a composition without an audio file: a scene put there makes it longer -->
           @if (endPx !== undefined) {

@@ -7,6 +7,7 @@ import { ToastrModule } from 'ngx-toastr';
 import WaveSurfer from 'wavesurfer.js';
 
 import { Composition } from '../models/composition';
+import { CompositionMarker } from '../models/composition-marker';
 import { ExternalComposition } from '../models/external-composition';
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
@@ -807,6 +808,46 @@ describe('TimelineService playing along an audio file', () => {
     expect([pastTheEnd.startMillis, pastTheEnd.endMillis]).toEqual([60000 - TimelineService.minRegionMillis, 60000]);
   }));
 
+  it('pauses the song right at a hold point, and plays it on from there with GO', fakeAsync(() => {
+    let now = 0;
+    spyOn(performance, 'now').and.callFake(() => now);
+    projectService.project.compositions[0].markers.push(
+      new CompositionMarker({ uuid: 'hold', name: 'Bridge', positionMillis: 2000, type: 'hold' })
+    );
+    load();
+
+    service.play();
+    waveSurfer.handlers.play();
+    tick(0);
+    waveSurfer.currentTime = 2.03;
+    tick(40);
+
+    expect(service.holding).toBe(true);
+    expect(service.playState).toBe('playing');
+    expect(waveSurfer.pause).toHaveBeenCalled();
+    expect(waveSurfer.seekTo).toHaveBeenCalledWith(2000 / 60000);
+    expect(service.getCurrentMillis()).toBeCloseTo(2000, 6);
+    expect(livePreviewService.previewLive).toHaveBeenCalledWith('Rock & Roll', 2000);
+    expect(livePreviewService.stopPreviewPlay).not.toHaveBeenCalled();
+
+    // the song is paused, while the time held keeps growing
+    waveSurfer.handlers.pause();
+    now += 400;
+    tick(40);
+    expect(service.holds).toEqual([{ positionMillis: 2000, heldMillis: 400 }]);
+
+    service.go();
+    waveSurfer.currentTime = 2.5;
+    tick(40);
+
+    expect(waveSurfer.play).toHaveBeenCalledTimes(2);
+    expect(service.holding).toBe(false);
+    expect(service.currentTime).toBe('00:02.500');
+    expect(service.holds).toEqual([{ positionMillis: 2000, heldMillis: 400 }]);
+
+    service.pause();
+  }));
+
   it('destroys the player of the song left', fakeAsync(() => {
     load();
     service.play();
@@ -818,6 +859,378 @@ describe('TimelineService playing along an audio file', () => {
     expect(service.playState).toBe('paused');
     expect(service.peaks.length).toBe(0);
   }));
+});
+
+// The hold points of a composition: the playback stops at each one it comes to and waits for GO there, while the
+// effects and the steps of the clips spanning it run on (see getHeldMillis). The labels only mark a point in time.
+describe('TimelineService holding at the hold points', () => {
+  let service: TimelineService;
+  let projectService: ProjectService;
+  let previewLive: jasmine.Spy;
+  let now: number;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    projectService = TestBed.inject(ProjectService);
+    previewLive = spyOn(TestBed.inject(LivePreviewService), 'previewLive');
+    spyOn(TestBed.inject(LivePreviewService), 'stopPreviewPlay');
+
+    now = 1000;
+    spyOn(performance, 'now').and.callFake(() => now);
+
+    projectService.project = new Project({
+      scenes: [{ uuid: 'scene', name: 'Scene' }],
+      compositions: [
+        {
+          uuid: 'composition',
+          name: 'Song One',
+          syncType: 'none',
+          scenePlaybackRegions: [{ sceneUuid: 'scene', startMillis: 0, endMillis: 10000 }],
+          markers: [
+            { uuid: 'intro', name: 'Intro', positionMillis: 1000, type: 'label' },
+            { uuid: 'verse', name: 'Verse', positionMillis: 3000, type: 'hold' },
+            { uuid: 'chorus', name: 'Chorus', positionMillis: 6000, type: 'hold' },
+          ],
+        },
+      ],
+    });
+
+    service.selectCompositionIndex(0);
+  });
+
+  afterEach(() => {
+    service.destroyWaveSurfer();
+  });
+
+  // the clock moves on, and the playback follows it (as it does every few frames while it plays)
+  function run(millis: number) {
+    now += millis;
+    (service as any).followPlayback();
+  }
+
+  it('passes the labels, and stops at a hold point, right on it', () => {
+    service.play();
+    run(2000);
+    expect(service.holding).toBe(false);
+    expect(service.getCurrentMillis()).toBe(2000);
+
+    run(1040);
+
+    expect(service.holding).toBe(true);
+    expect(service.heldMarker.name).toBe('Verse');
+    expect(service.playState).toBe('playing');
+    expect(service.getCurrentMillis()).toBe(3000);
+    expect(service.currentTime).toBe('00:03.000');
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 0 }]);
+  });
+
+  it('keeps the position while it holds, and the time held growing', () => {
+    service.play();
+    run(3040);
+
+    run(5000);
+    expect(service.getCurrentMillis()).toBe(3000);
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 5000 }]);
+
+    // the preview asks for it in each frame it draws
+    now += 16;
+    service.updateHeldMillis();
+    expect(service.holds[0].heldMillis).toBe(5016);
+  });
+
+  it('goes on from the hold point with GO, the time held staying as long as it has been', () => {
+    service.play();
+    run(3040);
+    run(5000);
+
+    service.go();
+    run(1000);
+
+    expect(service.holding).toBe(false);
+    expect(service.heldMarker).toBeUndefined();
+    expect(service.getCurrentMillis()).toBe(4000);
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 5000 }]);
+  });
+
+  it('takes play for GO while it holds', () => {
+    service.play();
+    run(3040);
+
+    service.play();
+    run(500);
+
+    expect(service.holding).toBe(false);
+    expect(service.getCurrentMillis()).toBe(3500);
+  });
+
+  it('holds at each hold point it comes to, also at two passed between two updates', () => {
+    projectService.project.compositions[0].markers[2].positionMillis = 3020;
+
+    service.play();
+    run(3100);
+    expect(service.heldMarker.name).toBe('Verse');
+
+    run(1000);
+    service.go();
+    run(40);
+
+    expect(service.heldMarker.name).toBe('Chorus');
+    expect(service.getCurrentMillis()).toBe(3020);
+    expect(service.holds).toEqual([
+      { positionMillis: 3000, heldMillis: 1000 },
+      { positionMillis: 3020, heldMillis: 0 },
+    ]);
+  });
+
+  it('does not hold at a hold point it is started from', () => {
+    service.seekToMillis(3000);
+
+    service.play();
+    run(500);
+
+    expect(service.holding).toBe(false);
+    expect(service.getCurrentMillis()).toBe(3500);
+  });
+
+  it('does not hold at a hold point past the end', () => {
+    projectService.project.compositions[0].markers[2].positionMillis = 12000;
+
+    service.seekToMillis(4000);
+    service.play();
+    run(6040);
+    (service as any).stopClockAtTheEnd();
+
+    expect(service.holding).toBe(false);
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(10000);
+  });
+
+  it('keeps the holds when it is paused and played on, and starts over when it is played from the start', () => {
+    service.play();
+    run(3040);
+    run(2000);
+    service.go();
+    run(500);
+
+    service.pause();
+    service.play();
+    run(100);
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 2000 }]);
+
+    service.rewind();
+    expect(service.holds).toEqual([]);
+
+    service.play();
+    run(3040);
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 0 }]);
+  });
+
+  it('stops holding when it is paused, with the time held so far', () => {
+    service.play();
+    run(3040);
+    run(1500);
+
+    service.pause();
+    run(1000);
+
+    expect(service.holding).toBe(false);
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(3000);
+    expect(service.holds).toEqual([{ positionMillis: 3000, heldMillis: 1500 }]);
+
+    // played on from the hold point, it does not hold there again
+    service.play();
+    run(500);
+    expect(service.holding).toBe(false);
+    expect(service.getCurrentMillis()).toBe(3500);
+  });
+
+  it('starts over when it is moved, and stands where it has been moved to, if it held', () => {
+    service.play();
+    run(1000);
+    service.seekToMillis(2900);
+    run(140);
+    expect(service.holding).toBe(true);
+
+    service.seekToMillis(5000);
+    run(1000);
+
+    expect(service.holding).toBe(false);
+    expect(service.playState).toBe('paused');
+    expect(service.getCurrentMillis()).toBe(5000);
+    expect(service.holds).toEqual([]);
+  });
+
+  it('starts over with another composition', () => {
+    service.play();
+    run(3040);
+
+    service.selectCompositionIndex(0);
+
+    expect(service.holding).toBe(false);
+    expect(service.holds).toEqual([]);
+  });
+
+  it('lets the live preview hold along with it', () => {
+    const project = projectService.project;
+
+    service.play();
+    expect(project.previewHolding).toBe(false);
+
+    previewLive.calls.reset();
+    run(3040);
+    expect(project.previewHolding).toBe(true);
+    expect(project.previewHolds).toEqual([{ positionMillis: 3000, heldMillis: 0 }]);
+    expect(previewLive.calls.allArgs()).toEqual([['Song One', 3000]]);
+
+    previewLive.calls.reset();
+    run(2500);
+    service.go();
+    expect(project.previewHolding).toBe(false);
+    expect(project.previewHolds).toEqual([{ positionMillis: 3000, heldMillis: 2500 }]);
+    expect(previewLive.calls.allArgs()).toEqual([['Song One', 3000]]);
+
+    service.rewind();
+    expect(project.previewHolds).toEqual([]);
+  });
+
+  it('never opens a project holding, or with the holds of another one', () => {
+    const project = projectService.project;
+    service.play();
+    run(3040);
+
+    const opened = new Project(JSON.parse(JSON.stringify(project)));
+
+    expect(opened.previewHolding).toBe(false);
+    expect(opened.previewHolds).toEqual([]);
+  });
+});
+
+// The markers of a composition: labels and hold points, put where the playback is and moved along the time
+describe('TimelineService editing the markers', () => {
+  let service: TimelineService;
+  let projectService: ProjectService;
+  let previewLive: jasmine.Spy;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    projectService = TestBed.inject(ProjectService);
+    previewLive = spyOn(TestBed.inject(LivePreviewService), 'previewLive');
+
+    projectService.project = new Project({
+      scenes: [{ uuid: 'scene', name: 'Scene' }],
+      compositions: [
+        {
+          uuid: 'composition',
+          name: 'Song One',
+          syncType: 'none',
+          gridType: 'musical',
+          beatsPerMinute: 120,
+          gridResolution: 1,
+          gridOffsetMillis: 0,
+          snapToGrid: true,
+          scenePlaybackRegions: [{ sceneUuid: 'scene', startMillis: 0, endMillis: 10000 }],
+        },
+      ],
+    });
+
+    service.selectCompositionIndex(0);
+  });
+
+  afterEach(() => {
+    service.destroyWaveSurfer();
+  });
+
+  const markers = () => service.selectedComposition.markers;
+
+  it('puts a label or a hold point where the playback is, on the grid, numbered on and selected', () => {
+    service.seekToMillis(4200);
+    previewLive.calls.reset();
+
+    const label = service.addMarker('label', 'Label');
+    const hold = service.addMarker('hold', 'Hold');
+    service.seekToMillis(6000);
+    const secondHold = service.addMarker('hold', 'Hold');
+
+    expect(markers().map((marker) => [marker.name, marker.type, marker.positionMillis])).toEqual([
+      ['Label 1', 'label', 4000],
+      ['Hold 1', 'hold', 4000],
+      ['Hold 2', 'hold', 6000],
+    ]);
+    expect(label.uuid).toBeTruthy();
+    expect(hold.uuid).not.toBe(label.uuid);
+    expect(service.selectedMarker).toBe(secondHold);
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('selects the marker of the kind which is there already, instead of putting another one there', () => {
+    const first = service.addMarker('hold', 'Hold');
+    service.selectMarker(undefined);
+
+    expect(service.addMarker('hold', 'Hold')).toBe(first);
+    expect(markers().length).toBe(1);
+    expect(service.selectedMarker).toBe(first);
+  });
+
+  it('selects either a marker or a clip', () => {
+    const marker = service.addMarker('label', 'Label');
+    const region = service.selectedComposition.scenePlaybackRegions[0];
+
+    service.selectRegion(region);
+    expect(service.selectedMarker).toBeUndefined();
+
+    service.selectMarker(marker);
+    expect(service.selectedMarker).toBe(marker);
+    expect(service.selectedPlaybackRegion).toBeUndefined();
+  });
+
+  it('keeps a marker selected through an undo, which puts back another object of it', () => {
+    const marker = service.addMarker('label', 'Label');
+
+    service.selectedComposition.markers = [new CompositionMarker(JSON.parse(JSON.stringify(marker)))];
+
+    expect(service.selectedMarker).toBe(service.selectedComposition.markers[0]);
+  });
+
+  it('moves a marker onto the grid, not before the start', () => {
+    const marker = service.addMarker('label', 'Label');
+
+    service.moveMarker(marker, 7340);
+    expect(marker.positionMillis).toBe(7500);
+
+    service.moveMarker(marker, -800);
+    expect(marker.positionMillis).toBe(0);
+  });
+
+  it('removes a marker, and forgets it was selected', () => {
+    const marker = service.addMarker('hold', 'Hold');
+    previewLive.calls.reset();
+
+    service.removeMarker(marker);
+
+    expect(markers()).toEqual([]);
+    expect(service.selectedMarker).toBeUndefined();
+    expect(service.selectedMarkerUuid).toBeUndefined();
+    expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('forgets the selected marker with another composition', () => {
+    service.addMarker('hold', 'Hold');
+
+    service.selectCompositionIndex(0);
+
+    expect(service.selectedMarkerUuid).toBeUndefined();
+  });
 });
 
 // Tracks and clips: the scenes are put on the tracks of the composition.

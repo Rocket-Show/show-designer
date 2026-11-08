@@ -1,0 +1,90 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.fan-ends {
+  display: flex;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.fan-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+}
+
+.fan-end-label {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.fan-value {
+  width: 3.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.fan-slider {
+  flex: 1 1 auto;
+  min-height: 60px;
+}
+
+.position-end {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.fan-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 28px;
+  margin: 0.5rem 0;
+}
+
+.fan-bar {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+}
+
+.fan-bar-value {
+  width: 100%;
+  min-height: 1px;
+  background: var(--sd-primary, #fd7e14);
+  border-radius: 1px;
+}
+
+.fan-shapes .btn {
+  padding: 0.15rem 0.5rem;
+}
+
+/* a ramp from the first to the last fixture, and a V from the middle out to both ends */
+.fan-shape-icon {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  background-color: currentColor;
+  vertical-align: middle;
+}
+
+.fan-shape-icon-linear {
+  clip-path: polygon(0 100%, 100% 0, 100% 100%);
+}
+
+.fan-shape-icon-center {
+  clip-path: polygon(0 0, 50% 70%, 100% 0, 100% 100%, 0 100%);
+}
+
+.fan-shapes .btn.active .fan-shape-icon {
+  background-color: var(--sd-primary, #fd7e14);
+}

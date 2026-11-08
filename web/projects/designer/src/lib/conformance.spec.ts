@@ -91,14 +91,35 @@ function resolveProfiles(project: any): any {
   return resolved;
 }
 
-// a capability value as the designer writes it, without the properties missing
+// a capability value as the designer writes it, without the properties missing. A pan or tilt value between two steps
+// names the value it travels from and how far it has come (see pan-tilt).
 function capabilityOf(value: FixtureCapabilityValue): any {
   const capability = {};
 
-  for (const property of ['type', 'color', 'wheel', 'profileUuid', 'valuePercentage', 'slotNumber']) {
+  for (const property of [
+    'type',
+    'color',
+    'wheel',
+    'profileUuid',
+    'valuePercentage',
+    'slotNumber',
+    'valueDegrees',
+    'spreadDegrees',
+    'fanShape',
+    'fan',
+    'aimX',
+    'aimY',
+    'aimZ',
+    'blade',
+  ]) {
     if (value[property] !== undefined && value[property] !== null) {
       capability[property] = value[property];
     }
+  }
+
+  if (value.transitionFrom) {
+    capability['transitionFrom'] = capabilityOf(value.transitionFrom);
+    capability['transitionPosition'] = value.transitionPosition;
   }
 
   return capability;
@@ -143,7 +164,7 @@ function frameServices() {
 
 // the values the preview gives every fixture (and pixel) of a project at the passed times, the way
 // it plays the timeline of a composition, the selected preset or the selected scenes
-function channelValues(projectData: any, preview: any, times: number[], audio?: any): any[] {
+function channelValues(projectData: any, preview: any, times: number[], audio?: any, holds?: any[]): any[] {
   const services = frameServices();
   const project = new Project(resolveProfiles(projectData));
 
@@ -179,6 +200,9 @@ function channelValues(projectData: any, preview: any, times: number[], audio?: 
   } else {
     throw new Error('Unknown preview mode ' + preview.mode);
   }
+
+  // the hold points the timeline played through (with the time held at each), if any
+  services.timelineService.holds = holds ?? [];
 
   // the fixtures identified from the fixture pool, if any
   project.identifyFixtureUuids = preview.identify ?? [];
@@ -391,7 +415,7 @@ const kinds: { [kind: string]: (input: any) => any } = {
     });
   },
 
-  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times, input.audio)),
+  channelValues: (input) => input.runs.map((run: any) => channelValues(input.project, run.preview, run.times, input.audio, run.holds)),
 
   migration: (input) => migratedProjectOf(migrate(input.project)),
 };

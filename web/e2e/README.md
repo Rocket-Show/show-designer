@@ -5,18 +5,19 @@ The specs in this folder test whole user flows through the designer in a real br
 embedded, the 3D preview rendered with WebGL. The unit specs of the library (`ng test designer`) test its parts on
 their own, these test that the parts work together the way a user goes through them.
 
-| Spec                    | What it covers                                                                                                                                 |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start.spec.ts`         | the template project opening with all the panels, the intro walking a new user through them and staying closed once closed                     |
-| `fixtures.spec.ts`      | the fixture pool: finding profiles of the library, patching fixtures, naming and removing them, cancelling, a fixture with pixels in one row   |
-| `presets.spec.ts`       | adding a preset to a scene, selecting its fixtures, dimming and coloring them, the color the preset is marked with, the preview lit, the steps |
-| `pixel-effects.spec.ts` | a pixel effect on a bar: adding it to a preset, picking its pattern and its palette, the bar lit in its card                                   |
-| `timeline.spec.ts`      | a scene with a preset on a track of a composition without an audio file, playing, pausing, rewinding, stopping at the end                      |
-| `projects.spec.ts`      | registering and signing in on the way to saving, saving, opening the saved project again on the next visit and in the project browser, sharing |
-| `undo.spec.ts`          | undo and redo with the keyboard and the Edit menu                                                                                              |
-| `layout.spec.ts`        | folding panels with the arrows in the gutters and in the View menu, the layouts of the View menu, kept through a reload                        |
-| `errors.spec.ts`        | what the user is told when a project can't be opened or saved, or is shared before it has been saved                                           |
-| `phone.spec.ts`         | the panels stacked down the page of a phone without the 3D preview, editing a preset and the timeline there, the View menu, the intro          |
+| Spec                    | What it covers                                                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start.spec.ts`         | the template project opening with all the panels, the intro walking a new user through them and staying closed once closed                                  |
+| `fixtures.spec.ts`      | the fixture pool: finding profiles of the library, patching fixtures, naming and removing them, cancelling, a fixture with pixels in one row                |
+| `presets.spec.ts`       | adding a preset to a scene, selecting its fixtures, dimming and coloring them, the color the preset is marked with, the preview lit, the steps              |
+| `pixel-effects.spec.ts` | a pixel effect on a bar: adding it to a preset, picking its pattern and its palette, the bar lit in its card                                                |
+| `timeline.spec.ts`      | a scene with a preset on a track of a composition without an audio file, playing, pausing, rewinding, stopping at the end, holding at a hold point until GO |
+| `projects.spec.ts`      | registering and signing in on the way to saving, saving, opening the saved project again on the next visit and in the project browser, sharing              |
+| `undo.spec.ts`          | undo and redo with the keyboard and the Edit menu                                                                                                           |
+| `dmx.spec.ts`           | the DMX channels: the channels of each fixture with the values sent on them, the faders lighting the fixtures in the preview until the page is closed       |
+| `layout.spec.ts`        | folding panels with the arrows in the gutters and in the View menu, the layouts of the View menu, kept through a reload                                     |
+| `errors.spec.ts`        | what the user is told when a project can't be opened or saved, or is shared before it has been saved                                                        |
+| `phone.spec.ts`         | the panels stacked down the page of a phone without the 3D preview, editing a preset and the timeline there, the View menu, the intro                       |
 
 ## Running them
 
@@ -36,8 +37,9 @@ report of a failed run as the artifact `playwright-report`.
 ## The fake API
 
 The online designer talks to its PHP API (`show-designer-api/` in the [spark](https://github.com/Rocket-Show/spark)
-repository), which the dev build reaches at `http://localhost:8080/api/` (`src/environments/environment.ts`). The tests
-don't need it: `fake-api.ts` answers the requests in the browser (`context.route`), like the real endpoints do (see
+repository), which the app served for the tests (`ng serve --configuration e2e`) reaches at `http://localhost:8080/api/`
+(`src/environments/environment.e2e.ts`), wherever `environment.ts` points the dev build at. The tests don't need it:
+`fake-api.ts` answers the requests in the browser (`context.route`), like the real endpoints do (see
 `show-designer-api/*.php` for what they answer):
 
 - `project` serves the template (id 1, which every new project starts from: one preset in one scene, no fixtures) and

@@ -15,6 +15,7 @@ import { FixtureService } from '../../services/fixture.service';
 import { PREVIEW_GLOW_LAYER, PreviewService } from '../../services/preview.service';
 import { ProjectService } from '../../services/project.service';
 import { Fixture3d } from './fixture-3d';
+import { getGoboPattern, getGoboTexture } from './gobo';
 
 // a fixture shown as a glowing bulb only, the way the preview shows the pixels of a bar
 class Bulb3d extends Fixture3d {
@@ -597,5 +598,83 @@ describe('Fixture3d emitters and filters', () => {
     // full magenta and yellow let red through only
     fixture3d.updatePreview(values({ Cyan: 0, Magenta: 255, Yellow: 255 }), 1);
     expect(fixture3d.glow.getHex()).toBe(0xff0000);
+  });
+});
+
+// The beam opens as wide as the lens and the zoom of the fixture open it, and shows the gobo its wheel sits on.
+describe('Fixture3d zoom and gobo', () => {
+  let fixture3d: Beam3d;
+
+  beforeEach(() => {
+    configureTestingModule();
+
+    TestBed.inject(ProjectService).project = new Project({
+      fixtureProfiles: [
+        {
+          uuid: 'test/spot',
+          name: 'Spot',
+          physical: { lens: { degreesMinMax: [10, 30] } },
+          availableChannels: {
+            Dimmer: { capability: { type: 'Intensity' } },
+            Zoom: { capability: { type: 'Zoom', angleStart: 'narrow', angleEnd: 'wide' } },
+            'Gobo Wheel': {
+              capabilities: [
+                { dmxRange: [0, 9], type: 'WheelSlot', slotNumber: 1 },
+                { dmxRange: [10, 255], type: 'WheelSlot', slotNumber: 2 },
+              ],
+            },
+          },
+          wheels: { 'Gobo Wheel': { slots: [{ type: 'Open' }, { type: 'Gobo', name: 'Stars' }] } },
+          modes: [{ name: 'mode', shortName: 'mode', channels: ['Dimmer', 'Zoom', 'Gobo Wheel'] }],
+        },
+      ],
+      fixtures: [{ uuid: 'fixture-1', profileUuid: 'test/spot', modeShortName: 'mode', dmxFirstChannel: 0, positioning: 'topFront' }],
+    });
+    const fixtureService = TestBed.inject(FixtureService);
+    fixtureService.updateCachedFixtures();
+    fixture3d = new Beam3d(fixtureService, TestBed.inject(PreviewService), fixtureService.cachedFixtures[0]);
+  });
+
+  function show(zoom: number, gobo: number) {
+    fixture3d.updatePreview(
+      [
+        Object.assign(new FixtureChannelValue(), { channelName: 'Dimmer', value: 255 }),
+        Object.assign(new FixtureChannelValue(), { channelName: 'Zoom', value: zoom }),
+        Object.assign(new FixtureChannelValue(), { channelName: 'Gobo Wheel', value: gobo }),
+      ],
+      1
+    );
+  }
+
+  function uniforms(): any {
+    return (fixture3d as any).spotlightMaterial.uniforms;
+  }
+
+  it('opens the beam and its light from narrow to wide with the zoom', () => {
+    show(0, 0);
+    expect(uniforms().tanAngle.value).toBeCloseTo(Math.tan(THREE.MathUtils.degToRad(5)), 10);
+    expect(uniforms().cos2.value).toBeCloseTo(1 / (1 + Math.tan(THREE.MathUtils.degToRad(5)) ** 2), 10);
+    expect((fixture3d as any).spotLight.angle).toBeCloseTo(THREE.MathUtils.degToRad(10), 10);
+
+    show(255, 0);
+    expect(uniforms().tanAngle.value).toBeCloseTo(Math.tan(THREE.MathUtils.degToRad(15)), 10);
+    expect((fixture3d as any).spotLight.angle).toBeCloseTo(THREE.MathUtils.degToRad(30), 10);
+  });
+
+  it('shows the gobo the wheel sits on, and leaves its pattern on the floor to the beam', () => {
+    show(0, 0);
+    expect(fixture3d.showsGobo).toBe(false);
+    expect(uniforms().goboOn.value).toBe(0);
+    const openIntensity = (fixture3d as any).spotLight.intensity;
+
+    show(0, 100);
+    expect(fixture3d.showsGobo).toBe(true);
+    expect(uniforms().goboOn.value).toBe(1);
+    expect(uniforms().goboMap.value).toBe(getGoboTexture(getGoboPattern('Stars', 2)));
+    expect((fixture3d as any).spotLight.intensity).toBeLessThan(openIntensity);
+
+    show(0, 0);
+    expect(uniforms().goboOn.value).toBe(0);
+    expect((fixture3d as any).spotLight.intensity).toBe(openIntensity);
   });
 });

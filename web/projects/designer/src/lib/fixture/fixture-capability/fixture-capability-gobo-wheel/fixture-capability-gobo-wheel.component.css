@@ -7,3 +7,107 @@
   width: 180px;
   font-size: 0.85rem;
 }
+
+/* the shake as wide as the slots above it (the slider follows it, see sd-slider-fill) */
+.gobo-shake {
+  width: 180px;
+}
+
+.gobo-shake mv-slider {
+  display: block;
+}
+
+/* the pattern the preview shows a gobo with: a round picture, white where the light passes */
+.gobo-thumb {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: -4px;
+  border-radius: 50%;
+}
+
+.gobo-look {
+  width: 180px;
+}
+
+.gobo-look-label {
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.gobo-look-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.gobo-look-toggle canvas {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+/* The patterns to match a gobo with, over the panels: not cut by the card of the wheel. Placed below the pattern the
+   gobo shows, or above it, where more room is left (see placeFloatingPicker). */
+.gobo-picker {
+  position: fixed;
+  z-index: 1000;
+  width: 520px;
+  max-width: calc(100vw - 16px);
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--sd-space-2);
+  background-color: var(--sd-surface-2);
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.gobo-picker-title {
+  margin-bottom: var(--sd-space-2);
+  color: var(--sd-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.gobo-picker-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-1);
+}
+
+.gobo-picker-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 76px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-text);
+  font-size: 0.7rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.gobo-picker-tile:hover,
+.gobo-picker-tile:focus {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--sd-text);
+  text-decoration: none;
+}
+
+.gobo-picker-tile.active {
+  border-color: var(--sd-primary);
+}
+
+.gobo-picker-tile canvas {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 2px;
+  border-radius: 50%;
+}

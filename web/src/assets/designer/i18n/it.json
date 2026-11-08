@@ -47,6 +47,7 @@
       "settings": "Impostazioni",
       "help": "Aiuto",
       "fixture-pool": "Pool fixture",
+      "dmx-channels": "Canali DMX",
       "stage": "Palco",
       "project-new": "Nuovo",
       "project-save": "Salva",
@@ -168,8 +169,22 @@
       "steps-length": "Durata di un passo",
       "steps-loop": "Ripeti i passi",
       "steps-loop-length": "Durata del ciclo",
+      "steps-length-mode": "Durata del passo in",
+      "steps-beats-hint": "I passi seguono il tempo a cui vengono riprodotti. I loro tempi sono scritti a {{bpm}} BPM.",
+      "steps-order": "Ordine",
+      "steps-order-forward": "In avanti",
+      "steps-order-backward": "All’indietro",
+      "steps-order-pingpong": "Avanti e indietro",
+      "steps-order-random": "Casuale",
+      "steps-seed": "Seme dell’ordine casuale",
       "steps-chase": "Chase",
-      "model-specific": "{{count}} valori funzionano solo su: {{models}}"
+      "model-specific": "{{count}} valori funzionano solo su: {{models}}",
+      "settings-fan-order": "Ventaglio secondo",
+      "settings-fan-order-preset": "Ordine del preset",
+      "settings-fan-order-left-right": "Palco, da sinistra a destra",
+      "settings-fan-order-front-back": "Palco, dal davanti al fondo",
+      "settings-fan-order-bottom-top": "Palco, dal basso in alto",
+      "settings-fan-order-hint": "L’ordine che seguono ventagli, sfumature ed effetti a ventaglio. Sul palco, i fixture nello stesso punto ricevono lo stesso valore."
     },
     "fixture": {
       "no-fixtures": "Aggiungi nuovi fixture al progetto",
@@ -275,6 +290,9 @@
       "capability-pan-tilt-aim-stop": "Smetti di puntare",
       "capability-gobo-shake": "Shake",
       "capability-gobo-shake-off": "Spento",
+      "capability-gobo-pattern": "Nell’anteprima",
+      "capability-gobo-pattern-auto": "Dal suo nome",
+      "capability-gobo-pattern-pick": "Abbina un motivo al gobo",
       "capability-blade": {
         "BladeInsertion": {
           "Top": "Lama in alto",
@@ -288,7 +306,33 @@
           "Bottom": "Angolo lama in basso",
           "Left": "Angolo lama a sinistra"
         }
-      }
+      },
+      "gobo-family": {
+        "dots": "Punti",
+        "star": "Stella",
+        "rays": "Raggi",
+        "bars": "Barre",
+        "grid": "Griglia",
+        "rings": "Anelli",
+        "spiral": "Spirale",
+        "flower": "Fiore",
+        "polygon": "Poligono",
+        "checker": "Scacchiera",
+        "breakup": "Breakup"
+      },
+      "fan": "Apri a ventaglio",
+      "fan-hint": "Apre il valore a ventaglio sui fixture del preset, nell’ordine del ventaglio delle impostazioni del preset",
+      "fan-shape": "Ventaglio",
+      "fan-shape-linear": "Primo → ultimo",
+      "fan-shape-center": "Centro → estremi",
+      "fan-linear-from": "Primo",
+      "fan-linear-to": "Ultimo",
+      "fan-center-from": "Centro",
+      "fan-center-to": "Estremi",
+      "fan-bars-hint": "Cosa riceve ogni fixture, nell’ordine del ventaglio",
+      "capability-color-gradient": "Sfumatura",
+      "capability-color-gradient-hint": "Stende una sfumatura di colori sui fixture del preset",
+      "capability-color-gradient-order": "Dal primo all’ultimo fixture, nell’ordine del ventaglio delle impostazioni del preset. I fixture con ruota colori prendono il colore più vicino."
     },
     "fixture-pool": {
       "title": "Pool fixture",
@@ -340,6 +384,17 @@
       "reset-hint": "Chiede all’apparecchio sul palco di resettarsi, ad es. una testa mobile che ha perso la posizione",
       "lamp-on": "Lampada accesa",
       "lamp-on-hint": "Accende la lampada dell’apparecchio sul palco"
+    },
+    "dmx": {
+      "title": "Canali DMX",
+      "universe": "Universo",
+      "show-unpatched": "Mostra i canali senza fixture",
+      "release-all": "Rilascia tutti i fader",
+      "release": "Rilascia il fader: il canale invia di nuovo ciò che impostano i preset",
+      "unpatched": "Non assegnato",
+      "hint": "Il valore inviato su ogni canale, dopo il dimmer generale. Un fader tiene il suo canale al suo valore, sopra ciò che impostano i preset, finché non viene rilasciato. Chiudendo questa pagina vengono rilasciati tutti i fader.",
+      "no-universe": "Non c’è ancora nessun universo. Aggiungine uno nel Pool fixture.",
+      "no-fixtures": "Nessuna fixture è ancora assegnata a questo universo."
     },
     "gradient": {
       "color": "Colore come valore esadecimale",
@@ -555,7 +610,15 @@
       "pan-tilt-shape-figure8": "Otto",
       "pan-tilt-shape-line": "Linea",
       "pan-tilt-shape-wave": "Onda",
-      "pan-tilt-size": "Ampiezza"
+      "pan-tilt-size": "Ampiezza",
+      "curve-fan": "Ventaglio",
+      "curve-fan-hint": "Quanto l’effetto muove ogni fixture secondo il suo posto nel ventaglio del preset. Estremi opposti: il primo e l’ultimo di più, verso lati opposti, quello in mezzo resta fermo (una linea apre e chiude un ventaglio). Estremi uguali: il primo e l’ultimo di più, nella stessa direzione. Dal primo: il primo resta fermo, l’ultimo si muove di più.",
+      "curve-fan-none": "Tutti uguali",
+      "curve-fan-linear": "Estremi opposti",
+      "curve-fan-center": "Estremi uguali",
+      "curve-fan-side": "Dal primo",
+      "pixel-still": "Fermo",
+      "pixel-still-hint": "Il pattern resta dove lo mettono la sua fase e il chase, ad es. una sfumatura del flusso sul palco"
     },
     "composition": {
       "new": "Crea nuova composizione..."
@@ -594,6 +657,23 @@
       "show-track": "Mostra di nuovo la traccia nell'anteprima",
       "solo-track": "Solo: riproduci nell'anteprima solo le tracce in solo",
       "no-tracks": "Trascina qui una scena, o disegna quella selezionata, per riprodurla su una traccia",
+      "markers": "Marcatori",
+      "marker": "Marcatore",
+      "add-label": "Aggiungi un'etichetta alla posizione di riproduzione",
+      "add-hold": "Aggiungi un punto di attesa alla posizione di riproduzione: la riproduzione si ferma lì fino al GO",
+      "marker-settings": "Impostazioni del marcatore selezionato",
+      "marker-name": "Nome",
+      "marker-type": "Tipo",
+      "marker-type-label": "Etichetta",
+      "marker-type-hold": "Punto di attesa",
+      "marker-type-label-hint": "Segna un punto della composizione, ad es. dove inizia il ritornello.",
+      "marker-type-hold-hint": "La riproduzione si ferma qui e attende il GO. Gli effetti delle scene in corso continuano.",
+      "marker-position": "Posizione in millisecondi",
+      "remove-marker": "Rimuovi",
+      "new-label": "Etichetta",
+      "new-hold": "Attesa",
+      "go": "GO",
+      "go-hint": "Riprendi dal punto di attesa {{name}} (barra spaziatrice)",
       "actions": "Azioni",
       "action-type": {
         "NULL": "Nullo",

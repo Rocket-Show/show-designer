@@ -5,6 +5,7 @@ import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { adoptStepsLength, PresetStep } from '../models/preset-step';
 import { PresetStepEffectAmount } from '../models/preset-step-effect-amount';
+import { getStepsTimeMillis } from '../models/preset-steps-order';
 import { PresetStepService } from './preset-step.service';
 
 describe('PresetStepService', () => {
@@ -224,6 +225,49 @@ describe('PresetStepService', () => {
     const state = service.getStateAtMillis(preset(from, to), 1500);
 
     expect(state.fixtureCapabilityValues[0].valuePercentage).toBeCloseTo(0.6, 10);
+  });
+
+  it('should let each moving head travel on its own from one fan to the next', () => {
+    const from = step(0, 0);
+    const to = step(1000, 0, 1000);
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 0 }));
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Tilt', valuePercentage: 0.2 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Pan', valueDegrees: 20, spreadDegrees: 120 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'Tilt', valuePercentage: 0.6 }));
+
+    const state = service.getStateAtMillis(preset(from, to), 1250);
+    const pan = state.fixtureCapabilityValues.find((value) => value.type === FixtureCapabilityType.Pan);
+    const tilt = state.fixtureCapabilityValues.find((value) => value.type === FixtureCapabilityType.Tilt);
+
+    // where the heads point is worked out for each of them, from the value they travel from (see pan-tilt)
+    expect(pan.valueDegrees).toBe(20);
+    expect(pan.spreadDegrees).toBe(120);
+    expect(pan.transitionFrom).toBe(from.fixtureCapabilityValues[0]);
+    expect(pan.transitionPosition).toBe(0.25);
+
+    // two percentages of the range alone travel like any other percentage
+    expect(tilt.valuePercentage).toBeCloseTo(0.3, 10);
+    expect(tilt.transitionFrom).toBeUndefined();
+
+    // a step on its own travels from nothing, and the values of a step are never touched
+    expect(service.getStateAtMillis(preset(from, to), 2000).fixtureCapabilityValues[0].transitionFrom).toBeUndefined();
+    expect(to.fixtureCapabilityValues[0].transitionFrom).toBeUndefined();
+  });
+
+  it('should let each blade of a framing shutter travel from the same blade', () => {
+    const from = step(0, 0);
+    const to = step(1000, 0, 1000);
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Top', valuePercentage: 0 }));
+    from.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Bottom', valuePercentage: 1 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Bottom', valuePercentage: 0.5 }));
+    to.fixtureCapabilityValues.push(new FixtureCapabilityValue({ type: 'BladeInsertion', blade: 'Top', valuePercentage: 1 }));
+
+    const state = service.getStateAtMillis(preset(from, to), 1500);
+    const blade = (name: string) => state.fixtureCapabilityValues.find((value) => value.blade === name);
+
+    expect(state.fixtureCapabilityValues.length).toBe(2);
+    expect(blade('Top').valuePercentage).toBeCloseTo(0.5, 10);
+    expect(blade('Bottom').valuePercentage).toBeCloseTo(0.75, 10);
   });
 
   it('should turn a wheel as soon as the transition to its slot starts', () => {
@@ -550,6 +594,147 @@ describe('PresetStepService', () => {
       expect(service.getStepsPhasingMillis(sequence, 0, 4)).toBe(0);
       expect(service.getStepsPhasingMillis(sequence, 1, 4)).toBe(0);
       expect(service.getStepsPhasingMillis(sequence, 2, 4)).toBe(250);
+    });
+  });
+  describe('the order the steps are played in', () => {
+    // three steps a second apart: 10, 20 and 30, each jumping in (no transition)
+    function threeSteps(order: string, loop = false): Preset {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(2000, 30));
+      presetWithSteps.stepsOrder = order;
+      presetWithSteps.stepsLoop = loop;
+
+      return presetWithSteps;
+    }
+
+    function played(presetWithSteps: Preset, count: number): number[] {
+      const values: number[] = [];
+
+      for (let i = 0; i < count; i++) {
+        values.push(dimmerAt(presetWithSteps, i * 1000 + 500));
+      }
+
+      return values;
+    }
+
+    it('should play the steps the way they are written down, forward', () => {
+      expect(played(threeSteps('forward', true), 6)).toEqual([10, 20, 30, 10, 20, 30]);
+    });
+
+    it('should play the steps backward, holding the first one at the end', () => {
+      expect(played(threeSteps('backward'), 5)).toEqual([30, 20, 10, 10, 10]);
+    });
+
+    it('should loop the steps backward', () => {
+      expect(played(threeSteps('backward', true), 6)).toEqual([30, 20, 10, 30, 20, 10]);
+    });
+
+    it('should play the steps forward and back, without playing the ends twice in a row', () => {
+      expect(played(threeSteps('pingpong', true), 9)).toEqual([10, 20, 30, 20, 10, 20, 30, 20, 10]);
+    });
+
+    it('should end forward and back on the first step, if the sequence does not loop', () => {
+      expect(played(threeSteps('pingpong'), 7)).toEqual([10, 20, 30, 20, 10, 10, 10]);
+    });
+
+    it('should play every step once per pass in a random order, never one twice in a row', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(2000, 30), step(3000, 40), step(4000, 50));
+      presetWithSteps.stepsOrder = 'random';
+      presetWithSteps.stepsLoop = true;
+      const values = played(presetWithSteps, 5 * 20);
+
+      for (let pass = 0; pass < 20; pass++) {
+        expect(values.slice(pass * 5, pass * 5 + 5).sort((a, b) => a - b)).toEqual([10, 20, 30, 40, 50]);
+      }
+      for (let i = 1; i < values.length; i++) {
+        expect(values[i]).not.toBe(values[i - 1]);
+      }
+
+      // not simply forward, and the same again for the same seed
+      expect(values.slice(0, 15)).not.toEqual([10, 20, 30, 40, 50, 10, 20, 30, 40, 50, 10, 20, 30, 40, 50]);
+      expect(played(presetWithSteps, 5 * 20)).toEqual(values);
+
+      // another seed shuffles differently
+      presetWithSteps.stepsSeed = 2;
+      expect(played(presetWithSteps, 5 * 20)).not.toEqual(values);
+    });
+
+    it('should let each step last as long as it does written down, in any order', () => {
+      // 10 lasts 500, 20 lasts 1500, 30 lasts as long as the one before it
+      const presetWithSteps = loaded(step(0, 10), step(500, 20), step(2000, 30));
+      presetWithSteps.stepsOrder = 'backward';
+
+      expect(service.getStepsPassMillis(presetWithSteps)).toBe(3500);
+      expect(dimmerAt(presetWithSteps, 1400)).toBe(30);
+      expect(dimmerAt(presetWithSteps, 1600)).toBe(20);
+      expect(dimmerAt(presetWithSteps, 2900)).toBe(20);
+      expect(dimmerAt(presetWithSteps, 3100)).toBe(10);
+    });
+
+    it('should travel into a step from the one played before it', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20, 1000), step(2000, 30, 1000));
+      presetWithSteps.stepsOrder = 'backward';
+      presetWithSteps.stepsLoop = true;
+
+      // 30 opens the pass, travelling from 10, which ended the pass before
+      expect(dimmerAt(presetWithSteps, 3000 + 500)).toBe(20);
+      // 20 travels from 30 over its second
+      expect(dimmerAt(presetWithSteps, 1000 + 500)).toBe(25);
+      // the step written first jumps in (it has no transition of its own)
+      expect(dimmerAt(presetWithSteps, 2000 + 1)).toBe(10);
+    });
+
+    it('should hold the step it opens with before the sequence starts', () => {
+      expect(dimmerAt(threeSteps('backward'), -500)).toBe(30);
+    });
+
+    it('should make a pass forward and back last as long as all the steps it plays', () => {
+      expect(service.getStepsPassMillis(threeSteps('pingpong', true))).toBe(4000);
+      expect(service.getStepsPassMillis(threeSteps('pingpong'))).toBe(5000);
+      expect(service.getStepsPassMillis(threeSteps('random', true))).toBe(3000);
+    });
+
+    it('should spread the chase over the fixtures over a whole pass in the order', () => {
+      const presetWithSteps = threeSteps('pingpong', true);
+      presetWithSteps.stepsPhasingMode = 'spread';
+
+      expect(service.getStepsPhasingMillis(presetWithSteps, 1, 4)).toBe(1000);
+    });
+
+    it('should leave out the steps which last no time', () => {
+      const presetWithSteps = loaded(step(0, 10), step(1000, 20), step(1000, 25), step(2000, 30));
+      presetWithSteps.stepsOrder = 'backward';
+
+      expect(played(presetWithSteps, 3)).toEqual([30, 25, 10]);
+    });
+
+    it('should play the steps of an order it does not know forward, like Rocket Show', () => {
+      expect(played(threeSteps('sideways', true), 4)).toEqual([10, 20, 30, 10]);
+    });
+
+    it('should know which step opens a sequence which does not loop', () => {
+      const presetWithSteps = threeSteps('backward');
+
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[2])).toBe(true);
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[0])).toBe(false);
+
+      presetWithSteps.stepsLoop = true;
+      expect(service.opensSequence(presetWithSteps, presetWithSteps.steps[2])).toBe(false);
+    });
+  });
+
+  describe('the steps following the beat', () => {
+    it('run as much faster or slower as the tempo played is than the one they are written at', () => {
+      const presetWithSteps = preset(step(0, 10), step(1000, 20));
+      presetWithSteps.stepsLengthMode = 'beats';
+      presetWithSteps.stepsBeatsPerMinute = 120;
+
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 120)).toBe(1000);
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 90)).toBe(750);
+      expect(getStepsTimeMillis(presetWithSteps, 1000, 150)).toBe(1250);
+    });
+
+    it('leave the steps timed as written down alone', () => {
+      expect(getStepsTimeMillis(preset(step(0, 10)), 1000, 90)).toBe(1000);
     });
   });
 });

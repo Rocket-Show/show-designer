@@ -13,6 +13,7 @@ import { PresetStep } from '../../../models/preset-step';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 import { FixtureCapabilityDimmerComponent } from './fixture-capability-dimmer.component';
+import { FixtureCapabilityFanComponent } from '../fixture-capability-fan/fixture-capability-fan.component';
 
 // The dimmer of the step being edited, typed in percent or set with its slider. Switched off,
 // the step leaves the brightness of the fixtures alone.
@@ -26,7 +27,7 @@ describe('FixtureCapabilityDimmerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FixtureCapabilityDimmerComponent],
+      declarations: [FixtureCapabilityDimmerComponent, FixtureCapabilityFanComponent],
       imports: [FormsModule, NgxBootstrapSliderModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()],
     }).compileComponents();
@@ -121,5 +122,45 @@ describe('FixtureCapabilityDimmerComponent', () => {
 
     expect(component.getValue()).toBeUndefined();
     expect(component.getValueText()).toBeUndefined();
+  });
+
+  it('fans the dimmer out over the fixtures of the preset, from the first to the last one or from the middle', async () => {
+    presetService.setCapabilityValue(step, FixtureCapabilityType.Intensity, 0.8);
+    await update();
+
+    (element.querySelector('button[name="fan"]') as HTMLButtonElement).click();
+    await update();
+
+    // from none on the first fixture to what it was on the last one, saved as the one in the middle
+    const fanned = presetService.getCapabilityValue(step, FixtureCapabilityType.Intensity);
+    expect(fanned.fan.map((stop) => [stop.position, stop.valuePercentage])).toEqual([
+      [0, 0],
+      [1, 0.8],
+    ]);
+    expect(fanned.valuePercentage).toBeCloseTo(0.4, 12);
+    expect(component.isFanned()).toBe(true);
+    expect(previewLive).toHaveBeenCalled();
+
+    // each end on a field (and a slider) of its own
+    const ends = Array.from(element.querySelectorAll('input.fan-value')) as HTMLInputElement[];
+    expect(ends.map((end) => end.value)).toEqual(['0', '80']);
+    ends[0].value = '20';
+    ends[0].dispatchEvent(new Event('input'));
+    await update();
+    expect(presetService.getCapabilityFan(step, FixtureCapabilityType.Intensity)[0].valuePercentage).toBe(0.2);
+
+    // from the middle out to both ends
+    (element.querySelector('button[name="fan-shape-center"]') as HTMLButtonElement).click();
+    await update();
+    expect(presetService.getCapabilityFan(step, FixtureCapabilityType.Intensity).map((stop) => stop.valuePercentage)).toEqual([
+      0.8, 0.2, 0.8,
+    ]);
+    expect(element.querySelectorAll('.fan-bar').length).toBeGreaterThan(1);
+
+    // not fanned anymore: all the fixtures at the one in the middle
+    (element.querySelector('button[name="fan"]') as HTMLButtonElement).click();
+    await update();
+    expect(component.isFanned()).toBe(false);
+    expect(intensity()).toBe(0.2);
   });
 });
