@@ -37,9 +37,9 @@ export function mixesSubtractively(channels: CachedFixtureChannel[]): boolean {
 export function getFixtureCapabilityValues(
   values: FixtureCapabilityValue[],
   channels: CachedFixtureChannel[],
-  whiteFromColor = false
+  emittersFromColor = false
 ): FixtureCapabilityValue[] {
-  const capabilityValues = getEmitterValues(values, channels, whiteFromColor);
+  const capabilityValues = getEmitterValues(values, channels, emittersFromColor);
 
   if (!mixesSubtractively(channels)) {
     return capabilityValues;

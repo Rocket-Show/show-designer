@@ -41,15 +41,30 @@
         type="checkbox"
         class="form-check-input"
         id="capabilityColorWhite"
-        name="whiteFromColor"
-        [ngModel]="getWhiteFromColor()"
-        (ngModelChange)="setWhiteFromColor($event)"
+        name="emittersFromColor"
+        [ngModel]="getEmittersFromColor()"
+        (ngModelChange)="setEmittersFromColor($event)"
       />
       <label class="form-check-label" for="capabilityColorWhite">{{ 'designer.fixture.capability-color-white' | translate }}</label>
     </div>
     } @if (gradient) {
     <div class="color-gradient">
       <lib-app-gradient-editor [stops]="gradientStops" (stopsChange)="setGradient($event)"></lib-app-gradient-editor>
+      <!-- blended from one color to the next, or each fixture in one of the colors -->
+      <div class="btn-group btn-group-sm mt-2 gradient-between" role="group">
+        @for (between of ['smooth', 'steps']; track between) {
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [attr.name]="'gradient-' + between"
+          [class.active]="getGradientBetween() === between"
+          [attr.aria-pressed]="getGradientBetween() === between"
+          (click)="setGradientBetween(between)"
+        >
+          {{ 'designer.fixture.capability-color-gradient-' + between | translate }}
+        </button>
+        }
+      </div>
       <div class="color-gradient-hint text-muted mt-2">{{ 'designer.fixture.capability-color-gradient-order' | translate }}</div>
     </div>
     }

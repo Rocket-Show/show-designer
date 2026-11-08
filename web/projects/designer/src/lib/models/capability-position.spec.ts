@@ -5,7 +5,10 @@ import {
   getPositionedCapability,
   getPositionedChannelValue,
   getPropertyRank,
+  getRotationAngleChannelValue,
   getRotationChannelValue,
+  turnsWheel,
+  turnsWheelToAngle,
   getRotationRank,
   getShakeChannelValue,
   isOverridingCapabilityType,
@@ -517,5 +520,33 @@ describe('capability-position', () => {
     expect(full.defaultValue).toBe(128);
     expect(full.capabilities[0].capability.dmxRange).toEqual([0, 65535]);
     expect(channelOf({ defaultValue: '50%', capability: range(0, 255, 'Zoom') }).defaultValue).toBeCloseTo(127.5, 9);
+  });
+
+  it('should turn one wheel of several, and turn it to an angle', () => {
+    const rotation = channelOf({
+      capabilities: [
+        range(0, 63, 'WheelSlotRotation', { wheel: 'Gobo 1', speedStart: 'fast CCW', speedEnd: 'slow CCW' }),
+        range(64, 67, 'WheelSlotRotation', { wheel: 'Gobo 1', speed: 'stop' }),
+        range(68, 127, 'WheelSlotRotation', { wheel: 'Gobo 1', speedStart: 'slow CW', speedEnd: 'fast CW' }),
+        range(128, 255, 'WheelSlotRotation', { wheel: 'Gobo 1', angleStart: '0deg', angleEnd: '360deg' }),
+      ],
+    });
+
+    expect(turnsWheel(rotation, FixtureCapabilityType.WheelSlotRotation, 'Gobo 1')).toBe(true);
+    expect(turnsWheel(rotation, FixtureCapabilityType.WheelSlotRotation, 'Gobo 2')).toBe(false);
+    expect(turnsWheelToAngle(rotation, FixtureCapabilityType.WheelSlotRotation, 'Gobo 1')).toBe(true);
+
+    // at a speed, only the wheel it turns
+    expect(getRotationChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 1, 'Gobo 1')).toBe(127);
+    expect(getRotationChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 1, 'Gobo 2')).toBeUndefined();
+
+    // to an angle, held there: beyond the range at its end
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 180, 'Gobo 1')).toBeCloseTo(191.5, 9);
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 400, 'Gobo 1')).toBe(255);
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 90, 'Gobo 2')).toBeUndefined();
+
+    // a rotation without a wheel of its own turns the wheel named like its channel
+    const named = channelOf({ capability: { type: 'WheelSlotRotation', speedStart: 'slow CW', speedEnd: 'fast CW' } });
+    expect(turnsWheel(named, FixtureCapabilityType.WheelSlotRotation, 'Channel')).toBe(true);
   });
 });

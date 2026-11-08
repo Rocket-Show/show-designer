@@ -14,7 +14,9 @@ import { TranslateService } from '@ngx-translate/core';
 import { followFloatingPicker, placeFloatingPicker } from '../../../floating-picker';
 import { CachedFixtureCapability } from '../../../models/cached-fixture-capability';
 import { CachedFixtureChannel } from '../../../models/cached-fixture-channel';
+import { turnsWheel, turnsWheelToAngle } from '../../../models/capability-position';
 import { FixtureCapabilityType } from '../../../models/fixture-capability';
+import { FixtureCapabilityValue } from '../../../models/fixture-capability-value';
 import { FixtureProfile } from '../../../models/fixture-profile';
 import { FixtureWheelSlotType } from '../../../models/fixture-wheel-slot';
 import { GoboPatternChoice } from '../../../models/gobo-pattern-choice';
@@ -102,6 +104,10 @@ export class FixtureCapabilityGoboWheelComponent implements AfterViewChecked, On
     this.update();
   }
 
+  // the channels of a fixture of the profile, which may turn the wheel
+  @Input()
+  fixtureChannels: CachedFixtureChannel[] = [];
+
   constructor(
     private presetService: PresetService,
     private changeDetectorRef: ChangeDetectorRef,
@@ -137,6 +143,119 @@ export class FixtureCapabilityGoboWheelComponent implements AfterViewChecked, On
         }
       }
     }
+  }
+
+  // what kind of wheel it is: of gobos, of animations, of prisms, of frosts, of irises, or else another one
+  get wheelKind(): string {
+    const types = this.slotCapabilities.map((capability) => capability.wheelSlots[0]?.type);
+
+    for (const [type, kind] of [
+      [FixtureWheelSlotType.Gobo, 'gobo'],
+      [FixtureWheelSlotType.AnimationGoboStart, 'animation'],
+      [FixtureWheelSlotType.Prism, 'prism'],
+      [FixtureWheelSlotType.Frost, 'frost'],
+      [FixtureWheelSlotType.Iris, 'iris'],
+    ] as [FixtureWheelSlotType, string][]) {
+      if (types.indexOf(type) >= 0) {
+        return kind;
+      }
+    }
+
+    return 'other';
+  }
+
+  // ---- the rotation of the wheel (of the gobo picked) ----
+
+  private get rotatingChannels(): CachedFixtureChannel[] {
+    return (this.fixtureChannels || []).filter(
+      (channel) => channel.channel && turnsWheel(channel, FixtureCapabilityType.WheelSlotRotation, this.wheelName)
+    );
+  }
+
+  // can a fixture of the profile turn the gobo of this wheel, and turn it to an angle (index it)?
+  canRotate(): boolean {
+    return !!this.wheelName && this.rotatingChannels.length > 0;
+  }
+
+  canIndex(): boolean {
+    return this.rotatingChannels.some((channel) => turnsWheelToAngle(channel, FixtureCapabilityType.WheelSlotRotation, this.wheelName));
+  }
+
+  private getRotationValue(): FixtureCapabilityValue {
+    return this.presetService.getExactCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.WheelSlotRotation,
+      this.wheelName,
+      this._fixtureProfile?.uuid
+    );
+  }
+
+  // how fast the gobo turns: anticlockwise below the middle, standing in it, clockwise above it (see capability-position)
+  getRotation(): number {
+    const value = this.getRotationValue();
+
+    return value && value.valuePercentage >= 0 ? value.valuePercentage : 0.5;
+  }
+
+  // the angle the gobo is turned to and held at, if it is
+  getAngle(): number {
+    const value = this.getRotationValue();
+
+    return typeof value?.valueDegrees === 'number' ? value.valueDegrees : undefined;
+  }
+
+  isRotating(): boolean {
+    return !!this.getRotationValue();
+  }
+
+  private putRotation(change: (value: FixtureCapabilityValue) => void) {
+    const value = new FixtureCapabilityValue();
+    value.type = FixtureCapabilityType.WheelSlotRotation;
+    value.wheel = this.wheelName;
+    value.profileUuid = this._fixtureProfile?.uuid;
+    change(value);
+    this.presetService.putExactCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.WheelSlotRotation,
+      this.wheelName,
+      this._fixtureProfile?.uuid,
+      value
+    );
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
+  setRotation(speed: any) {
+    const number = Number(speed);
+
+    if (speed === '' || speed === null || isNaN(number) || number < 0 || number > 1) {
+      return;
+    }
+
+    this.putRotation((value) => (value.valuePercentage = number));
+  }
+
+  setAngle(angle: any) {
+    const number = Number(angle);
+
+    if (angle === '' || angle === null || isNaN(number)) {
+      return;
+    }
+
+    this.putRotation((value) => (value.valueDegrees = number));
+  }
+
+  // the wheel left to the rest of the preset again
+  stopRotation() {
+    this.presetService.putExactCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.WheelSlotRotation,
+      this.wheelName,
+      this._fixtureProfile?.uuid,
+      undefined
+    );
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
   }
 
   // what a slot is shown as: the name of its gobo, else what kind of slot it is, with its number

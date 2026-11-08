@@ -1,0 +1,71 @@
+<div class="card border-secondary h-100" [class.capability-deactivated]="!getValue()" style="min-height: 200px">
+  <div class="card-header">
+    <div class="my-auto">
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" [id]="id" [ngModel]="!!getValue()" (ngModelChange)="changeActive($event)" />
+        <label class="form-check-label text-nowrap" [for]="id">{{ 'designer.fixture.capability-' + kind | translate }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body h-100 d-flex command-body" style="flex-direction: column">
+    @if (kind === 'program') {
+    <!-- the program by its number, 0 for none -->
+    <label class="text-muted mb-1" [for]="id + 'Number'">{{ 'designer.fixture.capability-program-number' | translate }}</label>
+    <select
+      class="mb-2"
+      [id]="id + 'Number'"
+      name="programNumber"
+      [ngModel]="getValue()?.programNumber ?? 1"
+      (ngModelChange)="setProgram($event)"
+    >
+      <option [ngValue]="0">{{ 'designer.fixture.capability-program-none' | translate }}</option>
+      @for (number of programNumbers; track number) {
+      <option [ngValue]="number">{{ number }}</option>
+      }
+    </select>
+    <div class="form-check mb-2">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        [id]="id + 'Sound'"
+        name="programSound"
+        [ngModel]="!!getValue()?.soundControlled"
+        (ngModelChange)="setSound($event)"
+      />
+      <label class="form-check-label" [for]="id + 'Sound'">{{ 'designer.fixture.capability-program-sound' | translate }}</label>
+    </div>
+    <div class="text-muted mb-1">{{ 'designer.fixture.capability-program-speed' | translate }}</div>
+    <div class="h-100 w-100 d-flex">
+      <mv-slider
+        class="mx-auto"
+        [value]="getValue()?.valuePercentage ?? 0.5"
+        (change)="setSpeed($event.newValue)"
+        [orientation]="'vertical'"
+        [reversed]="true"
+        style="height: 100%"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+    </div>
+    } @else {
+    <!-- what the fixtures are asked to do while the preset plays -->
+    <div class="btn-group-vertical btn-group-toggle w-100 maintenance-actions" role="group">
+      @for (action of actions; track action) {
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        [attr.name]="'maintenance-' + action"
+        [class.active]="getValue()?.maintenanceAction === action"
+        (click)="setAction(action)"
+      >
+        {{ 'designer.fixture.capability-maintenance-' + action | translate }}
+      </button>
+      }
+    </div>
+    <small class="text-muted mt-2 command-hint">{{ 'designer.fixture.capability-maintenance-hint' | translate }}</small>
+    }
+  </div>
+</div>

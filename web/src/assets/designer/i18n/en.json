@@ -184,7 +184,12 @@
       "settings-fan-order-left-right": "Stage, left to right",
       "settings-fan-order-front-back": "Stage, front to back",
       "settings-fan-order-bottom-top": "Stage, bottom to top",
-      "settings-fan-order-hint": "The order fans, gradients and fanned effects follow. On the stage, fixtures at the same place get the same value."
+      "settings-fan-order-hint": "The order fans, gradients and fanned effects follow. On the stage, fixtures at the same place get the same value.",
+      "settings-pattern": "Pattern",
+      "settings-pattern-groups": "Groups of",
+      "settings-pattern-wings": "Wings",
+      "settings-pattern-every": "Every",
+      "settings-pattern-hint": "For the chases and the fans in the order of the preset: the fixtures of a group take the same place, every other wing runs the other way round (from the middle out), every N repeats the places (every other fixture in another color)."
     },
     "fixture": {
       "no-fixtures": "Add new fixtures to the project",
@@ -346,8 +351,31 @@
       "strobe-effect-Burst": "Burst",
       "strobe-effect-Sound": "To the sound",
       "strobe-effect-Closed": "Closed",
-      "capability-color-white": "White on the white LEDs",
-      "capability-color-white-hint": "Fixtures with red, green, blue and white light the white part of the color with their white LEDs (for the whole preset). The color temperature plays on warm and cold white LEDs of fixtures without a channel for it."
+      "capability-color-white": "White and amber on their LEDs",
+      "capability-color-white-hint": "Fixtures with white or amber LEDs besides red, green and blue light those parts of the color with them (for the whole preset). The color temperature plays on warm and cold white LEDs, or as a color, on fixtures without a channel for it.",
+      "capability-color-gradient-smooth": "Blend",
+      "capability-color-gradient-steps": "Steps",
+      "capability-gobos": "Gobo (all models)",
+      "capability-gobos-hint": "Picks the gobo on the gobo wheel of every model showing it (matched to it in the wheel of each model, or named the same). Models without it keep theirs.",
+      "capability-gobos-models": "{{count}} of {{total}} models",
+      "capability-wheel-animation": "Animation wheel",
+      "capability-wheel-prism": "Prism wheel",
+      "capability-wheel-frost": "Frost wheel",
+      "capability-wheel-iris": "Iris wheel",
+      "capability-wheel-rotation": "Rotation",
+      "capability-wheel-rotation-off": "Leave the rotation to the rest of the preset",
+      "capability-wheel-angle": "Angle",
+      "capability-program": "Program",
+      "capability-program-number": "Program",
+      "capability-program-none": "None",
+      "capability-program-sound": "To the sound",
+      "capability-program-speed": "Speed",
+      "capability-maintenance": "Maintenance",
+      "capability-maintenance-reset": "Reset",
+      "capability-maintenance-lamp-on": "Lamp on",
+      "capability-maintenance-lamp-off": "Lamp off",
+      "capability-maintenance-hint": "Asked for as long as the preset plays, e.g. at the start of the show.",
+      "capability-wheel-gobo": "Gobo wheel"
     },
     "fixture-pool": {
       "title": "Fixture pool",
@@ -633,7 +661,9 @@
       "curve-fan-center": "Ends alike",
       "curve-fan-side": "From the first",
       "pixel-still": "Still",
-      "pixel-still-hint": "The pattern stands where its phase and the chase put it, e.g. a gradient of the flow over the stage"
+      "pixel-still-hint": "The pattern stands where its phase and the chase put it, e.g. a gradient of the flow over the stage",
+      "curve-pan-tilt-degrees": "Pan and tilt in degrees",
+      "curve-pan-tilt-degrees-hint": "Turns every model by the same degrees, instead of each over a share of its range."
     },
     "composition": {
       "new": "Create new composition..."

@@ -706,6 +706,21 @@ describe('EffectCurveComponent', () => {
     expect(element.querySelector('select[name="fanMode"]')).toBeNull();
   });
 
+  it('turns the heads by the same degrees on every model, for a curve on the pan or the tilt', async () => {
+    curve = new EffectCurve();
+    await render();
+    expect(element.querySelector('input[name="panTiltInDegrees"]')).toBeNull();
+
+    curve.capabilities = [new FixtureCapability({ type: FixtureCapabilityType.Pan })];
+    await render();
+    const degrees = element.querySelector('input[name="panTiltInDegrees"]') as HTMLInputElement;
+    expect(degrees.checked).toBe(false);
+
+    degrees.click();
+    await update();
+    expect(curve.panTiltInDegrees).toBe(true);
+  });
+
   it('stands a pattern of a pixel effect still', async () => {
     const pixels = new EffectPixel({ uuid: 'pixels' });
     curve = pixels;

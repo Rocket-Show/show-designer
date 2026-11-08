@@ -184,7 +184,12 @@
       "settings-fan-order-left-right": "Palco, da esquerda para a direita",
       "settings-fan-order-front-back": "Palco, da frente para trás",
       "settings-fan-order-bottom-top": "Palco, de baixo para cima",
-      "settings-fan-order-hint": "A ordem que seguem os leques, os gradientes e os efeitos em leque. No palco, fixtures no mesmo lugar recebem o mesmo valor."
+      "settings-fan-order-hint": "A ordem que seguem os leques, os gradientes e os efeitos em leque. No palco, fixtures no mesmo lugar recebem o mesmo valor.",
+      "settings-pattern": "Padrão",
+      "settings-pattern-groups": "Grupos de",
+      "settings-pattern-wings": "Asas",
+      "settings-pattern-every": "Cada",
+      "settings-pattern-hint": "Para os chases e os leques na ordem da predefinição: os fixtures de um grupo ocupam o mesmo lugar, cada outra asa corre ao contrário (do centro para fora), cada N repete os lugares (cada outro fixture noutra cor)."
     },
     "fixture": {
       "no-fixtures": "Adicione novos fixtures ao projeto",
@@ -346,8 +351,31 @@
       "strobe-effect-Burst": "Rajada",
       "strobe-effect-Sound": "Ao som",
       "strobe-effect-Closed": "Fechado",
-      "capability-color-white": "O branco nos LED brancos",
-      "capability-color-white-hint": "Fixtures com vermelho, verde, azul e branco dão a parte branca da cor com os seus LED brancos (para toda a predefinição). A temperatura de cor toca nos LED branco quente e branco frio de fixtures sem canal próprio para ela."
+      "capability-color-white": "Branco e âmbar nos seus LED",
+      "capability-color-white-hint": "Fixtures com LED brancos ou âmbar além de vermelho, verde e azul dão essas partes da cor com eles (para toda a predefinição). A temperatura de cor toca nos LED branco quente e branco frio, ou como cor, em fixtures sem canal próprio para ela.",
+      "capability-color-gradient-smooth": "Gradual",
+      "capability-color-gradient-steps": "Degraus",
+      "capability-gobos": "Gobo (todos os modelos)",
+      "capability-gobos-hint": "Escolhe o gobo na roda de gobos de cada modelo que o mostra (associado na roda de cada modelo ou com o mesmo nome). Os modelos sem ele mantêm o seu.",
+      "capability-gobos-models": "{{count}} de {{total}} modelos",
+      "capability-wheel-animation": "Roda de animação",
+      "capability-wheel-prism": "Roda de prismas",
+      "capability-wheel-frost": "Roda de frost",
+      "capability-wheel-iris": "Roda de íris",
+      "capability-wheel-rotation": "Rotação",
+      "capability-wheel-rotation-off": "Deixar a rotação ao resto da predefinição",
+      "capability-wheel-angle": "Ângulo",
+      "capability-program": "Programa",
+      "capability-program-number": "Programa",
+      "capability-program-none": "Nenhum",
+      "capability-program-sound": "Ao som",
+      "capability-program-speed": "Velocidade",
+      "capability-maintenance": "Manutenção",
+      "capability-maintenance-reset": "Reinício",
+      "capability-maintenance-lamp-on": "Lâmpada ligada",
+      "capability-maintenance-lamp-off": "Lâmpada desligada",
+      "capability-maintenance-hint": "Pedido enquanto a predefinição toca, p. ex. no início do espetáculo.",
+      "capability-wheel-gobo": "Roda de gobos"
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -633,7 +661,9 @@
       "curve-fan-center": "Pontas iguais",
       "curve-fan-side": "A partir do primeiro",
       "pixel-still": "Parado",
-      "pixel-still-hint": "O padrão fica onde a sua fase e o chase o põem, p. ex. um gradiente do fluxo sobre o palco"
+      "pixel-still-hint": "O padrão fica onde a sua fase e o chase o põem, p. ex. um gradiente do fluxo sobre o palco",
+      "curve-pan-tilt-degrees": "Pan e tilt em graus",
+      "curve-pan-tilt-degrees-hint": "Roda cada modelo os mesmos graus, em vez de cada um sobre uma parte do seu alcance."
     },
     "composition": {
       "new": "Criar nova composição..."

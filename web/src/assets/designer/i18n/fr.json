@@ -184,7 +184,12 @@
       "settings-fan-order-left-right": "Scène, de gauche à droite",
       "settings-fan-order-front-back": "Scène, de l’avant vers l’arrière",
       "settings-fan-order-bottom-top": "Scène, de bas en haut",
-      "settings-fan-order-hint": "L’ordre que suivent les éventails, les dégradés et les effets en éventail. Sur la scène, les fixtures au même endroit reçoivent la même valeur."
+      "settings-fan-order-hint": "L’ordre que suivent les éventails, les dégradés et les effets en éventail. Sur la scène, les fixtures au même endroit reçoivent la même valeur.",
+      "settings-pattern": "Motif",
+      "settings-pattern-groups": "Groupes de",
+      "settings-pattern-wings": "Ailes",
+      "settings-pattern-every": "Tous les",
+      "settings-pattern-hint": "Pour les chases et les éventails dans l’ordre du préréglage : les fixtures d’un groupe prennent la même place, une aile sur deux va à l’envers (du milieu vers l’extérieur), tous les N répète les places (un fixture sur deux d’une autre couleur)."
     },
     "fixture": {
       "no-fixtures": "Ajoutez de nouveaux fixtures au projet",
@@ -346,8 +351,31 @@
       "strobe-effect-Burst": "Rafale",
       "strobe-effect-Sound": "Au son",
       "strobe-effect-Closed": "Fermé",
-      "capability-color-white": "Le blanc sur les LED blanches",
-      "capability-color-white-hint": "Les fixtures avec rouge, vert, bleu et blanc donnent la part blanche de la couleur avec leurs LED blanches (pour tout le préréglage). La température de couleur joue sur les LED blanc chaud et blanc froid des fixtures sans canal pour elle."
+      "capability-color-white": "Blanc et ambre sur leurs LED",
+      "capability-color-white-hint": "Les fixtures avec des LED blanches ou ambre en plus du rouge, du vert et du bleu donnent ces parts de la couleur avec elles (pour tout le préréglage). La température de couleur joue sur les LED blanc chaud et blanc froid, ou comme couleur, sur les fixtures sans canal pour elle.",
+      "capability-color-gradient-smooth": "Fondu",
+      "capability-color-gradient-steps": "Paliers",
+      "capability-gobos": "Gobo (tous les modèles)",
+      "capability-gobos-hint": "Choisit le gobo sur la roue de gobos de chaque modèle qui le montre (associé dans la roue de chaque modèle ou du même nom). Les modèles sans lui gardent le leur.",
+      "capability-gobos-models": "{{count}} sur {{total}} modèles",
+      "capability-wheel-animation": "Roue d’animation",
+      "capability-wheel-prism": "Roue de prismes",
+      "capability-wheel-frost": "Roue de frost",
+      "capability-wheel-iris": "Roue d’iris",
+      "capability-wheel-rotation": "Rotation",
+      "capability-wheel-rotation-off": "Laisser la rotation au reste du préréglage",
+      "capability-wheel-angle": "Angle",
+      "capability-program": "Programme",
+      "capability-program-number": "Programme",
+      "capability-program-none": "Aucun",
+      "capability-program-sound": "Au son",
+      "capability-program-speed": "Vitesse",
+      "capability-maintenance": "Maintenance",
+      "capability-maintenance-reset": "Réinitialisation",
+      "capability-maintenance-lamp-on": "Lampe allumée",
+      "capability-maintenance-lamp-off": "Lampe éteinte",
+      "capability-maintenance-hint": "Demandé tant que le préréglage joue, p. ex. au début du show.",
+      "capability-wheel-gobo": "Roue de gobos"
     },
     "fixture-pool": {
       "title": "Parc de fixtures",
@@ -633,7 +661,9 @@
       "curve-fan-center": "Bords pareils",
       "curve-fan-side": "Depuis le premier",
       "pixel-still": "Immobile",
-      "pixel-still-hint": "Le motif reste là où sa phase et le chase le placent, p. ex. un dégradé du flux sur la scène"
+      "pixel-still-hint": "Le motif reste là où sa phase et le chase le placent, p. ex. un dégradé du flux sur la scène",
+      "curve-pan-tilt-degrees": "Pan et tilt en degrés",
+      "curve-pan-tilt-degrees-hint": "Tourne chaque modèle des mêmes degrés, au lieu de chacun sur une part de sa plage."
     },
     "composition": {
       "new": "Créer une nouvelle composition..."

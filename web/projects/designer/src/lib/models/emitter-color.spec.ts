@@ -32,7 +32,7 @@ function percentages(values: FixtureCapabilityValue[]): { [color: string]: numbe
   const result = {};
 
   for (const value of values) {
-    result[value.color || value.type] = Math.round(value.valuePercentage * 1000) / 1000;
+    result[value.color || value.type] = Math.round(value.valuePercentage * 1000) / 1000 + 0;
   }
 
   return result;
@@ -86,5 +86,42 @@ describe('emitter-color', () => {
     const cto = fixtureService.getCachedChannels(ctoProfile, ctoProfile.modes[0], null);
     const values = [new FixtureCapabilityValue({ type: 'ColorTemperature', valuePercentage: 1 })];
     expect(getEmitterValues(values, cto, false)).toBe(values);
+  });
+
+  it('should light the amber part of the colors on the amber LEDs, after the white one', () => {
+    const rgbwa = channelsOf('Red', 'Green', 'Blue', 'White', 'Amber');
+
+    // white 0.2, then of (0.8, 0.4, 0) the amber part: all of the green with a third more red
+    expect(percentages(getEmitterValues([color('Red', 1), color('Green', 0.6), color('Blue', 0.2)], rgbwa, true))).toEqual({
+      Red: 0.267,
+      Green: 0,
+      Blue: 0,
+      White: 0.2,
+      Amber: 0.533,
+    });
+
+    // an amber set by the step itself wins
+    expect(percentages(getEmitterValues([...orange, color('Amber', 0.1)], channelsOf('Red', 'Green', 'Blue', 'Amber'), true))).toEqual({
+      Red: 1,
+      Green: 0.6,
+      Blue: 0.4,
+      Amber: 0.1,
+    });
+  });
+
+  it('should show the color temperature as a color on a fixture with red, green and blue only', () => {
+    const rgb = channelsOf('Red', 'Green', 'Blue');
+    const temperature = (value: number, ...more: FixtureCapabilityValue[]) =>
+      percentages(
+        getEmitterValues([new FixtureCapabilityValue({ type: 'ColorTemperature', valuePercentage: value }), ...more], rgb, false)
+      );
+
+    expect(temperature(0)).toEqual({ ColorTemperature: 0, Red: 1, Green: 0.6, Blue: 0.3 });
+    expect(temperature(0.5)).toEqual({ ColorTemperature: 0.5, Red: 1, Green: 1, Blue: 1 });
+    expect(temperature(0.75)).toEqual({ ColorTemperature: 0.75, Red: 0.9, Green: 0.94, Blue: 1 });
+    expect(temperature(1)).toEqual({ ColorTemperature: 1, Red: 0.8, Green: 0.88, Blue: 1 });
+
+    // a color of the step itself wins
+    expect(temperature(0, color('Blue', 0.5))).toEqual({ ColorTemperature: 0, Blue: 0.5 });
   });
 });

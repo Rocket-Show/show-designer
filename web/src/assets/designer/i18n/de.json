@@ -184,7 +184,12 @@
       "settings-fan-order-left-right": "Bühne, links nach rechts",
       "settings-fan-order-front-back": "Bühne, vorne nach hinten",
       "settings-fan-order-bottom-top": "Bühne, unten nach oben",
-      "settings-fan-order-hint": "Die Reihenfolge, der Fächer, Verläufe und gefächerte Effekte folgen. Auf der Bühne bekommen Fixtures am selben Ort denselben Wert."
+      "settings-fan-order-hint": "Die Reihenfolge, der Fächer, Verläufe und gefächerte Effekte folgen. Auf der Bühne bekommen Fixtures am selben Ort denselben Wert.",
+      "settings-pattern": "Muster",
+      "settings-pattern-groups": "Gruppen zu",
+      "settings-pattern-wings": "Flügel",
+      "settings-pattern-every": "Jede",
+      "settings-pattern-hint": "Für die Chases und die Fächer in der Reihenfolge des Presets: Die Fixtures einer Gruppe nehmen denselben Platz ein, jeder zweite Flügel läuft umgekehrt (von der Mitte nach aussen), jede N wiederholt die Plätze (jede zweite Fixture in einer anderen Farbe)."
     },
     "fixture": {
       "no-fixtures": "Füge neue Fixtures zum Projekt hinzu",
@@ -346,8 +351,31 @@
       "strobe-effect-Burst": "Burst",
       "strobe-effect-Sound": "Zum Ton",
       "strobe-effect-Closed": "Geschlossen",
-      "capability-color-white": "Weiss auf die weissen LEDs",
-      "capability-color-white-hint": "Fixtures mit Rot, Grün, Blau und Weiss erzeugen den Weissanteil der Farbe mit ihren weissen LEDs (für das ganze Preset). Die Farbtemperatur spielt auf warm- und kaltweissen LEDs von Fixtures ohne eigenen Kanal dafür."
+      "capability-color-white": "Weiss und Amber auf ihren LEDs",
+      "capability-color-white-hint": "Fixtures mit weissen oder Amber-LEDs neben Rot, Grün und Blau erzeugen diese Anteile der Farbe damit (für das ganze Preset). Die Farbtemperatur spielt auf warm- und kaltweissen LEDs oder als Farbe bei Fixtures ohne eigenen Kanal dafür.",
+      "capability-color-gradient-smooth": "Fliessend",
+      "capability-color-gradient-steps": "Stufen",
+      "capability-gobos": "Gobo (alle Modelle)",
+      "capability-gobos-hint": "Wählt das Gobo auf dem Goborad jedes Modells, das es zeigt (im Rad jedes Modells zugeordnet oder gleich benannt). Modelle ohne es behalten ihres.",
+      "capability-gobos-models": "{{count}} von {{total}} Modellen",
+      "capability-wheel-animation": "Animationsrad",
+      "capability-wheel-prism": "Prismenrad",
+      "capability-wheel-frost": "Frostrad",
+      "capability-wheel-iris": "Irisrad",
+      "capability-wheel-rotation": "Rotation",
+      "capability-wheel-rotation-off": "Rotation dem Rest des Presets überlassen",
+      "capability-wheel-angle": "Winkel",
+      "capability-program": "Programm",
+      "capability-program-number": "Programm",
+      "capability-program-none": "Keines",
+      "capability-program-sound": "Zum Ton",
+      "capability-program-speed": "Geschwindigkeit",
+      "capability-maintenance": "Wartung",
+      "capability-maintenance-reset": "Reset",
+      "capability-maintenance-lamp-on": "Lampe an",
+      "capability-maintenance-lamp-off": "Lampe aus",
+      "capability-maintenance-hint": "Gilt, solange das Preset spielt, z. B. zu Beginn der Show.",
+      "capability-wheel-gobo": "Goborad"
     },
     "fixture-pool": {
       "title": "Fixture Pool",
@@ -634,7 +662,9 @@
       "curve-fan-center": "Enden gleich",
       "curve-fan-side": "Ab der ersten",
       "pixel-still": "Stehend",
-      "pixel-still-hint": "Das Muster steht dort, wo seine Phase und der Chase es hinsetzen, z. B. ein Verlauf des Flusses über die Bühne"
+      "pixel-still-hint": "Das Muster steht dort, wo seine Phase und der Chase es hinsetzen, z. B. ein Verlauf des Flusses über die Bühne",
+      "curve-pan-tilt-degrees": "Pan und Tilt in Grad",
+      "curve-pan-tilt-degrees-hint": "Dreht jedes Modell um dieselben Grad, statt jedes über einen Anteil seines Bereichs."
     },
     "composition": {
       "new": "Neue Komposition erstellen..."

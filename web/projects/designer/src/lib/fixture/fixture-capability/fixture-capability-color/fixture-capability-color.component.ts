@@ -146,22 +146,56 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
-  // does a fixture of the preset have a white LED besides red, green and blue?
+  // how the gradient goes from one color to the next: blended, or in 'steps' (each fixture in one of its colors)
+  getGradientBetween(): string {
+    const value = this.presetService.getCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.ColorIntensity,
+      FixtureCapabilityColor.Red
+    );
+
+    return value?.fanBetween === 'steps' ? 'steps' : 'smooth';
+  }
+
+  setGradientBetween(between: string) {
+    const step = this.presetService.selectedStep;
+
+    if (!step || !this.getColorFans()) {
+      return;
+    }
+
+    for (const color of FixtureCapabilityColorComponent.gradientColors) {
+      const value = new FixtureCapabilityValue({
+        ...this.presetService.getCapabilityValue(step, FixtureCapabilityType.ColorIntensity, color),
+      });
+      value.fanBetween = between === 'steps' ? 'steps' : undefined;
+      this.presetService.putCapabilityValue(step, value);
+    }
+
+    this.changeDetectorRef.detectChanges();
+    this.presetService.fixtureColorChanged.next();
+    this.livePreviewService.previewLive();
+  }
+
+  // does a fixture of the preset have a white or an amber LED besides red, green and blue?
   hasWhite(): boolean {
-    return this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.White);
+    return (
+      this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.White) ||
+      this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Amber)
+    );
   }
 
   // the white part of the colors on the white LEDs, for the whole preset (see emitter-color)
-  getWhiteFromColor(): boolean {
-    return !!this.presetService.selectedPreset?.whiteFromColor;
+  getEmittersFromColor(): boolean {
+    return !!this.presetService.selectedPreset?.emittersFromColor;
   }
 
-  setWhiteFromColor(white: boolean) {
+  setEmittersFromColor(white: boolean) {
     if (!this.presetService.selectedPreset) {
       return;
     }
 
-    this.presetService.selectedPreset.whiteFromColor = white === true;
+    this.presetService.selectedPreset.emittersFromColor = white === true;
     this.presetService.capabilityValuesChanged.next();
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();

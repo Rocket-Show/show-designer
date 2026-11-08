@@ -12,7 +12,12 @@ import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { getStepsTimeMillis } from '../models/preset-steps-order';
 import { applyTransitionCurve } from '../models/transition-curve';
-import { getPositionedChannelValue, isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
+import {
+  getPositionedChannelValue,
+  isCommandCapabilityType,
+  isOverridingCapabilityType,
+  isPositionedCapabilityType,
+} from '../models/capability-position';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { EffectPixel } from '../models/effect-pixel';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
@@ -528,7 +533,7 @@ export class PreviewService implements OnDestroy {
       brightnessBelow === undefined ? 0 : this.getPresetDimmerBrightness(state, cachedFixture, preset, brightnessBelow);
 
     // a fixture mixing its colors with filters is given the colors the other way round (see subtractive-color)
-    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels, preset?.whiteFromColor);
+    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels, preset?.emittersFromColor);
 
     // mix the capability values of the state the preset is in
     for (const presetCapabilityValue of capabilityValues) {
@@ -557,7 +562,7 @@ export class PreviewService implements OnDestroy {
             continue;
           }
 
-          if (isPositionedCapabilityType(presetCapabilityValue.type)) {
+          if (isPositionedCapabilityType(presetCapabilityValue.type) || isCommandCapabilityType(presetCapabilityValue.type)) {
             // a position is played on the channel as a whole, by the capability of it doing it
             const value = this.presetService.getPositionedChannelValue(presetCapabilityValue, cachedChannel, cachedFixture.profile.uuid);
 
@@ -1395,25 +1400,28 @@ export class PreviewService implements OnDestroy {
 
         for (const preset of presets) {
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
-          const fixtureIndex = fixtureIndices
+          const presetIndex = fixtureIndices
             .get(preset.preset)
             .get(this.presetService.getPresetFixtureKey(cachedFixture.fixture.uuid, cachedFixture.pixel?.key));
 
-          if (fixtureIndex >= 0) {
+          if (presetIndex >= 0) {
             // this fixture is also in the preset -> mix the required values (overwrite existing values,
-            // if set multiple times)
+            // if set multiple times). Its chases and its fans in its own order follow the pattern of the preset.
+            const pattern = preset.preset.getPatternPlace(presetIndex, fixtureCounts.get(preset.preset));
+            const fixtureIndex = pattern.index;
+            const fixtureCount = pattern.count;
             const intensityPercentage = this.getPresetIntensity(preset, timeMillis);
             const presetState =
               presetStates.get(preset) ||
               this.getPresetStepState(
                 preset,
                 timeMillis,
-                this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCounts.get(preset.preset))
+                this.presetStepService.getStepsPhasingMillis(preset.preset, fixtureIndex, fixtureCount)
               );
 
             const context: PanTiltContext = {
               fixtureIndex,
-              fixtureCount: fixtureCounts.get(preset.preset),
+              fixtureCount,
               placement: placements.get(cachedFixture.fixture.uuid),
               fanPlace: this.getStageFanPlace(preset.preset, cachedFixture),
             };
@@ -1428,7 +1436,7 @@ export class PreviewService implements OnDestroy {
             this.mixEffects(
               timeMillis,
               fixtureIndex,
-              fixtureCounts.get(preset.preset),
+              fixtureCount,
               preset,
               cachedFixture,
               values,

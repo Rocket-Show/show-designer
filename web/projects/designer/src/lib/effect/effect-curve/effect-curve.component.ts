@@ -390,6 +390,22 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // does the curve drive the pan or the tilt (not a movement, which turns the heads in degrees anyway)?
+  get drivesPanTilt(): boolean {
+    return (
+      !this.isMovement &&
+      !this.isPixel &&
+      !!this.curve?.capabilities.some(
+        (capability) => capability.type === FixtureCapabilityType.Pan || capability.type === FixtureCapabilityType.Tilt
+      )
+    );
+  }
+
+  setPanTiltInDegrees(degrees: boolean) {
+    this.curve.panTiltInDegrees = degrees === true;
+    this.livePreviewService.previewLive();
+  }
+
   setFanMode(fanMode: string) {
     this.curve.fanMode = fanMode;
     this.livePreviewService.previewLive();

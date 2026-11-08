@@ -1,0 +1,31 @@
+<div class="card border-secondary h-100" style="min-height: 200px">
+  <div class="card-header">
+    <div class="my-auto" [title]="'designer.fixture.capability-gobos-hint' | translate">
+      {{ 'designer.fixture.capability-gobos' | translate }}
+    </div>
+  </div>
+
+  <div class="card-body h-100 overflow-auto">
+    <div class="gobos-grid">
+      @for (gobo of gobos; track gobo.key) {
+      <button
+        type="button"
+        class="btn btn-secondary gobos-tile"
+        [class.active]="isPicked(gobo)"
+        [attr.aria-pressed]="isPicked(gobo)"
+        [attr.data-key]="gobo.key"
+        [title]="'designer.fixture.capability-gobos-models' | translate : { count: getModelCount(gobo), total: modelCount }"
+        (click)="pick(gobo)"
+      >
+        @if (gobo.pattern) {
+        <canvas #goboCanvas width="40" height="40" [attr.data-key]="gobo.key" aria-hidden="true"></canvas>
+        } @else {
+        <span class="gobos-open" aria-hidden="true"></span>
+        }
+        <span class="gobos-count">{{ getModelCount(gobo) }}/{{ modelCount }}</span>
+      </button>
+      }
+    </div>
+    <small class="text-muted d-block mt-2 gobos-hint">{{ 'designer.fixture.capability-gobos-hint' | translate }}</small>
+  </div>
+</div>

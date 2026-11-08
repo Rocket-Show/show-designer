@@ -184,7 +184,12 @@
       "settings-fan-order-left-right": "Escenario, de izquierda a derecha",
       "settings-fan-order-front-back": "Escenario, de delante hacia atrás",
       "settings-fan-order-bottom-top": "Escenario, de abajo hacia arriba",
-      "settings-fan-order-hint": "El orden que siguen los abanicos, los degradados y los efectos en abanico. En el escenario, los fixtures en el mismo lugar reciben el mismo valor."
+      "settings-fan-order-hint": "El orden que siguen los abanicos, los degradados y los efectos en abanico. En el escenario, los fixtures en el mismo lugar reciben el mismo valor.",
+      "settings-pattern": "Patrón",
+      "settings-pattern-groups": "Grupos de",
+      "settings-pattern-wings": "Alas",
+      "settings-pattern-every": "Cada",
+      "settings-pattern-hint": "Para los chases y los abanicos en el orden del preajuste: los fixtures de un grupo ocupan el mismo lugar, cada otra ala va al revés (del centro hacia fuera), cada N repite los lugares (cada otro fixture en otro color)."
     },
     "fixture": {
       "no-fixtures": "Añade nuevos fixtures al proyecto",
@@ -346,8 +351,31 @@
       "strobe-effect-Burst": "Ráfaga",
       "strobe-effect-Sound": "Al sonido",
       "strobe-effect-Closed": "Cerrado",
-      "capability-color-white": "El blanco en los LED blancos",
-      "capability-color-white-hint": "Los fixtures con rojo, verde, azul y blanco dan la parte blanca del color con sus LED blancos (para todo el preajuste). La temperatura de color se reproduce en los LED blancos cálidos y fríos de los fixtures sin canal propio para ella."
+      "capability-color-white": "Blanco y ámbar en sus LED",
+      "capability-color-white-hint": "Los fixtures con LED blancos o ámbar además de rojo, verde y azul dan esas partes del color con ellos (para todo el preajuste). La temperatura de color se reproduce en LED blancos cálidos y fríos, o como color, en fixtures sin canal propio para ella.",
+      "capability-color-gradient-smooth": "Fundido",
+      "capability-color-gradient-steps": "Pasos",
+      "capability-gobos": "Gobo (todos los modelos)",
+      "capability-gobos-hint": "Elige el gobo en la rueda de gobos de cada modelo que lo muestra (asignado en la rueda de cada modelo o con el mismo nombre). Los modelos sin él conservan el suyo.",
+      "capability-gobos-models": "{{count}} de {{total}} modelos",
+      "capability-wheel-animation": "Rueda de animación",
+      "capability-wheel-prism": "Rueda de prismas",
+      "capability-wheel-frost": "Rueda de frost",
+      "capability-wheel-iris": "Rueda de iris",
+      "capability-wheel-rotation": "Rotación",
+      "capability-wheel-rotation-off": "Dejar la rotación al resto del preajuste",
+      "capability-wheel-angle": "Ángulo",
+      "capability-program": "Programa",
+      "capability-program-number": "Programa",
+      "capability-program-none": "Ninguno",
+      "capability-program-sound": "Al sonido",
+      "capability-program-speed": "Velocidad",
+      "capability-maintenance": "Mantenimiento",
+      "capability-maintenance-reset": "Reinicio",
+      "capability-maintenance-lamp-on": "Lámpara encendida",
+      "capability-maintenance-lamp-off": "Lámpara apagada",
+      "capability-maintenance-hint": "Se pide mientras suena el preajuste, p. ej. al principio del show.",
+      "capability-wheel-gobo": "Rueda de gobos"
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",
@@ -633,7 +661,9 @@
       "curve-fan-center": "Extremos iguales",
       "curve-fan-side": "Desde el primero",
       "pixel-still": "Quieto",
-      "pixel-still-hint": "El patrón se queda donde lo ponen su fase y el chase, p. ej. un degradado del flujo sobre el escenario"
+      "pixel-still-hint": "El patrón se queda donde lo ponen su fase y el chase, p. ej. un degradado del flujo sobre el escenario",
+      "curve-pan-tilt-degrees": "Pan y tilt en grados",
+      "curve-pan-tilt-degrees-hint": "Gira cada modelo los mismos grados, en lugar de cada uno sobre una parte de su rango."
     },
     "composition": {
       "new": "Crear nueva composición..."

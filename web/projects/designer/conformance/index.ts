@@ -13,24 +13,25 @@ import case9 from './cases/channel-values-pixel-effects.json';
 import case10 from './cases/channel-values-pixel-stage.json';
 import case11 from './cases/channel-values-pixel-white.json';
 import case12 from './cases/channel-values-scenarios.json';
-import case13 from './cases/channel-values-timing.json';
-import case14 from './cases/default-value.json';
-import case15 from './cases/effect-curve-edges.json';
-import case16 from './cases/effect-curve.json';
-import case17 from './cases/hex-color.json';
-import case18 from './cases/migration-edges.json';
-import case19 from './cases/migration.json';
-import case20 from './cases/mix-colors.json';
-import case21 from './cases/pixel-group.json';
-import case22 from './cases/pixel-pattern.json';
-import case23 from './cases/pixels.json';
-import case24 from './cases/preset-intensity-edges.json';
-import case25 from './cases/preset-intensity.json';
-import case26 from './cases/preset-steps-edges.json';
-import case27 from './cases/preset-steps-orders.json';
-import case28 from './cases/preset-steps.json';
-import case29 from './cases/profile-number.json';
-import case30 from './cases/transition-curve.json';
+import case13 from './cases/channel-values-show.json';
+import case14 from './cases/channel-values-timing.json';
+import case15 from './cases/default-value.json';
+import case16 from './cases/effect-curve-edges.json';
+import case17 from './cases/effect-curve.json';
+import case18 from './cases/hex-color.json';
+import case19 from './cases/migration-edges.json';
+import case20 from './cases/migration.json';
+import case21 from './cases/mix-colors.json';
+import case22 from './cases/pixel-group.json';
+import case23 from './cases/pixel-pattern.json';
+import case24 from './cases/pixels.json';
+import case25 from './cases/preset-intensity-edges.json';
+import case26 from './cases/preset-intensity.json';
+import case27 from './cases/preset-steps-edges.json';
+import case28 from './cases/preset-steps-orders.json';
+import case29 from './cases/preset-steps.json';
+import case30 from './cases/profile-number.json';
+import case31 from './cases/transition-curve.json';
 import profile0 from './profiles/adb/alc4.json';
 import profile1 from './profiles/chauvet-dj/colorband-pix.json';
 import profile2 from './profiles/dts/xr4-spot.json';
@@ -52,14 +53,15 @@ import profile17 from './profiles/test/mover.json';
 import profile18 from './profiles/test/moving-head.json';
 import profile19 from './profiles/test/pixel-bar.json';
 import profile20 from './profiles/test/pixel-matrix.json';
-import profile21 from './profiles/test/rgb-par.json';
-import profile22 from './profiles/test/rgb.json';
-import profile23 from './profiles/test/shared-dimmer.json';
-import profile24 from './profiles/test/strobe-par.json';
-import profile25 from './profiles/test/wheels.json';
-import profile26 from './profiles/test/white-matrix.json';
-import profile27 from './profiles/test/wide-mover.json';
-import profile28 from './profiles/varytec/easy-move-xs-hp-wash-7x8w-rgbw.json';
+import profile21 from './profiles/test/program-spot.json';
+import profile22 from './profiles/test/rgb-par.json';
+import profile23 from './profiles/test/rgb.json';
+import profile24 from './profiles/test/shared-dimmer.json';
+import profile25 from './profiles/test/strobe-par.json';
+import profile26 from './profiles/test/wheels.json';
+import profile27 from './profiles/test/white-matrix.json';
+import profile28 from './profiles/test/wide-mover.json';
+import profile29 from './profiles/varytec/easy-move-xs-hp-wash-7x8w-rgbw.json';
 
 export const caseFiles: { [fileName: string]: any } = {
   'channel-values-attributes.json': case0,
@@ -75,24 +77,25 @@ export const caseFiles: { [fileName: string]: any } = {
   'channel-values-pixel-stage.json': case10,
   'channel-values-pixel-white.json': case11,
   'channel-values-scenarios.json': case12,
-  'channel-values-timing.json': case13,
-  'default-value.json': case14,
-  'effect-curve-edges.json': case15,
-  'effect-curve.json': case16,
-  'hex-color.json': case17,
-  'migration-edges.json': case18,
-  'migration.json': case19,
-  'mix-colors.json': case20,
-  'pixel-group.json': case21,
-  'pixel-pattern.json': case22,
-  'pixels.json': case23,
-  'preset-intensity-edges.json': case24,
-  'preset-intensity.json': case25,
-  'preset-steps-edges.json': case26,
-  'preset-steps-orders.json': case27,
-  'preset-steps.json': case28,
-  'profile-number.json': case29,
-  'transition-curve.json': case30,
+  'channel-values-show.json': case13,
+  'channel-values-timing.json': case14,
+  'default-value.json': case15,
+  'effect-curve-edges.json': case16,
+  'effect-curve.json': case17,
+  'hex-color.json': case18,
+  'migration-edges.json': case19,
+  'migration.json': case20,
+  'mix-colors.json': case21,
+  'pixel-group.json': case22,
+  'pixel-pattern.json': case23,
+  'pixels.json': case24,
+  'preset-intensity-edges.json': case25,
+  'preset-intensity.json': case26,
+  'preset-steps-edges.json': case27,
+  'preset-steps-orders.json': case28,
+  'preset-steps.json': case29,
+  'profile-number.json': case30,
+  'transition-curve.json': case31,
 };
 
 export const profiles: { [name: string]: any } = {
@@ -117,12 +120,13 @@ export const profiles: { [name: string]: any } = {
   'test/moving-head': profile18,
   'test/pixel-bar': profile19,
   'test/pixel-matrix': profile20,
-  'test/rgb-par': profile21,
-  'test/rgb': profile22,
-  'test/shared-dimmer': profile23,
-  'test/strobe-par': profile24,
-  'test/wheels': profile25,
-  'test/white-matrix': profile26,
-  'test/wide-mover': profile27,
-  'varytec/easy-move-xs-hp-wash-7x8w-rgbw': profile28,
+  'test/program-spot': profile21,
+  'test/rgb-par': profile22,
+  'test/rgb': profile23,
+  'test/shared-dimmer': profile24,
+  'test/strobe-par': profile25,
+  'test/wheels': profile26,
+  'test/white-matrix': profile27,
+  'test/wide-mover': profile28,
+  'varytec/easy-move-xs-hp-wash-7x8w-rgbw': profile29,
 };

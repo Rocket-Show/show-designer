@@ -24,10 +24,15 @@ import { LivePreviewService } from './live-preview.service';
 import { AnimationService } from './animation.service';
 import {
   getPositionedChannelValue,
+  getRotationAngleChannelValue,
+  isRotationCapabilityType,
   getShakeChannelValue,
+  isCommandCapabilityType,
   isOverridingCapabilityType,
   isPositionedCapabilityType,
 } from '../models/capability-position';
+import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
+import { getProgramChannelValue } from '../models/program';
 import { getPanTiltChannelValue, isPanTilt, PanTiltContext } from '../models/pan-tilt';
 import { getFixtureCapabilityValues } from '../models/subtractive-color';
 import { countModelSpecificValues } from '../models/model-specific';
@@ -588,6 +593,43 @@ export class PresetService {
     this.capabilityValuesChanged.next();
   }
 
+  // The value of the step of exactly the passed kind (e.g. the rotation of one wheel of one model, not the one of all
+  // wheels), or undefined
+  getExactCapabilityValue(step: PresetStep, type: FixtureCapabilityType, wheel: string, profileUuid: string): FixtureCapabilityValue {
+    return step?.fixtureCapabilityValues.find(
+      (value) =>
+        value.type === type &&
+        (value.wheel ?? undefined) === (wheel ?? undefined) &&
+        (value.profileUuid ?? undefined) === (profileUuid ?? undefined)
+    );
+  }
+
+  // put a capability value on the step in place of the one of exactly its kind (see getExactCapabilityValue), or take
+  // that one away (no value)
+  putExactCapabilityValue(
+    step: PresetStep,
+    type: FixtureCapabilityType,
+    wheel: string,
+    profileUuid: string,
+    value: FixtureCapabilityValue
+  ) {
+    if (!step) {
+      return;
+    }
+
+    const existing = this.getExactCapabilityValue(step, type, wheel, profileUuid);
+
+    if (existing) {
+      step.fixtureCapabilityValues.splice(step.fixtureCapabilityValues.indexOf(existing), 1);
+    }
+
+    if (value) {
+      step.fixtureCapabilityValues.push(value);
+    }
+
+    this.capabilityValuesChanged.next();
+  }
+
   // put a capability value on the step as it is, in place of the one it had of the same kind (e.g. a position of a
   // moving head with all it says: its degrees, its fan and the spot it aims at)
   putCapabilityValue(step: PresetStep, capabilityValue: FixtureCapabilityValue) {
@@ -931,7 +973,7 @@ export class PresetService {
     profileUuid: string,
     preset?: Preset
   ): boolean {
-    return getFixtureCapabilityValues(capabilityValues, channels, preset?.whiteFromColor).some((capabilityValue) =>
+    return getFixtureCapabilityValues(capabilityValues, channels, preset?.emittersFromColor).some((capabilityValue) =>
       channels.some(
         (channel) =>
           channel.channel &&
@@ -958,7 +1000,39 @@ export class PresetService {
   // the value a positioned capability value (see capability-position) drives a channel of a fixture of the passed
   // profile to, or undefined, if the channel doesn't do it
   getPositionedChannelValue(capabilityValue: FixtureCapabilityValue, channel: CachedFixtureChannel, profileUuid: string): number {
-    if (!(capabilityValue.valuePercentage >= 0) || (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid)) {
+    if (capabilityValue.profileUuid && capabilityValue.profileUuid !== profileUuid) {
+      return undefined;
+    }
+
+    // a program of the fixture, at the speed of the value
+    if (capabilityValue.type === FixtureCapabilityType.Effect) {
+      return getProgramChannelValue(
+        channel,
+        capabilityValue.programNumber,
+        capabilityValue.soundControlled,
+        capabilityValue.valuePercentage
+      );
+    }
+
+    // a reset or the lamp switched on or off, on the channel doing it
+    if (capabilityValue.type === FixtureCapabilityType.Maintenance) {
+      const found = capabilityValue.maintenanceAction
+        ? getMaintenanceCapability([channel], capabilityValue.maintenanceAction as MaintenanceAction)
+        : undefined;
+
+      return found ? found.capability.centerValue : undefined;
+    }
+
+    // a rotation turning (a wheel, if it names one) to an angle and holding it there
+    if (
+      isRotationCapabilityType(capabilityValue.type) &&
+      typeof capabilityValue.valueDegrees === 'number' &&
+      !isNaN(capabilityValue.valueDegrees)
+    ) {
+      return getRotationAngleChannelValue(channel, capabilityValue.type, capabilityValue.valueDegrees, capabilityValue.wheel);
+    }
+
+    if (!(capabilityValue.valuePercentage >= 0)) {
       return undefined;
     }
 
@@ -971,7 +1045,8 @@ export class PresetService {
       capabilityValue.type,
       capabilityValue.valuePercentage,
       capabilityValue.blade,
-      capabilityValue.shutterEffect
+      capabilityValue.shutterEffect,
+      capabilityValue.wheel
     );
   }
 
@@ -1004,7 +1079,7 @@ export class PresetService {
   ): number {
     let value: number;
 
-    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels, preset?.whiteFromColor);
+    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels, preset?.emittersFromColor);
 
     for (const capabilityValue of fixtureCapabilityValues) {
       if (isOverridingCapabilityType(capabilityValue.type)) {
@@ -1012,8 +1087,8 @@ export class PresetService {
         continue;
       }
 
-      if (isPositionedCapabilityType(capabilityValue.type)) {
-        // a position drives the channel as a whole, like in the preview
+      if (isPositionedCapabilityType(capabilityValue.type) || isCommandCapabilityType(capabilityValue.type)) {
+        // a position (and a program or maintenance) drives the channel as a whole, like in the preview
         const positionedValue = this.getPositionedChannelValue(capabilityValue, channel, profileUuid);
 
         if (positionedValue !== undefined) {
@@ -1393,7 +1468,7 @@ export class PresetService {
     const preset: Preset = new Preset();
     preset.uuid = this.uuidService.getUuid();
     preset.name = name || 'New Preset';
-    preset.whiteFromColor = true;
+    preset.emittersFromColor = true;
 
     // Insert the new preset before the highest currently selected preset
     let highestSelectedPresetIndex = 0;

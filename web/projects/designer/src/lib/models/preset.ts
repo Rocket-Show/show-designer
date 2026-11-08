@@ -1,3 +1,4 @@
+import { getPatternPlace, PatternPlace } from './selection-pattern';
 import { Effect } from './effect';
 import { EffectCurve } from './effect-curve';
 import { EffectPanTilt } from './effect-pan-tilt';
@@ -105,9 +106,15 @@ export class Preset {
   // are on the stage, from the left to the right, from the front to the back or from the bottom to the top.
   fanOrder = 'preset';
 
+  // the pattern the fixtures are put in for the chases and the fans in the order of the preset (see selection-pattern):
+  // so many fixtures in a group (1: each on its own), so many wings (1: none) and repeated every so many (0: not)
+  patternGroupSize = 1;
+  patternWings = 1;
+  patternEvery = 0;
+
   // light the white LEDs of a fixture with red, green, blue and white with the white part of the colors of the preset
   // (see emitter-color). New presets do, a preset written before the designer knew it doesn't.
-  whiteFromColor = false;
+  emittersFromColor = false;
 
   // position offset, relative to the scene start
   // (undefined = start/end of the scene itself)
@@ -208,7 +215,12 @@ export class Preset {
 
     // a preset written before the fans followed the stage fans in its own order
     this.fanOrder = data.fanOrder || 'preset';
-    this.whiteFromColor = data.whiteFromColor === true;
+    this.emittersFromColor = data.emittersFromColor === true;
+
+    // a preset written before the patterns puts its fixtures in its own order
+    this.patternGroupSize = data.patternGroupSize ?? 1;
+    this.patternWings = data.patternWings ?? 1;
+    this.patternEvery = data.patternEvery ?? 0;
 
     // a value missing or null keeps the default, like in Rocket Show
     this.startMillis = data.startMillis ?? undefined;
@@ -233,6 +245,11 @@ export class Preset {
 
   // the position the preset points its fixtures at on the passed capability: a mirrored
   // axis is folded around the middle of its range, the rest is passed through
+  // where a fixture at the passed place in the order of the preset is in its pattern (see selection-pattern)
+  public getPatternPlace(index: number, count: number): PatternPlace {
+    return getPatternPlace(index, count, this.patternGroupSize, this.patternWings, this.patternEvery);
+  }
+
   public getMirroredValuePercentage(type: FixtureCapabilityType, valuePercentage: number): number {
     return this.mirrorsCapability(type) ? 1 - valuePercentage : valuePercentage;
   }

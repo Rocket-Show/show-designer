@@ -1,0 +1,43 @@
+.gobos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 52px);
+  gap: 6px;
+}
+
+.gobos-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px;
+  line-height: 1;
+}
+
+.gobos-tile.active {
+  box-shadow: inset 0 0 0 2px var(--sd-primary, #fd7e14);
+}
+
+.gobos-tile canvas {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+/* the open slot: a circle of light */
+.gobos-open {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 55%, rgba(255, 255, 255, 0.2) 60%, transparent 62%);
+}
+
+.gobos-count {
+  font-size: 0.7rem;
+  margin-top: 3px;
+  opacity: 0.8;
+}
+
+.gobos-hint {
+  max-width: 230px;
+  font-size: 0.75rem;
+}

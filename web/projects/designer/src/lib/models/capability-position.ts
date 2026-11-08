@@ -33,7 +33,14 @@ export const positionedCapabilityTypes = [
   FixtureCapabilityType.BladeSystemRotation,
   FixtureCapabilityType.IrisEffect,
   FixtureCapabilityType.FrostEffect,
+  FixtureCapabilityType.EffectSpeed,
 ];
+
+// What a preset asks a fixture to do besides a position, played on the channel doing it: run one of its programs (see
+// program) or reset itself and switch its lamp on or off (see maintenance)
+export function isCommandCapabilityType(type: FixtureCapabilityType): boolean {
+  return type === FixtureCapabilityType.Effect || type === FixtureCapabilityType.Maintenance;
+}
 
 // The positions a curve can swing (see EffectCurve), on every model: the ones of the steps but the prism (in or out),
 // the blades (one of them each) and the pulses of an iris and of a frost (played over the rest)
@@ -51,6 +58,7 @@ export const curveCapabilityTypes = [
   FixtureCapabilityType.PrismRotation,
   FixtureCapabilityType.Rotation,
   FixtureCapabilityType.BladeSystemRotation,
+  FixtureCapabilityType.EffectSpeed,
 ];
 
 // the rotations, which turn either way
@@ -221,6 +229,8 @@ function getRangeEnds(capability: FixtureCapability): { ends: string[]; inverted
       return { ends: ends(capability.angleStart, capability.angleEnd, capability.angle), inverted: false };
     case FixtureCapabilityType.IrisEffect:
     case FixtureCapabilityType.FrostEffect:
+    case FixtureCapabilityType.Effect:
+    case FixtureCapabilityType.EffectSpeed:
       return { ends: ends(capability.speedStart, capability.speedEnd, capability.speed), inverted: false };
     case FixtureCapabilityType.WheelShake:
       return { ends: ends(capability.shakeSpeedStart, capability.shakeSpeedEnd, capability.shakeSpeed), inverted: false };
@@ -279,7 +289,7 @@ function ofType(channel: CachedFixtureChannel, type: FixtureCapabilityType): Cac
 
 // the capability of the channel switching the passed one off: "no function" on a channel which has the passed one
 // (e.g. "no strobe" below the strobe of a par)
-function getOff(channel: CachedFixtureChannel, type: FixtureCapabilityType): CachedFixtureCapability {
+export function getOff(channel: CachedFixtureChannel, type: FixtureCapabilityType): CachedFixtureCapability {
   if (ofType(channel, type).length === 0) {
     return undefined;
   }
@@ -440,10 +450,11 @@ export function getPositionedChannelValue(
   type: FixtureCapabilityType,
   valuePercentage: number,
   blade?: string,
-  shutterEffect?: string
+  shutterEffect?: string,
+  wheel?: string
 ): number {
   if (isRotationCapabilityType(type)) {
-    return getRotationChannelValue(channel, type, valuePercentage);
+    return getRotationChannelValue(channel, type, valuePercentage, wheel);
   }
 
   const channelCapability = getPositionedCapability(channel, type, valuePercentage, blade, shutterEffect);
@@ -464,7 +475,7 @@ export function getPositionedChannelValue(
 }
 
 // the value at the passed position (0 to 1) within the range of a capability of the channel
-function getRangeValue(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability, position: number): number {
+export function getRangeValue(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability, position: number): number {
   const capability = channelCapability.capability;
 
   if (channel.capabilities.length === 1) {
@@ -509,9 +520,90 @@ function getRotationEnds(channelCapability: CachedFixtureCapability): number[] {
 // The value of a channel turning something at the passed speed: anticlockwise below the middle (fastest at 0), stopped
 // in the middle, clockwise above it (fastest at 1), or undefined if the channel doesn't turn it that way. The widest
 // range turning the asked way only is taken from slow to fast, or else one turning both ways, from where it stops.
-export function getRotationChannelValue(channel: CachedFixtureChannel, type: FixtureCapabilityType, valuePercentage: number): number {
+// the wheels a capability turns: the ones it names, or else the one named like its channel
+function getTurnedWheels(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability): string[] {
+  const wheel = channelCapability.capability.wheel;
+
+  if (Array.isArray(wheel)) {
+    return wheel;
+  }
+
+  return typeof wheel === 'string' ? [wheel] : [channel.name];
+}
+
+// does a capability turn the passed wheel (any wheel, if none is passed)?
+function turns(channel: CachedFixtureChannel, channelCapability: CachedFixtureCapability, wheel: string): boolean {
+  return !wheel || getTurnedWheels(channel, channelCapability).indexOf(wheel) >= 0;
+}
+
+// does a capability of the passed type of the channel turn the passed wheel (a rotation of a gobo wheel)?
+export function turnsWheel(channel: CachedFixtureChannel, type: FixtureCapabilityType, wheel: string): boolean {
+  return ofType(channel, type).some((channelCapability) => turns(channel, channelCapability, wheel));
+}
+
+// does a capability of the passed type of the channel turn the passed wheel to an angle (an indexed gobo)?
+export function turnsWheelToAngle(channel: CachedFixtureChannel, type: FixtureCapabilityType, wheel: string): boolean {
+  return ofType(channel, type).some(
+    (channelCapability) =>
+      turns(channel, channelCapability, wheel) &&
+      getPropertyRank(channelCapability.capability.angleStart ?? channelCapability.capability.angle) !== undefined
+  );
+}
+
+// The value of a channel turning a wheel (or anything else) to the passed angle in degrees and holding it there (an
+// indexed gobo), or undefined if the channel can't: in the range of angles the angle is in, or else at the end of the
+// range closest to it. A capability at a single angle is played in its middle.
+export function getRotationAngleChannelValue(
+  channel: CachedFixtureChannel,
+  type: FixtureCapabilityType,
+  degrees: number,
+  wheel?: string
+): number {
+  let best: CachedFixtureCapability;
+  let bestDistance = Number.MAX_VALUE;
+  let bestPosition: number;
+
+  for (const channelCapability of ofType(channel, type)) {
+    if (!turns(channel, channelCapability, wheel)) {
+      continue;
+    }
+
+    const capability = channelCapability.capability;
+    const start = getPropertyRank(capability.angleStart ?? capability.angle);
+    const end = getPropertyRank(capability.angleEnd ?? capability.angle);
+
+    if (start === undefined || end === undefined) {
+      continue;
+    }
+
+    const low = Math.min(start, end);
+    const high = Math.max(start, end);
+    const distance = degrees < low ? low - degrees : degrees > high ? degrees - high : 0;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = channelCapability;
+      bestPosition = start === end ? undefined : (Math.max(low, Math.min(high, degrees)) - start) / (end - start);
+    }
+  }
+
+  if (!best) {
+    return undefined;
+  }
+
+  return bestPosition === undefined ? best.centerValue : getRangeValue(channel, best, bestPosition);
+}
+
+export function getRotationChannelValue(
+  channel: CachedFixtureChannel,
+  type: FixtureCapabilityType,
+  valuePercentage: number,
+  wheel?: string
+): number {
   const speed = Math.max(Math.min(valuePercentage * 2 - 1, 1), -1);
-  const rotations = ofType(channel, type).filter((channelCapability) => getRotationEnds(channelCapability) !== undefined);
+  const rotations = ofType(channel, type).filter(
+    (channelCapability) => getRotationEnds(channelCapability) !== undefined && turns(channel, channelCapability, wheel)
+  );
 
   if (rotations.length === 0) {
     return undefined;
