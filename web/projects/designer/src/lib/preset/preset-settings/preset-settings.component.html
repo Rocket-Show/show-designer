@@ -48,6 +48,28 @@
     </div>
   </div>
 
+  <!-- the pattern the fixtures are put in for the chases and the fans in the order of the preset -->
+  <div class="form-group row">
+    <label class="col-lg-4 col-form-label">{{ 'designer.preset.settings-pattern' | translate }}</label>
+    <div class="col-lg-8">
+      <div class="d-flex flex-wrap align-items-center pattern-fields">
+        <label class="mr-2 mb-0" for="patternGroupSize">{{ 'designer.preset.settings-pattern-groups' | translate }}</label>
+        <input
+          type="text"
+          class="form-control pattern-field mr-4"
+          id="patternGroupSize"
+          name="patternGroupSize"
+          [(ngModel)]="patternGroupSize"
+        />
+        <label class="mr-2 mb-0" for="patternWings">{{ 'designer.preset.settings-pattern-wings' | translate }}</label>
+        <input type="text" class="form-control pattern-field mr-4" id="patternWings" name="patternWings" [(ngModel)]="patternWings" />
+        <label class="mr-2 mb-0" for="patternEvery">{{ 'designer.preset.settings-pattern-every' | translate }}</label>
+        <input type="text" class="form-control pattern-field" id="patternEvery" name="patternEvery" [(ngModel)]="patternEvery" />
+      </div>
+      <small class="form-text text-muted">{{ 'designer.preset.settings-pattern-hint' | translate }}</small>
+    </div>
+  </div>
+
   <div class="form-group row">
     <label class="col-lg-4 col-form-label">{{ 'designer.preset.settings-start' | translate }}</label>
     <div class="col-lg-8 d-flex align-items-center">

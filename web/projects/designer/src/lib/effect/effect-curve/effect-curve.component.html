@@ -547,6 +547,23 @@
     </div>
   </div>
 
+  <!-- a curve on the pan or the tilt turns every model by the same degrees, or each over a share of its range -->
+  @if (drivesPanTilt) {
+  <div class="form-check mb-1" [title]="'designer.effect.curve-pan-tilt-degrees-hint' | translate">
+    <input
+      type="checkbox"
+      class="form-check-input"
+      name="panTiltInDegrees"
+      [id]="'panTiltInDegrees_' + curve.uuid"
+      [ngModel]="curve.panTiltInDegrees"
+      (ngModelChange)="setPanTiltInDegrees($event)"
+    />
+    <label class="form-check-label" [for]="'panTiltInDegrees_' + curve.uuid">{{
+      'designer.effect.curve-pan-tilt-degrees' | translate
+    }}</label>
+  </div>
+  }
+
   <!-- how far the curve swings on each fixture by its place in the fan of the preset: all the same, or fanned out -->
   @if (!isPixel) {
   <div class="d-flex">

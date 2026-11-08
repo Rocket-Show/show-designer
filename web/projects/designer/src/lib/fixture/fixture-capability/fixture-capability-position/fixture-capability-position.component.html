@@ -34,7 +34,23 @@
     }
   </div>
 
-  @if (isSwitch) {
+  <!-- the effect the strobe flashes in, on every model as far as it can -->
+  @if (isStrobe) {
+  <div class="strobe-effect px-2 pt-2">
+    <select
+      class="w-100"
+      name="strobeEffect"
+      [attr.aria-label]="'designer.fixture.strobe-effect' | translate"
+      [title]="'designer.fixture.strobe-effect-hint' | translate"
+      [ngModel]="getStrobeEffect()"
+      (ngModelChange)="setStrobeEffect($event)"
+    >
+      @for (effect of strobeEffects; track effect) {
+      <option [value]="effect">{{ 'designer.fixture.strobe-effect-' + effect | translate }}</option>
+      }
+    </select>
+  </div>
+  } @if (isSwitch) {
   <div class="card-body h-100 d-flex" style="flex-direction: column">
     <div class="btn-group-vertical btn-group-toggle mx-auto" role="group">
       <button type="button" class="btn btn-secondary btn-sm" [class.active]="getValue() > 0" (click)="setValue(1)">

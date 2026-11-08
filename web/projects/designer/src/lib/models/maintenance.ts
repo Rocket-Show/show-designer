@@ -4,20 +4,24 @@ import { CachedFixtureChannel } from './cached-fixture-channel';
 import { FixtureCapabilityType } from './fixture-capability';
 
 // What the fixture pool asks a fixture to do on the live preview, through a maintenance capability of its profile:
-// reset itself (e.g. a moving head which lost its position) or switch its lamp on. It is held for as long as the
+// reset itself (e.g. a moving head which lost its position) or switch its lamp on. A preset can ask for it as well, and
+// to switch the lamp off, for as long as it plays (see FixtureCapabilityValue.maintenanceAction). It is held for as long as the
 // fixture asks for it (see getMaintenanceHoldMillis), over everything the presets do with it. Rocket Show plays it
 // the very same way (Maintenance).
-export type MaintenanceAction = 'reset' | 'lamp-on';
+export type MaintenanceAction = 'reset' | 'lamp-on' | 'lamp-off';
+export const maintenanceActions: MaintenanceAction[] = ['reset', 'lamp-on', 'lamp-off'];
 
 // a maintenance capability doing nothing but the action, and one doing it among other things
 const exactly: { [action: string]: RegExp } = {
   reset: /^(fixture |total |full )?reset( all)?$/,
   'lamp-on': /^lamp on$/,
+  'lamp-off': /^lamp off$/,
 };
 
 const among: { [action: string]: RegExp } = {
   reset: /\breset\b/,
   'lamp-on': /\blamp\s*on\b/,
+  'lamp-off': /\blamp\s*off\b/,
 };
 
 // the channel and the capability of a fixture doing the passed action, or undefined if it can't
@@ -33,6 +37,10 @@ export function getMaintenanceCapability(
     }
 
     for (const capability of channel.capabilities) {
+      if (!exactly[action]) {
+        return undefined;
+      }
+
       const comment = (capability.capability.comment || '').trim().toLowerCase();
 
       if (capability.capability.type !== FixtureCapabilityType.Maintenance) {

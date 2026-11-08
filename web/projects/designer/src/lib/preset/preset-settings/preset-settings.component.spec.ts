@@ -227,4 +227,15 @@ describe('PresetSettingsComponent', () => {
     fixture.componentInstance.ok();
     expect(preset.fanOrder).toBe('left-right');
   });
+
+  it('sets the pattern of the chases and the fans, whole numbers from their least on', async () => {
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.patternGroupSize = '2';
+    component.patternWings = 'x';
+    component.patternEvery = '2.6';
+    component.ok();
+
+    expect([preset.patternGroupSize, preset.patternWings, preset.patternEvery]).toEqual([2, 1, 3]);
+  });
 });

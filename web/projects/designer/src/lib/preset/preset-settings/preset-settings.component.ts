@@ -42,6 +42,11 @@ export class PresetSettingsComponent implements OnInit {
   readonly fanOrders = fanOrders;
   fanOrder = 'preset';
 
+  // the pattern of the chases and of the fans in the order of the preset (see selection-pattern)
+  patternGroupSize: any = 1;
+  patternWings: any = 1;
+  patternEvery: any = 0;
+
   constructor(public bsModalRef: BsModalRef, private colorService: ColorService, private presetService: PresetService) {}
 
   ngOnInit() {
@@ -58,6 +63,9 @@ export class PresetSettingsComponent implements OnInit {
     this.fadeInCurve = this.preset.fadeInCurve;
     this.fadeOutCurve = this.preset.fadeOutCurve;
     this.fanOrder = this.preset.fanOrder || 'preset';
+    this.patternGroupSize = this.preset.patternGroupSize;
+    this.patternWings = this.preset.patternWings;
+    this.patternEvery = this.preset.patternEvery;
 
     this.derivedColor = this.colorService.getDerivedPresetColor(this.preset);
     this.palette = this.colorService.pickerColors;
@@ -97,12 +105,22 @@ export class PresetSettingsComponent implements OnInit {
     this.preset.fadeInCurve = this.fadeInCurve;
     this.preset.fadeOutCurve = this.fadeOutCurve;
     this.preset.fanOrder = this.fanOrder;
+    this.preset.patternGroupSize = this.patternNumber(this.patternGroupSize, 1);
+    this.preset.patternWings = this.patternNumber(this.patternWings, 1);
+    this.preset.patternEvery = this.patternNumber(this.patternEvery, 0);
 
     // the icon and the color of the preset are part of the lists, which are only built
     // again when the presets change
     this.presetService.presetsChanged.next();
 
     this.bsModalRef.hide();
+  }
+
+  // a whole number of a pattern typed in, at least the passed one (which nothing typed is as well)
+  private patternNumber(value: any, least: number): number {
+    const number = Math.round(Number(value));
+
+    return value === '' || value === null || value === undefined || isNaN(number) ? least : Math.max(number, least);
   }
 
   cancel() {

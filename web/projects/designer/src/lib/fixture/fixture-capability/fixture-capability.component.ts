@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { getMaintenanceCapability, maintenanceActions } from '../../models/maintenance';
 import { CachedFixtureChannel } from '../../models/cached-fixture-channel';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureWheelSlotType } from '../../models/fixture-wheel-slot';
@@ -28,13 +29,28 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
   hasCapabilityColorOrColorWheel: boolean = false;
   hasCapabilityPanTilt: boolean = false;
 
-  // the gobo wheels, once for each profile, like the color wheels
-  goboWheelChannels: { profile: FixtureProfile; channel: CachedFixtureChannel }[] = [];
+  // the wheels with slots besides colors (gobos, prisms, frosts, animations), once for each profile, like the color
+  // wheels, with the channels of a fixture of the profile (which may turn the wheel)
+  goboWheelChannels: { profile: FixtureProfile; channel: CachedFixtureChannel; fixtureChannels: CachedFixtureChannel[] }[] = [];
+
+  // the gobo wheels of more than one model, which a gobo is picked on for all of them at once
+  get multiModelGoboWheels(): { profile: FixtureProfile; channel: CachedFixtureChannel }[] {
+    const gobos = this.goboWheelChannels.filter((wheel) =>
+      wheel.channel.capabilities.some(
+        (capability) => capability.wheel && this.fixtureService.wheelHasSlotType(capability.wheel, FixtureWheelSlotType.Gobo)
+      )
+    );
+
+    return new Set(gobos.map((wheel) => wheel.profile.uuid)).size > 1 ? gobos : [];
+  }
 
   // the capabilities besides the dimmer, the color and pan/tilt which play the same on every model of fixture (see
   // capability-position) and the emitters of light besides red, green and blue, which the fixtures of the preset have
   positionedTypes: FixtureCapabilityType[] = [];
   emitterColors: FixtureCapabilityColor[] = [];
+
+  // the programs the fixtures run on their own, and maintenance (reset, lamp on and off), if they have them
+  commandKinds: ('program' | 'maintenance')[] = [];
 
   // the blades of a framing shutter the fixtures of the preset have, put in and turned
   bladePanels: { type: FixtureCapabilityType; blade: string }[] = [];
@@ -125,12 +141,12 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
               if (!this.wheelInList(fixture.profile, channel)) {
                 this.colorWheelChannels.push({ profile: fixture.profile, channel, fixtureChannels: fixture.channels });
               }
-            } else if (this.fixtureService.wheelHasSlotType(capability.wheel, FixtureWheelSlotType.Gobo)) {
-              // gobo wheel
+            } else {
+              // a wheel of gobos, prisms, frosts or animations
               if (
                 !this.goboWheelChannels.some((wheel) => wheel.profile.uuid === fixture.profile.uuid && wheel.channel.name === channel.name)
               ) {
-                this.goboWheelChannels.push({ profile: fixture.profile, channel });
+                this.goboWheelChannels.push({ profile: fixture.profile, channel, fixtureChannels: fixture.channels });
               }
             }
           }
@@ -151,6 +167,23 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
         getPlayingTypes(type).some((playingType) => this.presetService.hasCapabilityType(playingType)) ||
         (type === FixtureCapabilityType.ShutterStrobe && this.presetService.hasCapabilityType(FixtureCapabilityType.StrobeSpeed))
     );
+    this.commandKinds = [];
+
+    if (this.presetService.hasCapabilityType(FixtureCapabilityType.Effect)) {
+      this.commandKinds.push('program');
+    }
+
+    // asking the fixtures to reset or to switch their lamp, if one of them can
+    if (
+      this.presetService.hasCapabilityType(FixtureCapabilityType.Maintenance) &&
+      (this.presetService.selectedPreset?.fixtures || []).some((presetFixture) => {
+        const fixture = this.fixtureService.getCachedFixtureByUuid(presetFixture.fixtureUuid, presetFixture.pixelKey);
+        return !!fixture && maintenanceActions.some((action) => !!getMaintenanceCapability(fixture.channels, action));
+      })
+    ) {
+      this.commandKinds.push('maintenance');
+    }
+
     this.emitterColors = FixtureCapabilityComponent.emitters.filter((color) =>
       this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, color)
     );
@@ -185,7 +218,8 @@ export class FixtureCapabilityComponent implements OnInit, OnDestroy {
       this.positionedTypes.length > 0 ||
       this.emitterColors.length > 0 ||
       this.bladePanels.length > 0 ||
-      this.goboWheelChannels.length > 0
+      this.goboWheelChannels.length > 0 ||
+      this.commandKinds.length > 0
     );
   }
 

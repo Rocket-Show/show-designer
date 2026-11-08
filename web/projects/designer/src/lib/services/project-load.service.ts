@@ -418,6 +418,11 @@ export class ProjectLoadService {
         if (asTemplate) {
           project.id = undefined;
           project.shareToken = undefined;
+
+          // a new show lights the white and the amber LEDs with the parts of its colors, like a preset added to it
+          for (const preset of project.presets) {
+            preset.emittersFromColor = true;
+          }
         }
 
         // (the template, kept in the version it was saved with)
@@ -462,6 +467,7 @@ export class ProjectLoadService {
     const preset = new Preset();
     preset.uuid = this.uuidService.getUuid();
     preset.name = 'New Preset';
+    preset.emittersFromColor = true;
     this.projectService.project.presets.push(preset);
     this.presetService.selectPreset(0);
 

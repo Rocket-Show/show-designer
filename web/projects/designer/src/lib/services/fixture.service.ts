@@ -10,7 +10,7 @@ import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { Color } from '../models/color';
 import { Fixture } from '../models/fixture';
 import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
-import { FixtureChannel } from '../models/fixture-channel';
+import { FixtureChannel, getCapabilityInFullResolution, getResolutionMultiplier } from '../models/fixture-channel';
 import { FixtureMode } from '../models/fixture-mode';
 import { FixtureProfile } from '../models/fixture-profile';
 import { FixtureWheel } from '../models/fixture-wheel';
@@ -326,9 +326,14 @@ export class FixtureService {
     }
   }
 
-  private getFixtureCapability(capability: FixtureCapability, channelName: string, profile: FixtureProfile): CachedFixtureCapability {
+  private getFixtureCapability(
+    capability: FixtureCapability,
+    channelName: string,
+    profile: FixtureProfile,
+    resolutionMultiplier = 1
+  ): CachedFixtureCapability {
     const cachedFixtureCapability = new CachedFixtureCapability();
-    cachedFixtureCapability.capability = capability;
+    cachedFixtureCapability.capability = getCapabilityInFullResolution(capability, resolutionMultiplier);
     if (capability.slotNumber != null) {
       // there is a wheel connected to this capability
       if (typeof capability.wheel === 'string') {
@@ -357,11 +362,14 @@ export class FixtureService {
   ): CachedFixtureCapability[] {
     const capabilites: CachedFixtureCapability[] = [];
 
+    // the ranges of a profile writing them in fewer bits than the channel has, in its full resolution
+    const multiplier = getResolutionMultiplier(fixtureChannel);
+
     if (fixtureChannel.capability) {
-      capabilites.push(this.getFixtureCapability(fixtureChannel.capability, channelName, profile));
+      capabilites.push(this.getFixtureCapability(fixtureChannel.capability, channelName, profile, multiplier));
     } else if (fixtureChannel.capabilities) {
       for (const capability of fixtureChannel.capabilities) {
-        capabilites.push(this.getFixtureCapability(capability, channelName, profile));
+        capabilites.push(this.getFixtureCapability(capability, channelName, profile, multiplier));
       }
     }
 
@@ -390,8 +398,10 @@ export class FixtureService {
       return percentage === undefined ? undefined : (this.getMaxValueByChannel(fixtureChannel) / 100) * percentage;
     }
 
-    // DMX value
-    return parseProfileNumber(text);
+    // DMX value, of a profile writing it in fewer bits than the channel has as well
+    const value = parseProfileNumber(text);
+
+    return value === undefined ? undefined : value * getResolutionMultiplier(fixtureChannel);
   }
 
   private getColorWheelByChannel(channel: CachedFixtureChannel, profile: FixtureProfile): FixtureWheel {

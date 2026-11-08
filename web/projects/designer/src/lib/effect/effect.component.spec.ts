@@ -155,6 +155,8 @@ describe('EffectComponent', () => {
 
     expect(added instanceof EffectCurve).toBe(true);
     expect(added.uuid).toBeTruthy();
+    // a new curve turns the heads by the same degrees on every model
+    expect((added as EffectCurve).panTiltInDegrees).toBe(true);
     expect(effectService.selectedEffect).toBe(added);
     expect(effectsChanged).toHaveBeenCalled();
     expect(previewLive).toHaveBeenCalled();

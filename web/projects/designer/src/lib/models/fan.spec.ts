@@ -176,4 +176,18 @@ describe('fan', () => {
     expect(placed.valuePercentage).toBeCloseTo(0.7, 12);
     expect(placed.transitionFrom).toBeUndefined();
   });
+
+  it('should take the values of a fan in steps, each stop sharing the fan evenly', () => {
+    const colors = stops([0, 1], [0.5, 0.5], [1, 0]);
+
+    expect(getFanValue(colors, 0, 'steps')).toBe(1);
+    expect(getFanValue(colors, 0.33, 'steps')).toBe(1);
+    expect(getFanValue(colors, 0.34, 'steps')).toBe(0.5);
+    expect(getFanValue(colors, 0.9, 'steps')).toBe(0);
+    expect(getFanValue(colors, 1, 'steps')).toBe(0);
+
+    // every other fixture in the other color: two stops, the places 0 and 1 of a pattern repeated every 2
+    expect(getFanValue(stops([0, 1], [1, 0]), 0, 'steps')).toBe(1);
+    expect(getFanValue(stops([0, 1], [1, 0]), 1, 'steps')).toBe(0);
+  });
 });

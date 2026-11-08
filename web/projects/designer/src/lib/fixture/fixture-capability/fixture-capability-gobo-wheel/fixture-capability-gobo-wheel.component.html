@@ -10,7 +10,11 @@
           (ngModelChange)="changeActive($event)"
         />
         <label class="form-check-label" for="capabilityGoboWheel{{ _fixtureProfile?.uuid }}{{ _channel?.name }}">
-          {{ 'designer.fixture.capability-gobo-wheel' | translate }}
+          @if (wheelKind === 'other') {
+          {{ wheelName }}
+          } @else {
+          {{ 'designer.fixture.capability-wheel-' + wheelKind | translate }}
+          }
         </label>
       </div>
     </div>
@@ -118,6 +122,55 @@
         [max]="1"
         [step]="0.01"
       ></mv-slider>
+    </div>
+    }
+    <!-- the gobo turning at a speed or turned to an angle and held there, on this wheel only -->
+    @if (canRotate()) {
+    <div class="gobo-rotation mt-2">
+      <div class="d-flex justify-content-between align-items-center text-muted">
+        <span>{{ 'designer.fixture.capability-wheel-rotation' | translate }}</span>
+        @if (isRotating()) {
+        <button
+          type="button"
+          class="btn btn-link btn-sm p-0"
+          name="stopRotation"
+          [title]="'designer.fixture.capability-wheel-rotation-off' | translate"
+          [attr.aria-label]="'designer.fixture.capability-wheel-rotation-off' | translate"
+          (click)="stopRotation()"
+        >
+          <i class="fa fa-times" aria-hidden="true"></i>
+        </button>
+        }
+      </div>
+      <mv-slider
+        class="sd-slider-fill"
+        [value]="getRotation()"
+        (change)="setRotation($event.newValue)"
+        [tooltip]="'hide'"
+        [min]="0"
+        [max]="1"
+        [step]="0.01"
+      ></mv-slider>
+      <div class="d-flex justify-content-between text-muted gobo-rotation-ends">
+        <span>{{ 'designer.fixture.capability-position-low.WheelSlotRotation' | translate }}</span>
+        <span>{{ 'designer.fixture.capability-position-high.WheelSlotRotation' | translate }}</span>
+      </div>
+      @if (canIndex()) {
+      <div class="d-flex align-items-center mt-1">
+        <label class="text-muted mb-0 mr-2" [for]="'wheelAngle' + _fixtureProfile?.uuid + _channel?.name">{{
+          'designer.fixture.capability-wheel-angle' | translate
+        }}</label>
+        <input
+          class="sd-value-input"
+          type="text"
+          name="wheelAngle"
+          [id]="'wheelAngle' + _fixtureProfile?.uuid + _channel?.name"
+          [ngModel]="getAngle()"
+          (ngModelChange)="setAngle($event)"
+        />
+        <span class="ml-1">°</span>
+      </div>
+      }
     </div>
     }
   </div>
