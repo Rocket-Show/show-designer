@@ -70,9 +70,11 @@ export class EffectComponent implements OnInit {
     this.livePreviewService.previewLive();
   }
 
+  // a curve, moving the heads by the same degrees on every model (see EffectCurve.panTiltInDegrees)
   addCurveEffect() {
     const effect = new EffectCurve();
     effect.uuid = this.uuidService.getUuid();
+    effect.panTiltInDegrees = true;
     this.addEffect(effect);
     this.livePreviewService.previewLive();
   }

@@ -332,7 +332,22 @@
       "fan-bars-hint": "Was jede Fixture bekommt, in der Reihenfolge des Fächers",
       "capability-color-gradient": "Verlauf",
       "capability-color-gradient-hint": "Spannt einen Farbverlauf über die Fixtures des Presets",
-      "capability-color-gradient-order": "Von der ersten bis zur letzten Fixture, in der Fächer-Reihenfolge der Preset-Einstellungen. Fixtures mit Farbrad nehmen die nächstgelegene Farbe."
+      "capability-color-gradient-order": "Von der ersten bis zur letzten Fixture, in der Fächer-Reihenfolge der Preset-Einstellungen. Fixtures mit Farbrad nehmen die nächstgelegene Farbe.",
+      "strobe-effect": "Effekt",
+      "strobe-effect-hint": "Womit der Strobe blitzt. Fixtures ohne den Effekt blitzen mit dem nächstgelegenen, den sie haben, zuletzt als einfacher Strobe.",
+      "strobe-effect-Strobe": "Strobe",
+      "strobe-effect-Random": "Zufällig",
+      "strobe-effect-Pulse": "Puls",
+      "strobe-effect-RampUp": "Rampe hoch",
+      "strobe-effect-RampDown": "Rampe runter",
+      "strobe-effect-RampUpDown": "Rampe hoch und runter",
+      "strobe-effect-Lightning": "Blitz",
+      "strobe-effect-Spikes": "Spitzen",
+      "strobe-effect-Burst": "Burst",
+      "strobe-effect-Sound": "Zum Ton",
+      "strobe-effect-Closed": "Geschlossen",
+      "capability-color-white": "Weiss auf die weissen LEDs",
+      "capability-color-white-hint": "Fixtures mit Rot, Grün, Blau und Weiss erzeugen den Weissanteil der Farbe mit ihren weissen LEDs (für das ganze Preset). Die Farbtemperatur spielt auf warm- und kaltweissen LEDs von Fixtures ohne eigenen Kanal dafür."
     },
     "fixture-pool": {
       "title": "Fixture Pool",

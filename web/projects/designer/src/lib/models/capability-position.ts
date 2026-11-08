@@ -35,6 +35,24 @@ export const positionedCapabilityTypes = [
   FixtureCapabilityType.FrostEffect,
 ];
 
+// The positions a curve can swing (see EffectCurve), on every model: the ones of the steps but the prism (in or out),
+// the blades (one of them each) and the pulses of an iris and of a frost (played over the rest)
+export const curveCapabilityTypes = [
+  FixtureCapabilityType.ShutterStrobe,
+  FixtureCapabilityType.StrobeDuration,
+  FixtureCapabilityType.Zoom,
+  FixtureCapabilityType.Focus,
+  FixtureCapabilityType.Iris,
+  FixtureCapabilityType.Frost,
+  FixtureCapabilityType.ColorTemperature,
+  FixtureCapabilityType.PanTiltSpeed,
+  FixtureCapabilityType.FogOutput,
+  FixtureCapabilityType.WheelSlotRotation,
+  FixtureCapabilityType.PrismRotation,
+  FixtureCapabilityType.Rotation,
+  FixtureCapabilityType.BladeSystemRotation,
+];
+
 // the rotations, which turn either way
 export const rotationCapabilityTypes = [
   FixtureCapabilityType.WheelSlotRotation,
@@ -269,6 +287,79 @@ function getOff(channel: CachedFixtureChannel, type: FixtureCapabilityType): Cac
   return channel.capabilities.filter((channelCapability) => channelCapability.capability.type === FixtureCapabilityType.NoFunction)[0];
 }
 
+// The effects a strobe can flash in (see FixtureCapabilityValue.shutterEffect), on every model: as the fixture library
+// names them, and a strobe flashing at random ('Random') or to the sound ('Sound'). A fixture which can't flash in the
+// effect asked for flashes in the closest one it has, in the end as a plain strobe. 'Closed' closes the shutter.
+export const strobeEffects = [
+  'Strobe',
+  'Random',
+  'Pulse',
+  'RampUp',
+  'RampDown',
+  'RampUpDown',
+  'Lightning',
+  'Spikes',
+  'Burst',
+  'Sound',
+  'Closed',
+];
+
+// what a fixture flashes in instead of an effect it doesn't have, one after the other, a plain strobe at last
+const strobeFallbacks: { [effect: string]: string[] } = {
+  Random: ['Spikes', 'Lightning'],
+  RampUp: ['RampUpDown', 'Pulse'],
+  RampDown: ['RampUpDown', 'Pulse'],
+  RampUpDown: ['Pulse'],
+  Lightning: ['Random', 'Spikes'],
+  Spikes: ['Random', 'Lightning'],
+  Burst: ['Random'],
+};
+
+// The capabilities of the channel flashing in an effect: a strobe at random is a strobe with a random timing (or any
+// other effect at random), one to the sound any effect controlled by the sound, preferring a strobe. Any other effect
+// flashes on its own, not at random or to the sound, if the channel has it that way.
+function getStrobesOf(channel: CachedFixtureChannel, effect: string): CachedFixtureCapability[] {
+  const shutters = ofType(channel, FixtureCapabilityType.ShutterStrobe);
+
+  if (effect === 'Random') {
+    const random = shutters.filter((channelCapability) => channelCapability.capability.randomTiming);
+    const strobes = random.filter((channelCapability) => channelCapability.capability.shutterEffect === 'Strobe');
+
+    return strobes.length > 0 ? strobes : random;
+  }
+
+  if (effect === 'Sound') {
+    const sound = shutters.filter((channelCapability) => channelCapability.capability.soundControlled);
+    const strobes = sound.filter((channelCapability) => channelCapability.capability.shutterEffect === 'Strobe');
+
+    return strobes.length > 0 ? strobes : sound;
+  }
+
+  const effects = shutters.filter((channelCapability) => channelCapability.capability.shutterEffect === effect);
+  const regular = effects.filter(
+    (channelCapability) => !channelCapability.capability.randomTiming && !channelCapability.capability.soundControlled
+  );
+
+  return regular.length > 0 ? regular : effects;
+}
+
+// The capability of the channel flashing in the passed effect (a plain strobe without one), or in the closest one the
+// channel has (see strobeFallbacks), in the end in a strobe flashing on its own (not at random or to the sound), or else
+// any of them
+function getStrobe(channel: CachedFixtureChannel, shutterEffect: string): CachedFixtureCapability {
+  const effect = shutterEffect && strobeEffects.indexOf(shutterEffect) >= 0 ? shutterEffect : 'Strobe';
+
+  for (const candidate of [effect, ...(strobeFallbacks[effect] || []), 'Strobe']) {
+    const strobes = getStrobesOf(channel, candidate);
+
+    if (strobes.length > 0) {
+      return getWidest(channel, strobes);
+    }
+  }
+
+  return undefined;
+}
+
 // the capability of the channel a positioned capability value is played with, or undefined if the channel doesn't
 // do it. A channel has one capability doing it: the widest one, unless the value says which kind it is. A blade is
 // played by the capabilities of the blade the value names.
@@ -276,7 +367,8 @@ export function getPositionedCapability(
   channel: CachedFixtureChannel,
   type: FixtureCapabilityType,
   valuePercentage: number,
-  blade?: string
+  blade?: string,
+  shutterEffect?: string
 ): CachedFixtureCapability {
   if (isBladeCapabilityType(type)) {
     return getWidest(
@@ -291,14 +383,13 @@ export function getPositionedCapability(
   }
 
   if (type === FixtureCapabilityType.ShutterStrobe) {
-    if (valuePercentage > 0) {
-      // a strobe flashing on its own, not at random or to the sound, or else any of them
-      const strobes = ofType(channel, type).filter((channelCapability) => channelCapability.capability.shutterEffect === 'Strobe');
-      const regular = strobes.filter(
-        (channelCapability) => !channelCapability.capability.randomTiming && !channelCapability.capability.soundControlled
-      );
+    if (shutterEffect === 'Closed') {
+      // the shutter closed, whatever the value says, or else nothing to do
+      return ofType(channel, type).find((channelCapability) => channelCapability.capability.shutterEffect === 'Closed');
+    }
 
-      return getWidest(channel, regular.length > 0 ? regular : strobes);
+    if (valuePercentage > 0) {
+      return getStrobe(channel, shutterEffect);
     }
 
     // the shutter open, or else no strobe
@@ -336,7 +427,7 @@ function isSingleValue(type: FixtureCapabilityType, valuePercentage: number, cap
     return true;
   }
 
-  if (type === FixtureCapabilityType.ShutterStrobe && valuePercentage <= 0) {
+  if (type === FixtureCapabilityType.ShutterStrobe && (valuePercentage <= 0 || capability.shutterEffect === 'Closed')) {
     return true;
   }
 
@@ -348,13 +439,14 @@ export function getPositionedChannelValue(
   channel: CachedFixtureChannel,
   type: FixtureCapabilityType,
   valuePercentage: number,
-  blade?: string
+  blade?: string,
+  shutterEffect?: string
 ): number {
   if (isRotationCapabilityType(type)) {
     return getRotationChannelValue(channel, type, valuePercentage);
   }
 
-  const channelCapability = getPositionedCapability(channel, type, valuePercentage, blade);
+  const channelCapability = getPositionedCapability(channel, type, valuePercentage, blade, shutterEffect);
 
   if (!channelCapability) {
     return undefined;

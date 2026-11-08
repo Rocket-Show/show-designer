@@ -332,7 +332,22 @@
       "fan-bars-hint": "What each fixture gets, in the order of the fan",
       "capability-color-gradient": "Gradient",
       "capability-color-gradient-hint": "Spans a gradient of colors over the fixtures of the preset",
-      "capability-color-gradient-order": "From the first to the last fixture, in the fan order of the preset settings. Fixtures with a color wheel take the closest color."
+      "capability-color-gradient-order": "From the first to the last fixture, in the fan order of the preset settings. Fixtures with a color wheel take the closest color.",
+      "strobe-effect": "Effect",
+      "strobe-effect-hint": "What the strobe flashes in. Fixtures without the effect flash in the closest one they have, in the end as a plain strobe.",
+      "strobe-effect-Strobe": "Strobe",
+      "strobe-effect-Random": "Random",
+      "strobe-effect-Pulse": "Pulse",
+      "strobe-effect-RampUp": "Ramp up",
+      "strobe-effect-RampDown": "Ramp down",
+      "strobe-effect-RampUpDown": "Ramp up and down",
+      "strobe-effect-Lightning": "Lightning",
+      "strobe-effect-Spikes": "Spikes",
+      "strobe-effect-Burst": "Burst",
+      "strobe-effect-Sound": "To the sound",
+      "strobe-effect-Closed": "Closed",
+      "capability-color-white": "White on the white LEDs",
+      "capability-color-white-hint": "Fixtures with red, green, blue and white light the white part of the color with their white LEDs (for the whole preset). The color temperature plays on warm and cold white LEDs of fixtures without a channel for it."
     },
     "fixture-pool": {
       "title": "Fixture pool",

@@ -105,6 +105,10 @@ export class Preset {
   // are on the stage, from the left to the right, from the front to the back or from the bottom to the top.
   fanOrder = 'preset';
 
+  // light the white LEDs of a fixture with red, green, blue and white with the white part of the colors of the preset
+  // (see emitter-color). New presets do, a preset written before the designer knew it doesn't.
+  whiteFromColor = false;
+
   // position offset, relative to the scene start
   // (undefined = start/end of the scene itself)
   startMillis: number;
@@ -204,6 +208,7 @@ export class Preset {
 
     // a preset written before the fans followed the stage fans in its own order
     this.fanOrder = data.fanOrder || 'preset';
+    this.whiteFromColor = data.whiteFromColor === true;
 
     // a value missing or null keeps the default, like in Rocket Show
     this.startMillis = data.startMillis ?? undefined;

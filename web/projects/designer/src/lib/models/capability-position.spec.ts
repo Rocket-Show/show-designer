@@ -12,6 +12,7 @@ import {
   isPositionedCapabilityType,
   isRangeReversed,
   isRotationCapabilityType,
+  strobeEffects,
 } from './capability-position';
 import { FixtureCapability, FixtureCapabilityType } from './fixture-capability';
 import { FixtureProfile } from './fixture-profile';
@@ -446,5 +447,75 @@ describe('capability-position', () => {
       expect(getShakeChannelValue(wheel, 'Channel', 2, 0)).toBeUndefined();
       expect(getShakeChannelValue(wheel, 'Other', 2, 1)).toBeUndefined();
     });
+  });
+
+  it('should flash a strobe in the effect asked for, or in the closest one the channel has', () => {
+    const shutter = channelOf({
+      capabilities: [
+        range(0, 9, 'ShutterStrobe', { shutterEffect: 'Closed' }),
+        range(10, 19, 'ShutterStrobe', { shutterEffect: 'Open' }),
+        range(20, 59, 'ShutterStrobe', { shutterEffect: 'Strobe', speedStart: 'slow', speedEnd: 'fast' }),
+        range(60, 79, 'ShutterStrobe', { shutterEffect: 'Strobe', speedStart: 'slow', speedEnd: 'fast', randomTiming: true }),
+        range(80, 99, 'ShutterStrobe', { shutterEffect: 'Pulse', speedStart: 'slow', speedEnd: 'fast' }),
+        range(100, 119, 'ShutterStrobe', { shutterEffect: 'Lightning' }),
+        range(120, 139, 'ShutterStrobe', { shutterEffect: 'Strobe', soundControlled: true }),
+      ],
+    });
+    const effect = (shutterEffect: string, value = 0.5) =>
+      getPositionedCapability(shutter, FixtureCapabilityType.ShutterStrobe, value, undefined, shutterEffect)?.capability.dmxRange[0];
+
+    expect(strobeEffects).toContain('Pulse');
+    expect(effect(undefined)).toBe(20);
+    expect(effect('Strobe')).toBe(20);
+    expect(effect('Random')).toBe(60);
+    expect(effect('Pulse')).toBe(80);
+    expect(effect('Lightning')).toBe(100);
+    expect(effect('Sound')).toBe(120);
+
+    // the closest effect the channel has: a ramp pulses, a burst flashes at random, an effect it doesn't know strobes
+    expect(effect('RampUp')).toBe(80);
+    expect(effect('Burst')).toBe(60);
+    expect(effect('Spikes')).toBe(60);
+    expect(effect('Fireworks')).toBe(20);
+
+    // at 0 the shutter is open, closed is closed whatever the speed says, in the middle of its range
+    expect(effect('Pulse', 0)).toBe(10);
+    expect(getPositionedChannelValue(shutter, FixtureCapabilityType.ShutterStrobe, 0.7, undefined, 'Closed')).toBe(4);
+    expect(getPositionedChannelValue(shutter, FixtureCapabilityType.ShutterStrobe, 0.5, undefined, 'Pulse')).toBeCloseTo(89.5, 9);
+
+    // a channel with a plain strobe only strobes, and can't close
+    const plain = channelOf({ capabilities: [range(0, 9, 'NoFunction'), range(10, 255, 'ShutterStrobe', { shutterEffect: 'Strobe' })] });
+    expect(getPositionedCapability(plain, FixtureCapabilityType.ShutterStrobe, 0.5, undefined, 'Lightning').capability.dmxRange[0]).toBe(
+      10
+    );
+    expect(getPositionedChannelValue(plain, FixtureCapabilityType.ShutterStrobe, 0.5, undefined, 'Closed')).toBeUndefined();
+  });
+
+  it('should read the ranges and the default of a channel written in fewer bits than it has', () => {
+    const fine = channelOf({
+      fineChannelAliases: ['Fine'],
+      dmxValueResolution: '8bit',
+      defaultValue: 128,
+      capabilities: [range(0, 249, 'Intensity'), range(250, 255, 'ShutterStrobe', { shutterEffect: 'Strobe' })],
+    });
+
+    expect(fine.maxValue).toBe(65535);
+    expect(fine.defaultValue).toBe(32768);
+    expect(fine.capabilities.map((capability) => capability.capability.dmxRange)).toEqual([
+      [0, 63999],
+      [64000, 65535],
+    ]);
+    expect(fine.capabilities[1].centerValue).toBe(64767);
+
+    // written in its full resolution, or saying nothing: as it is
+    const full = channelOf({
+      fineChannelAliases: ['Fine'],
+      dmxValueResolution: '16bit',
+      defaultValue: 128,
+      capability: range(0, 65535, 'Zoom'),
+    });
+    expect(full.defaultValue).toBe(128);
+    expect(full.capabilities[0].capability.dmxRange).toEqual([0, 65535]);
+    expect(channelOf({ defaultValue: '50%', capability: range(0, 255, 'Zoom') }).defaultValue).toBeCloseTo(127.5, 9);
   });
 });

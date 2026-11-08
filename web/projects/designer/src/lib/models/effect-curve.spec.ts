@@ -1,3 +1,4 @@
+import { FixtureCapability, FixtureCapabilityType } from './fixture-capability';
 import { EffectCurve } from './effect-curve';
 
 // a curve on a fixed period, so the tempo must not reach it
@@ -387,5 +388,25 @@ describe('EffectCurve', () => {
     for (let millis = 0; millis < 1000; millis += 50) {
       expect(sine.getValueAtMillis(millis, 0, 1)).toBeCloseTo(1, 9);
     }
+  });
+
+  it('should play a curve on the pan and the tilt in degrees, a new one at least', () => {
+    const pan = new FixtureCapability();
+    pan.type = FixtureCapabilityType.Pan;
+    const tilt = new FixtureCapability();
+    tilt.type = FixtureCapabilityType.Tilt;
+    const dimmer = new FixtureCapability();
+    dimmer.type = FixtureCapabilityType.Intensity;
+
+    // a curve of a project before it moves a share of the range of each head
+    const old = new EffectCurve({ uuid: 'old' });
+    expect(old.panTiltInDegrees).toBe(false);
+    expect(old.getCapabilityValue(pan, 0.7).valuePercentage).toBe(0.7);
+
+    const degrees = new EffectCurve({ uuid: 'degrees', panTiltInDegrees: true });
+    expect(degrees.getCapabilityValue(pan, 0.7).valueDegrees).toBeCloseTo(108, 9);
+    expect(degrees.getCapabilityValue(pan, 0.7).valuePercentage).toBeUndefined();
+    expect(degrees.getCapabilityValue(tilt, 0).valueDegrees).toBe(-135);
+    expect(degrees.getCapabilityValue(dimmer, 0.7).valuePercentage).toBe(0.7);
   });
 });

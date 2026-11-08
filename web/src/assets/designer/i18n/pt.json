@@ -332,7 +332,22 @@
       "fan-bars-hint": "O que cada fixture recebe, na ordem do leque",
       "capability-color-gradient": "Gradiente",
       "capability-color-gradient-hint": "Estende um gradiente de cores sobre os fixtures da predefinição",
-      "capability-color-gradient-order": "Do primeiro ao último fixture, na ordem do leque das definições da predefinição. Fixtures com roda de cores ficam com a cor mais próxima."
+      "capability-color-gradient-order": "Do primeiro ao último fixture, na ordem do leque das definições da predefinição. Fixtures com roda de cores ficam com a cor mais próxima.",
+      "strobe-effect": "Efeito",
+      "strobe-effect-hint": "Com o que o estroboscópio pisca. Fixtures sem o efeito piscam com o mais próximo que tiverem, no fim como um estroboscópio simples.",
+      "strobe-effect-Strobe": "Estroboscópio",
+      "strobe-effect-Random": "Aleatório",
+      "strobe-effect-Pulse": "Pulso",
+      "strobe-effect-RampUp": "Rampa a subir",
+      "strobe-effect-RampDown": "Rampa a descer",
+      "strobe-effect-RampUpDown": "Rampa a subir e descer",
+      "strobe-effect-Lightning": "Relâmpago",
+      "strobe-effect-Spikes": "Picos",
+      "strobe-effect-Burst": "Rajada",
+      "strobe-effect-Sound": "Ao som",
+      "strobe-effect-Closed": "Fechado",
+      "capability-color-white": "O branco nos LED brancos",
+      "capability-color-white-hint": "Fixtures com vermelho, verde, azul e branco dão a parte branca da cor com os seus LED brancos (para toda a predefinição). A temperatura de cor toca nos LED branco quente e branco frio de fixtures sem canal próprio para ela."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",

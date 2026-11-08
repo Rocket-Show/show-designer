@@ -287,4 +287,21 @@ describe('FixtureCapabilityColorComponent', () => {
     expect(rgb(step)).toEqual([0, 1, 0]);
     expect(presetService.getCapabilityFan(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red)).toBeUndefined();
   });
+
+  it('lights the white LEDs with the white part of the colors, for the whole preset', async () => {
+    await render();
+
+    // a preset without a fixture with white LEDs doesn't offer it
+    expect(element.querySelector('input[name="whiteFromColor"]')).toBeNull();
+
+    spyOn(presetService, 'hasCapabilityType').and.returnValue(true);
+    await update();
+    const white = element.querySelector('input[name="whiteFromColor"]') as HTMLInputElement;
+    expect(white.checked).toBe(false);
+
+    white.click();
+    await update();
+    expect(preset.whiteFromColor).toBe(true);
+    expect(component.getWhiteFromColor()).toBe(true);
+  });
 });

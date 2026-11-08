@@ -931,7 +931,7 @@ export class PresetService {
     profileUuid: string,
     preset?: Preset
   ): boolean {
-    return getFixtureCapabilityValues(capabilityValues, channels).some((capabilityValue) =>
+    return getFixtureCapabilityValues(capabilityValues, channels, preset?.whiteFromColor).some((capabilityValue) =>
       channels.some(
         (channel) =>
           channel.channel &&
@@ -966,7 +966,13 @@ export class PresetService {
       return getShakeChannelValue(channel, capabilityValue.wheel, capabilityValue.slotNumber, capabilityValue.valuePercentage);
     }
 
-    return getPositionedChannelValue(channel, capabilityValue.type, capabilityValue.valuePercentage, capabilityValue.blade);
+    return getPositionedChannelValue(
+      channel,
+      capabilityValue.type,
+      capabilityValue.valuePercentage,
+      capabilityValue.blade,
+      capabilityValue.shutterEffect
+    );
   }
 
   // the value a pan or tilt value points a fixture of the passed profile at with a channel, or undefined, if the channel
@@ -998,7 +1004,7 @@ export class PresetService {
   ): number {
     let value: number;
 
-    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels);
+    const fixtureCapabilityValues = getFixtureCapabilityValues(capabilityValues, fixtureChannels, preset?.whiteFromColor);
 
     for (const capabilityValue of fixtureCapabilityValues) {
       if (isOverridingCapabilityType(capabilityValue.type)) {
@@ -1387,6 +1393,7 @@ export class PresetService {
     const preset: Preset = new Preset();
     preset.uuid = this.uuidService.getUuid();
     preset.name = name || 'New Preset';
+    preset.whiteFromColor = true;
 
     // Insert the new preset before the highest currently selected preset
     let highestSelectedPresetIndex = 0;

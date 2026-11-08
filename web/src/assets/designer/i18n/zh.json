@@ -332,7 +332,22 @@
       "fan-bars-hint": "每台灯具得到的值，按扇形顺序",
       "capability-color-gradient": "渐变",
       "capability-color-gradient-hint": "在预设的灯具上铺开颜色渐变",
-      "capability-color-gradient-order": "从第一台到最后一台灯具，按预设设置中的扇形顺序。带颜色轮的灯具取最接近的颜色。"
+      "capability-color-gradient-order": "从第一台到最后一台灯具，按预设设置中的扇形顺序。带颜色轮的灯具取最接近的颜色。",
+      "strobe-effect": "效果",
+      "strobe-effect-hint": "频闪使用的效果。没有该效果的灯具会使用其拥有的最接近的效果，最终作为普通频闪。",
+      "strobe-effect-Strobe": "频闪",
+      "strobe-effect-Random": "随机",
+      "strobe-effect-Pulse": "脉冲",
+      "strobe-effect-RampUp": "渐亮",
+      "strobe-effect-RampDown": "渐暗",
+      "strobe-effect-RampUpDown": "渐亮再渐暗",
+      "strobe-effect-Lightning": "闪电",
+      "strobe-effect-Spikes": "尖峰",
+      "strobe-effect-Burst": "连发",
+      "strobe-effect-Sound": "随声音",
+      "strobe-effect-Closed": "关闭",
+      "capability-color-white": "白色由白色 LED 发出",
+      "capability-color-white-hint": "带红、绿、蓝和白色的灯具用白色 LED 发出颜色中的白色部分（对整个预设）。没有色温通道的灯具会在暖白和冷白 LED 上体现色温。"
     },
     "fixture-pool": {
       "title": "灯具库",

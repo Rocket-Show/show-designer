@@ -332,7 +332,22 @@
       "fan-bars-hint": "Lo que recibe cada fixture, en el orden del abanico",
       "capability-color-gradient": "Degradado",
       "capability-color-gradient-hint": "Extiende un degradado de colores sobre los fixtures del preajuste",
-      "capability-color-gradient-order": "Del primer al último fixture, en el orden de abanico de los ajustes del preajuste. Los fixtures con rueda de color toman el color más cercano."
+      "capability-color-gradient-order": "Del primer al último fixture, en el orden de abanico de los ajustes del preajuste. Los fixtures con rueda de color toman el color más cercano.",
+      "strobe-effect": "Efecto",
+      "strobe-effect-hint": "Con qué destella el estroboscopio. Los fixtures sin el efecto destellan con el más parecido que tengan, al final como un estroboscopio simple.",
+      "strobe-effect-Strobe": "Estroboscopio",
+      "strobe-effect-Random": "Aleatorio",
+      "strobe-effect-Pulse": "Pulso",
+      "strobe-effect-RampUp": "Rampa arriba",
+      "strobe-effect-RampDown": "Rampa abajo",
+      "strobe-effect-RampUpDown": "Rampa arriba y abajo",
+      "strobe-effect-Lightning": "Relámpago",
+      "strobe-effect-Spikes": "Picos",
+      "strobe-effect-Burst": "Ráfaga",
+      "strobe-effect-Sound": "Al sonido",
+      "strobe-effect-Closed": "Cerrado",
+      "capability-color-white": "El blanco en los LED blancos",
+      "capability-color-white-hint": "Los fixtures con rojo, verde, azul y blanco dan la parte blanca del color con sus LED blancos (para todo el preajuste). La temperatura de color se reproduce en los LED blancos cálidos y fríos de los fixtures sin canal propio para ella."
     },
     "fixture-pool": {
       "title": "Grupo de fixtures",

@@ -332,7 +332,22 @@
       "fan-bars-hint": "Ce que reçoit chaque fixture, dans l’ordre de l’éventail",
       "capability-color-gradient": "Dégradé",
       "capability-color-gradient-hint": "Étend un dégradé de couleurs sur les fixtures du préréglage",
-      "capability-color-gradient-order": "Du premier au dernier fixture, dans l’ordre d’éventail des réglages du préréglage. Les fixtures avec une roue de couleurs prennent la couleur la plus proche."
+      "capability-color-gradient-order": "Du premier au dernier fixture, dans l’ordre d’éventail des réglages du préréglage. Les fixtures avec une roue de couleurs prennent la couleur la plus proche.",
+      "strobe-effect": "Effet",
+      "strobe-effect-hint": "Ce avec quoi le strobe flashe. Les fixtures sans cet effet flashent avec le plus proche qu’ils ont, au final comme un strobe simple.",
+      "strobe-effect-Strobe": "Strobe",
+      "strobe-effect-Random": "Aléatoire",
+      "strobe-effect-Pulse": "Pulsation",
+      "strobe-effect-RampUp": "Rampe montante",
+      "strobe-effect-RampDown": "Rampe descendante",
+      "strobe-effect-RampUpDown": "Rampe montante et descendante",
+      "strobe-effect-Lightning": "Éclair",
+      "strobe-effect-Spikes": "Pics",
+      "strobe-effect-Burst": "Rafale",
+      "strobe-effect-Sound": "Au son",
+      "strobe-effect-Closed": "Fermé",
+      "capability-color-white": "Le blanc sur les LED blanches",
+      "capability-color-white-hint": "Les fixtures avec rouge, vert, bleu et blanc donnent la part blanche de la couleur avec leurs LED blanches (pour tout le préréglage). La température de couleur joue sur les LED blanc chaud et blanc froid des fixtures sans canal pour elle."
     },
     "fixture-pool": {
       "title": "Parc de fixtures",

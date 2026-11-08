@@ -462,6 +462,7 @@ export class ProjectLoadService {
     const preset = new Preset();
     preset.uuid = this.uuidService.getUuid();
     preset.name = 'New Preset';
+    preset.whiteFromColor = true;
     this.projectService.project.presets.push(preset);
     this.presetService.selectPreset(0);
 

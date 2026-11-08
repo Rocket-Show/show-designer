@@ -2,7 +2,9 @@ import { cycleSine } from './cycle-sine';
 import { Effect } from './effect';
 import { EffectCurveProfileChannels } from './effect-curve-profile-channel';
 import { getFanFactor } from './fan';
-import { FixtureCapability } from './fixture-capability';
+import { FixtureCapability, FixtureCapabilityType } from './fixture-capability';
+import { FixtureCapabilityValue } from './fixture-capability-value';
+import { defaultPanRangeDegrees, defaultTiltRangeDegrees } from './pan-tilt';
 
 export class EffectCurve extends Effect {
   // a cycle border is never hit exactly when the curve is sampled, so the value held
@@ -79,6 +81,11 @@ export class EffectCurve extends Effect {
   // far (a line fanned 'linear' opens and closes the fan of the heads).
   fanMode = 'none';
 
+  // A curve on the pan or the tilt turns every moving head by the same degrees (see pan-tilt): from the middle of what
+  // it reaches, the whole curve from 0 to 1 spanning what a head reaches by default (540° of pan, 270° of tilt). A
+  // curve of a project before it moves each head over a share of its own range instead.
+  panTiltInDegrees = false;
+
   // a movement of the pan and the tilt runs on the timing of a curve as well (see EffectPanTilt)
   constructor(data?: any, type = 'curve') {
     super(type, data);
@@ -125,8 +132,27 @@ export class EffectCurve extends Effect {
     this.runDurationMillis = data.runDurationMillis ?? 5000;
     this.endMode = data.endMode || 'hold';
 
-    // curves used to swing as far on all the fixtures
+    // curves used to swing as far on all the fixtures, and to move the heads over a share of their ranges
     this.fanMode = data.fanMode || 'none';
+    this.panTiltInDegrees = data.panTiltInDegrees === true;
+  }
+
+  // The value of a step a curve on the passed capability plays at the passed value of the curve (see
+  // getCapabilityChannelValue of the preview): a percentage, the pan and the tilt in degrees around the middle of what
+  // the heads reach (see panTiltInDegrees)
+  public getCapabilityValue(capability: FixtureCapability, value: number): FixtureCapabilityValue {
+    const capabilityValue = new FixtureCapabilityValue();
+    capabilityValue.type = capability.type;
+    capabilityValue.color = capability.color;
+
+    if (this.panTiltInDegrees && (capability.type === FixtureCapabilityType.Pan || capability.type === FixtureCapabilityType.Tilt)) {
+      capabilityValue.valueDegrees =
+        (value - 0.5) * (capability.type === FixtureCapabilityType.Pan ? defaultPanRangeDegrees : defaultTiltRangeDegrees);
+    } else {
+      capabilityValue.valuePercentage = value;
+    }
+
+    return capabilityValue;
   }
 
   // whether the curve swings as far as the place of each fixture in the fan says

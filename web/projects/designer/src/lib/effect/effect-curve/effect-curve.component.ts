@@ -16,6 +16,8 @@ import { LivePreviewService } from '../../services/live-preview.service';
 import { AudioBus, TimelineService } from '../../services/timeline.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { fanModes } from '../../models/fan';
+import { curveCapabilityTypes, getPlayingTypes } from '../../models/capability-position';
+import { emitterColors } from '../../models/emitter-color';
 import { EffectCurveAdvancedComponent } from './effect-curve-advanced/effect-curve-advanced.component';
 import { EffectPixel } from '../../models/effect-pixel';
 import { CachedFixture } from '../../models/cached-fixture';
@@ -1776,6 +1778,16 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       availableCapabilities.push(capability);
     }
 
+    // the emitters besides red, green and blue (e.g. white, amber or UV)
+    for (const color of emitterColors) {
+      if (this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, color)) {
+        const capability = new FixtureCapability();
+        capability.type = FixtureCapabilityType.ColorIntensity;
+        capability.color = color;
+        availableCapabilities.push(capability);
+      }
+    }
+
     if (this.presetService.hasCapabilityPanTilt()) {
       let capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Pan;
@@ -1784,6 +1796,18 @@ export class EffectCurveComponent implements OnInit, OnDestroy {
       capability = new FixtureCapability();
       capability.type = FixtureCapabilityType.Tilt;
       availableCapabilities.push(capability);
+    }
+
+    // the positions which play the same on every model (e.g. the zoom, see capability-position)
+    for (const type of curveCapabilityTypes) {
+      if (
+        getPlayingTypes(type).some((playingType) => this.presetService.hasCapabilityType(playingType)) ||
+        (type === FixtureCapabilityType.ShutterStrobe && this.presetService.hasCapabilityType(FixtureCapabilityType.StrobeSpeed))
+      ) {
+        const capability = new FixtureCapability();
+        capability.type = type;
+        availableCapabilities.push(capability);
+      }
     }
 
     this.capabilityOptions = availableCapabilities.map((capability, index) => ({

@@ -332,7 +332,22 @@
       "fan-bars-hint": "Cosa riceve ogni fixture, nell’ordine del ventaglio",
       "capability-color-gradient": "Sfumatura",
       "capability-color-gradient-hint": "Stende una sfumatura di colori sui fixture del preset",
-      "capability-color-gradient-order": "Dal primo all’ultimo fixture, nell’ordine del ventaglio delle impostazioni del preset. I fixture con ruota colori prendono il colore più vicino."
+      "capability-color-gradient-order": "Dal primo all’ultimo fixture, nell’ordine del ventaglio delle impostazioni del preset. I fixture con ruota colori prendono il colore più vicino.",
+      "strobe-effect": "Effetto",
+      "strobe-effect-hint": "Con cosa lampeggia lo strobo. I fixture senza l’effetto lampeggiano con quello più vicino che hanno, alla fine come strobo semplice.",
+      "strobe-effect-Strobe": "Strobo",
+      "strobe-effect-Random": "Casuale",
+      "strobe-effect-Pulse": "Impulso",
+      "strobe-effect-RampUp": "Rampa su",
+      "strobe-effect-RampDown": "Rampa giù",
+      "strobe-effect-RampUpDown": "Rampa su e giù",
+      "strobe-effect-Lightning": "Fulmine",
+      "strobe-effect-Spikes": "Picchi",
+      "strobe-effect-Burst": "Raffica",
+      "strobe-effect-Sound": "Al suono",
+      "strobe-effect-Closed": "Chiuso",
+      "capability-color-white": "Il bianco sui LED bianchi",
+      "capability-color-white-hint": "I fixture con rosso, verde, blu e bianco fanno la parte bianca del colore con i loro LED bianchi (per tutto il preset). La temperatura colore suona sui LED bianco caldo e bianco freddo dei fixture senza un canale apposito."
     },
     "fixture-pool": {
       "title": "Pool fixture",

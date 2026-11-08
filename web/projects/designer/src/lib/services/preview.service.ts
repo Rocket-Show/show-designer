@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { CachedFixture } from '../models/cached-fixture';
 import { EffectCurve } from '../models/effect-curve';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
+import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
 import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
@@ -11,7 +12,7 @@ import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
 import { getStepsTimeMillis } from '../models/preset-steps-order';
 import { applyTransitionCurve } from '../models/transition-curve';
-import { isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
+import { getPositionedChannelValue, isOverridingCapabilityType, isPositionedCapabilityType } from '../models/capability-position';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { EffectPixel } from '../models/effect-pixel';
 import { CachedFixtureChannel } from '../models/cached-fixture-channel';
@@ -527,7 +528,7 @@ export class PreviewService implements OnDestroy {
       brightnessBelow === undefined ? 0 : this.getPresetDimmerBrightness(state, cachedFixture, preset, brightnessBelow);
 
     // a fixture mixing its colors with filters is given the colors the other way round (see subtractive-color)
-    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels);
+    const capabilityValues = getFixtureCapabilityValues(state.fixtureCapabilityValues, cachedFixture.channels, preset?.whiteFromColor);
 
     // mix the capability values of the state the preset is in
     for (const presetCapabilityValue of capabilityValues) {
@@ -783,39 +784,26 @@ export class PreviewService implements OnDestroy {
           const beatsPerMinute = this.getBeatsPerMinute();
           const curveTimeMillis = this.getCurveTimeMillis(effectCurve, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
 
-          // capabilities
-          for (const capability of effectCurve.capabilities) {
-            for (const cachedChannel of cachedFixture.channels) {
-              for (const channelCapability of cachedChannel.capabilities) {
-                if (
-                  this.fixtureService.capabilitiesMatch(
-                    capability.type,
-                    channelCapability.capability.type,
-                    capability.color,
-                    channelCapability.capability.color,
-                    null,
-                    null,
-                    null,
-                    null
-                  )
-                ) {
-                  // swung as far as the place of the fixture in the fan of the preset says
-                  let value = effectCurve.getFannedValue(
-                    effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute),
-                    getFanPlace(context)
-                  );
+          // capabilities, swung as far as the place of the fixture in the fan of the preset says
+          const curveValue = effectCurve.getFannedValue(
+            effectCurve.getValueAtMillis(curveTimeMillis, fixtureIndex, fixtureCount, beatsPerMinute),
+            getFanPlace(context)
+          );
 
-                  // the curve does not apply anymore after it has finished running
-                  if (value !== undefined) {
-                    // a preset which mirrors this axis mirrors the movement of its curves as well
-                    value = preset.preset.getMirroredValuePercentage(capability.type, value);
+          // the curve does not apply anymore after it has finished running
+          if (curveValue !== undefined) {
+            for (const capability of effectCurve.capabilities) {
+              const capabilityValue = effectCurve.getCapabilityValue(capability, curveValue);
 
-                    const fixtureChannelValue = new FixtureChannelValue();
-                    fixtureChannelValue.channelName = cachedChannel.name;
-                    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-                    fixtureChannelValue.value = cachedChannel.maxValue * value;
-                    this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
-                  }
+              for (const cachedChannel of cachedFixture.channels) {
+                const channelValue = this.getCurveChannelValue(capabilityValue, cachedChannel, preset.preset);
+
+                if (channelValue !== undefined) {
+                  const fixtureChannelValue = new FixtureChannelValue();
+                  fixtureChannelValue.channelName = cachedChannel.name;
+                  fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+                  fixtureChannelValue.value = channelValue;
+                  this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
                 }
               }
             }
@@ -1223,6 +1211,49 @@ export class PreviewService implements OnDestroy {
           channelCapability.capability.type === FixtureCapabilityType.ColorIntensity && channelCapability.capability.color === color
       )
     );
+  }
+
+  // The value a curve on a capability puts on a channel of a fixture, played like a value of a step: a dimmer or a color
+  // within the range of the channel giving the brightness (not over a strobe sharing the channel), a position (e.g. a
+  // zoom, see capability-position) by the capability of the channel doing it, the pan and the tilt mirrored with the
+  // preset. Undefined, if the channel doesn't do it. This follows the same rules as Rocket Show.
+  private getCurveChannelValue(capabilityValue: FixtureCapabilityValue, cachedChannel: CachedFixtureChannel, preset: Preset): number {
+    if (capabilityValue.type === FixtureCapabilityType.ShutterStrobe) {
+      // the strobe on a channel of its speed as well, like the strobe of a step
+      return (
+        getPositionedChannelValue(cachedChannel, capabilityValue.type, capabilityValue.valuePercentage) ??
+        getPositionedChannelValue(cachedChannel, FixtureCapabilityType.StrobeSpeed, capabilityValue.valuePercentage)
+      );
+    }
+
+    if (isPositionedCapabilityType(capabilityValue.type)) {
+      return getPositionedChannelValue(cachedChannel, capabilityValue.type, capabilityValue.valuePercentage);
+    }
+
+    let value: number;
+
+    for (const channelCapability of cachedChannel.capabilities) {
+      if (
+        this.fixtureService.capabilitiesMatch(
+          capabilityValue.type,
+          channelCapability.capability.type,
+          capabilityValue.color,
+          channelCapability.capability.color,
+          null,
+          null,
+          null,
+          null
+        )
+      ) {
+        const channelValue = this.presetService.getCapabilityChannelValue(capabilityValue, cachedChannel, channelCapability, preset);
+
+        if (channelValue !== undefined) {
+          value = channelValue;
+        }
+      }
+    }
+
+    return value;
   }
 
   // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),

@@ -146,6 +146,27 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // does a fixture of the preset have a white LED besides red, green and blue?
+  hasWhite(): boolean {
+    return this.presetService.hasCapabilityType(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.White);
+  }
+
+  // the white part of the colors on the white LEDs, for the whole preset (see emitter-color)
+  getWhiteFromColor(): boolean {
+    return !!this.presetService.selectedPreset?.whiteFromColor;
+  }
+
+  setWhiteFromColor(white: boolean) {
+    if (!this.presetService.selectedPreset) {
+      return;
+    }
+
+    this.presetService.selectedPreset.whiteFromColor = white === true;
+    this.presetService.capabilityValuesChanged.next();
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
   // Span a gradient over the fixtures from the color of the step to blue (to red, if it is blue already), or take it
   // away again, leaving all of them in the color of the one in the middle
   toggleGradient() {

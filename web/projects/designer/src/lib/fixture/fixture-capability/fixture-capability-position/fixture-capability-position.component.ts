@@ -1,7 +1,8 @@
 import { ChangeDetectorRef, Component, Input } from '@angular/core';
-import { isRotationCapabilityType } from '../../../models/capability-position';
+import { isRotationCapabilityType, strobeEffects } from '../../../models/capability-position';
 import { getFanStops } from '../../../models/fan';
 import { FixtureCapabilityColor, FixtureCapabilityType } from '../../../models/fixture-capability';
+import { FixtureCapabilityValue } from '../../../models/fixture-capability-value';
 import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 
@@ -45,6 +46,13 @@ export class FixtureCapabilityPositionComponent {
     private changeDetectorRef: ChangeDetectorRef,
     private livePreviewService: LivePreviewService
   ) {}
+
+  readonly strobeEffects = strobeEffects;
+
+  // the strobe flashes in an effect of its choice (see capability-position)
+  get isStrobe(): boolean {
+    return this.type === FixtureCapabilityType.ShutterStrobe;
+  }
 
   // the prism is either in or out
   get isSwitch(): boolean {
@@ -123,10 +131,45 @@ export class FixtureCapabilityPositionComponent {
     return value >= 0 ? Math.round(value * 100 * 100) / 100 : undefined;
   }
 
+  // the effect the strobe of the step flashes in, a plain strobe if it doesn't say
+  getStrobeEffect(): string {
+    const value = this.presetService.getCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.ShutterStrobe);
+
+    return value?.shutterEffect || 'Strobe';
+  }
+
+  // Flash the strobe in the passed effect, at the speed it is at (in the middle, if it is off). The shutter closed
+  // doesn't need a speed.
+  setStrobeEffect(effect: string) {
+    const step = this.presetService.selectedStep;
+
+    if (!step || strobeEffects.indexOf(effect) < 0) {
+      return;
+    }
+
+    if (!(this.getValue() > 0)) {
+      this.setValue(0.5);
+    }
+
+    this.putStrobeEffect(effect);
+    this.changeDetectorRef.detectChanges();
+    this.livePreviewService.previewLive();
+  }
+
+  private putStrobeEffect(effect: string) {
+    const step = this.presetService.selectedStep;
+    const value = new FixtureCapabilityValue({ ...this.presetService.getCapabilityValue(step, FixtureCapabilityType.ShutterStrobe) });
+    value.shutterEffect = effect === 'Strobe' ? undefined : effect;
+    this.presetService.putCapabilityValue(step, value);
+  }
+
   setValue(value: any) {
     if (isNaN(value) || value < 0 || value > 1 || !this.presetService.selectedStep) {
       return;
     }
+
+    // a new speed keeps the effect the strobe flashes in
+    const effect = this.isStrobe ? this.getStrobeEffect() : undefined;
 
     for (const type of this.types) {
       this.presetService.setCapabilityValue(
@@ -139,6 +182,10 @@ export class FixtureCapabilityPositionComponent {
         undefined,
         this.blade
       );
+    }
+
+    if (effect && effect !== 'Strobe') {
+      this.putStrobeEffect(effect);
     }
 
     this.changeDetectorRef.detectChanges();
