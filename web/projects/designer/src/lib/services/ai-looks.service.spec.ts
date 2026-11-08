@@ -15,6 +15,7 @@ import { EffectPixel } from '../models/effect-pixel';
 import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
+import { Composition } from '../models/composition';
 import { Project } from '../models/project';
 import { AiLooksService } from './ai-looks.service';
 import { FixtureService } from './fixture.service';
@@ -22,6 +23,7 @@ import { PresetService } from './preset.service';
 import { PreviewService } from './preview.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
+import { TimelineService } from './timeline.service';
 import { UndoService } from './undo.service';
 import { UserService } from './user.service';
 
@@ -426,6 +428,38 @@ describe('AiLooksService', () => {
       // a strobe flashes at full
       expect(value(preset, FixtureCapabilityType.Intensity).valuePercentage).toBe(1);
       expect(genericStrobePercentage(3)).toBeCloseTo(2 / 19, 3);
+    });
+
+    it('flash a model which tells no speeds like one from 1 to 20 times a second', () => {
+      const { presets } = service.addToProject(
+        oneLook({ groups: ['rgb-par'], strobe: { effect: 'Strobe', flashesPerSecond: 3 } }),
+        service.getRig(),
+        120
+      );
+      const strobe = value(presets[0], FixtureCapabilityType.ShutterStrobe, undefined, 'test/rgb-par');
+
+      expect(strobe.valuePercentage).toBeCloseTo(genericStrobePercentage(3), 6);
+      expect(strobe.shutterEffect).toBeUndefined();
+    });
+
+    it('add nothing for looks without a preset to play, and name the folders of looks without a name', () => {
+      const project = projectService.project;
+      const nothingToPlay = service.addToProject(oneLook({ groups: ['side-pars'], dimmer: 1 }), service.getRig(), 120);
+
+      expect(nothingToPlay.presets.length).toBe(0);
+      expect(project.presetFolders.length).toBe(0);
+      expect(project.scenes.length).toBe(0);
+
+      service.addToProject({ ...oneLook({ groups: ['rgb-par'], dimmer: 1 }), name: '', scenes: [] }, service.getRig(), 120);
+      expect(project.presetFolders.map((folder) => folder.name)).toEqual(['AI looks']);
+      expect(project.scenes.length).toBe(0);
+    });
+
+    it('follow the tempo of the composition open, or 120 beats a minute', () => {
+      expect(service.getTempo()).toBe(120);
+
+      TestBed.inject(TimelineService).selectedComposition = new Composition({ beatsPerMinute: 127.6 });
+      expect(service.getTempo()).toBe(128);
     });
 
     it('light the groups no preset brightens at full, and leave out what has nothing to play', () => {
