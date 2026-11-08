@@ -1,4 +1,4 @@
-import { ExternalComposition } from './external-composition';
+import { ExternalActionTrigger, ExternalAudioFile, ExternalComposition } from './external-composition';
 
 // Rocket Show hands out its compositions like it saves them
 describe('ExternalComposition', () => {
@@ -26,6 +26,22 @@ describe('ExternalComposition', () => {
     const composition = new ExternalComposition({ actionTriggerList: [{ positionMillis: 0, actionList: [{ actionNull: {} }] }] });
 
     expect(composition.actionTriggers[0].actionTypes).toEqual(['actionNull']);
+  });
+
+  it('reads what Rocket Show leaves out as nothing', () => {
+    expect(new ExternalComposition().actionTriggers).toEqual([]);
+    expect(new ExternalComposition().audioFiles).toEqual([]);
+    expect(new ExternalActionTrigger().actionTypes).toEqual([]);
+    expect(new ExternalAudioFile().name).toBe('');
+
+    // actions without a wrapper or without a name, a trigger at the start
+    const composition = new ExternalComposition({ actionTriggerList: [{ actionList: [null, {}, { actionMidi: null }] }] });
+    expect(composition.actionTriggers[0].positionMillis).toBe(0);
+    expect(composition.actionTriggers[0].actionTypes).toEqual(['actionMidi']);
+
+    // a file without a name, an offset or a volume plays at the start, at full
+    const file = new ExternalAudioFile({ outputBusUuid: 'bus' });
+    expect([file.name, file.busUuid, file.offsetMillis, file.volume]).toEqual(['', 'bus', 0, 1]);
   });
 
   it('has no actions, if there are none', () => {

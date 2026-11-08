@@ -93,6 +93,16 @@ describe('beam-angle', () => {
     expect(getBeamAngleDeg(spot, [value('Zoom', 5)])).toBe(25);
   });
 
+  it('runs a zoom naming no angles over the lens, and says nothing without a lens either', () => {
+    const spot = fixture([10, 40], { Zoom: { capability: { type: 'Zoom' } } });
+    expect(getBeamAngleDeg(spot, [value('Zoom', 0)])).toBe(10);
+    expect(getBeamAngleDeg(spot, [value('Zoom', 255)])).toBe(40);
+
+    const noLens = fixture(undefined, { Zoom: { capability: { type: 'Zoom' } } });
+    expect(getBeamAngleDeg(noLens, [value('Zoom', 255)])).toBeUndefined();
+    expect(getBeamAngleDeg(undefined, [])).toBeUndefined();
+  });
+
   it('takes the beam angle of a channel of its own', () => {
     const spot = fixture(undefined, { 'Beam Angle': { capability: { type: 'BeamAngle', angleStart: '6deg', angleEnd: '30deg' } } });
 
@@ -120,5 +130,8 @@ describe('beam-angle', () => {
     expect(readZoomAngle('narrow', undefined)).toBeUndefined();
     expect(readZoomAngle('50%', undefined)).toBeUndefined();
     expect(readZoomAngle(undefined, [8, 30])).toBeUndefined();
+    expect(readZoomAngle('wide', undefined)).toBeUndefined();
+    expect(readZoomAngle('closed', undefined)).toBe(0);
+    expect(readZoomAngle('manydeg', [8, 30])).toBeUndefined();
   });
 });

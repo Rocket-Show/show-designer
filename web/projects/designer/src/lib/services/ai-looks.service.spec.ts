@@ -519,6 +519,18 @@ describe('AiLooksService', () => {
       http.verify();
     });
 
+    it('send no token for a user who is not logged in', () => {
+      const http = TestBed.inject(HttpTestingController);
+      spyOn(TestBed.inject(UserService), 'getHeaders').and.returnValue(null);
+
+      service.design(service.getRequest(service.getRig(), defaultAiSettings(), '')).subscribe({ error: () => undefined });
+      const design = http.expectOne('ai-looks');
+      expect(design.request.headers.has('Authorization')).toBe(false);
+      expect(design.request.headers.get('Content-Type')).toBe('application/json');
+      design.flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+      http.verify();
+    });
+
     it('send the looks to change with the instruction', () => {
       const looks = oneLook({ groups: ['rgb-par'], dimmer: 1 });
       const request = service.getRequest(service.getRig(), defaultAiSettings(), '', looks, 'Warmer');

@@ -525,7 +525,7 @@ export class SceneComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Let Claude design presets and scenes for the fixtures of the project. Like saving a project, it needs a logged in
+  // Let the AI design presets and scenes for the fixtures of the project. Like saving a project, it needs a logged in
   // user: one who isn't is asked to log in (or to register) first.
   designWithAi() {
     this.userEnsureLoginService.login().subscribe(() => {

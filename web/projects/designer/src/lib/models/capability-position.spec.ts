@@ -5,8 +5,10 @@ import {
   getPositionedCapability,
   getPositionedChannelValue,
   getPropertyRank,
+  getRangeValue,
   getRotationAngleChannelValue,
   getRotationChannelValue,
+  getWidest,
   turnsWheel,
   turnsWheelToAngle,
   getRotationRank,
@@ -548,5 +550,35 @@ describe('capability-position', () => {
     // a rotation without a wheel of its own turns the wheel named like its channel
     const named = channelOf({ capability: { type: 'WheelSlotRotation', speedStart: 'slow CW', speedEnd: 'fast CW' } });
     expect(turnsWheel(named, FixtureCapabilityType.WheelSlotRotation, 'Channel')).toBe(true);
+  });
+
+  it('should turn to the angle of the closest range, a single angle in its middle, the wheels it names in a list', () => {
+    const rotation = channelOf({
+      capabilities: [
+        range(0, 9, 'WheelSlotRotation', { wheel: ['Gobo 1', 'Gobo 2'], speed: 'stop' }),
+        range(10, 19, 'WheelSlotRotation', { wheel: ['Gobo 1', 'Gobo 2'], angle: '45deg' }),
+        range(20, 255, 'WheelSlotRotation', { wheel: ['Gobo 1', 'Gobo 2'], angleStart: '90deg', angleEnd: '270deg' }),
+      ],
+    });
+    const single = rotation.capabilities[1].centerValue;
+
+    expect(turnsWheel(rotation, FixtureCapabilityType.WheelSlotRotation, 'Gobo 2')).toBe(true);
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 45, 'Gobo 2')).toBe(single);
+    // below the single angle, closer to it than to the range
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 0, 'Gobo 2')).toBe(single);
+    expect(getRotationAngleChannelValue(rotation, FixtureCapabilityType.WheelSlotRotation, 100, 'Gobo 2')).toBeCloseTo(
+      20 + (235 * 10) / 180,
+      9
+    );
+  });
+
+  it('should read a range which tells no ends as running from low to high, and one without a range as the whole channel', () => {
+    expect(isRangeReversed(new FixtureCapability({ type: 'Intensity', angleStart: 'wide', angleEnd: 'narrow' }))).toBe(false);
+
+    const channel: any = { maxValue: 255, capabilities: [{}, {}] };
+    const without: any = { capability: { dmxRange: [] } };
+    const narrow: any = { capability: { dmxRange: [0, 10] } };
+    expect(getRangeValue(channel, without, 0.5)).toBeUndefined();
+    expect(getWidest(channel, [narrow, without])).toBe(without);
   });
 });

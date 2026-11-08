@@ -6,7 +6,7 @@ import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureCapabilityValue } from './fixture-capability-value';
 import { Preset } from './preset';
 
-// The looks Claude answers, turned into presets and scenes of the designer, without a project around them: what the
+// The looks the AI answers, turned into presets and scenes of the designer, without a project around them: what the
 // AiLooksService spec doesn't play through the preview.
 describe('compileAiLooks', () => {
   const nothing: Omit<AiPreset, 'id' | 'name' | 'groups'> = {
@@ -180,6 +180,27 @@ describe('compileAiLooks', () => {
     ]);
     // never so slow it doesn't flash at all
     expect(genericStrobePercentage(0)).toBe(0.01);
+  });
+
+  it('lights the fixtures of a preset no preset brightens at full, whatever it lights them with', () => {
+    const lit: Partial<AiPreset>[] = [
+      { colorGradient: { colors: ['#ff0000', '#0000ff'], blend: 'steps' } },
+      { colorSequence: { colors: ['#ff0000', '#0000ff'], beatsPerColor: 1, fade: 'snap', chase: 'none' } },
+      { pixel: { pattern: 'chase', palette: 'fire', colors: [], beats: 1, direction: 'right', size: 0.2 } },
+      { zoomFan: { shape: 'center', from: 0, to: 1 } },
+      { position: { aim: 'center', fanDegrees: 0, fanShape: 'linear' } },
+      { movement: { shape: 'circle', panDegrees: 10, tiltDegrees: 10, beats: 4, chase: 'none', fan: undefined } },
+    ];
+
+    for (const preset of lit) {
+      expect(value(compileOne(preset), FixtureCapabilityType.Intensity).valuePercentage).toBe(1);
+    }
+
+    // a color it can't read lights nothing, a movement without a fan moves all heads the same
+    const unreadable = compileOne({ color: 'red' });
+    expect(value(unreadable, FixtureCapabilityType.ColorIntensity)).toBeUndefined();
+    expect(value(unreadable, FixtureCapabilityType.Intensity)).toBeUndefined();
+    expect((compileOne(lit[5]).effects[0] as EffectCurve).fanMode).toBe('none');
   });
 
   it('makes scenes of the presets it made, named after their section without a name, and blackouts without presets', () => {

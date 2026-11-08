@@ -93,8 +93,8 @@ export class FakeApi {
   readonly requests: ApiRequest[] = [];
 
   // The AI looks (see show-designer-api/ai-looks.php in the spark repository): whether they can be used, the looks
-  // Claude answers in this test (each request takes the next one, the last one again), how many requests a user may make
-  // a day, and how long Claude takes to answer
+  // the AI answers in this test (each request takes the next one, the last one again), how many requests a user may make
+  // a day, and how long the AI takes to answer
   aiAvailable = true;
   aiLooks: any[] = [];
   aiRequestsPerUserPerDay = 20;

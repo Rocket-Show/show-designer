@@ -20,7 +20,7 @@ export interface AiRigSource {
   stageFloorHeightCm: number;
 }
 
-// The fixtures of a project in groups, as Claude is told about them (see ai-looks): the fixtures of a folder of the
+// The fixtures of a project in groups, as the AI is told about them (see ai-looks): the fixtures of a folder of the
 // fixture pool form a group, the others one for each model and place on the stage, in the order of the fixture pool.
 export function buildAiRig(source: AiRigSource): AiRig {
   const fixtures = new Map(source.fixtures.map((fixture) => [fixture.uuid, fixture]));

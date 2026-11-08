@@ -398,6 +398,14 @@ describe('pixel patterns', () => {
     expect(at(image({ imageColors: 'palette' }), 0, 1)).toEqual([0.299, 1]);
     // scrolling around: half a period later the other side
     expect(samplePixelPattern(image({ fit: 'stretch', scroll: 'left' }), 0.5, pixel(0, 4, 0, 4))).toEqual([0, 1, 0, 0, 1]);
+
+    // an image in shades of gray lights red, green and blue alike, none lights nothing
+    const gray = new PixelBitmap({ width: 1, height: 1, channels: 1, frames: [encodeBase64(new Uint8Array([102]))] });
+    const [, lit, red, green, blue] = samplePixelPattern(settings('image', { bitmap: gray }), 0, pixel(0, 1));
+    expect(lit).toBe(1);
+    expect(red).toBeCloseTo(0.4, 3);
+    expect([green, blue]).toEqual([red, red]);
+    expect(samplePixelPattern(settings('image'), 0, pixel(0, 1))).toEqual([0, 0]);
   });
 
   it('runs through the frames of an animation in a period', () => {

@@ -33,7 +33,7 @@ export class ConfigService {
   // this on a device already owns one.
   public hardwarePromo = false;
 
-  // When true, the designer offers the AI looks: Claude designs presets and scenes for the fixtures of a logged in
+  // When true, the designer offers the AI looks: the AI designs presets and scenes for the fixtures of a logged in
   // user, through the API of the online designer (ai-looks). A Rocket Show device has no such API.
   public aiLooks = false;
 

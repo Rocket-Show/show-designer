@@ -19,7 +19,7 @@ const nothing = {
   strobe: null,
 };
 
-// The looks Claude answers for the rig of the tests: a gradient over the pars fanned out from the middle, the moving
+// The looks the AI answers for the rig of the tests: a gradient over the pars fanned out from the middle, the moving
 // heads fanned around the middle of the stage moving in a figure 8, a chase over the pixels of the bars
 export const neonNight = {
   name: 'Neon night',
@@ -84,7 +84,7 @@ async function openAiLooks(designer: Designer) {
   await designer.clickTool(designer.panel('Scenes'), 'fa-magic', 'Design scenes with AI');
 }
 
-// Claude designs presets and scenes for the fixtures of the project (see show-designer-api/ai-looks.php in the spark
+// The AI designs presets and scenes for the fixtures of the project (see show-designer-api/ai-looks.php in the spark
 // repository): the user describes the looks and picks colors, a mood, the energy and the tempo, gets the scenes and
 // adds them to the project, ready to be triggered.
 test.describe('AI looks', () => {
@@ -108,7 +108,7 @@ test.describe('AI looks', () => {
     // logged in, the dialog opens with the fixtures of the project in groups
     const dialog = designer.dialog('Design with AI');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Claude designs for these fixtures')).toBeVisible();
+    await expect(dialog.getByText('The AI designs for these fixtures')).toBeVisible();
     await expect(dialog.locator('.ai-groups li')).toHaveText([
       /RGB par\s*4×\s*Truss, front/,
       /Moving head\s*2×\s*Truss, back/,
@@ -135,7 +135,7 @@ test.describe('AI looks', () => {
       await dialog.getByRole('button', { name: 'Big' }).click();
       await dialog.getByRole('button', { name: 'Design', exact: true }).click();
 
-      // the scenes Claude designed, with what they layer
+      // the scenes the AI designed, with what they layer
       await expect(dialog.getByRole('heading', { name: 'Neon night' })).toBeVisible();
       await expect(dialog.locator('.ai-scenes li')).toHaveCount(4);
       await expect(dialog.locator('.ai-scenes li').nth(2)).toContainText('Chorus');
@@ -215,7 +215,7 @@ test.describe('AI looks', () => {
       await expect(dialog.getByLabel('What should the show look like?')).toBeVisible();
     });
 
-    test('tells the user when Claude can not design the looks', async ({ designer, api }) => {
+    test('tells the user when the AI can not design the looks', async ({ designer, api }) => {
       await designer.open();
       api.fail('POST ai-looks', 429, 'ai-user-limit-reached');
       await openAiLooks(designer);

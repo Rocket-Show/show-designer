@@ -18,11 +18,11 @@ import { builtInPixelPalettes, pixelPaletteCss } from '../../models/pixel-palett
 import { AiLooksService } from '../../services/ai-looks.service';
 import { UserService } from '../../services/user.service';
 
-// what the dialog shows: the settings, the wait for Claude, or the looks it designed
+// what the dialog shows: the settings, the wait for the AI, or the looks it designed
 type AiLooksView = 'settings' | 'designing' | 'looks';
 
 // The AI looks (see AiLooksService): the user describes the looks and picks colors, a mood, the energy, the tempo and
-// how much the heads move, Claude designs presets and scenes for the fixtures of the project, and the user adds them
+// how much the heads move, the AI designs presets and scenes for the fixtures of the project, and the user adds them
 // to the project or has them changed.
 @Component({
   selector: 'lib-ai-looks',
@@ -209,7 +209,7 @@ export class AiLooksComponent implements OnInit {
     this.request(undefined, undefined);
   }
 
-  // have Claude change the looks as the user says
+  // have the AI change the looks as the user says
   change() {
     if (this.instruction.trim()) {
       this.request(this.looks, this.instruction.trim());

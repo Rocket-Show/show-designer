@@ -90,19 +90,19 @@ The PHP API of the online designer, its database schema and its tests live in th
 
 ### The AI looks
 
-With `[aiLooks]="true"` (the online designer), the scenes panel offers to design scenes with AI (the magic wand). Claude
+With `[aiLooks]="true"` (the online designer), the scenes panel offers to design scenes with AI (the magic wand). The AI
 designs presets and scenes for the fixtures of the project through the `ai-looks` endpoint of the API (see the README of
 the spark repository for its settings and the API key), so the user has to be logged in, like for saving: a visitor is
 asked to log in or to register first. A Rocket Show device has no such endpoint and leaves it off.
 
 - `models/ai-rig.ts` describes the fixtures in groups (a folder of the fixture pool, or each model and place on the
   stage) with what they can do.
-- `models/ai-looks-compiler.ts` turns the looks Claude answers into presets and scenes with the attributes of the
+- `models/ai-looks-compiler.ts` turns the looks the AI answers into presets and scenes with the attributes of the
   designer: dimmers, colors and zooms, fanned out or as gradients, color sequences in steps following the beat, moving
   heads aimed at a spot and fanned, movements, dimmer curves, pixel effects and the strobe in its effect, as fast on
   every model as asked (`AiLooksService.getStrobeValues`).
 - `ai/ai-looks` is the dialog: what the user asks for (the output, colors or a palette, the mood, the energy, the
-  tempo, the movement, the contrast, the strobe), the scenes Claude designed, changing them, and adding them to the
+  tempo, the movement, the contrast, the strobe), the scenes the AI designed, changing them, and adding them to the
   project in folders named after them, as one step to undo.
 
 ## Build & publish as NPM package

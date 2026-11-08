@@ -528,6 +528,12 @@ describe('FixtureService brightness and wheel slots', () => {
     expect(service.getBrightnessOfValue(lightOutput, lightOutput.capabilities[0], 255)).toBe(0);
   });
 
+  it('reads a brightness it can not make out as running from off to bright', () => {
+    const unreadable = new FixtureCapability({ type: 'Intensity', brightnessStart: 'dim%', brightnessEnd: 'manylm' });
+
+    expect(service.getBrightnessRange(unreadable, 1000)).toEqual([0, 1]);
+  });
+
   it('shows the brightness of a value in the preview', () => {
     const dimmer = channel([
       { dmxRange: [0, 7], type: 'Intensity', brightness: 'off' },

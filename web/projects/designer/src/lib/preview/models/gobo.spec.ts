@@ -36,6 +36,12 @@ describe('gobo', () => {
     // a chessboard in a circle, not rings
     expect(getGoboPattern('Circular chess', 4).family).toBe('checker');
     expect(getGoboPattern('Triangle', 5)).toEqual(jasmine.objectContaining({ family: 'polygon', count: 3 }));
+    // the corners of the other polygons, a hexagon without a number of its own
+    expect(getGoboPattern('Square', 5).count).toBe(4);
+    expect(getGoboPattern('Diamond', 5).count).toBe(4);
+    expect(getGoboPattern('Pentagon', 5).count).toBe(5);
+    expect(getGoboPattern('Octagon', 5).count).toBe(8);
+    expect(getGoboPattern('Hexagon', 5).count).toBe(6);
   });
 
   it('draws the same gobo the same way every time, wherever it is on its wheel', () => {
@@ -99,6 +105,9 @@ describe('gobo', () => {
     // without a direction, the way a speed of anything else is read
     expect(getRotationTurnsPerSecond('fast')).toBe(1);
     expect(getRotationTurnsPerSecond('sideways')).toBeUndefined();
+    // a part of the fastest the fixture turns, taken as a turn a second
+    expect(getRotationTurnsPerSecond('50%')).toBe(0.5);
+    expect(getRotationTurnsPerSecond(undefined)).toBeUndefined();
   });
 
   describe('of a fixture', () => {
@@ -181,6 +190,21 @@ describe('gobo', () => {
       // turning: fast clockwise is a turn a second, 60 rpm as well
       expect(state({ 'Gobo Wheel': 15, 'Gobo Rotation': 127 }, 250).angle).toBeCloseTo(Math.PI / 2, 10);
       expect(state({ 'Gobo Wheel': 15, 'Gobo Rotation': 255 }, 500).angle).toBeCloseTo(Math.PI, 10);
+    });
+
+    it('shows nothing without a fixture or values, and skips the channels it has not', () => {
+      const fixture: CachedFixture = fixtureService.cachedFixtures[0];
+      const lookUp = (channelName: string) => fixtureService.getChannelByName(fixture, channelName);
+      const inValue = (channel: any, value: number) => fixtureService.getCapabilityInValue(channel, value);
+      const unknown = new FixtureChannelValue();
+      unknown.channelName = 'Unknown';
+      unknown.value = 15;
+
+      expect(getGoboState(undefined, [], lookUp, inValue, 0)).toBeUndefined();
+      expect(getGoboState(fixture, undefined, lookUp, inValue, 0)).toBeUndefined();
+      expect(getGoboState(fixture, [unknown], lookUp, inValue, 0)).toBeUndefined();
+      // a value no capability holds
+      expect(getGoboState(fixture, [unknown], lookUp, () => undefined, 0)).toBeUndefined();
     });
 
     it('shakes the gobo it shakes', () => {

@@ -11,7 +11,7 @@ import { AiLooksService } from '../../services/ai-looks.service';
 import { UserService } from '../../services/user.service';
 import { AiLooksComponent } from './ai-looks.component';
 
-// The dialog of the AI looks: what the user picks, the request to Claude (through AiLooksService), the looks it
+// The dialog of the AI looks: what the user picks, the request to the AI (through AiLooksService), the looks it
 // answers, changing them and adding them to the project, and what it tells when something goes wrong.
 describe('AiLooksComponent', () => {
   let fixture: ComponentFixture<AiLooksComponent>;
@@ -135,6 +135,12 @@ describe('AiLooksComponent', () => {
     expect(component.hasFixtures).toBe(false);
     expect(component.canDesign).toBe(false);
     expect(text()).toContain('designer.ai.no-fixtures');
+  });
+
+  it('counts no requests made when the API tells none', () => {
+    open({ available: true, requestsPerUserPerDay: 20 });
+
+    expect(component.requestsLeft).toBe(20);
   });
 
   it('lets an admin design as often as they like', () => {

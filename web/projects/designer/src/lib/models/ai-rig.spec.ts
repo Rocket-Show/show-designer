@@ -3,7 +3,7 @@ import { Fixture, Positioning } from './fixture';
 import { FixtureCapabilityType } from './fixture-capability';
 import { FixtureWheelSlotType } from './fixture-wheel-slot';
 
-// The fixtures of a project in groups, as Claude is told about them: built here from parts of fixtures with just what
+// The fixtures of a project in groups, as the AI is told about them: built here from parts of fixtures with just what
 // the rig reads of them (their profile and the capabilities of their channels).
 describe('buildAiRig', () => {
   function fixture(uuid: string, profileUuid: string, data: any = {}): Fixture {
@@ -139,6 +139,28 @@ describe('buildAiRig', () => {
     expect(rig.groups[0].group.abilities).toContain('pixels');
     expect(rig.groups[0].group.colors).toBeUndefined();
     expect(rig.groups[1].group.pixels).toEqual({ columns: 4, rows: 4 });
+  });
+
+  it('copes with profiles telling little: no categories, wheels without slots, a matrix of one layer, a folder without a name', () => {
+    const plain = { uuid: 'plain', name: 'Plain' };
+    const panel = { uuid: 'panel', name: 'Panel', categories: ['Matrix'], matrix: { pixelCount: [4, 2] } };
+    const fixtures = [fixture('a', 'plain'), fixture('b', 'panel')];
+    const bare = (type: FixtureCapabilityType, wheelIsColor = false) => ({ capability: { type }, wheelIsColor });
+
+    const rig = buildAiRig({
+      fixtures,
+      presetFixtures: [{ fixtureUuid: 'a', folderUuid: 'unnamed' }, { fixtureUuid: 'b' }] as any[],
+      fixtureFolders: [{ uuid: 'unnamed', name: '' } as any],
+      cachedFixtures: [
+        part(fixtures[0], plain, [bare(FixtureCapabilityType.WheelSlot, true), bare(FixtureCapabilityType.WheelSlot)]),
+        part(fixtures[1], panel, [capability(FixtureCapabilityType.ColorIntensity)], '1'),
+      ],
+      ...stage,
+    });
+
+    expect(rig.groups[0].group).toEqual(jasmine.objectContaining({ id: 'group', name: '', category: '', abilities: ['color'] }));
+    expect(rig.groups[0].group.colors).toBeUndefined();
+    expect(rig.groups[1].group.pixels).toEqual({ columns: 4, rows: 2 });
   });
 
   it('describes no more groups than the API takes', () => {

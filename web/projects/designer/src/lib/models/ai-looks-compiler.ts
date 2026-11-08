@@ -209,7 +209,7 @@ function pixelEffect(ai: AiPreset, context: AiCompileContext): EffectPixel {
 // does the preset light its fixtures in some way, besides their brightness?
 function lights(ai: AiPreset): boolean {
   return !!(
-    ai.color ||
+    !!aiColorToRgb(ai.color) ||
     ai.colorGradient ||
     ai.colorSequence ||
     ai.pixel ||

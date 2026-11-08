@@ -1,4 +1,4 @@
-// The AI looks: presets and scenes Claude designs for the fixtures of a project, through the API of the online designer
+// The AI looks: presets and scenes the AI designs for the fixtures of a project, through the API of the online designer
 // (ai-looks, see show-designer-api in the spark repository). The designer describes its fixtures in groups (AiRig) and
 // sends what the user picked (AiSettings). The answer (AiLooks) says what each preset sets in terms of the designer
 // (a dimmer, a color, a fan, a gradient, an aim, a movement, ...), which AiLooksCompiler turns into presets and scenes.
