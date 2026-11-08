@@ -4,6 +4,18 @@
       {{ 'designer.scene.title' | translate }}
     </div>
     <div class="ml-auto">
+      @if (configService.aiLooks) {
+      <a
+        href="#"
+        class="btn btn-secondary m-0 p-0 ai-looks-button"
+        popover="{{ 'designer.ai.open' | translate }}"
+        container="body"
+        placement="bottom"
+        triggers="mouseenter:mouseleave"
+        (click)="designWithAi(); (false)"
+        ><i class="fa fa-magic fa-fw" aria-hidden="true"></i
+      ></a>
+      }
       <a
         href="#"
         class="btn btn-secondary m-0 p-0"

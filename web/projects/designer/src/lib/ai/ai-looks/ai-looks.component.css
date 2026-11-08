@@ -1,0 +1,103 @@
+.ai-looks {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-1);
+}
+
+/* a color picked for the looks, with a cross to take it away */
+.ai-color {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-color input[type='color'] {
+  width: 40px;
+  height: 31px;
+  padding: 2px;
+  border: 1px solid var(--sd-border-strong);
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-2);
+  cursor: pointer;
+}
+
+.ai-color-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 10px;
+  text-align: center;
+  border-radius: 50%;
+  color: var(--sd-text);
+  background-color: var(--sd-surface-4);
+}
+
+.ai-palettes {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--sd-space-1);
+}
+
+.ai-palette {
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--sd-radius-sm);
+  cursor: pointer;
+}
+
+.ai-palette.active {
+  border-color: var(--sd-primary);
+  box-shadow: 0 0 0 1px var(--sd-bg);
+}
+
+.ai-groups .list-group-item {
+  background-color: transparent;
+}
+
+.ai-designing {
+  color: var(--sd-primary);
+  animation: ai-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ai-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: rotate(-8deg);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(8deg);
+  }
+}
+
+.ai-swatches {
+  display: inline-flex;
+  min-width: 18px;
+}
+
+.ai-swatch {
+  width: 12px;
+  height: 18px;
+  border-radius: 2px;
+  margin-right: 1px;
+}
+
+.ai-energy {
+  margin-left: var(--sd-space-2);
+  font-size: 8px;
+  color: var(--sd-surface-4);
+  white-space: nowrap;
+}
+
+.ai-energy .on {
+  color: var(--sd-primary);
+}

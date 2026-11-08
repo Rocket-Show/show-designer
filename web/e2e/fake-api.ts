@@ -92,6 +92,15 @@ export class FakeApi {
   readonly sessions = new Map<string, string>();
   readonly requests: ApiRequest[] = [];
 
+  // The AI looks (see show-designer-api/ai-looks.php in the spark repository): whether they can be used, the looks
+  // Claude answers in this test (each request takes the next one, the last one again), how many requests a user may make
+  // a day, and how long Claude takes to answer
+  aiAvailable = true;
+  aiLooks: any[] = [];
+  aiRequestsPerUserPerDay = 20;
+  aiDelayMillis = 0;
+  private readonly aiRequests = new Map<string, number>();
+
   // the endpoints which fail (e.g. 'GET project'), with the status and the error they answer
   private readonly failures = new Map<string, { status: number; error: string }>();
 
@@ -299,6 +308,32 @@ export class FakeApi {
         const token = 'session-' + this.nextSession++;
         this.sessions.set(token, user.email);
         return answer({ token, username: user.username });
+      }
+      case 'GET ai-looks':
+      case 'POST ai-looks': {
+        if (!userEmail) {
+          return error('unauthorized', 401);
+        }
+        const used = this.aiRequests.get(userEmail) || 0;
+        const usage = { requestsLast24Hours: used, requestsPerUserPerDay: this.aiRequestsPerUserPerDay };
+        if (request.method() === 'GET') {
+          return answer(this.aiAvailable ? { available: true, ...usage } : { available: false });
+        }
+        if (!this.aiAvailable) {
+          return error('ai-unavailable', 503);
+        }
+        if (used >= this.aiRequestsPerUserPerDay) {
+          return error('ai-user-limit-reached', 429);
+        }
+        if (!body?.rig?.groups?.length) {
+          return answer({ error: 'invalid-request', detail: 'rig.groups lists 1 to 32 groups.' }, 400);
+        }
+        this.aiRequests.set(userEmail, used + 1);
+        if (this.aiDelayMillis > 0) {
+          await new Promise((resolve) => setTimeout(resolve, this.aiDelayMillis));
+        }
+        const looks = this.aiLooks[Math.min(used, this.aiLooks.length - 1)];
+        return answer({ looks, requestsLast24Hours: used + 1, requestsPerUserPerDay: this.aiRequestsPerUserPerDay });
       }
       default:
         return error('not-found', 404);

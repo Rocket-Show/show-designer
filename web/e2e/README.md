@@ -48,6 +48,9 @@ repository), which the app served for the tests (`ng serve --configuration e2e`)
 - `fixtures` lists the profiles of the fixture library (the test profiles of the conformance cases in
   `projects/designer/conformance/profiles/test`), `fixture?uuid=` serves one.
 - `register` and `login` keep the users and their sessions (the token in the `Authorization` header).
+- `ai-looks` answers the AI looks for a user who is signed in: the looks a test sets (`aiLooks`, one for each request),
+  as many requests a day as `aiRequestsPerUserPerDay` allows, after `aiDelayMillis`, or none (`aiAvailable`). No
+  request reaches Claude.
 
 Each test gets a fake API of its own, which already knows the user Jane (`designer.ts`). A test sets up what the API
 holds before the designer opens (`addProject`, `patchTemplate` for a template with fixtures, `fail` for an endpoint
