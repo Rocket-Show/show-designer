@@ -1,11 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { BsModalRef } from 'ngx-bootstrap/modal';
 import { ToastrService } from 'ngx-toastr';
 import {
   AiLooks,
   AiLooksStatus,
+  AiScene,
   aiMoods,
   aiMovements,
   aiOutputs,
@@ -14,23 +14,28 @@ import {
   AiSettings,
   defaultAiSettings,
 } from '../../models/ai-looks';
+import { AiCompiled } from '../../models/ai-looks-compiler';
 import { builtInPixelPalettes, pixelPaletteCss } from '../../models/pixel-palettes';
+import { Scene } from '../../models/scene';
 import { AiLooksService } from '../../services/ai-looks.service';
+import { AnimationService } from '../../services/animation.service';
+import { PreviewService } from '../../services/preview.service';
 import { UserService } from '../../services/user.service';
 
-// what the dialog shows: the settings, the wait for the AI, or the looks it designed
+// what the panel shows: the settings, the wait for the AI, or the looks it designed
 type AiLooksView = 'settings' | 'designing' | 'looks';
 
-// The AI looks (see AiLooksService): the user describes the looks and picks colors, a mood, the energy, the tempo and
-// how much the heads move, the AI designs presets and scenes for the fixtures of the project, and the user adds them
-// to the project or has them changed.
+// The AI looks (see AiLooksService), in a panel beside the designer: the user describes the looks and picks colors, a
+// mood, the energy, the tempo and how much the heads move, and the AI designs presets and scenes for the fixtures of
+// the project. The stage plays each scene picked before anything is added: the user adds the scenes they want to the
+// project, has the looks changed or discards them.
 @Component({
   selector: 'lib-ai-looks',
   templateUrl: './ai-looks.component.html',
   styleUrls: ['./ai-looks.component.css'],
   standalone: false,
 })
-export class AiLooksComponent implements OnInit {
+export class AiLooksComponent implements OnInit, OnDestroy {
   readonly outputs = aiOutputs;
   readonly moods = aiMoods;
   readonly movements = aiMovements;
@@ -51,9 +56,21 @@ export class AiLooksComponent implements OnInit {
   // the error of the last request, as a key of the translations
   errorKey: string;
 
+  // the looks made into presets and scenes, the scene the stage plays, the scenes not to add and whether the stage
+  // plays one scene after the other
+  compiled: AiCompiled;
+  playing = 0;
+  private left = new Set<Scene>();
+  autoplay = false;
+  private autoplayTimer: any;
+
+  // the bars each scene plays for, while the stage plays one after the other
+  static readonly autoplayBars = 8;
+
   constructor(
-    private bsModalRef: BsModalRef,
     private aiLooksService: AiLooksService,
+    private previewService: PreviewService,
+    private animationService: AnimationService,
     private userService: UserService,
     private toastrService: ToastrService,
     private translateService: TranslateService
@@ -67,6 +84,11 @@ export class AiLooksComponent implements OnInit {
     this.settings = last ? { ...last.settings, colors: [...last.settings.colors] } : defaultAiSettings(this.aiLooksService.getTempo());
     this.prompt = last ? last.prompt : '';
     this.looks = last ? last.looks : undefined;
+
+    // back to the looks designed the last time, if there are any
+    if (this.looks) {
+      this.showLooks();
+    }
 
     this.aiLooksService.getStatus().subscribe({
       next: (status) => {
@@ -235,7 +257,7 @@ export class AiLooksComponent implements OnInit {
           requestsLast24Hours: response.requestsLast24Hours,
           requestsPerUserPerDay: response.requestsPerUserPerDay,
         };
-        this.view = 'looks';
+        this.showLooks();
         this.remember();
       },
       error: (error) => {
@@ -275,23 +297,116 @@ export class AiLooksComponent implements OnInit {
     this.errorKey = 'designer.ai.error.' + (known.indexOf(code) >= 0 ? code : 'ai-failed');
   }
 
+  // ---- the looks on the stage ----
+
+  // the looks made into presets and scenes, all of them to add, the first one on the stage
+  private showLooks() {
+    this.compiled = this.aiLooksService.compile(this.looks, this.rig, this.settings.bpm);
+    this.left.clear();
+    this.view = 'looks';
+    this.play(0);
+  }
+
+  get scenes(): Scene[] {
+    return this.compiled ? this.compiled.scenes : [];
+  }
+
+  // the scene of the looks a scene to add is made of: its section, its energy and its presets
+  sourceOf(index: number): AiScene {
+    return this.compiled.sources[index];
+  }
+
+  // the stage plays the scene at the passed place, as if it was triggered now
+  play(index: number) {
+    const scene = this.scenes[index];
+
+    if (!scene) {
+      this.previewService.endAiPreview();
+      return;
+    }
+
+    this.playing = index;
+    this.previewService.previewAiScene(scene, this.aiLooksService.getScenePresets(this.compiled, scene), this.animationService.timeMillis);
+    this.restartAutoplay();
+  }
+
+  previous() {
+    this.play((this.playing + this.scenes.length - 1) % this.scenes.length);
+  }
+
+  next() {
+    this.play((this.playing + 1) % this.scenes.length);
+  }
+
+  // the stage plays one scene after the other, each for some bars at the tempo of the looks
+  setAutoplay(autoplay: boolean) {
+    this.autoplay = autoplay;
+    this.restartAutoplay();
+  }
+
+  private restartAutoplay() {
+    clearInterval(this.autoplayTimer);
+    this.autoplayTimer = undefined;
+
+    if (this.autoplay && this.scenes.length > 1) {
+      const millis = (AiLooksComponent.autoplayBars * 4 * 60000) / this.settings.bpm;
+      this.autoplayTimer = setInterval(() => this.play((this.playing + 1) % this.scenes.length), millis);
+    }
+  }
+
+  isPicked(scene: Scene): boolean {
+    return !this.left.has(scene);
+  }
+
+  // a scene to add to the project, or to leave out
+  setPicked(scene: Scene, picked: boolean) {
+    if (picked) {
+      this.left.delete(scene);
+    } else {
+      this.left.add(scene);
+    }
+  }
+
+  get pickedScenes(): Scene[] {
+    return this.scenes.filter((scene) => this.isPicked(scene));
+  }
+
+  private endPreview() {
+    clearInterval(this.autoplayTimer);
+    this.autoplayTimer = undefined;
+    this.previewService.endAiPreview();
+  }
+
   back() {
+    this.endPreview();
     this.view = 'settings';
     this.errorKey = undefined;
   }
 
+  // the scenes picked, with the presets they play, added to the project: the one on the stage plays on
   add() {
-    const compiled = this.aiLooksService.addToProject(this.looks, this.rig, this.settings.bpm);
+    const added = this.aiLooksService.addCompiled(this.compiled, this.looks.name, this.pickedScenes, this.scenes[this.playing]);
 
     this.translateService
-      .get('designer.ai.added', { scenes: compiled.scenes.length, presets: compiled.presets.length })
+      .get('designer.ai.added', { scenes: added.scenes.length, presets: added.presets.length })
       .subscribe((message) => this.toastrService.success(message));
 
     this.aiLooksService.last = undefined;
-    this.bsModalRef.hide();
+    this.close();
   }
 
-  cancel() {
-    this.bsModalRef.hide();
+  // the looks are let go of, the project stays as it is
+  discard() {
+    this.aiLooksService.last = undefined;
+    this.close();
+  }
+
+  close() {
+    this.endPreview();
+    this.aiLooksService.closePanel();
+  }
+
+  ngOnDestroy() {
+    this.endPreview();
   }
 }

@@ -1024,3 +1024,42 @@ describe('PreviewService building the stage', () => {
     expect(materials.map((material) => material.dispose.calls.count())).toEqual([1, 1]);
   });
 });
+
+// A scene of the AI looks plays on the stage before it is added: in place of the scenes or the preset picked, like a
+// scene triggered at the moment it was picked, outside the timeline
+describe('PreviewService previewing a scene of the AI looks', () => {
+  let service: PreviewService;
+  let timelineService: { playState: string; holds: any[] };
+
+  beforeEach(() => {
+    timelineService = { playState: 'stopped', holds: [{ positionMillis: 500, heldMillis: 2000 }] };
+    service = new PreviewService(undefined, undefined, undefined, undefined, timelineService as any, undefined);
+  });
+
+  it('plays the presets of the scene, the topmost one last, from the moment it was picked', () => {
+    const top = new Preset({ uuid: 'top' });
+    const below = new Preset({ uuid: 'below' });
+    const scene = new Scene({ uuid: 'ai', name: 'Chorus' });
+
+    service.previewAiScene(scene, [top, below], 1000);
+
+    const presets = service.getPresets(1200);
+    expect(presets.map((preset) => preset.preset)).toEqual([below, top]);
+    expect(presets.every((preset) => preset.scene === scene && preset.region.startMillis === 1000)).toBe(true);
+    expect(service.aiPreviewScene).toBe(scene);
+
+    // outside the timeline: its hold points are none of its business
+    expect(service['getHolds'](presets[0])).toEqual([]);
+    expect(service['getHolds'](new PresetRegionScene(top, new ScenePlaybackRegion(), scene))).toBe(timelineService.holds);
+  });
+
+  it('leaves the stage to the timeline while it plays, and to the project once it ends', () => {
+    service.previewAiScene(new Scene({ uuid: 'ai' }), [new Preset({ uuid: 'top' })], 0);
+    timelineService.playState = 'playing';
+    (timelineService as any).getPresetsInTime = () => [];
+    expect(service.getPresets(0)).toEqual([]);
+
+    service.endAiPreview();
+    expect(service.aiPreviewScene).toBeUndefined();
+  });
+});

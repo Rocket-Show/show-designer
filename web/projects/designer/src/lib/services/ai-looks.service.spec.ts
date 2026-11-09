@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrModule } from 'ngx-toastr';
+import { EMPTY, of } from 'rxjs';
 
 import { profiles } from '../../../conformance';
 import { AiLooks, AiPreset, AiRig, defaultAiSettings } from '../models/ai-looks';
@@ -27,6 +28,7 @@ import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
 import { TimelineService } from './timeline.service';
 import { UndoService } from './undo.service';
+import { UserEnsureLoginService } from './user-ensure-login.service';
 import { UserService } from './user.service';
 
 // a preset of the looks with everything it can set left out
@@ -597,6 +599,112 @@ describe('AiLooksService', () => {
       expect(value(presets[2], FixtureCapabilityType.Intensity)).toBeUndefined();
       expect(scenes.map((scene) => scene.name)).toEqual(['All']);
       expect(scenes[0].presetUuids.length).toBe(3);
+    });
+  });
+
+  describe('the looks played before they are added', () => {
+    const twoLooks = (): AiLooks => ({
+      name: 'Neon night',
+      summary: '',
+      presets: [
+        { ...nothing, id: 'wash', name: 'Pink wash', groups: ['rgb-par'], dimmer: 1, color: '#ff0000' },
+        { ...nothing, id: 'heads', name: 'Heads', groups: ['mover'], dimmer: 1 },
+      ],
+      scenes: [
+        { name: 'Verse', section: 'verse', energy: 2, presets: ['wash'], fadeInBeats: 0, fadeOutBeats: 0 },
+        { name: 'Chorus', section: 'chorus', energy: 5, presets: ['heads', 'wash'], fadeInBeats: 0, fadeOutBeats: 0 },
+        { name: 'Empty', section: 'verse', energy: 1, presets: ['missing'], fadeInBeats: 0, fadeOutBeats: 0 },
+      ],
+    });
+
+    it('play a scene on the stage, leaving the project as it is', () => {
+      const compiled = service.compile(twoLooks(), service.getRig(), 120);
+
+      // a scene of the looks without a preset left is left out, the others know the scene of the looks they come from
+      expect(compiled.scenes.map((scene) => scene.name)).toEqual(['Verse', 'Chorus']);
+      expect(compiled.sources.map((scene) => scene.name)).toEqual(['Verse', 'Chorus']);
+      expect(service.getScenePresets(compiled, compiled.scenes[1]).map((preset) => preset.name)).toEqual(['Heads', 'Pink wash']);
+      expect(projectService.project.presets.length).toBe(0);
+      expect(channelValue('fixture-1', 'Red')).toBeFalsy();
+
+      previewService.previewAiScene(compiled.scenes[0], service.getScenePresets(compiled, compiled.scenes[0]), 0);
+      expect(previewService.aiPreviewScene).toBe(compiled.scenes[0]);
+      expect(channelValue('fixture-1', 'Red', 100)).toBe(255);
+      expect(projectService.project.presets.length).toBe(0);
+
+      previewService.endAiPreview();
+      expect(previewService.aiPreviewScene).toBeUndefined();
+      expect(channelValue('fixture-1', 'Red', 100)).toBeFalsy();
+    });
+
+    it('add the scenes picked with the presets they play, the scene played playing on', () => {
+      const compiled = service.compile(twoLooks(), service.getRig(), 120);
+      const [verse, chorus] = compiled.scenes;
+
+      const added = service.addCompiled(compiled, 'Neon night', [verse], chorus);
+
+      // the heads only play in the chorus, which is left out: the first scene added plays
+      expect(added.scenes).toEqual([verse]);
+      expect(projectService.project.presets.map((preset) => preset.name)).toEqual(['Pink wash']);
+      expect(projectService.project.scenes.map((scene) => scene.name)).toEqual(['Verse']);
+      expect(sceneService.selectedScenes).toEqual([verse]);
+
+      // the scene played, when it is added
+      const again = service.compile(twoLooks(), service.getRig(), 120);
+      service.addCompiled(again, 'Neon night', again.scenes, again.scenes[1]);
+      expect(sceneService.selectedScenes).toEqual([again.scenes[1]]);
+
+      // nothing picked adds nothing
+      const none = service.compile(twoLooks(), service.getRig(), 120);
+      expect(service.addCompiled(none, 'Neon night', []).scenes).toEqual([]);
+    });
+  });
+
+  describe('the panel', () => {
+    it('opens for a logged in user, after asking a visitor to log in, and closes', () => {
+      const toggled: boolean[] = [];
+      service.panelToggled.subscribe((open) => toggled.push(open));
+      const login = spyOn(TestBed.inject(UserEnsureLoginService), 'login').and.returnValue(of(null));
+
+      service.start();
+      service.openPanel();
+      expect(login).toHaveBeenCalled();
+      expect(service.panelOpen).toBe(true);
+
+      service.closePanel();
+      service.closePanel();
+      expect(service.panelOpen).toBe(false);
+      expect(toggled).toEqual([true, false]);
+    });
+
+    it('stays closed for a visitor who does not log in', () => {
+      spyOn(TestBed.inject(UserEnsureLoginService), 'login').and.returnValue(EMPTY);
+
+      service.start();
+
+      expect(service.panelOpen).toBe(false);
+    });
+
+    it('remembers the tip about it as seen, and skips it without a storage', () => {
+      const stored = localStorage.getItem('aiTipSeen');
+      localStorage.removeItem('aiTipSeen');
+
+      expect(service.tipSeen).toBe(false);
+      service.dismissTip();
+      expect(service.tipSeen).toBe(true);
+
+      spyOn(localStorage, 'getItem').and.throwError('blocked');
+      spyOn(localStorage, 'setItem').and.throwError('blocked');
+      expect(service.tipSeen).toBe(true);
+      expect(() => service.dismissTip()).not.toThrow();
+
+      (localStorage.getItem as jasmine.Spy).and.callThrough();
+      (localStorage.setItem as jasmine.Spy).and.callThrough();
+      if (stored === null) {
+        localStorage.removeItem('aiTipSeen');
+      } else {
+        localStorage.setItem('aiTipSeen', stored);
+      }
     });
   });
 

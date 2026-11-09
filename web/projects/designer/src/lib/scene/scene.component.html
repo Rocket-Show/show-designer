@@ -120,4 +120,21 @@
       </ng-template>
     </lib-tree>
   </div>
+  <!-- the AI designs the looks: a card while nothing is designed yet, a row below the scenes afterwards -->
+  @if (configService.aiLooks) { @if (nothingDesigned) {
+  <div class="scene-ai-start">
+    <span class="scene-ai-icon"><i class="fa fa-magic" aria-hidden="true"></i></span>
+    <strong class="d-block mb-1">{{ 'designer.ai.start-title' | translate }}</strong>
+    <p class="mb-2">
+      {{ (fixtureCount > 0 ? 'designer.ai.start-text' : 'designer.ai.start-no-fixtures') | translate : { count: fixtureCount } }}
+    </p>
+    <button type="button" class="btn btn-primary btn-sm" (click)="designWithAi()">
+      <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.ai.title' | translate }}
+    </button>
+  </div>
+  } @else {
+  <button type="button" class="scene-ai-more" (click)="designWithAi()">
+    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.ai.more' | translate }}
+  </button>
+  } }
 </div>

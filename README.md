@@ -104,9 +104,12 @@ asked to log in or to register first. A Rocket Show device has no such endpoint 
   rays, a breakup, ...), never by a slot: the rig tells the kinds the wheels have, as the preview draws them (the
   pattern matched to a gobo in its wheel, or else the one its name brings), and each model puts its wheel on the slot of
   that kind, or else on its first gobo (`AiLooksService.getGoboValues`).
-- `ai/ai-looks` is the dialog: what the user asks for (the output, colors or a palette, the mood, the energy, the
-  tempo, the movement, the contrast, the strobe), the scenes the AI designed, changing them, and adding them to the
-  project in folders named after them, as one step to undo.
+- `ai/ai-looks` is the panel beside the designer (over it in a narrow window): what the user asks for (the output,
+  colors or a palette, the mood, the energy, the tempo, the movement, the contrast, the strobe), the scenes the AI
+  designed, each played on the stage before anything is added (`PreviewService.previewAiScene`, like a scene triggered
+  when it is picked), changing them, and adding the scenes picked to the project in folders named after them, as one
+  step to undo, or discarding them. It opens from the menu bar, the scenes (a card while nothing is designed yet), a
+  tip shown once the project has fixtures and the welcome tour (`AiLooksService.start`).
 
 ## Build & publish as NPM package
 

@@ -15,6 +15,8 @@ interface Options {
   signedIn: boolean;
   // the user has turned off the 3D preview, which is the most work for the browser
   previewHidden: boolean;
+  // the user has seen the tip about the AI looks, which shows once the project has fixtures
+  aiTipSeen: boolean;
 }
 
 // Each test gets a fresh browser context (an empty local storage, as for a new visitor) and a fake API of its own,
@@ -23,9 +25,14 @@ export const test = base.extend<Options & { api: FakeApi; designer: Designer }>(
   introSeen: [true, { option: true }],
   signedIn: [false, { option: true }],
   previewHidden: [false, { option: true }],
+  aiTipSeen: [true, { option: true }],
 
-  storageState: async ({ introSeen, signedIn, previewHidden, baseURL }, use) => {
+  storageState: async ({ introSeen, signedIn, previewHidden, aiTipSeen, baseURL }, use) => {
     const localStorage: { name: string; value: string }[] = [];
+
+    if (aiTipSeen) {
+      localStorage.push({ name: 'aiTipSeen', value: 'true' });
+    }
 
     if (previewHidden) {
       localStorage.push({ name: 'previewHidden', value: 'true' });

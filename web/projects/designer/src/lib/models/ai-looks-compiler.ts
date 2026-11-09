@@ -1,4 +1,4 @@
-import { AiChase, AiFan, AiLooks, AiPreset, AiRig } from './ai-looks';
+import { AiChase, AiFan, AiLooks, AiPreset, AiRig, AiScene } from './ai-looks';
 import { EffectCurve } from './effect-curve';
 import { EffectPanTilt } from './effect-pan-tilt';
 import { EffectPixel } from './effect-pixel';
@@ -31,6 +31,9 @@ export interface AiCompileContext {
 export interface AiCompiled {
   presets: Preset[];
   scenes: Scene[];
+
+  // the scene of the looks each scene is made of, in the same order (a scene of the looks without a preset left out)
+  sources?: AiScene[];
 }
 
 // how long a number of beats lasts at the tempo of the looks
@@ -369,6 +372,7 @@ export function compileAiLooks(looks: AiLooks, context: AiCompileContext): AiCom
   }
 
   const scenes: Scene[] = [];
+  const sources: AiScene[] = [];
 
   for (const ai of looks.scenes) {
     const scenePresets = ai.presets.map((id) => presets.get(id)).filter((preset) => !!preset);
@@ -384,9 +388,10 @@ export function compileAiLooks(looks: AiLooks, context: AiCompileContext): AiCom
     scene.fadeInMillis = beatsMillis(ai.fadeInBeats || 0, context.bpm);
     scene.fadeOutMillis = beatsMillis(ai.fadeOutBeats || 0, context.bpm);
     scenes.push(scene);
+    sources.push(ai);
   }
 
-  return { presets: Array.from(presets.values()), scenes };
+  return { presets: Array.from(presets.values()), scenes, sources };
 }
 
 // the strobe of a fixture not telling how fast it flashes: the fixture library calls a strobe 1 flash a second slow

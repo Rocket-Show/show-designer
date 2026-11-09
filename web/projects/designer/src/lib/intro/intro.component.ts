@@ -1,5 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { AiLooksService } from '../services/ai-looks.service';
+import { ConfigService } from '../services/config.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
 import { IntroService } from '../services/intro.service';
 import { LayoutService } from '../services/layout.service';
@@ -15,7 +17,13 @@ export class IntroComponent implements OnInit, OnDestroy {
 
   private stepChangedSubscription: Subscription;
 
-  constructor(public introService: IntroService, public hardwarePromoService: HardwarePromoService, public layoutService: LayoutService) {
+  constructor(
+    public introService: IntroService,
+    public hardwarePromoService: HardwarePromoService,
+    public layoutService: LayoutService,
+    public configService: ConfigService,
+    private aiLooksService: AiLooksService
+  ) {
     this.promoLink = this.hardwarePromoService.link('intro-finish');
   }
 
@@ -35,5 +43,15 @@ export class IntroComponent implements OnInit, OnDestroy {
 
   close() {
     this.introService.setShowIntro(false);
+  }
+
+  // where the tour starts and ends, it offers to let the AI design the looks instead (see AiLooksService.start)
+  get offersAi(): boolean {
+    return this.configService.aiLooks && (this.introService.activeStep === 'start' || this.introService.activeStep === 'finish');
+  }
+
+  startAi() {
+    this.close();
+    this.aiLooksService.start();
   }
 }

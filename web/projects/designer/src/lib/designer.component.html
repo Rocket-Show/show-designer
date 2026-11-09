@@ -133,7 +133,30 @@
     }
 
     <ul class="navbar-nav">
-      @if (configService.shareAvailable) {
+      @if (configService.aiLooks) {
+      <li class="nav-item d-flex align-items-center mr-2 ai-start">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm ai-start-button"
+          [class.ai-start-button-open]="aiLooksService.panelOpen"
+          (click)="closeAiTip(false); aiLooksService.start()"
+        >
+          <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.ai.title' | translate }}
+        </button>
+        @if (showAiTip()) {
+        <div class="ai-tip" role="dialog" [attr.aria-label]="'designer.ai.tip-title' | translate">
+          <strong class="d-block mb-1">{{ 'designer.ai.tip-title' | translate }}</strong>
+          <p class="mb-2">{{ 'designer.ai.tip-text' | translate : { count: projectService.project.fixtures.length } }}</p>
+          <button type="button" class="btn btn-primary btn-sm mr-2" (click)="closeAiTip(true)">
+            {{ 'designer.ai.tip-try' | translate }}
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="closeAiTip(false)">
+            {{ 'designer.ai.tip-later' | translate }}
+          </button>
+        </div>
+        }
+      </li>
+      } @if (configService.shareAvailable) {
       <li class="nav-item d-flex" data-toggle="collapse">
         <a class="nav-link text-primary" (click)="projectShare(); (false)" routerLinkActive="active"
           ><i class="fa fa-share-alt" aria-hidden="true"></i> {{ 'designer.navigation.project-share' | translate }}</a
@@ -177,185 +200,194 @@
     </ul>
   </nav>
 
-  <!-- the rows, split and folded by DesignerLayout. On a phone, the open panels are stacked. -->
-  <div class="h-100 d-flex designer-rows">
-    <div id="row1" class="split split-vertical designer-row d-flex pt-3 px-3">
-      <!-- Scenes -->
-      <div id="scenes" class="split split-horizontal h-100">
-        @if (projectService.project) {
-        <lib-app-scene></lib-app-scene>
-        }
-      </div>
+  <!-- the rows, split and folded by DesignerLayout (on a phone, the open panels are stacked), and beside them the panel
+       of the AI looks while it is open, over the designer in a narrow window -->
+  <div class="h-100 d-flex designer-main">
+    <div class="h-100 d-flex designer-rows">
+      <div id="row1" class="split split-vertical designer-row d-flex pt-3 px-3">
+        <!-- Scenes -->
+        <div id="scenes" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <lib-app-scene></lib-app-scene>
+          }
+        </div>
 
-      <!-- Presets -->
-      <div id="presets" class="split split-horizontal h-100">
-        @if (projectService.project) {
-        <lib-app-preset></lib-app-preset>
-        }
-      </div>
+        <!-- Presets -->
+        <div id="presets" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <lib-app-preset></lib-app-preset>
+          }
+        </div>
 
-      <!-- 3D preview -->
-      <div id="preview" class="split split-horizontal h-100">
-        @if (projectService.project) {
-        <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('preview')">
-          <div class="card-body p-0 h-100">
-            <lib-app-preview class="h-100"></lib-app-preview>
+        <!-- 3D preview -->
+        <div id="preview" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <div class="card border-secondary h-100" [class.card-intro-active]="introService.showStep('preview')">
+            <div class="card-body p-0 h-100">
+              <lib-app-preview class="h-100"></lib-app-preview>
+            </div>
           </div>
+          }
         </div>
-        }
       </div>
-    </div>
 
-    <div id="row2" class="split split-vertical designer-row d-flex px-3">
-      <!-- Menu for the capabilities, channels, effects and settings -->
-      @if (projectService.project) {
-      <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
-        <div class="nav flex-column nav-pills nav-pills-attached h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-          <a
-            class="nav-link px-3 active"
-            (click)="openTab('capabilities')"
-            id="v-pills-capabilities-tab"
-            popover="{{ 'designer.misc.capabilities' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            data-toggle="pill"
-            href="#v-pills-capabilities"
-            role="tab"
-            aria-controls="v-pills-capabilities"
-            aria-selected="true"
-          >
-            <i class="fa fa-bolt fa-fw" aria-hidden="true"></i>
-          </a>
-          <a
-            class="nav-link px-3"
-            (click)="openTab('channels')"
-            id="v-pills-channels-tab"
-            popover="{{ 'designer.misc.channels' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            data-toggle="pill"
-            href="#v-pills-channels"
-            role="tab"
-            aria-controls="v-pills-channels"
-            aria-selected="false"
-          >
-            <i class="fa fa-sliders fa-fw" aria-hidden="true"></i>
-          </a>
-          <a
-            class="nav-link px-3"
-            (click)="openTab('effects')"
-            id="v-pills-effects-tab"
-            popover="{{ 'designer.misc.effects' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            data-toggle="pill"
-            href="#v-pills-effects"
-            role="tab"
-            aria-controls="v-pills-effects"
-            aria-selected="false"
-          >
-            <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
-          </a>
+      <div id="row2" class="split split-vertical designer-row d-flex px-3">
+        <!-- Menu for the capabilities, channels, effects and settings -->
+        @if (projectService.project) {
+        <div class="tab-rail col col-auto p-0 h-100" style="margin-right: -1px">
+          <div class="nav flex-column nav-pills nav-pills-attached h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+            <a
+              class="nav-link px-3 active"
+              (click)="openTab('capabilities')"
+              id="v-pills-capabilities-tab"
+              popover="{{ 'designer.misc.capabilities' | translate }}"
+              container="body"
+              placement="right"
+              triggers="mouseenter:mouseleave"
+              data-toggle="pill"
+              href="#v-pills-capabilities"
+              role="tab"
+              aria-controls="v-pills-capabilities"
+              aria-selected="true"
+            >
+              <i class="fa fa-bolt fa-fw" aria-hidden="true"></i>
+            </a>
+            <a
+              class="nav-link px-3"
+              (click)="openTab('channels')"
+              id="v-pills-channels-tab"
+              popover="{{ 'designer.misc.channels' | translate }}"
+              container="body"
+              placement="right"
+              triggers="mouseenter:mouseleave"
+              data-toggle="pill"
+              href="#v-pills-channels"
+              role="tab"
+              aria-controls="v-pills-channels"
+              aria-selected="false"
+            >
+              <i class="fa fa-sliders fa-fw" aria-hidden="true"></i>
+            </a>
+            <a
+              class="nav-link px-3"
+              (click)="openTab('effects')"
+              id="v-pills-effects-tab"
+              popover="{{ 'designer.misc.effects' | translate }}"
+              container="body"
+              placement="right"
+              triggers="mouseenter:mouseleave"
+              data-toggle="pill"
+              href="#v-pills-effects"
+              role="tab"
+              aria-controls="v-pills-effects"
+              aria-selected="false"
+            >
+              <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
+            </a>
 
-          <a
-            class="nav-link px-3 nav-link-divider"
-            href="#"
-            [class.text-primary]="presetService.stepsVisible"
-            popover="{{ 'designer.preset.steps' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            (click)="presetService.switchStepsVisible(); (false)"
-          >
-            <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
-          </a>
+            <a
+              class="nav-link px-3 nav-link-divider"
+              href="#"
+              [class.text-primary]="presetService.stepsVisible"
+              popover="{{ 'designer.preset.steps' | translate }}"
+              container="body"
+              placement="right"
+              triggers="mouseenter:mouseleave"
+              (click)="presetService.switchStepsVisible(); (false)"
+            >
+              <i class="fa fa-tasks fa-fw" aria-hidden="true"></i>
+            </a>
 
-          <a
-            class="nav-link px-3 nav-link-divider"
-            (click)="openTab('settings')"
-            id="v-pills-settings-tab"
-            popover="{{ 'designer.misc.settings' | translate }}"
-            container="body"
-            placement="right"
-            triggers="mouseenter:mouseleave"
-            data-toggle="pill"
-            href="#v-pills-settings"
-            role="tab"
-            aria-controls="v-pills-settings"
-            aria-selected="false"
-          >
-            <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
-          </a>
-        </div>
+            <a
+              class="nav-link px-3 nav-link-divider"
+              (click)="openTab('settings')"
+              id="v-pills-settings-tab"
+              popover="{{ 'designer.misc.settings' | translate }}"
+              container="body"
+              placement="right"
+              triggers="mouseenter:mouseleave"
+              data-toggle="pill"
+              href="#v-pills-settings"
+              role="tab"
+              aria-controls="v-pills-settings"
+              aria-selected="false"
+            >
+              <i class="fa fa-cog fa-fw" aria-hidden="true"></i>
+            </a>
+          </div>
 
-        <!-- which preset the panels on the right are editing, marked the way the preset
+          <!-- which preset the panels on the right are editing, marked the way the preset
              list marks it -->
-        @if (presetService.selectedPreset) {
-        <div class="edit-target">
-          <i
-            class="fa fa-fw {{ presetService.getPresetIcon(presetService.selectedPreset) }}"
-            [style.color]="colorService.getPresetColor(presetService.selectedPreset)"
-            aria-hidden="true"
-          ></i>
-          {{ presetService.selectedPreset.name }}
+          @if (presetService.selectedPreset) {
+          <div class="edit-target">
+            <i
+              class="fa fa-fw {{ presetService.getPresetIcon(presetService.selectedPreset) }}"
+              [style.color]="colorService.getPresetColor(presetService.selectedPreset)"
+              aria-hidden="true"
+            ></i>
+            {{ presetService.selectedPreset.name }}
+          </div>
+          }
         </div>
         }
-      </div>
-      }
 
-      <div id="capabilities" class="split split-horizontal h-100">
-        @if (projectService.project) {
-        <div class="row h-100 flex-nowrap">
-          <!-- which step of the selected preset these panels are editing -->
-          <div class="col col-auto p-0 h-100">
-            <lib-app-preset-step></lib-app-preset-step>
-          </div>
+        <div id="capabilities" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <div class="row h-100 flex-nowrap">
+            <!-- which step of the selected preset these panels are editing -->
+            <div class="col col-auto p-0 h-100">
+              <lib-app-preset-step></lib-app-preset-step>
+            </div>
 
-          <!-- Content for the capabilities, channels, effects and settings -->
-          <div class="col px-0 h-100">
-            <div class="tab-content h-100" id="v-pills-tabContent">
-              <div class="tab-pane h-100 show active" id="v-pills-capabilities" role="tabpanel">
-                <lib-app-fixture-capability></lib-app-fixture-capability>
-              </div>
-              <div class="tab-pane h-100 show" id="v-pills-channels" role="tabpanel">
-                <lib-app-fixture-channel></lib-app-fixture-channel>
-              </div>
-              <div class="tab-pane h-100" id="v-pills-effects" role="tabpanel" aria-labelledby="v-pills-profile-tab">
-                <lib-app-effect></lib-app-effect>
-              </div>
-              <div class="tab-pane h-100" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-home-tab">
-                <lib-app-fixture-settings></lib-app-fixture-settings>
+            <!-- Content for the capabilities, channels, effects and settings -->
+            <div class="col px-0 h-100">
+              <div class="tab-content h-100" id="v-pills-tabContent">
+                <div class="tab-pane h-100 show active" id="v-pills-capabilities" role="tabpanel">
+                  <lib-app-fixture-capability></lib-app-fixture-capability>
+                </div>
+                <div class="tab-pane h-100 show" id="v-pills-channels" role="tabpanel">
+                  <lib-app-fixture-channel></lib-app-fixture-channel>
+                </div>
+                <div class="tab-pane h-100" id="v-pills-effects" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+                  <lib-app-effect></lib-app-effect>
+                </div>
+                <div class="tab-pane h-100" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-home-tab">
+                  <lib-app-fixture-settings></lib-app-fixture-settings>
+                </div>
               </div>
             </div>
           </div>
+          }
         </div>
-        }
+
+        <!-- Fixtures -->
+        <div id="fixtures" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <lib-app-fixture></lib-app-fixture>
+          }
+        </div>
+
+        <!-- Master dimmer -->
+        <div id="masterDimmer" class="split split-horizontal h-100">
+          @if (projectService.project) {
+          <lib-app-master-dimmer></lib-app-master-dimmer>
+          }
+        </div>
       </div>
 
-      <!-- Fixtures -->
-      <div id="fixtures" class="split split-horizontal h-100">
+      <!-- Timeline -->
+      <div id="row3" class="split split-vertical px-3 pb-3">
         @if (projectService.project) {
-        <lib-app-fixture></lib-app-fixture>
-        }
-      </div>
-
-      <!-- Master dimmer -->
-      <div id="masterDimmer" class="split split-horizontal h-100">
-        @if (projectService.project) {
-        <lib-app-master-dimmer></lib-app-master-dimmer>
+        <lib-app-timeline></lib-app-timeline>
         }
       </div>
     </div>
 
-    <!-- Timeline -->
-    <div id="row3" class="split split-vertical px-3 pb-3">
-      @if (projectService.project) {
-      <lib-app-timeline></lib-app-timeline>
-      }
+    @if (aiLooksService.panelOpen && projectService.project) {
+    <div class="designer-ai-panel">
+      <lib-ai-looks></lib-ai-looks>
     </div>
+    }
   </div>
 </div>
 

@@ -1,25 +1,34 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { BsModalRef } from 'ngx-bootstrap/modal';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AiLooks, AiLooksStatus, AiRig, defaultAiSettings } from '../../models/ai-looks';
+import { AiCompiled } from '../../models/ai-looks-compiler';
+import { Preset } from '../../models/preset';
+import { Scene } from '../../models/scene';
 import { AiLooksService } from '../../services/ai-looks.service';
+import { AnimationService } from '../../services/animation.service';
+import { PreviewService } from '../../services/preview.service';
 import { UserService } from '../../services/user.service';
 import { AiLooksComponent } from './ai-looks.component';
 
-// The dialog of the AI looks: what the user picks, the request to the AI (through AiLooksService), the looks it
-// answers, changing them and adding them to the project, and what it tells when something goes wrong.
+// The panel of the AI looks: what the user picks, the request to the AI (through AiLooksService), the looks it
+// answers, played on the stage scene by scene before anything is added, changing them, adding the scenes picked to the
+// project or discarding them, and what it tells when something goes wrong.
 describe('AiLooksComponent', () => {
   let fixture: ComponentFixture<AiLooksComponent>;
   let component: AiLooksComponent;
   let service: any;
+  let preview: jasmine.SpyObj<PreviewService>;
   let status: Subject<AiLooksStatus>;
-  let hide: jasmine.Spy;
   let logout: jasmine.Spy;
+  let compiled: AiCompiled;
+  let chorus: Scene;
+  let blackout: Scene;
+  let wash: Preset;
 
   const rig: AiRig = {
     groups: [
@@ -49,6 +58,7 @@ describe('AiLooksComponent', () => {
         fadeInBeats: 0,
         fadeOutBeats: 0,
       },
+      { name: 'Blackout', section: 'blackout', energy: 1, presets: [], fadeInBeats: 0, fadeOutBeats: 0 },
     ],
   };
 
@@ -57,9 +67,13 @@ describe('AiLooksComponent', () => {
   }
 
   beforeEach(() => {
-    hide = jasmine.createSpy('hide');
     logout = jasmine.createSpy('logout');
     status = new Subject<AiLooksStatus>();
+    wash = new Preset({ uuid: 'wash', name: 'Wash' });
+    chorus = new Scene({ uuid: 'chorus', name: 'Chorus', presetUuids: ['wash'] });
+    blackout = new Scene({ uuid: 'blackout', name: 'Blackout', presetUuids: [] });
+    compiled = { presets: [wash], scenes: [chorus, blackout], sources: looks.scenes };
+    preview = jasmine.createSpyObj<PreviewService>('PreviewService', ['previewAiScene', 'endAiPreview']);
     service = {
       last: undefined,
       getRig: () => rig,
@@ -69,15 +83,19 @@ describe('AiLooksComponent', () => {
         .createSpy('getRequest')
         .and.callFake((r, settings, prompt, current, instruction) => ({ settings, prompt, current, instruction })),
       design: jasmine.createSpy('design').and.returnValue(of({ looks, requestsLast24Hours: 3, requestsPerUserPerDay: 20 })),
-      addToProject: jasmine.createSpy('addToProject').and.returnValue({ presets: [{}, {}], scenes: [{}] }),
+      compile: jasmine.createSpy('compile').and.callFake(() => compiled),
+      getScenePresets: (c: AiCompiled, scene: Scene) => (scene === chorus ? [wash] : []),
+      addCompiled: jasmine.createSpy('addCompiled').and.returnValue({ presets: [{}, {}], scenes: [{}] }),
+      closePanel: jasmine.createSpy('closePanel'),
     };
 
     TestBed.configureTestingModule({
       declarations: [AiLooksComponent],
       imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
       providers: [
-        { provide: BsModalRef, useValue: { hide } },
         { provide: AiLooksService, useValue: service },
+        { provide: PreviewService, useValue: preview },
+        { provide: AnimationService, useValue: { timeMillis: 1000 } },
         { provide: UserService, useValue: { logout } },
       ],
     });
@@ -118,6 +136,11 @@ describe('AiLooksComponent', () => {
     expect(component.settings.colors).not.toBe(service.last.settings.colors);
     expect(component.prompt).toBe('Dark rock');
     expect(component.looks).toBe(looks);
+
+    // back to the looks designed then, the first scene on the stage
+    expect(component.view).toBe('looks');
+    expect(service.compile).toHaveBeenCalledWith(looks, rig, 90);
+    expect(preview.previewAiScene).toHaveBeenCalledWith(chorus, [wash], 1000);
   });
 
   it("can't design without the AI looks, without fixtures or without requests left", () => {
@@ -216,6 +239,12 @@ describe('AiLooksComponent', () => {
     expect(service.last.prompt).toBe('Synthwave');
     expect(text()).toContain('Neon night');
 
+    // made into scenes, the first one on the stage
+    expect(service.compile).toHaveBeenCalledWith(looks, rig, 128);
+    expect(preview.previewAiScene).toHaveBeenCalledWith(chorus, [wash], 1000);
+    expect(fixture.nativeElement.querySelectorAll('.ai-scene').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.ai-scene-playing').textContent).toContain('Chorus');
+
     // the scene is marked with the colors of its presets, and names them
     expect(component.sceneColors(looks.scenes[0].presets)).toEqual(['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#123456']);
     expect(component.presetNames(['wash', 'missing', 'solid'])).toBe('Wash, Solid');
@@ -238,6 +267,8 @@ describe('AiLooksComponent', () => {
     component.back();
     expect(component.view).toBe('settings');
     expect(component.errorKey).toBeUndefined();
+    // the stage plays the project again
+    expect(preview.endAiPreview).toHaveBeenCalled();
   });
 
   it("doesn't ask while it can't design", () => {
@@ -277,25 +308,92 @@ describe('AiLooksComponent', () => {
     expect(component.errorKey).toBe('designer.ai.error.unauthorized');
   });
 
-  it('adds the looks to the project at the tempo picked, and closes', () => {
-    const success = spyOn(TestBed.inject(ToastrService), 'success');
+  it('plays the scene clicked on the stage, the one before and the one after', () => {
+    open();
+    component.design();
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelectorAll('.ai-scene-play')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.playing).toBe(1);
+    expect(preview.previewAiScene).toHaveBeenCalledWith(blackout, [], 1000);
+    expect(fixture.nativeElement.querySelector('.ai-scene-playing').textContent).toContain('Blackout');
+
+    // round and round
+    component.next();
+    expect(component.playing).toBe(0);
+    component.previous();
+    expect(component.playing).toBe(1);
+
+    // there is none past the last one
+    preview.endAiPreview.calls.reset();
+    component.play(5);
+    expect(preview.endAiPreview).toHaveBeenCalled();
+  });
+
+  it('plays one scene after the other, for 8 bars each at the tempo of the looks', fakeAsync(() => {
     open();
     component.design();
 
+    component.setAutoplay(true);
+    // 8 bars of 4 beats at 128 BPM
+    tick(15000);
+    expect(component.playing).toBe(1);
+    tick(15000);
+    expect(component.playing).toBe(0);
+
+    component.setAutoplay(false);
+    tick(30000);
+    expect(component.playing).toBe(0);
+  }));
+
+  it('adds the scenes picked, with the presets they play, the one on the stage playing on', () => {
+    const success = spyOn(TestBed.inject(ToastrService), 'success');
+    open();
+    component.design();
+    fixture.detectChanges();
+
+    // the blackout ticked off
+    const pick = fixture.nativeElement.querySelectorAll('.ai-scene-pick')[1] as HTMLInputElement;
+    pick.checked = false;
+    pick.dispatchEvent(new Event('change'));
+    expect(component.isPicked(blackout)).toBe(false);
+    expect(component.pickedScenes).toEqual([chorus]);
+    component.setPicked(blackout, true);
+    component.setPicked(blackout, false);
+
     component.add();
 
-    expect(service.addToProject).toHaveBeenCalledWith(looks, rig, 128);
+    expect(service.addCompiled).toHaveBeenCalledWith(compiled, 'Neon night', [chorus], chorus);
     expect(success).toHaveBeenCalledWith('designer.ai.added');
     expect(service.last).toBeUndefined();
-    expect(hide).toHaveBeenCalled();
+    expect(service.closePanel).toHaveBeenCalled();
+    expect(preview.endAiPreview).toHaveBeenCalled();
   });
 
-  it('closes without adding anything', () => {
+  it('lets go of the looks without adding anything', () => {
     open();
+    component.design();
 
-    component.cancel();
+    component.discard();
 
-    expect(hide).toHaveBeenCalled();
-    expect(service.addToProject).not.toHaveBeenCalled();
+    expect(service.last).toBeUndefined();
+    expect(service.closePanel).toHaveBeenCalled();
+    expect(service.addCompiled).not.toHaveBeenCalled();
+  });
+
+  it('closes, keeping the looks for the next time, and stops playing them', () => {
+    open();
+    component.design();
+
+    component.close();
+
+    expect(service.last.looks).toBe(looks);
+    expect(service.closePanel).toHaveBeenCalled();
+    expect(preview.endAiPreview).toHaveBeenCalled();
+
+    preview.endAiPreview.calls.reset();
+    fixture.destroy();
+    expect(preview.endAiPreview).toHaveBeenCalled();
   });
 });

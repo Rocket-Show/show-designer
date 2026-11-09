@@ -48,6 +48,17 @@
   color: var(--sd-text);
 }
 
+/* a scene of the AI looks on the stage is not in the project yet */
+.preview-ai-badge {
+  flex: none;
+  margin-left: var(--sd-space-1);
+  padding: 0 var(--sd-space-2);
+  border: 1px solid var(--sd-primary);
+  border-radius: 999px;
+  color: var(--sd-primary);
+  white-space: nowrap;
+}
+
 /* a square icon button in the chrome, pushed against its right edge */
 .preview-chrome-button {
   flex: none;

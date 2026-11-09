@@ -1,6 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
+import { AiLooksService } from '../services/ai-looks.service';
 import { ConfigService } from '../services/config.service';
 import { IntroService } from '../services/intro.service';
 import { LayoutService } from '../services/layout.service';
@@ -13,14 +14,18 @@ describe('IntroComponent', () => {
   let introService: IntroService;
   let layoutService: LayoutService;
   let stored: string;
+  let aiLooks: { start: jasmine.Spy };
 
   beforeEach(() => {
     stored = localStorage.getItem('showIntro');
     localStorage.removeItem('showIntro');
 
+    aiLooks = { start: jasmine.createSpy('start') };
+
     TestBed.configureTestingModule({
       declarations: [IntroComponent],
       imports: [TranslateModule.forRoot()],
+      providers: [{ provide: AiLooksService, useValue: aiLooks }],
     });
 
     layoutService = TestBed.inject(LayoutService);
@@ -138,5 +143,30 @@ describe('IntroComponent', () => {
 
     expect(card().textContent).toContain('designer.hardware-promo.intro-finish');
     expect(card().querySelector<HTMLAnchorElement>('.card-body a').href).toContain('utm_content=intro-finish');
+  });
+
+  it('offers to let the AI design the looks where it starts and ends, where the AI looks are there', () => {
+    expect(card().querySelector('.intro-ai')).toBeNull();
+
+    TestBed.inject(ConfigService).aiLooks = true;
+    fixture.detectChanges();
+    expect(card().querySelector('.intro-ai').textContent).toContain('designer.intro.ai');
+
+    // not on the steps in between
+    introService.next();
+    fixture.detectChanges();
+    expect(card().querySelector('.intro-ai')).toBeNull();
+  });
+
+  it('lets the AI design the looks in place of the tour', () => {
+    TestBed.inject(ConfigService).aiLooks = true;
+    fixture.detectChanges();
+
+    (card().querySelector('.intro-ai button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(introService.showIntro).toBe(false);
+    expect(aiLooks.start).toHaveBeenCalled();
+    expect(card()).toBeNull();
   });
 });

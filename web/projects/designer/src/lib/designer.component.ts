@@ -42,6 +42,7 @@ import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
 import { LayoutService } from './services/layout.service';
+import { AiLooksService } from './services/ai-looks.service';
 
 @Component({
   selector: 'lib-designer',
@@ -178,6 +179,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     private hardwarePromoService: HardwarePromoService,
     public undoService: UndoService,
     public layoutService: LayoutService,
+    public aiLooksService: AiLooksService,
     private elementRef: ElementRef
   ) {
     this.configService.menuHeightChanged.subscribe(() => {
@@ -188,6 +190,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     // language for the titles of the arrows
     this.layoutService.changed.subscribe(() => this.layout?.build());
     this.translateService.onLangChange.subscribe(() => this.layout?.build());
+
+    // the panel of the AI looks takes room from the stage and the timeline, or gives it back
+    this.aiLooksService.panelToggled.subscribe(() => setTimeout(() => this.onResize()));
   }
 
   private loadError(response: any) {
@@ -247,6 +252,27 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     // split.js already subtracts the gutters from the rows themselves, so
     // reserving another gutter here only left dead space under the timeline
     this.totalMenuHeightPx = this.designerMenuSizePx + this.configService.menuHeightPx;
+  }
+
+  // The tip about the AI looks below their button: shown once, as soon as the project has fixtures to design for, unless
+  // the tour or the panel is open
+  showAiTip(): boolean {
+    return (
+      this.configService.aiLooks &&
+      !this.aiLooksService.panelOpen &&
+      !this.introService.showIntro &&
+      this.projectService.project?.fixtures.length > 0 &&
+      !this.aiLooksService.tipSeen
+    );
+  }
+
+  // the tip taken up (the panel opens) or put aside, for good
+  closeAiTip(tryIt: boolean) {
+    this.aiLooksService.dismissTip();
+
+    if (tryIt) {
+      this.aiLooksService.start();
+    }
   }
 
   private onResize() {

@@ -26,6 +26,7 @@ import { Fixture3d } from './models/fixture-3d';
 import { MovingHead3d } from './models/moving-head-3d';
 import { PixelFixture3d, PixelHousing3d } from './models/pixel-fixture-3d';
 import { PREVIEW_MAX_LIGHTS, PreviewComponent } from './preview.component';
+import { Scene } from '../models/scene';
 
 // The 3D preview renders the stage with the fixtures of the project, in the light of what is
 // playing, and can be turned off to save the time it takes.
@@ -860,6 +861,20 @@ describe('PreviewComponent', () => {
     fixture.detectChanges();
 
     expect(element('.preview-target-name').textContent).toBe('Warm');
+  });
+
+  it('names a scene of the AI looks it plays before the scene is added', () => {
+    open();
+    previewService.previewAiScene(new Scene({ uuid: 'ai', name: 'Chorus' }), [], 0);
+    fixture.detectChanges();
+
+    expect(element('.preview-target-type').textContent).toBe('designer.preview.ai');
+    expect(element('.preview-target-name').textContent).toBe('Chorus');
+    expect(element('.preview-ai-badge').textContent).toBe('designer.preview.ai-not-added');
+
+    previewService.endAiPreview();
+    fixture.detectChanges();
+    expect(element('.preview-ai-badge')).toBeNull();
   });
 
   it('is captioned as a simulation in the free online designer, while it renders', () => {

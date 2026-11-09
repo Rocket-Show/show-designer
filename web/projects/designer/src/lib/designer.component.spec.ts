@@ -38,6 +38,8 @@ import { UserEnsureLoginService } from './services/user-ensure-login.service';
 import { UserService } from './services/user.service';
 import { WarningDialogService } from './services/warning-dialog.service';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
+import { AiLooksService } from './services/ai-looks.service';
+import { Fixture } from './models/fixture';
 
 // The designer as the host app embeds it: the menus, the panels and the hotkeys around the
 // project, which it opens as it starts up. The panels themselves are left out.
@@ -51,6 +53,7 @@ describe('DesignerComponent', () => {
     'hardwarePromoSessions',
     'hardwarePromoLastVisit',
     'hardwarePromoBarDismissed',
+    'aiTipSeen',
   ];
   let stored: { [key: string]: string };
   let url: string;
@@ -278,6 +281,70 @@ describe('DesignerComponent', () => {
       expect(TestBed.inject(IntroService).showIntro).toBe(true);
       // the menu of the host and the one of the designer are taken away from the height
       expect(fixture.nativeElement.querySelector('#designer').style.height).toBe('calc(100% - 84px)');
+    });
+  });
+
+  describe('the AI looks', () => {
+    let aiLooksService: AiLooksService;
+    let start: jasmine.Spy;
+
+    beforeEach(() => {
+      aiLooksService = TestBed.inject(AiLooksService);
+      start = spyOn(aiLooksService, 'start');
+    });
+
+    it('are opened from the menu bar, where they are there', async () => {
+      await open();
+      expect(element('.ai-start-button')).toBeNull();
+
+      configService.aiLooks = true;
+      fixture.detectChanges();
+      element('.ai-start-button').click();
+
+      expect(start).toHaveBeenCalled();
+      expect(aiLooksService.tipSeen).toBe(true);
+    });
+
+    it('take room from the rows in a panel of their own while they are open, fitting the preview and the timeline in', async () => {
+      await open();
+      const preview = jasmine.createSpyObj('preview', ['onResize']);
+      component.previewComponent = preview;
+
+      aiLooksService.openPanel();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(element('.designer-ai-panel')).not.toBeNull();
+      expect(preview.onResize).toHaveBeenCalled();
+
+      aiLooksService.closePanel();
+      fixture.detectChanges();
+      expect(element('.designer-ai-panel')).toBeNull();
+    });
+
+    it('are tipped once, as soon as the project has fixtures to design for', async () => {
+      configService.aiLooks = true;
+      TestBed.inject(IntroService).showIntro = false;
+      await open();
+      expect(component.showAiTip()).toBe(false);
+
+      project.fixtures = [new Fixture({ uuid: 'par' })];
+      fixture.detectChanges();
+      expect(element('.ai-tip')).not.toBeNull();
+
+      // tried, it opens them, and is gone for good
+      (element('.ai-tip button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(start).toHaveBeenCalled();
+      expect(element('.ai-tip')).toBeNull();
+
+      // put aside, it is gone as well
+      localStorage.removeItem('aiTipSeen');
+      fixture.detectChanges();
+      component.closeAiTip(false);
+      fixture.detectChanges();
+      expect(element('.ai-tip')).toBeNull();
+      expect(start).toHaveBeenCalledTimes(1);
     });
   });
 

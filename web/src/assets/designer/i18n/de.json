@@ -135,7 +135,9 @@
       "hidden": "Vorschau ausgeblendet",
       "hidden-hint": "Die Bühne wird nicht gerendert, solange die Vorschau ausgeblendet ist.",
       "glow-off": "Lichtschein ausschalten, um Leistung zu sparen",
-      "glow-on": "Lichtschein einschalten"
+      "glow-on": "Lichtschein einschalten",
+      "ai": "KI-Vorschau",
+      "ai-not-added": "Noch nicht in deinem Projekt"
     },
     "preset": {
       "title": "Presets",
@@ -750,7 +752,8 @@
       "title-timeline": "Zeitleiste",
       "step-timeline": "In der Zeitleiste kannst du Szenen platzieren und synchronisiert zu einer Audio-Datei abspielen. ⏱ Auf dem Rocket Show-Gerät entspricht diese Datei einer Komposition, die beim Abspielen auch deine Lichtshow automatisch steuert, wenn die Namen identisch sind.",
       "title-finish": "Gut gemacht!",
-      "step-finish": "Höchste Zeit, dass du es selbst ausprobierst! Teile deine Shows mit deinen Freunden und schaue, was sie darüber denken. 👫"
+      "step-finish": "Höchste Zeit, dass du es selbst ausprobierst! Teile deine Shows mit deinen Freunden und schaue, was sie darüber denken. 👫",
+      "ai": "Keine Zeit für die Tour? Füge deine Geräte hinzu und lass die KI die Presets und Szenen dafür gestalten, nach deiner Musik und deiner Stimmung."
     },
     "hardware-promo": {
       "preview-badge": "Simulation",
@@ -912,7 +915,6 @@
       "change-placeholder": "z. B. Wärmer, und weniger Bewegung in der Strophe",
       "change-button": "Ändern",
       "design": "Gestalten",
-      "add": "Zum Projekt hinzufügen",
       "added": "{{scenes}} Szenen und {{presets}} Presets hinzugefügt.",
       "requests-left": "Noch {{left}} von {{limit}} Anfragen heute",
       "error": {
@@ -925,7 +927,24 @@
         "ai-refused": "Die KI hat diese Anfrage abgelehnt. Bitte beschreibe die Looks anders.",
         "ai-incomplete": "Die Antwort wurde zu lang. Bitte frage nach weniger Szenen.",
         "ai-failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
-      }
+      },
+      "close": "Schließen",
+      "preview-hint": "Klicke auf eine Szene, um sie auf der Bühne zu sehen. Nimm das Häkchen bei denen weg, die du nicht willst.",
+      "pick": "{{name}} zum Projekt hinzufügen",
+      "on-stage": "Auf der Bühne",
+      "previous": "Vorherige Szene",
+      "next": "Nächste Szene",
+      "autoplay": "Szenen nacheinander abspielen, je 8 Takte",
+      "discard": "Verwerfen",
+      "add-scenes": "Zum Projekt hinzufügen ({{count}})",
+      "start-title": "Lass die KI deine Show beleuchten",
+      "start-text": "Deine {{count}} Geräte sind bereit. Beschreibe die Musik und die Stimmung, und die KI gestaltet die Szenen und Presets dafür.",
+      "start-no-fixtures": "Füge deine Geräte im Gerätepool hinzu, dann gestaltet die KI die Szenen und Presets dafür.",
+      "more": "Weitere Szenen mit KI gestalten",
+      "tip-title": "Lass die KI deine Looks gestalten",
+      "tip-text": "Erzähl ihr vom Song und der Stimmung. Sie gestaltet Szenen für deine {{count}} Geräte, und du siehst sie dir auf der Bühne an, bevor etwas hinzugefügt wird.",
+      "tip-try": "Ausprobieren",
+      "tip-later": "Nicht jetzt"
     }
   }
 }

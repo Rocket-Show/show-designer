@@ -4,3 +4,43 @@
   font-size: 0.8em;
   white-space: nowrap;
 }
+
+/* the AI designs the looks: a card while nothing is designed yet */
+.scene-ai-start {
+  margin: var(--sd-space-2);
+  padding: var(--sd-space-3);
+  text-align: center;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-2);
+}
+
+.scene-ai-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--sd-space-2);
+  border-radius: 50%;
+  color: var(--sd-primary);
+  background-color: rgba(253, 126, 20, 0.15);
+}
+
+/* and a row below the scenes afterwards */
+.scene-ai-more {
+  display: block;
+  width: calc(100% - 2 * var(--sd-space-2));
+  margin: var(--sd-space-2);
+  padding: var(--sd-space-1) var(--sd-space-2);
+  border: 1px dashed var(--sd-primary);
+  border-radius: var(--sd-radius-sm);
+  background-color: rgba(253, 126, 20, 0.08);
+  color: var(--sd-primary);
+  font: inherit;
+}
+
+/* the scenes scroll above the card or the row of the AI looks */
+.card-body {
+  min-height: 0;
+}

@@ -135,7 +135,9 @@
       "hidden": "Vista previa oculta",
       "hidden-hint": "El escenario no se renderiza mientras la vista previa está oculta.",
       "glow-off": "Desactivar el halo de las luces para ahorrar rendimiento",
-      "glow-on": "Activar el halo de las luces"
+      "glow-on": "Activar el halo de las luces",
+      "ai": "Vista previa de la IA",
+      "ai-not-added": "Aún no está en tu proyecto"
     },
     "preset": {
       "title": "Preajustes",
@@ -749,7 +751,8 @@
       "title-timeline": "Línea de tiempo",
       "step-timeline": "Puedes colocar escenas en la línea de tiempo y reproducirlas sincronizadas con un archivo de audio. ⏱ Dicho archivo equivale a una composición en el dispositivo Rocket Show. Tu espectáculo de luces se reproducirá automáticamente con tu composición si los nombres coinciden.",
       "title-finish": "¡Bien hecho!",
-      "step-finish": "¡Ya es hora de que lo intentes por ti mismo! Comparte tus espectáculos con tus amigos y mira qué piensan. 👫"
+      "step-finish": "¡Ya es hora de que lo intentes por ti mismo! Comparte tus espectáculos con tus amigos y mira qué piensan. 👫",
+      "ai": "¿Sin tiempo para el recorrido? Añade tus aparatos y deja que la IA diseñe los presets y las escenas para ellos, según tu música y tu ambiente."
     },
     "hardware-promo": {
       "preview-badge": "Simulación",
@@ -911,7 +914,6 @@
       "change-placeholder": "p. ej. Más cálido y menos movimiento en la estrofa",
       "change-button": "Cambiar",
       "design": "Diseñar",
-      "add": "Añadir al proyecto",
       "added": "{{scenes}} escenas y {{presets}} presets añadidos.",
       "requests-left": "Quedan {{left}} de {{limit}} solicitudes hoy",
       "error": {
@@ -924,7 +926,24 @@
         "ai-refused": "La IA rechazó esta solicitud. Describe los looks de otra manera.",
         "ai-incomplete": "La respuesta fue demasiado larga. Pide menos escenas.",
         "ai-failed": "Algo salió mal. Inténtalo de nuevo."
-      }
+      },
+      "close": "Cerrar",
+      "preview-hint": "Haz clic en una escena para verla en el escenario. Desmarca las que no quieras.",
+      "pick": "Añadir {{name}} al proyecto",
+      "on-stage": "En el escenario",
+      "previous": "Escena anterior",
+      "next": "Escena siguiente",
+      "autoplay": "Reproducir las escenas una tras otra, 8 compases cada una",
+      "discard": "Descartar",
+      "add-scenes": "Añadir al proyecto ({{count}})",
+      "start-title": "Deja que la IA ilumine tu show",
+      "start-text": "Tus {{count}} aparatos están listos. Describe la música y el ambiente, y la IA diseña las escenas y los presets para ellos.",
+      "start-no-fixtures": "Añade tus aparatos al pool y deja que la IA diseñe las escenas y los presets para ellos.",
+      "more": "Diseñar más escenas con IA",
+      "tip-title": "Deja que la IA diseñe tus looks",
+      "tip-text": "Cuéntale la canción y el ambiente. Diseña escenas para tus {{count}} aparatos, y las ves en el escenario antes de añadir nada.",
+      "tip-try": "Probar",
+      "tip-later": "Ahora no"
     }
   }
 }

@@ -135,7 +135,9 @@
       "hidden": "Anteprima nascosta",
       "hidden-hint": "Il palco non viene renderizzato mentre l'anteprima è nascosta.",
       "glow-off": "Disattiva l'alone delle luci per risparmiare prestazioni",
-      "glow-on": "Attiva l'alone delle luci"
+      "glow-on": "Attiva l'alone delle luci",
+      "ai": "Anteprima dell'IA",
+      "ai-not-added": "Non ancora nel tuo progetto"
     },
     "preset": {
       "title": "Preset",
@@ -749,7 +751,8 @@
       "title-timeline": "Timeline",
       "step-timeline": "Puoi posizionare le scene sulla timeline e riprodurle in sincronia con un file audio. ⏱ Tale file equivale a una composizione sul dispositivo Rocket Show. Il tuo spettacolo luminoso verrà riprodotto automaticamente con la tua composizione se i nomi corrispondono.",
       "title-finish": "Ben fatto!",
-      "step-finish": "È ora che tu lo provi da solo! Condividi i tuoi spettacoli con i tuoi amici e guarda cosa ne pensano. 👫"
+      "step-finish": "È ora che tu lo provi da solo! Condividi i tuoi spettacoli con i tuoi amici e guarda cosa ne pensano. 👫",
+      "ai": "Non hai tempo per il tour? Aggiungi i tuoi dispositivi e lascia che l'IA progetti i preset e le scene per loro, in base alla tua musica e alla tua atmosfera."
     },
     "hardware-promo": {
       "preview-badge": "Simulazione",
@@ -911,7 +914,6 @@
       "change-placeholder": "es. Più caldo e meno movimento nella strofa",
       "change-button": "Modifica",
       "design": "Progetta",
-      "add": "Aggiungi al progetto",
       "added": "{{scenes}} scene e {{presets}} preset aggiunti.",
       "requests-left": "Ancora {{left}} richieste su {{limit}} oggi",
       "error": {
@@ -924,7 +926,24 @@
         "ai-refused": "L'IA ha rifiutato questa richiesta. Descrivi i look in un altro modo.",
         "ai-incomplete": "La risposta era troppo lunga. Chiedi meno scene.",
         "ai-failed": "Qualcosa è andato storto. Riprova."
-      }
+      },
+      "close": "Chiudi",
+      "preview-hint": "Fai clic su una scena per vederla sul palco. Togli la spunta a quelle che non vuoi.",
+      "pick": "Aggiungi {{name}} al progetto",
+      "on-stage": "Sul palco",
+      "previous": "Scena precedente",
+      "next": "Scena successiva",
+      "autoplay": "Riproduci le scene una dopo l'altra, 8 battute ciascuna",
+      "discard": "Scarta",
+      "add-scenes": "Aggiungi al progetto ({{count}})",
+      "start-title": "Lascia che l'IA illumini il tuo show",
+      "start-text": "I tuoi {{count}} dispositivi sono pronti. Descrivi la musica e l'atmosfera, e l'IA progetta le scene e i preset per loro.",
+      "start-no-fixtures": "Aggiungi i tuoi dispositivi al pool, poi lascia che l'IA progetti le scene e i preset per loro.",
+      "more": "Progetta altre scene con l'IA",
+      "tip-title": "Lascia che l'IA progetti i tuoi look",
+      "tip-text": "Raccontale la canzone e l'atmosfera. Progetta scene per i tuoi {{count}} dispositivi, e le vedi sul palco prima che venga aggiunto qualcosa.",
+      "tip-try": "Prova",
+      "tip-later": "Non ora"
     }
   }
 }

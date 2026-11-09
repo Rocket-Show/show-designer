@@ -25,6 +25,16 @@
   <div class="card-body h-100">
     <p>{{ 'designer.intro.step-' + introService.activeStep | translate }}</p>
 
+    <!-- or the AI designs the looks -->
+    @if (offersAi) {
+    <div class="intro-ai">
+      <p class="mb-2">{{ 'designer.intro.ai' | translate }}</p>
+      <button type="button" class="btn btn-primary btn-sm" (click)="startAi()">
+        <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.ai.title' | translate }}
+      </button>
+    </div>
+    }
+
     <!-- the user just walked through the whole designer: a good moment to mention the hardware -->
     @if (introService.activeStep == 'finish' && hardwarePromoService.enabled) {
     <p class="mb-0">

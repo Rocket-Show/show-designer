@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { AiLooks, AiLooksRequest, AiLooksResponse, AiLooksStatus, AiRig, AiSettings } from '../models/ai-looks';
 import { AiCompiled, aiRotationPercentage, compileAiLooks, genericStrobePercentage } from '../models/ai-looks-compiler';
 import { AiWheelGobo, buildAiRig, getWheelGobos } from '../models/ai-rig';
@@ -9,6 +9,7 @@ import { getPositionedCapability, getPropertyRank } from '../models/capability-p
 import { EffectCurve } from '../models/effect-curve';
 import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
+import { Preset } from '../models/preset';
 import { Scene } from '../models/scene';
 import { ColorService } from './color.service';
 import { FixtureService } from './fixture.service';
@@ -18,6 +19,7 @@ import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
 import { TimelineService } from './timeline.service';
 import { UndoService } from './undo.service';
+import { UserEnsureLoginService } from './user-ensure-login.service';
 import { UserService } from './user.service';
 import { UuidService } from './uuid.service';
 
@@ -27,8 +29,12 @@ import { UuidService } from './uuid.service';
   providedIn: 'root',
 })
 export class AiLooksService {
-  // what the user picked and got the last time the dialog was open, to start from the next time
+  // what the user picked and got the last time the panel was open, to start from the next time
   last: { settings: AiSettings; prompt: string; looks: AiLooks };
+
+  // whether the panel of the AI looks is open beside the designer (see AiLooksComponent), and when it opens or closes
+  panelOpen = false;
+  panelToggled = new Subject<boolean>();
 
   constructor(
     private http: HttpClient,
@@ -41,8 +47,15 @@ export class AiLooksService {
     private colorService: ColorService,
     private timelineService: TimelineService,
     private undoService: UndoService,
-    private uuidService: UuidService
+    private uuidService: UuidService,
+    private userEnsureLoginService: UserEnsureLoginService
   ) {}
+
+  // Opens the panel, for a logged in user: like saving a project, the AI looks need one. A user who isn't is asked to
+  // log in (or to register) first.
+  start() {
+    this.userEnsureLoginService.login().subscribe(() => this.openPanel());
+  }
 
   // can the AI looks be used, and how many requests the user has left
   getStatus(): Observable<AiLooksStatus> {
@@ -53,6 +66,37 @@ export class AiLooksService {
     return this.http.post<AiLooksResponse>('ai-looks', JSON.stringify(request), {
       headers: (this.userService.getHeaders() || new HttpHeaders()).set('Content-Type', 'application/json'),
     });
+  }
+
+  // whether the user has seen the tip about the AI looks, shown once (see DesignerComponent)
+  get tipSeen(): boolean {
+    try {
+      return localStorage.getItem('aiTipSeen') === 'true';
+    } catch {
+      return true;
+    }
+  }
+
+  dismissTip() {
+    try {
+      localStorage.setItem('aiTipSeen', 'true');
+    } catch {
+      // without a storage, the tip isn't shown anyway
+    }
+  }
+
+  openPanel() {
+    if (!this.panelOpen) {
+      this.panelOpen = true;
+      this.panelToggled.next(true);
+    }
+  }
+
+  closePanel() {
+    if (this.panelOpen) {
+      this.panelOpen = false;
+      this.panelToggled.next(false);
+    }
   }
 
   // the fixtures of the project in groups (see ai-rig)
@@ -88,11 +132,11 @@ export class AiLooksService {
     return request;
   }
 
-  // The presets and scenes of the looks, added to the project in a folder of the presets and one of the scenes named
-  // after them, as one step to undo. The first scene is selected, which previews it, and its topmost preset is edited.
-  addToProject(looks: AiLooks, rig: AiRig, bpm: number): AiCompiled {
+  // The presets and scenes of the looks for the fixtures of the project, made to play and to add, but not added yet
+  compile(looks: AiLooks, rig: AiRig, bpm: number): AiCompiled {
     const project = this.projectService.project;
-    const compiled = compileAiLooks(looks, {
+
+    return compileAiLooks(looks, {
       stageWidthCm: project.stageWidthCm,
       stageDepthCm: project.stageDepthCm,
       stageFloorHeightCm: project.stageFloorHeightCm,
@@ -103,22 +147,49 @@ export class AiLooksService {
       strobeValues: (fixtureUuids, effect, flashesPerSecond) => this.getStrobeValues(fixtureUuids, effect, flashesPerSecond),
       goboValues: (fixtureUuids, pattern, rotation) => this.getGoboValues(fixtureUuids, pattern, rotation),
     });
+  }
 
-    if (compiled.presets.length === 0) {
-      return compiled;
+  // the presets of a compiled scene, the topmost one first
+  getScenePresets(compiled: AiCompiled, scene: Scene): Preset[] {
+    return scene.presetUuids.map((uuid) => compiled.presets.find((preset) => preset.uuid === uuid)).filter((preset) => !!preset);
+  }
+
+  // The presets and scenes of the looks, added to the project in a folder of the presets and one of the scenes named
+  // after them, as one step to undo. The first scene is selected, which previews it, and its topmost preset is edited.
+  addToProject(looks: AiLooks, rig: AiRig, bpm: number): AiCompiled {
+    return this.addCompiled(this.compile(looks, rig, bpm), looks.name);
+  }
+
+  // The passed scenes of compiled looks (all of them, if none are passed) with the presets they play, added to the
+  // project in folders named after the looks, as one step to undo. The passed scene to play (else the first one added)
+  // is selected, which previews it, and its topmost preset is edited. What was added.
+  addCompiled(compiled: AiCompiled, name: string, scenes?: Scene[], play?: Scene): AiCompiled {
+    const project = this.projectService.project;
+    const added: AiCompiled = {
+      presets: [],
+      scenes: scenes ? compiled.scenes.filter((scene) => scenes.indexOf(scene) >= 0) : compiled.scenes,
+    };
+    added.presets = compiled.presets.filter((preset) => added.scenes.some((scene) => scene.presetUuids.indexOf(preset.uuid) >= 0));
+
+    if (!scenes) {
+      // all of the looks: the presets no scene plays as well
+      added.presets = compiled.presets;
     }
 
-    const name = looks.name || 'AI looks';
-    const presetFolder = this.folderService.createFolder(project.presetFolders, project.presets, name);
-    const sceneFolder = this.folderService.createFolder(project.sceneFolders, project.scenes, name);
+    if (added.presets.length === 0 && added.scenes.length === 0) {
+      return added;
+    }
 
-    compiled.presets.forEach((preset, index) => {
+    const presetFolder = this.folderService.createFolder(project.presetFolders, project.presets, name || 'AI looks');
+    const sceneFolder = this.folderService.createFolder(project.sceneFolders, project.scenes, name || 'AI looks');
+
+    added.presets.forEach((preset, index) => {
       preset.folderUuid = presetFolder.uuid;
       preset.sortIndex = index;
       project.presets.push(preset);
     });
 
-    compiled.scenes.forEach((scene: Scene, index) => {
+    added.scenes.forEach((scene: Scene, index) => {
       scene.folderUuid = sceneFolder.uuid;
       scene.sortIndex = index;
       scene.color = this.colorService.getNewSceneColor(project.scenes.length);
@@ -131,16 +202,17 @@ export class AiLooksService {
     this.presetService.presetsChanged.next();
     this.sceneService.scenesChanged.next();
 
-    // the first scene plays, its topmost preset is the one the editor shows
-    if (compiled.scenes.length > 0) {
-      const first = compiled.scenes[0];
-      const preset = compiled.presets.find((candidate) => candidate.uuid === first.presetUuids[0]) || compiled.presets[0];
+    // the scene to play, its topmost preset is the one the editor shows
+    const first = added.scenes.indexOf(play) >= 0 ? play : added.scenes[0];
+
+    if (first) {
+      const preset = added.presets.find((candidate) => candidate.uuid === first.presetUuids[0]) || added.presets[0];
       this.sceneService.selectScenes([first], preset);
     }
 
     this.undoService.captureChanges();
 
-    return compiled;
+    return added;
   }
 
   // The strobe of the fixtures of a preset flashing in an effect, as fast as asked on every model: each model takes its

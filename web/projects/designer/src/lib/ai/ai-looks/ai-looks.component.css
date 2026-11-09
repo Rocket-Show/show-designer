@@ -1,6 +1,73 @@
+/* the panel beside the designer: its header and footer stay, the rest scrolls */
+:host {
+  display: block;
+  height: 100%;
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .ai-looks {
-  max-height: 70vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+}
+
+.ai-panel-footer {
+  gap: var(--sd-space-1);
+}
+
+.ai-looks-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* a scene of the looks: picked to add or not, and played on the stage with a click */
+.ai-scene {
+  gap: var(--sd-space-2);
+  margin-bottom: var(--sd-space-1);
+  padding: var(--sd-space-2);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-sm);
+  background-color: var(--sd-surface-2);
+}
+
+.ai-scene-playing {
+  border-color: var(--sd-primary);
+}
+
+.ai-scene-pick {
+  margin-top: 4px;
+  accent-color: var(--sd-primary);
+}
+
+.ai-scene-play {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-on-stage {
+  display: block;
+  margin-top: 2px;
+  color: var(--sd-primary);
+}
+
+.ai-player .custom-control-label {
+  font-size: 0.875rem;
 }
 
 .ai-chips {

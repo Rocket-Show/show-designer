@@ -1177,6 +1177,78 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     flex-direction: column;
   }
 
+  // the rows beside the panel of the AI looks, which takes room from them while it is open
+  .designer-main > .designer-rows {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .designer-ai-panel {
+    flex: 0 0 380px;
+    width: 380px;
+    min-height: 0;
+    padding: $sd-space-3 $sd-space-3 $sd-space-3 0;
+  }
+
+  // in a narrow window and on a phone, the panel lies over the designer
+  @media (max-width: 1100px) {
+    .designer-ai-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1040;
+      width: min(100%, 420px);
+      padding: $sd-space-2;
+      background-color: $sd-bg;
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  // the button opening the AI looks stands out in the menu bar, and shows while the panel is open
+  .ai-start-button {
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .ai-start-button-open {
+    box-shadow: 0 0 0 3px rgba($sd-primary, 0.35);
+  }
+
+  // the tip about the AI looks, pointing at their button
+  .ai-start {
+    position: relative;
+  }
+
+  .ai-tip {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 1030;
+    width: 300px;
+    padding: $sd-space-3;
+    border: 1px solid $sd-primary;
+    border-radius: $sd-radius-sm;
+    background-color: $sd-surface-2;
+    color: $sd-text;
+    white-space: normal;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .ai-tip::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    right: 40px;
+    width: 12px;
+    height: 12px;
+    transform: rotate(45deg);
+    border-left: 1px solid $sd-primary;
+    border-top: 1px solid $sd-primary;
+    background-color: $sd-surface-2;
+  }
+
   .designer-rows > .split-vertical {
     flex: 0 1 auto;
     min-height: 0;

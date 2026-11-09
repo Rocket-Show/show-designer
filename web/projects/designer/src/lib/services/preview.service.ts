@@ -7,6 +7,8 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
+import { Scene } from '../models/scene';
+import { ScenePlaybackRegion } from '../models/scene-playback-region';
 import { getPresetTimes, getSceneTimes, PresetRegionScene } from '../models/preset-region-scene';
 import { PresetStep } from '../models/preset-step';
 import { PresetStepState } from '../models/preset-step-state';
@@ -171,6 +173,11 @@ export class PreviewService implements OnDestroy {
     localStorage.setItem(PREVIEW_GLOW_STORAGE_KEY, glow ? 'true' : 'false');
   }
 
+  // The scene of the AI looks being previewed (see AiLooksPanelComponent): the stage plays it in place of the scenes or
+  // the preset picked, like a scene triggered at the moment it was picked, until the preview ends. Neither the scene
+  // nor its presets are in the project.
+  private aiPreview: { scene: Scene; presets: Preset[]; region: ScenePlaybackRegion };
+
   constructor(
     private presetService: PresetService,
     private presetStepService: PresetStepService,
@@ -217,11 +224,37 @@ export class PreviewService implements OnDestroy {
     });
   }
 
+  // Plays the passed scene of the AI looks with its presets (the topmost one first) on the stage, faded in and running
+  // from the passed time on (see aiPreview)
+  previewAiScene(scene: Scene, presets: Preset[], timeMillis: number) {
+    this.aiPreview = { scene, presets, region: new ScenePlaybackRegion({ startMillis: timeMillis, endMillis: Infinity }) };
+  }
+
+  endAiPreview() {
+    this.aiPreview = undefined;
+  }
+
+  // the scene of the AI looks the stage plays, if it plays one
+  get aiPreviewScene(): Scene {
+    return this.aiPreview?.scene;
+  }
+
+  // The hold points of the timeline a preset runs on through: none for a scene of the AI looks, which plays outside the
+  // timeline
+  private getHolds(preset: PresetRegionScene) {
+    return this.aiPreview && preset.region === this.aiPreview.region ? [] : this.timelineService.holds;
+  }
+
   public getPresets(timeMillis: number): PresetRegionScene[] {
     // Get relevant presets in correct order to process with their corresponding scene, if available
     let presets: PresetRegionScene[] = [];
 
-    if (this.timelineService.playState === 'playing') {
+    if (this.aiPreview && this.timelineService.playState !== 'playing') {
+      // the topmost preset is the last one to play, over the ones below it
+      for (let index = this.aiPreview.presets.length - 1; index >= 0; index--) {
+        presets.push(new PresetRegionScene(this.aiPreview.presets[index], this.aiPreview.region, this.aiPreview.scene));
+      }
+    } else if (this.timelineService.playState === 'playing') {
       // Only use active presets in current regions
       presets = this.timelineService.getPresetsInTime(timeMillis);
     } else {
@@ -323,7 +356,7 @@ export class PreviewService implements OnDestroy {
 
     if (preset.region) {
       const startMillis = this.getPresetStartMillis(preset);
-      const heldMillis = getHeldMillis(this.timelineService.holds, startMillis, timeMillis);
+      const heldMillis = getHeldMillis(this.getHolds(preset), startMillis, timeMillis);
 
       if (followsBeat) {
         const presetTimeMillis = timeMillis - startMillis + heldMillis;
@@ -764,7 +797,7 @@ export class PreviewService implements OnDestroy {
     if (preset.region) {
       // the effects keep running through the holds of the timeline
       effectTimeMillis =
-        timeMillis - preset.region.startMillis + getHeldMillis(this.timelineService.holds, preset.region.startMillis, timeMillis);
+        timeMillis - preset.region.startMillis + getHeldMillis(this.getHolds(preset), preset.region.startMillis, timeMillis);
     }
 
     for (const effect of preset.preset.effects) {

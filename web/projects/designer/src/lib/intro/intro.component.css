@@ -16,3 +16,11 @@
   height: auto !important;
   max-height: 60vh;
 }
+
+/* the offer to let the AI design the looks */
+.intro-ai {
+  margin-bottom: var(--sd-space-3);
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border: 1px solid var(--sd-primary);
+  border-radius: var(--sd-radius-sm);
+}

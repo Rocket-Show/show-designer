@@ -23,9 +23,17 @@
        the same icon the scene tree gives them, the solo preset the one of the switch
        which puts it on its own. -->
   <div class="preview-target">
+    @if (previewService.aiPreviewScene; as aiScene) {
+    <!-- a scene of the AI looks, played before it is added -->
+    <i class="fa fa-fw fa-magic" aria-hidden="true"></i>
+    <span class="preview-target-type">{{ 'designer.preview.ai' | translate }}</span>
+    <span class="preview-target-name">{{ aiScene.name }}</span>
+    <span class="preview-ai-badge">{{ 'designer.preview.ai-not-added' | translate }}</span>
+    } @else {
     <i class="fa fa-fw" [class.fa-headphones]="soloPreset()" [class.fa-picture-o]="!soloPreset()" aria-hidden="true"></i>
     <span class="preview-target-type">{{ (soloPreset() ? 'designer.preview.solo' : 'designer.preview.scene') | translate }}</span>
     <span class="preview-target-name">{{ previewName() }}</span>
+    }
   </div>
 
   <!-- the glow around the lights, which costs a bit of performance -->
