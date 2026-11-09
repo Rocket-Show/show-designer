@@ -145,15 +145,17 @@ describe('compileAiLooks', () => {
     expect(together.phasingMode).toBe('millis');
     expect(together.phasingMillis).toBe(0);
     expect(together.lengthMillis).toBe(1000);
-    // without a dimmer of its own the curve pulses from full
+    // the curve pulses the brightness of the scene, all of it at its top
     expect(together.position + together.amplitude / 2).toBe(1);
+    expect(together.position - together.amplitude / 2).toBe(0);
 
     const fanned = compileOne({
       dimmerFan: { shape: 'linear', from: 0, to: 0.8 },
       dimmerEffect: { curve: 'triangle', beats: 1, depth: 0.5, width: 0.5, chase: 'spread' },
     }).effects[0] as EffectCurve;
-    // from the brightness in the middle of the fan
-    expect(fanned.position + fanned.amplitude / 2).toBeCloseTo(0.4, 6);
+    // the fan of the preset is the brightness it pulses, down to half of it
+    expect(fanned.position + fanned.amplitude / 2).toBeCloseTo(1, 6);
+    expect(fanned.position - fanned.amplitude / 2).toBeCloseTo(0.5, 6);
   });
 
   it('paints the pixels in the shades of the color of the preset, unless a palette of the designer or of its own is given', () => {

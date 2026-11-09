@@ -1319,9 +1319,10 @@ function channelValuesMixingEdges() {
   });
 
   // Colors fading in over a par lit blue at half below them: each fading preset lets its par light
-  // as bright as its own dimmer (one for its profile, a dimmer without a value doesn't count), a
-  // curve on the dimmer or else the dimmer below, while it blends its color with the blue. A curve
-  // only on a color or on channels, or an effect which is no curve, leaves the dimmer below alone.
+  // as bright as its own dimmer (one for its profile, a dimmer without a value doesn't count) or
+  // else the dimmer below, which a curve on the dimmer pulses, while it blends its color with the
+  // blue. A curve only on a color or on channels, or an effect which is no curve, leaves the dimmer
+  // below alone.
   const pars = ['own-dimmer', 'dimmer-without-value', 'curve-on-dimmer', 'curve-on-color', 'curve-on-channels', 'pan-tilt'];
   const fading = {
     'own-dimmer': { values: [capability('Intensity', 1, { profileUuid: 'test/rgb-par' })], effects: [] },
@@ -1405,6 +1406,42 @@ function channelValuesMixingEdges() {
         }
       ),
       runs: [{ preview: { mode: 'timeline', composition: 'Song' }, times: [0, 250, 500, 999, 1000, 3000] }],
+    },
+  });
+
+  // A curve on the dimmer pulses the brightness the presets light the pars with, whichever preset does it: one below
+  // the curve, one above it or its own. Without any, the curve lights the pars on its own, from 0 to full.
+  const pulsed = [0, 1, 2, 3].map((index) => edgeFixture('pulsed-' + index, 'test/rgb-par', '6ch', index));
+  const pulsedFixtures = pulsed.map((par) => ({ fixtureUuid: par.uuid }));
+  const pulse = (uuid) => ({
+    type: 'curve',
+    uuid,
+    curveType: 'sine',
+    lengthMillis: 2000,
+    capabilities: [{ type: 'Intensity' }],
+    channels: [],
+  });
+  const pulsePresets = [
+    edgePreset('half', pulsedFixtures, { fixtureCapabilityValues: [capability('Intensity', 0.4), ...rgb(0, 0, 1)] }),
+    edgePreset('bright', pulsedFixtures, { fixtureCapabilityValues: [capability('Intensity', 0.9)] }),
+    { ...edgePreset('pulse', pulsedFixtures, {}), effects: [pulse('pulse')] },
+    {
+      ...edgePreset('pulse-own', pulsedFixtures, { fixtureCapabilityValues: [capability('Intensity', 0.6), ...rgb(1, 0, 0)] }),
+      effects: [pulse('own')],
+    },
+  ];
+  const pulseScenes = [
+    { uuid: 'alone', presetUuids: ['pulse'] },
+    { uuid: 'over-half', presetUuids: ['pulse', 'half'] },
+    { uuid: 'under-bright', presetUuids: ['bright', 'pulse', 'half'] },
+    { uuid: 'own', presetUuids: ['pulse-own'] },
+  ].map((scene) => ({ ...scene, name: scene.uuid }));
+
+  cases.push({
+    name: 'curves on the dimmer pulsing the brightness of the presets above and below them',
+    input: {
+      project: edgeProject(['test/rgb-par'], pulsed, pulsePresets, pulseScenes),
+      runs: pulseScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 250, 500, 1000, 1500] })),
     },
   });
 
@@ -1787,12 +1824,26 @@ function channelValuesMovements() {
 
   // A movement runs around where the presets point the heads, whichever preset does it: one below the movement, one
   // above it, or one above the own position of the movement. Without any, around where they point at rest (the default
-  // of their channels). Of two movements, the one on top wins.
+  // of their channels). Of two movements, the one on top wins. A curve on the pan swings the heads around it alike.
   const layeringPresets = [
     edgePreset('aim-left', movingFixtures, { fixtureCapabilityValues: [pan({ valueDegrees: -40 }), tilt({ valueDegrees: 25 })] }),
     { ...edgePreset('sway', movingFixtures, {}), effects: [movement('sway', 'figure8')] },
     { ...edgePreset('own', movingFixtures, { fixtureCapabilityValues: at }), effects: [movement('own', 'circle')] },
     { ...edgePreset('line-on-top', movingFixtures, {}), effects: [movement('line-on-top', 'line', { phasingCycles: 0 })] },
+    {
+      ...edgePreset('swing', movingFixtures, {}),
+      effects: [
+        {
+          type: 'curve',
+          uuid: 'swing',
+          curveType: 'sine',
+          lengthMillis: 2000,
+          amplitude: 0.3,
+          capabilities: [{ type: 'Pan' }],
+          channels: [],
+        },
+      ],
+    },
   ];
   const layeringScenes = [
     { uuid: 'position-below', presetUuids: ['sway', 'aim-left'] },
@@ -1800,6 +1851,8 @@ function channelValuesMovements() {
     { uuid: 'at-rest', presetUuids: ['sway'] },
     { uuid: 'over-its-own', presetUuids: ['aim-left', 'own'] },
     { uuid: 'two-movements', presetUuids: ['line-on-top', 'sway', 'aim-left'] },
+    { uuid: 'curve-over-position', presetUuids: ['swing', 'aim-left'] },
+    { uuid: 'curve-under-position', presetUuids: ['aim-left', 'swing'] },
   ].map((scene) => ({ ...scene, name: scene.uuid }));
 
   cases.push({
@@ -2926,6 +2979,48 @@ function channelValuesPixelEffects() {
     input: {
       project: timeline,
       runs: [{ preview: { mode: 'timeline', composition: 'Song' }, times: [0, 499, 1250, 2950, 3100, 6500, 9001.5, 14000, 26500] }],
+    },
+  });
+
+  // A pixel effect in the shades of the color of its preset, or blended with it, follows the color all the presets put
+  // on the pixels: one above it as well. A pixel effect in colors of its own of a preset above covers it.
+  const barParts = fixtures
+    .filter((fixture) => fixture.uuid === 'bar-1')
+    .flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(bar)));
+  const chase = (uuid, extra = {}) => ({
+    type: 'pixel',
+    uuid,
+    pattern: 'chase',
+    size: 0.5,
+    softness: 0.5,
+    lengthMillis: 2000,
+    capabilities: [],
+    channels: [],
+    ...extra,
+  });
+  const layered = [
+    edgePreset('orange', barParts, { fixtureCapabilityValues: rgb(1, 0.5, 0) }),
+    edgePreset('blue', barParts, { fixtureCapabilityValues: rgb(0, 0, 1) }),
+    { ...edgePreset('shades', barParts, {}), effects: [chase('shades', { palette: { ref: 'preset' } })] },
+    { ...edgePreset('own-colors', barParts, {}), effects: [chase('own-colors', { palette: pixelPalettes[1] })] },
+    { ...edgePreset('added', barParts, {}), effects: [chase('added', { palette: pixelPalettes[1], blend: 'add' })] },
+  ];
+  const layeredScenes = [
+    { uuid: 'shades-under-orange', presetUuids: ['orange', 'shades', 'blue'] },
+    { uuid: 'shades-covered', presetUuids: ['own-colors', 'orange', 'shades'] },
+    { uuid: 'added-under-orange', presetUuids: ['orange', 'added'] },
+  ].map((scene) => ({ ...scene, name: scene.uuid }));
+
+  cases.push({
+    name: 'in the colors of the presets above and below them',
+    input: {
+      project: edgeProject(
+        [bar],
+        fixtures.filter((fixture) => fixture.uuid === 'bar-1'),
+        layered,
+        layeredScenes
+      ),
+      runs: layeredScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 400, 900] })),
     },
   });
 

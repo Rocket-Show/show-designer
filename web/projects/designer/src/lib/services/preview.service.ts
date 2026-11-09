@@ -3,7 +3,7 @@ import { Subject, Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { CachedFixture } from '../models/cached-fixture';
 import { EffectCurve } from '../models/effect-curve';
-import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
+import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Preset } from '../models/preset';
@@ -34,6 +34,7 @@ import {
   getAxisChannelValue,
   getAxisDegrees,
   getAxisRange,
+  getPanTiltDegrees,
   getStagePlacements,
   isPanTilt,
   PanTiltContext,
@@ -66,13 +67,42 @@ const PREVIEW_GLOW_STORAGE_KEY = 'previewGlow';
 // the layer of the scene the lights which glow are on as well (the LEDs and the lenses), see PreviewComponent.render
 export const PREVIEW_GLOW_LAYER = 1;
 
-// A movement of the moving heads, played once all the presets are mixed (see mixMovements)
-interface PendingMovement {
-  effect: EffectPanTilt;
+// An effect following what the presets give a fixture, played once all of them are mixed (see mixFollowingEffects): a
+// movement, a curve on the pan, the tilt or the dimmer (its capabilities following the presets), or a pixel effect in
+// the colors of the preset or blended with them
+interface FollowingEffect {
+  effect: EffectPanTilt | EffectCurve | EffectPixel;
+  capabilities?: FixtureCapability[];
   effectTimeMillis: number;
   preset: PresetRegionScene;
   intensityPercentage: number;
   context: PanTiltContext;
+  wholeFixtureIndex: number;
+  wholeFixtureCount: number;
+  // the place of its preset among the presets played, from the bottom
+  layer: number;
+}
+
+interface FollowingEffects {
+  effects: FollowingEffect[];
+  // the topmost preset playing a pixel effect in colors of its own on the fixture, which covers the pixel effects of
+  // the presets below it following the presets
+  coveringPixelLayer: number;
+}
+
+// whether a curve on the capability follows what the presets give a fixture: the pan and the tilt swing around where
+// they point it, the dimmer pulses the brightness they light it with
+function followsPresets(capability: FixtureCapability): boolean {
+  return (
+    capability.type === FixtureCapabilityType.Intensity ||
+    capability.type === FixtureCapabilityType.Pan ||
+    capability.type === FixtureCapabilityType.Tilt
+  );
+}
+
+// whether a pixel effect follows the color the presets give a pixel: in its shades, or blended with it
+function pixelFollowsPresets(effect: EffectPixel): boolean {
+  return effect.palette.ref === 'preset' || effect.blend !== 'replace';
 }
 
 @Injectable({
@@ -790,7 +820,8 @@ export class PreviewService implements OnDestroy {
     context: PanTiltContext,
     wholeFixtureIndex: number,
     wholeFixtureCount: number,
-    movements: PendingMovement[]
+    following: FollowingEffects,
+    layer: number
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -806,24 +837,42 @@ export class PreviewService implements OnDestroy {
       const effectIntensityPercentage = intensityPercentage * effectAmount;
 
       if (effect.visible && effectAmount > 0) {
-        // a movement runs around where all the presets point the heads, see mixMovements
+        // the effects following what all the presets give the fixture, see mixFollowingEffects
+        const followingEffect: FollowingEffect = {
+          effect: undefined,
+          effectTimeMillis,
+          preset,
+          intensityPercentage: effectIntensityPercentage,
+          context,
+          wholeFixtureIndex,
+          wholeFixtureCount,
+          layer,
+        };
+
+        // a movement runs around where all the presets point the heads
         if (effect instanceof EffectPanTilt) {
-          movements.push({ effect, effectTimeMillis, preset, intensityPercentage: effectIntensityPercentage, context });
+          following.effects.push({ ...followingEffect, effect });
           continue;
         }
 
         // a pixel effect chases from one fixture to the next, with all of their pixels
         if (effect instanceof EffectPixel) {
-          this.mixPixelEffect(
-            effect,
-            effectTimeMillis,
-            preset,
-            cachedFixture,
-            values,
-            effectIntensityPercentage,
-            wholeFixtureIndex,
-            wholeFixtureCount
-          );
+          if (pixelFollowsPresets(effect)) {
+            following.effects.push({ ...followingEffect, effect });
+          } else if (
+            this.mixPixelEffect(
+              effect,
+              effectTimeMillis,
+              preset,
+              cachedFixture,
+              values,
+              effectIntensityPercentage,
+              wholeFixtureIndex,
+              wholeFixtureCount
+            )
+          ) {
+            following.coveringPixelLayer = Math.max(following.coveringPixelLayer, layer);
+          }
           continue;
         }
 
@@ -832,6 +881,11 @@ export class PreviewService implements OnDestroy {
           const effectCurve = effect as EffectCurve;
           const beatsPerMinute = this.getBeatsPerMinute();
           const curveTimeMillis = this.getCurveTimeMillis(effectCurve, effectTimeMillis, preset, fixtureCount, beatsPerMinute);
+          const followingCapabilities = effectCurve.capabilities.filter((capability) => followsPresets(capability));
+
+          if (followingCapabilities.length > 0) {
+            following.effects.push({ ...followingEffect, effect: effectCurve, capabilities: followingCapabilities });
+          }
 
           // capabilities, swung as far as the place of the fixture in the fan of the preset says
           const curveValue = effectCurve.getFannedValue(
@@ -841,7 +895,7 @@ export class PreviewService implements OnDestroy {
 
           // the curve does not apply anymore after it has finished running
           if (curveValue !== undefined) {
-            for (const capability of effectCurve.capabilities) {
+            for (const capability of effectCurve.capabilities.filter((candidate) => !followsPresets(candidate))) {
               const capabilityValue = effectCurve.getCapabilityValue(capability, curveValue);
 
               for (const cachedChannel of cachedFixture.channels) {
@@ -901,15 +955,16 @@ export class PreviewService implements OnDestroy {
     values: FixtureChannelValue[],
     effectIntensityPercentage: number,
     fixtureIndex: number,
-    fixtureCount: number
-  ) {
+    fixtureCount: number,
+    baseValues: FixtureChannelValue[] = values
+  ): boolean {
     const channels = [FixtureCapabilityColor.Red, FixtureCapabilityColor.Green, FixtureCapabilityColor.Blue].map((color) =>
       this.getColorChannel(cachedFixture, color)
     );
     const whiteDimmer = channels.every((channel) => !channel) ? this.getWhitePixelDimmer(cachedFixture) : undefined;
 
     if (channels.every((channel) => !channel) && !whiteDimmer) {
-      return;
+      return false;
     }
 
     const beatsPerMinute = this.getBeatsPerMinute();
@@ -921,15 +976,15 @@ export class PreviewService implements OnDestroy {
 
     // the effect does not apply anymore after it has finished running
     if (cycles === undefined) {
-      return;
+      return false;
     }
 
-    // the color the preset puts on the part, as red, green and blue between 0 and 1 (white at full on a pixel lighting
-    // in white only, which its dimmer dims)
+    // the color the presets put on the part (all of them, for an effect following them), as red, green and blue between
+    // 0 and 1 (white at full on a pixel lighting in white only, which its dimmer dims)
     const base = whiteDimmer
       ? [1, 1, 1]
       : channels.map((channel) => {
-          const value = channel ? this.getChannelValue(values, channel.name, cachedFixture.profile.uuid) : undefined;
+          const value = channel ? this.getChannelValue(baseValues, channel.name, cachedFixture.profile.uuid) : undefined;
           return value ? value.value / channel.maxValue : 0;
         });
 
@@ -967,7 +1022,7 @@ export class PreviewService implements OnDestroy {
     // A pixel lighting in white only lights as bright as the brightest of the red, green and blue of the light, blended
     // with the white at full the preset puts on it, and dimmed by its dimmer, like a pixel lighting in colors is
     if (whiteDimmer) {
-      const value = this.getChannelValue(values, whiteDimmer.name, cachedFixture.profile.uuid);
+      const value = this.getChannelValue(baseValues, whiteDimmer.name, cachedFixture.profile.uuid);
       const dimmer = value ? value.value / whiteDimmer.maxValue : 0;
 
       this.mixPixelValue(
@@ -981,7 +1036,7 @@ export class PreviewService implements OnDestroy {
         effectIntensityPercentage,
         dimmer
       );
-      return;
+      return true;
     }
 
     // the white part of the light on the white LED, if it is to light it
@@ -1003,11 +1058,13 @@ export class PreviewService implements OnDestroy {
     });
 
     if (white) {
-      const value = this.getChannelValue(values, white.name, cachedFixture.profile.uuid);
+      const value = this.getChannelValue(baseValues, white.name, cachedFixture.profile.uuid);
       const baseWhite = value ? value.value / white.maxValue : 0;
 
       this.mixPixelValue(effect, cachedFixture, white, baseWhite, litWhite, level, values, effectIntensityPercentage);
     }
+
+    return true;
   }
 
   // A color of a pixel the effect lights, blended with the one the preset puts on it (base, between 0 and 1): the light
@@ -1305,16 +1362,30 @@ export class PreviewService implements OnDestroy {
     return value;
   }
 
-  // The movements of the moving heads run around where the presets point them, whichever preset does it: the one of
-  // the movement, one below it or one above it. Where they point (the default of the channel without a preset) is the
-  // middle of all the movements, which are mixed in the order of their presets, the one on top over the others. Each
-  // is mirrored with its preset. This follows the same rules as Rocket Show.
-  private mixMovements(movements: PendingMovement[], cachedFixture: CachedFixture, values: FixtureChannelValue[]) {
-    if (movements.length === 0) {
+  // The effects following what the presets give a fixture, whichever preset gives it: the one of the effect, one below
+  // it or one above it. They are mixed in the order of their presets, the one on top over the others.
+  // - A movement and a curve on the pan or the tilt swing the heads around where the presets point them (the default of
+  //   the channel without a preset), each mirrored with its preset.
+  // - A curve on the dimmer pulses the brightness the presets light the fixture with: from none at 0 to all of it at 1.
+  //   Without a preset setting the dimmer, the curve lights it on its own, from 0 to full.
+  // - A pixel effect in the colors of its preset, or blended with them, takes the color all the presets put on a pixel,
+  //   unless a pixel effect in colors of its own of a preset above covers it.
+  // This follows the same rules as Rocket Show.
+  private mixFollowingEffects(
+    following: FollowingEffects,
+    cachedFixture: CachedFixture,
+    values: FixtureChannelValue[],
+    defaultValues: FixtureChannelValue[]
+  ) {
+    if (following.effects.length === 0) {
       return;
     }
 
-    // where the presets point the fixture on each axis, before it moves
+    // what the presets give the fixture, before the effects following them
+    const presetValues = values.slice();
+    const profileUuid = cachedFixture.profile.uuid;
+
+    // where the presets point the fixture on each axis
     const axes: { cachedChannel: CachedFixtureChannel; type: FixtureCapabilityType; range: number; center: number }[] = [];
 
     for (const cachedChannel of cachedFixture.channels) {
@@ -1329,46 +1400,133 @@ export class PreviewService implements OnDestroy {
           continue;
         }
 
-        const value = this.getChannelValue(values, cachedChannel.name, cachedFixture.profile.uuid);
+        const value = this.getChannelValue(presetValues, cachedChannel.name, profileUuid);
         axes.push({ cachedChannel, type, range, center: value ? getAxisDegrees(cachedChannel, range, value.value) : 0 });
       }
     }
 
+    // how bright the presets light the dimmer: full, if none of them sets it (it still has its default value)
+    const dimmer = this.getDimmerChannel(cachedFixture);
+    const dimmerValue = dimmer ? this.getChannelValue(presetValues, dimmer.name, profileUuid) : undefined;
+    const brightness =
+      !dimmerValue || dimmerValue === this.getChannelValue(defaultValues, dimmer.name, profileUuid)
+        ? 1
+        : this.getDimmerBrightness(cachedFixture, presetValues);
+
     const beatsPerMinute = this.getBeatsPerMinute();
 
-    for (const movement of movements) {
-      const context = movement.context;
-      const curveTimeMillis = this.getCurveTimeMillis(
-        movement.effect,
-        movement.effectTimeMillis,
-        movement.preset,
-        context.fixtureCount,
-        beatsPerMinute
-      );
-      const offset = movement.effect.getOffsetAtMillis(
-        curveTimeMillis,
-        context.fixtureIndex,
-        context.fixtureCount,
-        beatsPerMinute,
-        context.fanPlace
-      );
+    for (const item of following.effects) {
+      const context = item.context;
+      const effect = item.effect;
 
-      // the movement does not apply anymore after it has finished running
-      if (!offset) {
+      if (effect instanceof EffectPixel) {
+        if (item.layer >= following.coveringPixelLayer) {
+          this.mixPixelEffect(
+            effect,
+            item.effectTimeMillis,
+            item.preset,
+            cachedFixture,
+            values,
+            item.intensityPercentage,
+            item.wholeFixtureIndex,
+            item.wholeFixtureCount,
+            presetValues
+          );
+        }
+
         continue;
       }
 
-      for (const axis of axes) {
-        const mirror = movement.preset.preset.mirrorsCapability(axis.type);
-        const move = axis.type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
+      const curveTimeMillis = this.getCurveTimeMillis(effect, item.effectTimeMillis, item.preset, context.fixtureCount, beatsPerMinute);
 
-        const fixtureChannelValue = new FixtureChannelValue();
-        fixtureChannelValue.channelName = axis.cachedChannel.name;
-        fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-        fixtureChannelValue.value = getAxisChannelValue(axis.cachedChannel, axis.range, axis.center + (mirror ? -move : move));
-        this.mixChannelValue(values, fixtureChannelValue, movement.intensityPercentage);
+      if (effect instanceof EffectPanTilt) {
+        const offset = effect.getOffsetAtMillis(
+          curveTimeMillis,
+          context.fixtureIndex,
+          context.fixtureCount,
+          beatsPerMinute,
+          context.fanPlace
+        );
+
+        // the movement does not apply anymore after it has finished running
+        if (!offset) {
+          continue;
+        }
+
+        for (const axis of axes) {
+          const mirror = item.preset.preset.mirrorsCapability(axis.type);
+          const move = axis.type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
+          this.mixAxisValue(
+            values,
+            cachedFixture,
+            axis.cachedChannel,
+            axis.range,
+            axis.center + (mirror ? -move : move),
+            item.intensityPercentage
+          );
+        }
+
+        continue;
+      }
+
+      // a curve, swung as far as the place of the fixture in the fan of the preset says
+      const curveValue = effect.getFannedValue(
+        effect.getValueAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute),
+        getFanPlace(context)
+      );
+
+      // the curve does not apply anymore after it has finished running
+      if (curveValue === undefined) {
+        continue;
+      }
+
+      for (const capability of item.capabilities) {
+        if (capability.type === FixtureCapabilityType.Intensity) {
+          const capabilityValue = effect.getCapabilityValue(capability, curveValue * brightness);
+
+          for (const cachedChannel of cachedFixture.channels) {
+            const channelValue = this.getCurveChannelValue(capabilityValue, cachedChannel, item.preset.preset);
+
+            if (channelValue !== undefined) {
+              const fixtureChannelValue = new FixtureChannelValue();
+              fixtureChannelValue.channelName = cachedChannel.name;
+              fixtureChannelValue.profileUuid = profileUuid;
+              fixtureChannelValue.value = channelValue;
+              this.mixChannelValue(values, fixtureChannelValue, item.intensityPercentage);
+            }
+          }
+
+          continue;
+        }
+
+        // the pan or the tilt: as far from where the presets point the heads as the curve says from the middle
+        const capabilityValue = effect.getCapabilityValue(capability, curveValue);
+        const mirror = item.preset.preset.mirrorsCapability(capability.type);
+
+        for (const axis of axes) {
+          if (axis.type === capability.type) {
+            const degrees = getPanTiltDegrees(capabilityValue, axis.range, mirror, undefined);
+            this.mixAxisValue(values, cachedFixture, axis.cachedChannel, axis.range, axis.center + degrees, item.intensityPercentage);
+          }
+        }
       }
     }
+  }
+
+  // points a fixture at the passed degrees on the axis of a channel, mixed over what it points at with the intensity
+  private mixAxisValue(
+    values: FixtureChannelValue[],
+    cachedFixture: CachedFixture,
+    cachedChannel: CachedFixtureChannel,
+    range: number,
+    degrees: number,
+    intensityPercentage: number
+  ) {
+    const fixtureChannelValue = new FixtureChannelValue();
+    fixtureChannelValue.channelName = cachedChannel.name;
+    fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
+    fixtureChannelValue.value = getAxisChannelValue(cachedChannel, range, degrees);
+    this.mixChannelValue(values, fixtureChannelValue, intensityPercentage);
   }
 
   // return all fixture uuids with their corresponding channel values
@@ -1461,10 +1619,12 @@ export class PreviewService implements OnDestroy {
           }
         }
 
-        // the movements of the presets, played over where all of them point the fixture
-        const movements: PendingMovement[] = [];
+        // the effects following what the presets give the fixture, played once all of them are mixed
+        const defaultValues = values.slice();
+        const following: FollowingEffects = { effects: [], coveringPixelLayer: -1 };
 
-        for (const preset of presets) {
+        for (let layer = 0; layer < presets.length; layer++) {
+          const preset = presets[layer];
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
           const presetIndex = fixtureIndices
             .get(preset.preset)
@@ -1511,12 +1671,13 @@ export class PreviewService implements OnDestroy {
               context,
               wholeFixtureChase.indices.get(cachedFixture.fixture.uuid) ?? 0,
               wholeFixtureChase.count,
-              movements
+              following,
+              layer
             );
           }
         }
 
-        this.mixMovements(movements, cachedFixture, values);
+        this.mixFollowingEffects(following, cachedFixture, values, defaultValues);
       }
 
       // a fixture being identified from the fixture pool blinks, whatever the presets light it with

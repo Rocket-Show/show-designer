@@ -152,22 +152,18 @@ function onTheBeat(effect: EffectCurve, beats: number, context: AiCompileContext
   effect.lengthMillis = beatsMillis(beats, context.bpm);
 }
 
-// the brightness pulsing from the brightness of the preset down by the depth, over the part of the period it's on
+// The brightness pulsing down by the depth from the one the presets of the scene light the fixtures with (the one of
+// the preset, or of a preset below or above it), over the part of the period it's on: a curve on the dimmer pulses
+// that brightness, from none at 0 to all of it at 1 (see mixFollowingEffects of the preview)
 function dimmerCurve(ai: AiPreset, context: AiCompileContext): EffectCurve {
   const effect = new EffectCurve();
-  const top =
-    typeof ai.dimmer === 'number'
-      ? ai.dimmer
-      : ai.dimmerFan
-      ? getFanMiddleValue(getFanStops(ai.dimmerFan.shape, ai.dimmerFan.from, ai.dimmerFan.to))
-      : 1;
-  const bottom = top * (1 - ai.dimmerEffect.depth);
+  const bottom = 1 - ai.dimmerEffect.depth;
 
   onTheBeat(effect, ai.dimmerEffect.beats, context);
   effect.curveType = ai.dimmerEffect.curve;
   effect.capabilities = [new FixtureCapability({ type: FixtureCapabilityType.Intensity })];
-  effect.amplitude = top - bottom;
-  effect.position = (top + bottom) / 2;
+  effect.amplitude = 1 - bottom;
+  effect.position = (1 + bottom) / 2;
   effect.dutyCycle = ai.dimmerEffect.width;
   chaseEffect(effect, ai.dimmerEffect.chase);
 

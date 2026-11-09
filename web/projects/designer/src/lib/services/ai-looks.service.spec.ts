@@ -371,7 +371,7 @@ describe('AiLooksService', () => {
       }
     });
 
-    it('pulse the brightness down from the one of the preset, and paint the pixels in a palette', () => {
+    it('pulse the brightness of the scene down by the depth, and paint the pixels in a palette', () => {
       const { presets } = service.addToProject(
         oneLook({
           groups: ['bar-of-three-pixels'],
@@ -388,9 +388,9 @@ describe('AiLooksService', () => {
 
       expect(curve.capabilities.map((capability) => capability.type)).toEqual([FixtureCapabilityType.Intensity]);
       expect(curve.curveType).toBe('square');
-      // from 0.8 down to 0.4
-      expect(curve.position + curve.amplitude / 2).toBeCloseTo(0.8, 6);
-      expect(curve.position - curve.amplitude / 2).toBeCloseTo(0.4, 6);
+      // all of the brightness the presets light the bars with (0.8 of the preset), down to half of it
+      expect(curve.position + curve.amplitude / 2).toBeCloseTo(1, 6);
+      expect(curve.position - curve.amplitude / 2).toBeCloseTo(0.5, 6);
       expect(curve.dutyCycle).toBe(0.25);
       expect([curve.phasingMode, curve.phasingCycles]).toEqual(['spread', 1]);
 
