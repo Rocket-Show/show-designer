@@ -1,8 +1,8 @@
-<div class="card border-secondary h-100" [class.capability-deactivated]="!getValue()" style="min-height: 200px">
+<div class="card border-secondary h-100" [class.capability-deactivated]="!isActive()" style="min-height: 200px">
   <div class="card-header">
     <div class="my-auto">
       <div class="form-check">
-        <input type="checkbox" class="form-check-input" [id]="id" [ngModel]="!!getValue()" (ngModelChange)="changeActive($event)" />
+        <input type="checkbox" class="form-check-input" [id]="id" [ngModel]="isActive()" (ngModelChange)="changeActive($event)" />
         <label class="form-check-label text-nowrap" [for]="id">{{ 'designer.fixture.capability-' + kind | translate }}</label>
       </div>
     </div>

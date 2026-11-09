@@ -132,21 +132,31 @@ export class FixtureCapabilityCommandComponent {
     this.livePreviewService.previewLive();
   }
 
+  // whether the step runs a program or asks for an action: it may keep one turned off (see played-values)
+  isActive(): boolean {
+    return this.presetService.hasActiveCapabilityValue(this.presetService.selectedStep, this.type);
+  }
+
+  // turns the program (with its speed) or the action off, keeping it, or on again as it was (the first one, if there
+  // wasn't one yet)
   changeActive(active: boolean) {
+    const step = this.presetService.selectedStep;
+    const types = this.kind === 'program' ? [this.type, FixtureCapabilityType.EffectSpeed] : [this.type];
+
     if (active) {
-      if (this.kind === 'program') {
-        this.putProgram(() => undefined);
-      } else {
-        this.setAction(this.actions[0] || 'reset');
+      if (!this.presetService.reactivateCapabilityValue(step, this.type)) {
+        if (this.kind === 'program') {
+          this.putProgram(() => undefined);
+        } else {
+          this.setAction(this.actions[0] || 'reset');
+        }
+
+        return;
       }
 
-      return;
-    }
-
-    this.presetService.deleteCapabilityValue(this.presetService.selectedStep, this.type);
-
-    if (this.kind === 'program') {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.EffectSpeed);
+      types.forEach((type) => this.presetService.reactivateCapabilityValue(step, type));
+    } else {
+      types.forEach((type) => this.presetService.deactivateCapabilityValue(step, type));
     }
 
     this.changeDetectorRef.detectChanges();

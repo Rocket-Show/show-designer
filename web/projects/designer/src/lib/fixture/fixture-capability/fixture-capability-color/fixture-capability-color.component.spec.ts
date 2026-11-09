@@ -174,9 +174,32 @@ describe('FixtureCapabilityColorComponent', () => {
     checkbox().click();
     await update();
 
-    expect(preset.steps[0].fixtureCapabilityValues).toEqual([]);
-    expect(hexInput().value).toBe('#ffffff');
-    expect(component.colorPicker.color.hexString).toBe('#ffffff');
+    // off, the step keeps the color, shown greyed out, but doesn't play it
+    expect(rgb(preset.steps[0])).toEqual([0, 0, 1]);
+    expect(preset.steps[0].fixtureCapabilityValues.every((value) => value.deactivated)).toBe(true);
+    expect(checkbox().checked).toBe(false);
+    expect(hexInput().value).toBe('#0000ff');
+
+    // and on again as it was
+    checkbox().click();
+    await update();
+
+    expect(rgb(preset.steps[0])).toEqual([0, 0, 1]);
+    expect(preset.steps[0].fixtureCapabilityValues.some((value) => value.deactivated)).toBe(false);
+    expect(checkbox().checked).toBe(true);
+  });
+
+  it('shows a color switched off, ready to switch on again', async () => {
+    for (const value of preset.steps[1].fixtureCapabilityValues) {
+      value.deactivated = true;
+    }
+    await render();
+
+    presetService.selectStep(preset.steps[1]);
+    await update();
+
+    expect(checkbox().checked).toBe(false);
+    expect(hexInput().value).toBe('#ff3300');
   });
 
   it('follows the preset being picked', async () => {

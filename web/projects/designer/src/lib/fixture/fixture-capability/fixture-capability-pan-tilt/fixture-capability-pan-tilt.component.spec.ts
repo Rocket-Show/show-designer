@@ -101,10 +101,25 @@ describe('FixtureCapabilityPanTiltComponent', () => {
     expect(value(tilt).valueDegrees).toBe(0);
     expect(element.querySelector('.pan-tilt-point')).not.toBeNull();
 
+    // off, the position is kept and shown, but not played
+    component.setDegrees(pan, 40);
     component.changeActive(false);
-    expect(value(pan)).toBeUndefined();
-    expect(value(tilt)).toBeUndefined();
+    await update();
+    expect(component.isActive()).toBe(false);
+    expect([value(pan).deactivated, value(tilt).deactivated]).toEqual([true, true]);
+    expect(element.querySelector('.pan-tilt-point')).not.toBeNull();
     expect(previewLive).toHaveBeenCalled();
+
+    // on again as it was
+    component.changeActive(true);
+    expect(component.isActive()).toBe(true);
+    expect(value(pan).valueDegrees).toBe(40);
+    expect([value(pan).deactivated, value(tilt).deactivated]).toEqual([undefined, undefined]);
+
+    // a change on one axis switches on the whole position
+    component.changeActive(false);
+    component.setDegrees(pan, 20);
+    expect([value(pan).deactivated, value(tilt).deactivated]).toEqual([undefined, undefined]);
   });
 
   it('points the heads at the degrees typed in, as far as they reach', async () => {

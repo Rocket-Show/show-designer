@@ -1,14 +1,8 @@
-<div class="card border-secondary h-100" [class.capability-deactivated]="getValue() == undefined" style="min-height: 200px">
+<div class="card border-secondary h-100" [class.capability-deactivated]="!isActive()" style="min-height: 200px">
   <div class="card-header">
     <div class="my-auto">
       <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          [id]="id"
-          [ngModel]="getValue() != undefined"
-          (ngModelChange)="changeActive($event)"
-        />
+        <input type="checkbox" class="form-check-input" [id]="id" [ngModel]="isActive()" (ngModelChange)="changeActive($event)" />
         <label class="form-check-label text-nowrap" [for]="id">
           @if (isEmitter) {
           <span class="emitter-swatch mr-1" [style.background-color]="emitterColor"></span>

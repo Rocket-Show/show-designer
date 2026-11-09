@@ -103,10 +103,19 @@ describe('FixtureCapabilityPositionComponent', () => {
     expect(valueOf(FixtureCapabilityType.Iris)).toBe(0);
     expect(checkbox().checked).toBe(true);
 
+    // off, the step keeps the position, but doesn't play it
+    component.setValue(0.4);
     component.changeActive(false);
     await update();
-    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.Iris)).toBeUndefined();
-    expect(previewLive).toHaveBeenCalledTimes(2);
+    expect(checkbox().checked).toBe(false);
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.Iris).deactivated).toBe(true);
+    expect(previewLive).toHaveBeenCalledTimes(3);
+
+    // on again as it was
+    component.changeActive(true);
+    await update();
+    expect(checkbox().checked).toBe(true);
+    expect(valueOf(FixtureCapabilityType.Iris)).toBe(0.4);
   });
 
   it('takes a position typed in percent', async () => {
@@ -137,8 +146,12 @@ describe('FixtureCapabilityPositionComponent', () => {
     expect(valueOf(FixtureCapabilityType.ShutterStrobe)).toBe(0.7);
     expect(valueOf(FixtureCapabilityType.StrobeSpeed)).toBe(0.7);
 
+    // off with its speed, on again with it
     component.changeActive(false);
-    expect(step.fixtureCapabilityValues).toEqual([]);
+    expect(step.fixtureCapabilityValues.every((value) => value.deactivated)).toBe(true);
+    component.changeActive(true);
+    expect(step.fixtureCapabilityValues.some((value) => value.deactivated)).toBe(false);
+    expect(valueOf(FixtureCapabilityType.StrobeSpeed)).toBe(0.7);
   });
 
   it('puts the prism in and takes it out', async () => {
@@ -171,8 +184,12 @@ describe('FixtureCapabilityPositionComponent', () => {
     expect(valueOf(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Amber)).toBe(1);
 
     component.changeActive(false);
-    expect(valueOf(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Amber)).toBeUndefined();
-    expect(valueOf(FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red)).toBe(0.5);
+    expect(presetService.getCapabilityValue(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Amber).deactivated).toBe(
+      true
+    );
+    expect(
+      presetService.getCapabilityValue(step, FixtureCapabilityType.ColorIntensity, FixtureCapabilityColor.Red).deactivated
+    ).toBeUndefined();
   });
 
   it('gives each card a checkbox of its own', async () => {
@@ -228,7 +245,10 @@ describe('FixtureCapabilityPositionComponent', () => {
     expect(component.getValue()).toBe(0);
 
     component.changeActive(false);
-    expect(step.fixtureCapabilityValues.map((value) => value.blade)).toEqual(['Top']);
+    expect(step.fixtureCapabilityValues.map((value) => [value.blade, value.deactivated])).toEqual([
+      ['Top', undefined],
+      ['Left', true],
+    ]);
   });
 
   it('flashes the strobe in an effect, keeping it at another speed', async () => {
@@ -256,6 +276,11 @@ describe('FixtureCapabilityPositionComponent', () => {
     component.setStrobeEffect('Strobe');
     expect(presetService.getCapabilityValue(step, FixtureCapabilityType.ShutterStrobe).shutterEffect).toBeUndefined();
     expect(previewLive).toHaveBeenCalled();
+
+    // picking an effect switches the strobe on, with its speed
+    component.changeActive(false);
+    component.setStrobeEffect('Pulse');
+    expect(step.fixtureCapabilityValues.some((value) => value.deactivated)).toBe(false);
   });
 
   it('offers no effect on anything but the strobe', async () => {

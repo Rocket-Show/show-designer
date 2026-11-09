@@ -4,6 +4,7 @@ import { FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { Preset } from '../models/preset';
 import { EffectPixel } from '../models/effect-pixel';
+import { playedValues } from '../models/played-values';
 import { Scene } from '../models/scene';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -158,11 +159,12 @@ export class ColorService {
 
   // the values a preset is read from: the ones of its first step. The preset carries
   // those on itself as well, but only after it has been saved (see
-  // writeCompatibilityValues), so the step is what a color has to follow.
+  // writeCompatibilityValues), so the step is what a color has to follow. Without the
+  // values turned off, which the preset doesn't play (see played-values).
   private getPresetCapabilityValues(preset: Preset): FixtureCapabilityValue[] {
     const step = preset.steps[0];
 
-    return (step ? step.fixtureCapabilityValues : preset.fixtureCapabilityValues) || [];
+    return playedValues((step ? step.fixtureCapabilityValues : preset.fixtureCapabilityValues) || []);
   }
 
   // the rgb color a preset mixes from its color intensities (what the color picker of

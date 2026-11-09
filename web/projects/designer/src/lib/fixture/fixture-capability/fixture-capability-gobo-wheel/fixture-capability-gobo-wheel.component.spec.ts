@@ -116,16 +116,23 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
     expect(previewLive).toHaveBeenCalled();
   });
 
-  it('starts on the first slot when switched on, and leaves the wheel alone when switched off', async () => {
+  it('starts on the first slot when switched on, and keeps the slot when switched off', async () => {
     component.changeActive(true);
     await update();
     expect(component.getCurrentSlotNumber()).toBe(1);
     expect(selected()).toEqual(['1 Open']);
 
+    component.selectSlotNumber(2);
     component.changeActive(false);
     await update();
-    expect(step.fixtureCapabilityValues).toEqual([]);
-    expect(selected()).toEqual([]);
+    expect(component.isActive()).toBe(false);
+    expect(step.fixtureCapabilityValues.map((value) => [value.slotNumber, value.deactivated])).toEqual([[2, true]]);
+
+    // on again at the same slot
+    component.changeActive(true);
+    await update();
+    expect(component.isActive()).toBe(true);
+    expect(component.getCurrentSlotNumber()).toBe(2);
   });
 
   it('shakes the gobo picked, if it can, and carries the shake over to another one which can', async () => {
@@ -155,8 +162,18 @@ describe('FixtureCapabilityGoboWheelComponent', () => {
 
     component.selectSlotNumber(2);
     component.setShake(0.4);
+
+    // off with its shake, on again with it
     component.changeActive(false);
-    expect(step.fixtureCapabilityValues).toEqual([]);
+    expect(step.fixtureCapabilityValues.every((value) => value.deactivated)).toBe(true);
+    component.changeActive(true);
+    expect(step.fixtureCapabilityValues.some((value) => value.deactivated)).toBe(false);
+    expect(component.getShake()).toBe(0.4);
+
+    // shaking a gobo switched off switches it on
+    component.changeActive(false);
+    component.setShake(0.5);
+    expect(component.isActive()).toBe(true);
   });
   describe('the pattern the preview shows a gobo with', () => {
     function slot(index: number): HTMLElement {

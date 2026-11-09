@@ -35,7 +35,7 @@
       >
         <line class="pan-tilt-axis" [attr.x1]="padSize / 2" y1="0" [attr.x2]="padSize / 2" [attr.y2]="padSize"></line>
         <line class="pan-tilt-axis" x1="0" [attr.y1]="padSize / 2" [attr.x2]="padSize" [attr.y2]="padSize / 2"></line>
-        @if (isActive()) {
+        @if (hasPosition()) {
         <circle class="pan-tilt-point" [attr.cx]="getPadX()" [attr.cy]="getPadY()" r="7"></circle>
         }
       </svg>

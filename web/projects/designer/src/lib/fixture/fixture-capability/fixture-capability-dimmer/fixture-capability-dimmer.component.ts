@@ -67,13 +67,22 @@ export class FixtureCapabilityDimmerComponent implements OnInit {
     this.livePreviewService.previewLive();
   }
 
+  // whether the step sets the dimmer: it may keep one turned off (see played-values)
+  isActive(): boolean {
+    return this.presetService.hasActiveCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity);
+  }
+
+  // turns the dimmer off, keeping its value, or on again as it was (at full, if it wasn't there yet)
   changeActive(active: boolean) {
-    if (active) {
+    const step = this.presetService.selectedStep;
+
+    if (!active) {
+      this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.Intensity);
+    } else if (!this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.Intensity)) {
       this.setValue(1);
-    } else {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Intensity);
-      this.changeDetectorRef.detectChanges();
     }
+
+    this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }
 }

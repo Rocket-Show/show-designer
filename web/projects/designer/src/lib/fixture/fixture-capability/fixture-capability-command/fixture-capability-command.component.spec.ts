@@ -78,9 +78,17 @@ describe('FixtureCapabilityCommandComponent', () => {
     expect(component.getValue().soundControlled).toBe(true);
     expect(component.programNumbers).toEqual([1]);
 
+    // off, the program and its speed are kept, but not played
     component.changeActive(false);
-    expect(component.getValue()).toBeUndefined();
-    expect(presetService.getCapabilityValue(presetService.selectedStep, FixtureCapabilityType.EffectSpeed)).toBeUndefined();
+    expect(component.isActive()).toBe(false);
+    expect(component.getValue().deactivated).toBe(true);
+    expect(presetService.getCapabilityValue(presetService.selectedStep, FixtureCapabilityType.EffectSpeed).deactivated).toBe(true);
+
+    // and on again as they were
+    component.changeActive(true);
+    expect(component.isActive()).toBe(true);
+    expect(component.getValue().soundControlled).toBe(true);
+    expect(presetService.getCapabilityValue(presetService.selectedStep, FixtureCapabilityType.EffectSpeed).deactivated).toBeUndefined();
   });
 
   it('asks the fixtures to reset or to switch their lamp, as far as they can', async () => {

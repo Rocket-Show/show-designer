@@ -57,6 +57,9 @@ export class FixtureCapabilityValue {
   transitionFrom: FixtureCapabilityValue;
   transitionPosition: number;
 
+  // turned off in the preset editor: kept with all it says, to be turned on again, but not played (see played-values)
+  deactivated: boolean;
+
   constructor(data?: any) {
     if (!data) {
       return;
@@ -82,5 +85,6 @@ export class FixtureCapabilityValue {
     this.programNumber = data.programNumber ?? undefined;
     this.soundControlled = data.soundControlled ?? undefined;
     this.maintenanceAction = data.maintenanceAction ?? undefined;
+    this.deactivated = data.deactivated === true ? true : undefined;
   }
 }

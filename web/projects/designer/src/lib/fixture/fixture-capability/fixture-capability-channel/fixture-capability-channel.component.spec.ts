@@ -168,8 +168,21 @@ describe('FixtureCapabilityChannelComponent', () => {
     checkbox().click();
     await update();
 
-    expect(channelValue(par, 'Strobe')).toBeUndefined();
+    // off, the step keeps the value, but doesn't play it
+    expect(channelValue(par, 'Strobe')).toBe(5);
+    expect(presetService.selectedStep.fixtureChannelValues[0].deactivated).toBe(true);
+    expect(checkbox().checked).toBe(false);
     expect(element.querySelector('.card').classList).toContain('capability-deactivated');
+
+    // and on again as it was
+    component.setValue(9, true);
+    component.changeActive(false);
+    checkbox().click();
+    await update();
+
+    expect(channelValue(par, 'Strobe')).toBe(9);
+    expect(presetService.selectedStep.fixtureChannelValues[0].deactivated).toBeUndefined();
+    expect(checkbox().checked).toBe(true);
   });
 
   it('moves into the middle of the capability picked', async () => {

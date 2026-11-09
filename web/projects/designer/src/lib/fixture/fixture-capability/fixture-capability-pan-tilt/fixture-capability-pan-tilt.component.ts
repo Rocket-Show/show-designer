@@ -85,7 +85,18 @@ export class FixtureCapabilityPanTiltComponent implements OnInit, OnDestroy {
     return type === FixtureCapabilityType.Pan ? this.panRange : this.tiltRange;
   }
 
+  // whether the step points the heads somewhere: it may keep a position turned off (see played-values)
   isActive(): boolean {
+    const step = this.presetService.selectedStep;
+
+    return (
+      this.presetService.hasActiveCapabilityValue(step, FixtureCapabilityType.Pan) ||
+      this.presetService.hasActiveCapabilityValue(step, FixtureCapabilityType.Tilt)
+    );
+  }
+
+  // whether the step has a position to show, turned on or off
+  hasPosition(): boolean {
     return !!this.getValue(FixtureCapabilityType.Pan) || !!this.getValue(FixtureCapabilityType.Tilt);
   }
 
@@ -123,6 +134,12 @@ export class FixtureCapabilityPanTiltComponent implements OnInit, OnDestroy {
     const value = new FixtureCapabilityValue(existing ? { ...existing } : { type });
     change(value);
     this.presetService.putCapabilityValue(step, value);
+
+    // an edit turns the whole position on, the other axis as well
+    this.presetService.reactivateCapabilityValue(
+      step,
+      type === FixtureCapabilityType.Pan ? FixtureCapabilityType.Tilt : FixtureCapabilityType.Pan
+    );
 
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
@@ -358,16 +375,25 @@ export class FixtureCapabilityPanTiltComponent implements OnInit, OnDestroy {
     this.livePreviewService.previewLive();
   }
 
+  // turns the position off, keeping it, or on again as it was (straight ahead, if there wasn't one yet)
   changeActive(active: boolean) {
+    const step = this.presetService.selectedStep;
+
     if (active) {
-      // straight ahead
-      this.padCenter();
-      return;
+      const pan = this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.Pan);
+      const tilt = this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.Tilt);
+
+      if (!pan && !tilt) {
+        // straight ahead
+        this.padCenter();
+        return;
+      }
+    } else {
+      this.previewService.pickSpot(false);
+      this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.Pan);
+      this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.Tilt);
     }
 
-    this.previewService.pickSpot(false);
-    this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Pan);
-    this.presetService.deleteCapabilityValue(this.presetService.selectedStep, FixtureCapabilityType.Tilt);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }

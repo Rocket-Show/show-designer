@@ -624,6 +624,8 @@ export class PresetService {
     }
 
     if (value) {
+      // an edit turns the value on
+      value.deactivated = undefined;
       step.fixtureCapabilityValues.push(value);
     }
 
@@ -641,6 +643,8 @@ export class PresetService {
       capabilityValue.profileUuid,
       capabilityValue.blade
     );
+    // an edit turns the value on
+    capabilityValue.deactivated = undefined;
     step.fixtureCapabilityValues.push(capabilityValue);
     this.capabilityValuesChanged.next();
   }
@@ -780,6 +784,93 @@ export class PresetService {
       }
     }
     return undefined;
+  }
+
+  // Turns the capability value of the step of the passed kind off: the step keeps it with all it says, to be turned on
+  // again (e.g. after a venue it didn't suit), but the preset doesn't play it (see played-values)
+  deactivateCapabilityValue(
+    step: PresetStep,
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string,
+    blade?: string
+  ) {
+    const value = this.getCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
+
+    if (value) {
+      value.deactivated = true;
+      this.capabilityValuesChanged.next();
+    }
+  }
+
+  // Turns the capability value of the step of the passed kind on again, as it was: whether the step had one turned off
+  reactivateCapabilityValue(
+    step: PresetStep,
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string,
+    blade?: string
+  ): boolean {
+    const value = this.getCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
+
+    if (!value?.deactivated) {
+      return false;
+    }
+
+    value.deactivated = undefined;
+    this.capabilityValuesChanged.next();
+    return true;
+  }
+
+  // whether the step has a capability value of the passed kind which is on
+  hasActiveCapabilityValue(
+    step: PresetStep,
+    capabilityType: FixtureCapabilityType,
+    color?: FixtureCapabilityColor,
+    wheel?: string,
+    profileUuid?: string,
+    blade?: string
+  ): boolean {
+    const value = this.getCapabilityValue(step, capabilityType, color, wheel, profileUuid, blade);
+
+    return !!value && !value.deactivated;
+  }
+
+  private getChannelValueOf(channelName: string, profileUuid: string): FixtureChannelValue {
+    return this.selectedStep?.fixtureChannelValues.find(
+      (channelValue) => channelValue.channelName === channelName && channelValue.profileUuid === profileUuid
+    );
+  }
+
+  // Turns the value of a channel of the selected step off, keeping it to be turned on again (see
+  // deactivateCapabilityValue)
+  deactivateChannelValue(channelName: string, profileUuid: string) {
+    const channelValue = this.getChannelValueOf(channelName, profileUuid);
+
+    if (channelValue) {
+      channelValue.deactivated = true;
+    }
+  }
+
+  // Turns the value of a channel of the selected step on again, as it was: whether the step had one turned off
+  reactivateChannelValue(channelName: string, profileUuid: string): boolean {
+    const channelValue = this.getChannelValueOf(channelName, profileUuid);
+
+    if (!channelValue?.deactivated) {
+      return false;
+    }
+
+    channelValue.deactivated = undefined;
+    return true;
+  }
+
+  // whether the selected step has a value of the channel which is on
+  hasActiveChannelValue(channelName: string, profileUuid: string): boolean {
+    const channelValue = this.getChannelValueOf(channelName, profileUuid);
+
+    return !!channelValue && !channelValue.deactivated;
   }
 
   deleteChannelValue(channelName: string, profileUuid: string) {

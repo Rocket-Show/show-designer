@@ -6,6 +6,7 @@ import { ToastrService } from 'ngx-toastr';
 import { Observable, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
+import { playedValues } from '../models/played-values';
 import { Scene } from '../models/scene';
 import { UserService } from './user.service';
 import { ConfigService } from './config.service';
@@ -78,13 +79,14 @@ export class ProjectService {
   // The presets carry the values of their first step on themselves as well. A Rocket
   // Show which does not know steps yet reads those, so an old player shows the first
   // step of a preset instead of leaving the stage dark. Written on the way out only:
-  // the steps are what a project is loaded from.
+  // the steps are what a project is loaded from. Without the values turned off, which
+  // an old player would play (see played-values).
   writeCompatibilityValues(project: Project) {
     for (const preset of project.presets) {
       const step = preset.steps[0];
 
-      preset.fixtureChannelValues = step ? step.fixtureChannelValues.slice() : [];
-      preset.fixtureCapabilityValues = step ? step.fixtureCapabilityValues.slice() : [];
+      preset.fixtureChannelValues = step ? playedValues(step.fixtureChannelValues).slice() : [];
+      preset.fixtureCapabilityValues = step ? playedValues(step.fixtureCapabilityValues).slice() : [];
     }
   }
 

@@ -147,6 +147,9 @@ export class FixtureCapabilityPositionComponent {
       return;
     }
 
+    // picking an effect turns the strobe on, with its speed
+    this.reactivate();
+
     if (!(this.getValue() > 0)) {
       this.setValue(0.5);
     }
@@ -211,14 +214,44 @@ export class FixtureCapabilityPositionComponent {
     this.livePreviewService.previewLive();
   }
 
-  changeActive(active: boolean) {
-    if (active) {
-      this.setValue(this.startValue);
-      return;
-    }
+  // whether the step sets the value: it may keep one turned off (see played-values)
+  isActive(): boolean {
+    return this.presetService.hasActiveCapabilityValue(
+      this.presetService.selectedStep,
+      this.type,
+      this.color,
+      undefined,
+      undefined,
+      this.blade
+    );
+  }
+
+  // turns the values of the step on again, as they were: whether there were any turned off
+  private reactivate(): boolean {
+    let reactivated = false;
 
     for (const type of this.types) {
-      this.presetService.deleteCapabilityValue(this.presetService.selectedStep, type, this.color, undefined, undefined, this.blade);
+      if (
+        this.presetService.reactivateCapabilityValue(this.presetService.selectedStep, type, this.color, undefined, undefined, this.blade)
+      ) {
+        reactivated = true;
+      }
+    }
+
+    return reactivated;
+  }
+
+  // turns the value off, keeping it, or on again as it was (at its start value, if it wasn't there yet)
+  changeActive(active: boolean) {
+    if (active) {
+      if (!this.reactivate()) {
+        this.setValue(this.startValue);
+        return;
+      }
+    } else {
+      for (const type of this.types) {
+        this.presetService.deactivateCapabilityValue(this.presetService.selectedStep, type, this.color, undefined, undefined, this.blade);
+      }
     }
 
     this.changeDetectorRef.detectChanges();

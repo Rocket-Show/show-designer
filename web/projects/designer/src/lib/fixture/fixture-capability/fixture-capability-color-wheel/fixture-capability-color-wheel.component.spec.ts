@@ -214,12 +214,24 @@ describe('FixtureCapabilityColorWheelComponent', () => {
     checkbox().click();
     expect(slotNumber()).toBe(1);
 
+    component.selectSlotNumber(2);
     await update();
     checkbox().click();
+    await update();
 
-    expect(slotNumber()).toBeUndefined();
-    expect(step.fixtureCapabilityValues).toEqual([]);
+    // off, the step keeps the slot, but doesn't play it
+    expect(slotNumber()).toBe(2);
+    expect(step.fixtureCapabilityValues[0].deactivated).toBe(true);
+    expect(checkbox().checked).toBe(false);
     expect(previewLive).toHaveBeenCalled();
+
+    // and on again at the same slot
+    checkbox().click();
+    await update();
+
+    expect(slotNumber()).toBe(2);
+    expect(step.fixtureCapabilityValues[0].deactivated).toBeUndefined();
+    expect(checkbox().checked).toBe(true);
   });
 
   it('names the wheel while several are shown', async () => {

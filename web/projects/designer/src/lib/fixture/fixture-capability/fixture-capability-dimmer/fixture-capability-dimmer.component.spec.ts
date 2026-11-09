@@ -14,6 +14,7 @@ import { LivePreviewService } from '../../../services/live-preview.service';
 import { PresetService } from '../../../services/preset.service';
 import { FixtureCapabilityDimmerComponent } from './fixture-capability-dimmer.component';
 import { FixtureCapabilityFanComponent } from '../fixture-capability-fan/fixture-capability-fan.component';
+import { FanStop } from '../../../models/fan-stop';
 
 // The dimmer of the step being edited, typed in percent or set with its slider. Switched off,
 // the step leaves the brightness of the fixtures alone.
@@ -111,10 +112,43 @@ describe('FixtureCapabilityDimmerComponent', () => {
 
     await update();
     checkbox().click();
+    await update();
 
-    expect(intensity()).toBeUndefined();
-    expect(step.fixtureCapabilityValues).toEqual([]);
+    // off, the step keeps the brightness, shown greyed out, but doesn't play it
+    expect(step.fixtureCapabilityValues.length).toBe(1);
+    expect(step.fixtureCapabilityValues[0].deactivated).toBe(true);
+    expect(checkbox().checked).toBe(false);
+    expect(element.querySelector('.card').classList).toContain('capability-deactivated');
+    expect(input().value).toBe('100');
     expect(previewLive).toHaveBeenCalled();
+  });
+
+  it('switches on again as it was, after it was switched off', async () => {
+    presetService.setCapabilityFan(step, FixtureCapabilityType.Intensity, [
+      new FanStop({ position: 0, valuePercentage: 0.2 }),
+      new FanStop({ position: 1, valuePercentage: 0.6 }),
+    ]);
+    await update();
+
+    checkbox().click();
+    await update();
+    checkbox().click();
+    await update();
+
+    expect(checkbox().checked).toBe(true);
+    expect(step.fixtureCapabilityValues[0].deactivated).toBeUndefined();
+    expect(step.fixtureCapabilityValues[0].fan.map((stop) => stop.valuePercentage)).toEqual([0.2, 0.6]);
+  });
+
+  it('switches on with a change of the brightness', async () => {
+    component.setValue(0.3);
+    component.changeActive(false);
+
+    component.setValue(0.5);
+    await update();
+
+    expect(checkbox().checked).toBe(true);
+    expect(intensity()).toBe(0.5);
   });
 
   it('shows nothing while no step is being edited', () => {

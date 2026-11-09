@@ -8,6 +8,7 @@ import { getAutomaticStartMillis, getStepsLoopMillis, getTransitionEndMillis, la
 import { PresetStepState } from '../models/preset-step-state';
 import { getStepLengths, getStepsOrderIndices, getStepsPassMillis, isStepsOrdered } from '../models/preset-steps-order';
 import { applyTransitionCurve } from '../models/transition-curve';
+import { playedValues } from '../models/played-values';
 import { UuidService } from './uuid.service';
 
 @Injectable({
@@ -165,8 +166,8 @@ export class PresetStepService {
     }
 
     state.currentStep = step;
-    state.fixtureChannelValues = step.fixtureChannelValues;
-    state.fixtureCapabilityValues = step.fixtureCapabilityValues;
+    state.fixtureChannelValues = playedValues(step.fixtureChannelValues);
+    state.fixtureCapabilityValues = playedValues(step.fixtureCapabilityValues);
 
     for (const effectAmount of step.effectAmounts) {
       state.effectAmounts.set(effectAmount.effectUuid, effectAmount.amount);
@@ -182,8 +183,8 @@ export class PresetStepService {
     if (!steps || steps.length === 0) {
       // an old project keeps its values on the preset itself
       const state = new PresetStepState();
-      state.fixtureChannelValues = preset.fixtureChannelValues || [];
-      state.fixtureCapabilityValues = preset.fixtureCapabilityValues || [];
+      state.fixtureChannelValues = playedValues(preset.fixtureChannelValues || []);
+      state.fixtureCapabilityValues = playedValues(preset.fixtureCapabilityValues || []);
 
       return state;
     }
@@ -364,10 +365,16 @@ export class PresetStepService {
     // the preset is on the step it is travelling into from the moment that step starts
     state.currentStep = to;
 
+    // a value turned off is not there to travel from or to (see played-values)
+    const fromChannelValues = playedValues(from.fixtureChannelValues);
+    const toChannelValues = playedValues(to.fixtureChannelValues);
+    const fromCapabilityValues = playedValues(from.fixtureCapabilityValues);
+    const toCapabilityValues = playedValues(to.fixtureCapabilityValues);
+
     // A value only one of the two steps carries is held as it is: a step not naming a
     // channel means it does not drive that channel, not that it drives it to zero.
-    for (const toValue of to.fixtureChannelValues) {
-      const fromValue = this.getMatchingChannelValue(from.fixtureChannelValues, toValue);
+    for (const toValue of toChannelValues) {
+      const fromValue = this.getMatchingChannelValue(fromChannelValues, toValue);
       const value = new FixtureChannelValue(toValue);
 
       if (fromValue) {
@@ -377,14 +384,14 @@ export class PresetStepService {
       state.fixtureChannelValues.push(value);
     }
 
-    for (const fromValue of from.fixtureChannelValues) {
-      if (!this.getMatchingChannelValue(to.fixtureChannelValues, fromValue)) {
+    for (const fromValue of fromChannelValues) {
+      if (!this.getMatchingChannelValue(toChannelValues, fromValue)) {
         state.fixtureChannelValues.push(fromValue);
       }
     }
 
-    for (const toValue of to.fixtureCapabilityValues) {
-      const fromValue = this.getMatchingCapabilityValue(from.fixtureCapabilityValues, toValue);
+    for (const toValue of toCapabilityValues) {
+      const fromValue = this.getMatchingCapabilityValue(fromCapabilityValues, toValue);
 
       if (!fromValue) {
         state.fixtureCapabilityValues.push(toValue);
@@ -419,8 +426,8 @@ export class PresetStepService {
       state.fixtureCapabilityValues.push(value);
     }
 
-    for (const fromValue of from.fixtureCapabilityValues) {
-      if (!this.getMatchingCapabilityValue(to.fixtureCapabilityValues, fromValue)) {
+    for (const fromValue of fromCapabilityValues) {
+      if (!this.getMatchingCapabilityValue(toCapabilityValues, fromValue)) {
         state.fixtureCapabilityValues.push(fromValue);
       }
     }

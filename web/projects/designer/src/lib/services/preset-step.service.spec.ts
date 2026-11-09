@@ -79,6 +79,41 @@ describe('PresetStepService', () => {
     expect(dimmerAt(old, 0)).toBe(42);
   });
 
+  it('should play no value switched off, on a step of its own or travelling between two steps', () => {
+    const red = (valuePercentage: number, deactivated?: boolean) =>
+      new FixtureCapabilityValue({ type: 'ColorIntensity', color: 'Red', valuePercentage, deactivated });
+    const first = step(0, 100, 1000);
+    first.fixtureCapabilityValues.push(red(0, true));
+    first.fixtureChannelValues[0].deactivated = true;
+    const second = step(1000, 200, 1000);
+    second.fixtureCapabilityValues.push(red(1));
+
+    // on its own, the step plays nothing it keeps switched off
+    const own = service.getStateAtMillis(preset(first), 0);
+    expect(own.fixtureChannelValues).toEqual([]);
+    expect(own.fixtureCapabilityValues).toEqual([]);
+
+    // between the two, there is nothing to travel from: the second step's values are held as they are
+    const between = service.getStateAtMillis(preset(first, second), 1500);
+    expect(between.fixtureChannelValues.map((value) => value.value)).toEqual([200]);
+    expect(between.fixtureCapabilityValues.map((value) => value.valuePercentage)).toEqual([1]);
+
+    // and the same into a step which keeps them switched off: the step before is held as it is
+    const on = step(0, 200, 1000);
+    on.fixtureCapabilityValues.push(red(1));
+    const off = step(1000, 100, 1000);
+    off.fixtureCapabilityValues.push(red(0, true));
+    off.fixtureChannelValues[0].deactivated = true;
+    const back = service.getStateAtMillis(preset(on, off), 1500);
+    expect(back.fixtureChannelValues.map((value) => value.value)).toEqual([200]);
+    expect(back.fixtureCapabilityValues.map((value) => value.valuePercentage)).toEqual([1]);
+
+    // a preset of an old project keeps its values on itself, switched off as well
+    const old = new Preset();
+    old.fixtureCapabilityValues = [red(1, true)];
+    expect(service.getStateAtMillis(old, 0).fixtureCapabilityValues).toEqual([]);
+  });
+
   it('should hold the first step before it starts', () => {
     const sequence = preset(step(1000, 100), step(2000, 200));
 

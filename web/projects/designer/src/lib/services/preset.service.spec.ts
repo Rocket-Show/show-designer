@@ -11,6 +11,7 @@ import { CachedFixtureChannel } from '../models/cached-fixture-channel';
 import { EffectCurve } from '../models/effect-curve';
 import { Fixture } from '../models/fixture';
 import { FixtureCapability, FixtureCapabilityColor, FixtureCapabilityType } from '../models/fixture-capability';
+import { FanStop } from '../models/fan-stop';
 import { FixtureCapabilityValue } from '../models/fixture-capability-value';
 import { FixtureProfile } from '../models/fixture-profile';
 import { FolderPosition } from '../models/folder-position';
@@ -898,5 +899,76 @@ describe('PresetService positions, blades and pulses', () => {
     // no pulse leaves the iris to the rest
     values[0].valuePercentage = 0;
     expect(service.getChannelValueFromCapabilities(values, iris, 'profile')).toBe(99.5);
+  });
+});
+
+// A value turned off in the preset editor is kept with all it says, to be turned on again (see played-values)
+describe('PresetService switching values off and on', () => {
+  let service: PresetService;
+  let step: PresetStep;
+
+  beforeEach(() => {
+    const fixtureService = new FixtureService(undefined, undefined, undefined, undefined, undefined, new FixturePixelGroupResolveService());
+    service = new PresetService(undefined, undefined, undefined, undefined, fixtureService, undefined, undefined, undefined);
+    step = new PresetStep();
+    service.selectedStep = step;
+  });
+
+  it('switches a capability value off and on again as it was', () => {
+    service.setCapabilityValue(step, FixtureCapabilityType.Zoom, 0.3);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(true);
+
+    service.deactivateCapabilityValue(step, FixtureCapabilityType.Zoom);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(false);
+    expect(service.getCapabilityValue(step, FixtureCapabilityType.Zoom).valuePercentage).toBe(0.3);
+
+    expect(service.reactivateCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(true);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(true);
+    // on already
+    expect(service.reactivateCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(false);
+  });
+
+  it('has nothing to switch without a value', () => {
+    service.deactivateCapabilityValue(step, FixtureCapabilityType.Iris);
+
+    expect(step.fixtureCapabilityValues).toEqual([]);
+    expect(service.reactivateCapabilityValue(step, FixtureCapabilityType.Iris)).toBe(false);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.Iris)).toBe(false);
+
+    service.deactivateChannelValue('Dimmer', 'profile');
+    expect(service.reactivateChannelValue('Dimmer', 'profile')).toBe(false);
+    expect(service.hasActiveChannelValue('Dimmer', 'profile')).toBe(false);
+  });
+
+  it('switches a value on with an edit', () => {
+    service.setCapabilityValue(step, FixtureCapabilityType.Zoom, 0.3);
+    service.deactivateCapabilityValue(step, FixtureCapabilityType.Zoom);
+    service.setCapabilityFan(step, FixtureCapabilityType.Zoom, [
+      new FanStop({ position: 0, valuePercentage: 0 }),
+      new FanStop({ position: 1, valuePercentage: 1 }),
+    ]);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.Zoom)).toBe(true);
+
+    const rotation = new FixtureCapabilityValue({ type: 'WheelSlotRotation', wheel: 'Gobo Wheel', valuePercentage: 0.7 });
+    service.putExactCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, 'Gobo Wheel', undefined, rotation);
+    service.deactivateCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, undefined, 'Gobo Wheel');
+    const faster = new FixtureCapabilityValue({ ...rotation, valuePercentage: 0.9 });
+    service.putExactCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, 'Gobo Wheel', undefined, faster);
+    expect(service.hasActiveCapabilityValue(step, FixtureCapabilityType.WheelSlotRotation, undefined, 'Gobo Wheel')).toBe(true);
+  });
+
+  it('switches the value of a channel off and on again as it was', () => {
+    service.setChannelValue('Dimmer', 'profile', 120);
+
+    service.deactivateChannelValue('Dimmer', 'profile');
+    expect(service.hasActiveChannelValue('Dimmer', 'profile')).toBe(false);
+    expect(service.getChannelValue('Dimmer', 'profile')).toBe(120);
+
+    expect(service.reactivateChannelValue('Dimmer', 'profile')).toBe(true);
+    expect(service.hasActiveChannelValue('Dimmer', 'profile')).toBe(true);
+
+    // without a step being edited, there is none
+    service.selectedStep = undefined;
+    expect(service.hasActiveChannelValue('Dimmer', 'profile')).toBe(false);
   });
 });

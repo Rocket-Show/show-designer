@@ -1,4 +1,4 @@
-<div class="card border-secondary h-100" [class.capability-deactivated]="value == undefined" style="min-height: 200px">
+<div class="card border-secondary h-100" [class.capability-deactivated]="!active" style="min-height: 200px">
   <div class="card-header">
     <div class="my-auto">
       <div class="form-check">
@@ -6,7 +6,7 @@
           type="checkbox"
           class="form-check-input"
           id="capabilityGeneric{{ capabilityIndex }}Active"
-          [ngModel]="value != undefined"
+          [ngModel]="active"
           (ngModelChange)="changeActive($event)"
         />
         <label class="form-check-label" for="capabilityGeneric{{ capabilityIndex }}Active">

@@ -312,6 +312,14 @@ export class FixtureCapabilityGoboWheelComponent implements AfterViewChecked, On
       return;
     }
 
+    // shaking the gobo turns it on
+    this.presetService.reactivateCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.WheelSlot,
+      undefined,
+      this.wheelName,
+      this._fixtureProfile.uuid
+    );
     this.putShake(speed);
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
@@ -378,21 +386,36 @@ export class FixtureCapabilityGoboWheelComponent implements AfterViewChecked, On
     this.livePreviewService.previewLive();
   }
 
-  changeActive(active: boolean) {
-    if (active) {
-      // the first slot, which is open on most wheels
-      this.selectSlotNumber(this.slotCapabilities[0]?.capability.slotNumber ?? 1);
-      return;
-    }
-
-    this.presetService.deleteCapabilityValue(
+  // whether the step sets a slot of the wheel: it may keep one turned off (see played-values)
+  isActive(): boolean {
+    return this.presetService.hasActiveCapabilityValue(
       this.presetService.selectedStep,
       FixtureCapabilityType.WheelSlot,
       undefined,
       this.wheelName,
-      this._fixtureProfile.uuid
+      this._fixtureProfile?.uuid
     );
-    this.putShake(0);
+  }
+
+  // Turns the slot and its shake off, keeping them, or on again as they were (the first slot, if there wasn't one
+  // yet). The rotation has a switch of its own.
+  changeActive(active: boolean) {
+    const step = this.presetService.selectedStep;
+    const profileUuid = this._fixtureProfile.uuid;
+
+    if (active) {
+      if (!this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.WheelSlot, undefined, this.wheelName, profileUuid)) {
+        // the first slot, which is open on most wheels
+        this.selectSlotNumber(this.slotCapabilities[0]?.capability.slotNumber ?? 1);
+        return;
+      }
+
+      this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.WheelShake, undefined, this.wheelName, profileUuid);
+    } else {
+      this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.WheelSlot, undefined, this.wheelName, profileUuid);
+      this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.WheelShake, undefined, this.wheelName, profileUuid);
+    }
+
     this.changeDetectorRef.detectChanges();
     this.livePreviewService.previewLive();
   }

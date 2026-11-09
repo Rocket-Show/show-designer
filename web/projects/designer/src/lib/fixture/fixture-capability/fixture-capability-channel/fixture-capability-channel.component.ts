@@ -6,6 +6,7 @@ import { FixtureProfile } from '../../../models/fixture-profile';
 import { PresetService } from '../../../services/preset.service';
 import { EffectService } from '../../../services/effect.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
+import { playedValues } from '../../../models/played-values';
 
 @Component({
   selector: 'lib-app-fixture-capability-channel',
@@ -29,6 +30,9 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
   // chasing, differs from fixture to fixture, so the channel only says that it is driven.
   drivenByEffect = false;
   templateValue = 0;
+
+  // whether the step sets the channel: it may keep a value turned off (see played-values)
+  active = false;
   description: string;
 
   hasRange = false;
@@ -103,9 +107,10 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     this.selectedCapability = this._channel.capabilities[0];
 
     this.value = this.presetService.getChannelValue(this._channel.name, this.profile.uuid);
+    this.active = this.presetService.hasActiveChannelValue(this._channel.name, this.profile.uuid);
 
     const capabilityValue = this.presetService.getChannelValueFromCapabilities(
-      this.presetService.selectedStep.fixtureCapabilityValues,
+      playedValues(this.presetService.selectedStep.fixtureCapabilityValues),
       this._channel,
       this.profile.uuid,
       this.presetService.selectedPreset,
@@ -283,6 +288,7 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     value = +value;
 
     this.value = value;
+    this.active = true;
     this.calculateTemplateValue();
 
     this.presetService.setChannelValue(this._channel.name, this.profile.uuid, value);
@@ -321,14 +327,17 @@ export class FixtureCapabilityChannelComponent implements OnInit, OnDestroy {
     return 0;
   }
 
+  // turns the channel off, keeping its value, or on again as it was
   changeActive(active: boolean) {
-    if (active) {
+    if (!active) {
+      this.presetService.deactivateChannelValue(this._channel.name, this.profile.uuid);
+      this.updateChannel();
+    } else if (this.presetService.reactivateChannelValue(this._channel.name, this.profile.uuid)) {
+      this.updateChannel();
+    } else {
       // keep what the channel was showing: the value a capability drives it to, or the
       // default value of the channel, if no capability reaches it
       this.setValue(this.templateValue, true);
-    } else {
-      this.presetService.deleteChannelValue(this._channel.name, this.profile.uuid);
-      this.updateChannel();
     }
     this.livePreviewService.previewLive();
   }

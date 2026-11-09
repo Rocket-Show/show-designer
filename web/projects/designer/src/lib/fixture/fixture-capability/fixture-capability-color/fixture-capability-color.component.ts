@@ -85,7 +85,12 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     this.updateGradient();
 
     if (red !== undefined && green !== undefined && blue !== undefined) {
-      this.active = true;
+      // a color turned off is shown as well, to be turned on again as it is (see played-values)
+      this.active = this.presetService.hasActiveCapabilityValue(
+        this.presetService.selectedStep,
+        FixtureCapabilityType.ColorIntensity,
+        FixtureCapabilityColor.Red
+      );
     } else {
       this.active = false;
       red = 255;
@@ -257,63 +262,49 @@ export class FixtureCapabilityColorComponent implements OnInit, OnDestroy {
     this.colorPickerMounted = true;
   }
 
+  // colors the fixtures of the step in the passed color of the picker
   private updateFixtureColor(color: any) {
     if (this.presetService.selectedStep) {
-      if (color) {
+      const rgb = [color.rgb.r, color.rgb.g, color.rgb.b];
+
+      FixtureCapabilityColorComponent.gradientColors.forEach((capabilityColor, index) =>
         this.presetService.setCapabilityValue(
           this.presetService.selectedStep,
           FixtureCapabilityType.ColorIntensity,
-          color.rgb.r / 255,
+          rgb[index] / 255,
           undefined,
-          FixtureCapabilityColor.Red
-        );
-        this.presetService.setCapabilityValue(
-          this.presetService.selectedStep,
-          FixtureCapabilityType.ColorIntensity,
-          color.rgb.g / 255,
-          undefined,
-          FixtureCapabilityColor.Green
-        );
-        this.presetService.setCapabilityValue(
-          this.presetService.selectedStep,
-          FixtureCapabilityType.ColorIntensity,
-          color.rgb.b / 255,
-          undefined,
-          FixtureCapabilityColor.Blue
-        );
-      } else {
-        this.presetService.deleteCapabilityValue(
-          this.presetService.selectedStep,
-          FixtureCapabilityType.ColorIntensity,
-          FixtureCapabilityColor.Red
-        );
-        this.presetService.deleteCapabilityValue(
-          this.presetService.selectedStep,
-          FixtureCapabilityType.ColorIntensity,
-          FixtureCapabilityColor.Green
-        );
-        this.presetService.deleteCapabilityValue(
-          this.presetService.selectedStep,
-          FixtureCapabilityType.ColorIntensity,
-          FixtureCapabilityColor.Blue
-        );
-      }
+          capabilityColor
+        )
+      );
       this.changeDetectorRef.detectChanges();
       this.presetService.fixtureColorChanged.next();
       this.livePreviewService.previewLive();
     }
   }
 
+  // Turns the color off, keeping it (a gradient too), or on again as it was. A color which wasn't there yet is the one
+  // of the picker.
   changeActive(active: boolean) {
+    const step = this.presetService.selectedStep;
+    const colors = FixtureCapabilityColorComponent.gradientColors;
     this.active = active;
 
-    if (active) {
-      this.updateFixtureColor(this.colorPicker.color);
+    if (!active) {
+      colors.forEach((color) => this.presetService.deactivateCapabilityValue(step, FixtureCapabilityType.ColorIntensity, color));
     } else {
-      this.updateFixtureColor(undefined);
-      this.setPickerColor(255, 255, 255);
-      this.color = '#ffffff';
+      const reactivated = colors.map((color) =>
+        this.presetService.reactivateCapabilityValue(step, FixtureCapabilityType.ColorIntensity, color)
+      );
+
+      if (!reactivated.some((on) => on)) {
+        this.updateFixtureColor(this.colorPicker.color);
+        this.livePreviewService.previewLive();
+        return;
+      }
     }
+
+    this.changeDetectorRef.detectChanges();
+    this.presetService.fixtureColorChanged.next();
     this.livePreviewService.previewLive();
   }
 

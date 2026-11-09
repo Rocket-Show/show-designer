@@ -67,6 +67,14 @@ describe('ColorService', () => {
     expect(service.getDerivedPresetColor(preset)).toBe('#ff0000');
   });
 
+  it('leaves a color switched off unmarked', () => {
+    const preset = new Preset();
+    preset.steps = [step(1, 0, 0)];
+    preset.steps[0].fixtureCapabilityValues.forEach((value) => (value.deactivated = true));
+
+    expect(service.getDerivedPresetColor(preset)).toBeUndefined();
+  });
+
   it('keeps that color while a later step is being edited', () => {
     const preset = new Preset();
     preset.steps = [step(1, 0, 0), step(0, 0, 1)];

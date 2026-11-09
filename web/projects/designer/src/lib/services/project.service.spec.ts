@@ -164,6 +164,21 @@ describe('ProjectService with the designer API', () => {
     expect(project.presets[1].fixtureCapabilityValues).toEqual([]);
   });
 
+  it('leaves the values switched off out of the ones for a Rocket Show without steps, which would play them', () => {
+    const on = new FixtureCapabilityValue({ type: 'Zoom', valuePercentage: 0.5 });
+    const off = new FixtureCapabilityValue({ type: 'Iris', valuePercentage: 0.5, deactivated: true });
+    const first = new PresetStep();
+    first.fixtureCapabilityValues = [on, off];
+    const project = new Project();
+    project.presets = [presetWithSteps(first)];
+
+    service.writeCompatibilityValues(project);
+
+    expect(project.presets[0].fixtureCapabilityValues).toEqual([on]);
+    // the step keeps both
+    expect(first.fixtureCapabilityValues).toEqual([on, off]);
+  });
+
   it('saves a project and keeps the id and the share token it is given', () => {
     const navigate = spyOn(TestBed.inject(Router), 'navigate');
     const project = new Project({ name: 'Show', presets: [{ uuid: 'p', steps: [{ uuid: 's' }] }] });

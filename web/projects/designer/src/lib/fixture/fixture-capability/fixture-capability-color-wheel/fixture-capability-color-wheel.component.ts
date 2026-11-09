@@ -8,6 +8,7 @@ import { FixtureWheel } from '../../../models/fixture-wheel';
 import { FixtureService } from '../../../services/fixture.service';
 import { PresetService } from '../../../services/preset.service';
 import { LivePreviewService } from '../../../services/live-preview.service';
+import { playedValues } from '../../../models/played-values';
 
 @Component({
   selector: 'lib-app-fixture-capability-color-wheel',
@@ -156,7 +157,7 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
       // no slot is selected and the capability is inactive
       // -> show the approx. color, if a color or a similar slot from a different wheel has been selected,
       // unless the fixture lights the color itself
-      const capabilityValues = this.presetService.selectedStep.fixtureCapabilityValues;
+      const capabilityValues = playedValues(this.presetService.selectedStep.fixtureCapabilityValues);
 
       if (
         this.presetService.lightsColorOfItsOwn(
@@ -179,8 +180,29 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
     }
   }
 
+  // whether the step sets a slot of the wheel: it may keep one turned off (see played-values)
+  isActive(): boolean {
+    return this.presetService.hasActiveCapabilityValue(
+      this.presetService.selectedStep,
+      FixtureCapabilityType.WheelSlot,
+      undefined,
+      this.wheelName,
+      this._fixtureProfile.uuid
+    );
+  }
+
+  // turns the slot off, keeping it, or on again as it was (the first slot, if there wasn't one yet)
   changeActive(active: boolean) {
-    if (active) {
+    if (
+      active &&
+      !this.presetService.reactivateCapabilityValue(
+        this.presetService.selectedStep,
+        FixtureCapabilityType.WheelSlot,
+        undefined,
+        this.wheelName,
+        this._fixtureProfile.uuid
+      )
+    ) {
       this.presetService.setCapabilityValue(
         this.presetService.selectedStep,
         FixtureCapabilityType.WheelSlot,
@@ -190,8 +212,8 @@ export class FixtureCapabilityColorWheelComponent implements OnInit, OnDestroy {
         this.wheelName,
         this._fixtureProfile.uuid
       );
-    } else {
-      this.presetService.deleteCapabilityValue(
+    } else if (!active) {
+      this.presetService.deactivateCapabilityValue(
         this.presetService.selectedStep,
         FixtureCapabilityType.WheelSlot,
         undefined,

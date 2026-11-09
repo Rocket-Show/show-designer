@@ -1068,6 +1068,45 @@ function channelValuesEdges() {
     },
   });
 
+  // Values switched off in the preset editor (deactivated) are kept, but not played: the color, the brightness and a
+  // channel of the preset on top leave the blue of the one below, and a step switching values off holds the ones of
+  // the step before, as if it didn't name them
+  const switched = [0, 1].map((index) => edgeFixture('switched-' + index, sharedDimmer, '10ch', index));
+  const switchedFixtures = switched.map((par) => ({ fixtureUuid: par.uuid }));
+  const off = (value) => ({ ...value, deactivated: true });
+  const switchedPresets = [
+    edgePreset('blue-below', switchedFixtures, {
+      fixtureCapabilityValues: [capability('Intensity', 0.6), ...rgb(0, 0, 1)],
+    }),
+    edgePreset('switched-off', switchedFixtures, {
+      fixtureCapabilityValues: [off(capability('Intensity', 1)), ...rgb(1, 0, 0).map(off)],
+      fixtureChannelValues: [off({ profileUuid: sharedDimmer, channelName: 'Fixed', value: 200 })],
+    }),
+    {
+      uuid: 'switching-steps',
+      name: 'switching-steps',
+      fixtures: switchedFixtures,
+      steps: [
+        step('dim', 0, { fixtureCapabilityValues: [capability('Intensity', 0.2), ...rgb(1, 0, 0)] }),
+        step('switched', 1000, { fixtureCapabilityValues: [off(capability('Intensity', 1)), ...rgb(0, 1, 0)] }, { transitionMillis: 1000 }),
+      ],
+      effects: [],
+    },
+  ];
+
+  cases.push({
+    name: 'values switched off in the preset editor, kept but not played',
+    input: {
+      project: edgeProject([sharedDimmer], switched, switchedPresets, [
+        { uuid: 'over-blue', name: 'Over blue', presetUuids: ['switched-off', 'blue-below'] },
+      ]),
+      runs: [
+        { preview: { mode: 'scenes', scenes: ['over-blue'] }, times: [0] },
+        { preview: { mode: 'preset', preset: 'switching-steps', stepPreviewStartMillis: 0 }, times: [0, 1500, 2000] },
+      ],
+    },
+  });
+
   // A spot with a gobo wheel before its color wheel, which a channel named differently than the
   // wheel sets and another one shakes (naming its wheels in a list). Each spot is given a gobo and
   // a color, which the color wheel approximates: yellow lies as close to red, green, white and the
