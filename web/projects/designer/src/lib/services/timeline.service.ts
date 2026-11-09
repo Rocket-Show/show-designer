@@ -1133,12 +1133,13 @@ export class TimelineService {
         // the file name is also used for the real file name
         audioFileName = 'file/get?name=' + encodeURIComponent(this.selectedComposition.audioFileName) + '&type=AUDIO';
       } else {
-        // the composition uuid and extension is used as the file name
+        // the composition uuid and extension is used as the file name, the extension in lower case like the server
+        // stores it (Song.MP3, as files are often named on Windows, is stored as <uuid>.mp3)
         audioFileName =
           'composition-files/?file=' +
           this.selectedComposition.uuid +
           '.' +
-          this.selectedComposition.audioFileName.substr(this.selectedComposition.audioFileName.lastIndexOf('.') + 1);
+          this.selectedComposition.audioFileName.substr(this.selectedComposition.audioFileName.lastIndexOf('.') + 1).toLowerCase();
       }
 
       this.waveSurfer.load(this.configService.restUrl + audioFileName);

@@ -674,6 +674,15 @@ describe('TimelineService playing along an audio file', () => {
     expect(waveSurfer.load).toHaveBeenCalledWith('https://show/api/composition-files/?file=song.mp3');
   }));
 
+  it('loads the audio file the server stored with its extension in lower case', fakeAsync(() => {
+    projectService.project.compositions[0].audioFileName = 'Track 01.MP3';
+
+    service.selectCompositionIndex(0);
+    tick();
+
+    expect(waveSurfer.load).toHaveBeenCalledWith('https://show/api/composition-files/?file=song.mp3');
+  }));
+
   it('loads the audio file of a composition from the media library of Rocket Show, named for an address', fakeAsync(() => {
     configService.enableMediaLibrary = true;
 
