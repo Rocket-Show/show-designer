@@ -1746,6 +1746,31 @@ function channelValuesMovements() {
     },
   });
 
+  // A movement runs around where the presets point the heads, whichever preset does it: one below the movement, one
+  // above it, or one above the own position of the movement. Without any, around where they point at rest (the default
+  // of their channels). Of two movements, the one on top wins.
+  const layeringPresets = [
+    edgePreset('aim-left', movingFixtures, { fixtureCapabilityValues: [pan({ valueDegrees: -40 }), tilt({ valueDegrees: 25 })] }),
+    { ...edgePreset('sway', movingFixtures, {}), effects: [movement('sway', 'figure8')] },
+    { ...edgePreset('own', movingFixtures, { fixtureCapabilityValues: at }), effects: [movement('own', 'circle')] },
+    { ...edgePreset('line-on-top', movingFixtures, {}), effects: [movement('line-on-top', 'line', { phasingCycles: 0 })] },
+  ];
+  const layeringScenes = [
+    { uuid: 'position-below', presetUuids: ['sway', 'aim-left'] },
+    { uuid: 'position-above', presetUuids: ['aim-left', 'sway'] },
+    { uuid: 'at-rest', presetUuids: ['sway'] },
+    { uuid: 'over-its-own', presetUuids: ['aim-left', 'own'] },
+    { uuid: 'two-movements', presetUuids: ['line-on-top', 'sway', 'aim-left'] },
+  ].map((scene) => ({ ...scene, name: scene.uuid }));
+
+  cases.push({
+    name: 'movements around where the presets above or below them point the moving heads',
+    input: {
+      project: edgeProject([wideMover, movingHead], moving, layeringPresets, layeringScenes),
+      runs: layeringScenes.map((scene) => ({ preview: { mode: 'scenes', scenes: [scene.uuid] }, times: [0, 250, 500, 1000, 1500] })),
+    },
+  });
+
   // Movements fanned over the heads: a line on the pan fanned from the middle, opening and closing the fan of the step
   // (mirrored as well), a circle fanned from the first head, chasing over them, and a line fanned over a single head,
   // which leaves it where the step points it

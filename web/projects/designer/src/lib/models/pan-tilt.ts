@@ -104,6 +104,12 @@ export function getAxisChannelValue(channel: CachedFixtureChannel, range: number
   return channel.maxValue * position;
 }
 
+// the degrees from the middle of its range the passed value of a channel points its fixture at (see
+// getAxisChannelValue)
+export function getAxisDegrees(channel: CachedFixtureChannel, range: number, value: number): number {
+  return (value / channel.maxValue - 0.5) * range;
+}
+
 // The degrees the passed fixture of a preset is turned by to fan the fixtures out: the first one by half of them to
 // one side, the last one by half of them to the other, or ('center' as the shape) the one in the middle by half of them
 // to one side, the ends by half of them to the other (see fan)
@@ -348,30 +354,4 @@ export function getAimDegrees(placement: StagePlacement, target: number[]): { pa
   }
 
   return { pan: (pan * 180) / Math.PI, tilt: (tilt * 180) / Math.PI };
-}
-
-// Where the passed values of a preset point a fixture of the passed profile on an axis, in degrees from the middle of
-// its range, or undefined if they don't (a later value wins, like when they are mixed). A movement of the preset runs
-// around it (see EffectPanTilt).
-export function getPresetPanTiltDegrees(
-  values: FixtureCapabilityValue[],
-  type: FixtureCapabilityType,
-  profileUuid: string,
-  range: number,
-  mirror: boolean,
-  context: PanTiltContext
-): number {
-  let degrees: number;
-
-  for (const value of values) {
-    if (value.type === type && (!value.profileUuid || value.profileUuid === profileUuid)) {
-      const valueDegrees = getPanTiltDegrees(value, range, mirror, context);
-
-      if (valueDegrees !== undefined) {
-        degrees = valueDegrees;
-      }
-    }
-  }
-
-  return degrees;
 }

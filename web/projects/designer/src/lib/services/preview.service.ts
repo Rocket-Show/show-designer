@@ -30,8 +30,8 @@ import { demoAudioFrames } from '../models/pixel-audio-analysis';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
+  getAxisDegrees,
   getAxisRange,
-  getPresetPanTiltDegrees,
   getStagePlacements,
   isPanTilt,
   PanTiltContext,
@@ -63,6 +63,15 @@ const PREVIEW_GLOW_STORAGE_KEY = 'previewGlow';
 
 // the layer of the scene the lights which glow are on as well (the LEDs and the lenses), see PreviewComponent.render
 export const PREVIEW_GLOW_LAYER = 1;
+
+// A movement of the moving heads, played once all the presets are mixed (see mixMovements)
+interface PendingMovement {
+  effect: EffectPanTilt;
+  effectTimeMillis: number;
+  preset: PresetRegionScene;
+  intensityPercentage: number;
+  context: PanTiltContext;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -747,7 +756,8 @@ export class PreviewService implements OnDestroy {
     state: PresetStepState,
     context: PanTiltContext,
     wholeFixtureIndex: number,
-    wholeFixtureCount: number
+    wholeFixtureCount: number,
+    movements: PendingMovement[]
   ) {
     let effectTimeMillis = timeMillis;
 
@@ -763,8 +773,9 @@ export class PreviewService implements OnDestroy {
       const effectIntensityPercentage = intensityPercentage * effectAmount;
 
       if (effect.visible && effectAmount > 0) {
+        // a movement runs around where all the presets point the heads, see mixMovements
         if (effect instanceof EffectPanTilt) {
-          this.mixPanTiltEffect(effect, effectTimeMillis, preset, cachedFixture, values, effectIntensityPercentage, state, context);
+          movements.push({ effect, effectTimeMillis, preset, intensityPercentage: effectIntensityPercentage, context });
           continue;
         }
 
@@ -1261,26 +1272,17 @@ export class PreviewService implements OnDestroy {
     return value;
   }
 
-  // A movement of the moving heads, around where the preset points each of them (or around the middle, if it doesn't),
-  // mirrored with the preset. This follows the same rules as Rocket Show.
-  private mixPanTiltEffect(
-    effect: EffectPanTilt,
-    effectTimeMillis: number,
-    preset: PresetRegionScene,
-    cachedFixture: CachedFixture,
-    values: FixtureChannelValue[],
-    effectIntensityPercentage: number,
-    state: PresetStepState,
-    context: PanTiltContext
-  ) {
-    const beatsPerMinute = this.getBeatsPerMinute();
-    const curveTimeMillis = this.getCurveTimeMillis(effect, effectTimeMillis, preset, context.fixtureCount, beatsPerMinute);
-    const offset = effect.getOffsetAtMillis(curveTimeMillis, context.fixtureIndex, context.fixtureCount, beatsPerMinute, context.fanPlace);
-
-    // the movement does not apply anymore after it has finished running
-    if (!offset) {
+  // The movements of the moving heads run around where the presets point them, whichever preset does it: the one of
+  // the movement, one below it or one above it. Where they point (the default of the channel without a preset) is the
+  // middle of all the movements, which are mixed in the order of their presets, the one on top over the others. Each
+  // is mirrored with its preset. This follows the same rules as Rocket Show.
+  private mixMovements(movements: PendingMovement[], cachedFixture: CachedFixture, values: FixtureChannelValue[]) {
+    if (movements.length === 0) {
       return;
     }
+
+    // where the presets point the fixture on each axis, before it moves
+    const axes: { cachedChannel: CachedFixtureChannel; type: FixtureCapabilityType; range: number; center: number }[] = [];
 
     for (const cachedChannel of cachedFixture.channels) {
       if (!cachedChannel.channel) {
@@ -1294,16 +1296,44 @@ export class PreviewService implements OnDestroy {
           continue;
         }
 
-        const mirror = preset.preset.mirrorsCapability(type);
-        const center =
-          getPresetPanTiltDegrees(state.fixtureCapabilityValues, type, cachedFixture.profile.uuid, range, mirror, context) ?? 0;
-        const move = type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
+        const value = this.getChannelValue(values, cachedChannel.name, cachedFixture.profile.uuid);
+        axes.push({ cachedChannel, type, range, center: value ? getAxisDegrees(cachedChannel, range, value.value) : 0 });
+      }
+    }
+
+    const beatsPerMinute = this.getBeatsPerMinute();
+
+    for (const movement of movements) {
+      const context = movement.context;
+      const curveTimeMillis = this.getCurveTimeMillis(
+        movement.effect,
+        movement.effectTimeMillis,
+        movement.preset,
+        context.fixtureCount,
+        beatsPerMinute
+      );
+      const offset = movement.effect.getOffsetAtMillis(
+        curveTimeMillis,
+        context.fixtureIndex,
+        context.fixtureCount,
+        beatsPerMinute,
+        context.fanPlace
+      );
+
+      // the movement does not apply anymore after it has finished running
+      if (!offset) {
+        continue;
+      }
+
+      for (const axis of axes) {
+        const mirror = movement.preset.preset.mirrorsCapability(axis.type);
+        const move = axis.type === FixtureCapabilityType.Pan ? offset.pan : offset.tilt;
 
         const fixtureChannelValue = new FixtureChannelValue();
-        fixtureChannelValue.channelName = cachedChannel.name;
+        fixtureChannelValue.channelName = axis.cachedChannel.name;
         fixtureChannelValue.profileUuid = cachedFixture.profile.uuid;
-        fixtureChannelValue.value = getAxisChannelValue(cachedChannel, range, center + (mirror ? -move : move));
-        this.mixChannelValue(values, fixtureChannelValue, effectIntensityPercentage);
+        fixtureChannelValue.value = getAxisChannelValue(axis.cachedChannel, axis.range, axis.center + (mirror ? -move : move));
+        this.mixChannelValue(values, fixtureChannelValue, movement.intensityPercentage);
       }
     }
   }
@@ -1398,6 +1428,9 @@ export class PreviewService implements OnDestroy {
           }
         }
 
+        // the movements of the presets, played over where all of them point the fixture
+        const movements: PendingMovement[] = [];
+
         for (const preset of presets) {
           // search for this fixture in the preset and get it's preset-specific index (for chasing effects)
           const presetIndex = fixtureIndices
@@ -1444,10 +1477,13 @@ export class PreviewService implements OnDestroy {
               state,
               context,
               wholeFixtureChase.indices.get(cachedFixture.fixture.uuid) ?? 0,
-              wholeFixtureChase.count
+              wholeFixtureChase.count,
+              movements
             );
           }
         }
+
+        this.mixMovements(movements, cachedFixture, values);
       }
 
       // a fixture being identified from the fixture pool blinks, whatever the presets light it with

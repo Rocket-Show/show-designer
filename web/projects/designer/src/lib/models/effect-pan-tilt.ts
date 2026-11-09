@@ -2,12 +2,12 @@ import { cycleSine } from './cycle-sine';
 import { EffectCurve } from './effect-curve';
 import { getFanPlace } from './fan';
 
-// A movement of the moving heads of a preset around where the preset points them (or around the middle, if it
-// doesn't): a circle, a figure 8, a line back and forth or a wave (back and forth on the pan, nodding three times on
-// the tilt on the way), its size given in degrees on each axis, which moves every model the same way. It runs on the
-// timing of a curve: its period, its phase, the chase over the fixtures, how long it runs and how far it moves each
-// fixture by its place in the fan of the preset (a line fanned 'linear' opens and closes the fan of the heads). Rocket
-// Show plays it the very same way (EffectPanTilt).
+// A movement of the moving heads of a preset around where the presets of the scene point them, whichever preset does it
+// (see mixMovements of the preview): a circle, a figure 8, a line back and forth or a wave (back and forth on the pan,
+// nodding three times on the tilt on the way), its size given in degrees on each axis, which moves every model the same
+// way. It runs on the timing of a curve: its period, its phase, the chase over the fixtures, how long it runs and how
+// far it moves each fixture by its place in the fan of the preset (a line fanned 'linear' opens and closes the fan of
+// the heads). Rocket Show plays it the very same way (EffectPanTilt).
 export class EffectPanTilt extends EffectCurve {
   shape = 'circle';
 

@@ -7,10 +7,11 @@ import { FixtureCapabilityValue } from './fixture-capability-value';
 import { FixtureProfile } from './fixture-profile';
 import {
   getAimDegrees,
+  getAxisChannelValue,
+  getAxisDegrees,
   getAxisRange,
   getPanTiltChannelValue,
   getPanTiltDegrees,
-  getPresetPanTiltDegrees,
   getRotationMatrix,
   getSpreadDegrees,
   getStagePlacements,
@@ -179,19 +180,12 @@ describe('pan-tilt', () => {
     expect(getPanTiltChannelValue(aimed, wide, false, undefined)).toBeUndefined();
   });
 
-  it('should find where the values of a preset point a fixture, the last one winning', () => {
-    const values = [
-      value('Pan', { valueDegrees: 10 }),
-      value('Pan', { valueDegrees: 20, profileUuid: 'other' }),
-      value('Pan', { valueDegrees: 30, profileUuid: 'profile' }),
-      value('Pan', {}),
-      value('Tilt', { valueDegrees: 40 }),
-    ];
-
-    expect(getPresetPanTiltDegrees(values, FixtureCapabilityType.Pan, 'profile', 540, false, undefined)).toBe(30);
-    expect(getPresetPanTiltDegrees(values, FixtureCapabilityType.Pan, 'profile', 540, true, undefined)).toBe(-30);
-    expect(getPresetPanTiltDegrees(values, FixtureCapabilityType.Tilt, 'profile', 270, false, undefined)).toBe(40);
-    expect(getPresetPanTiltDegrees([], FixtureCapabilityType.Tilt, 'profile', 270, false, undefined)).toBeUndefined();
+  it('should read where the value of a channel points its fixture', () => {
+    // the middle of the range, its ends and back from the value pointing at some degrees
+    expect(getAxisDegrees(wide, 630, wide.maxValue / 2)).toBe(0);
+    expect(getAxisDegrees(wide, 630, 0)).toBe(-315);
+    expect(getAxisDegrees(wide, 630, wide.maxValue)).toBe(315);
+    expect(getAxisDegrees(wide, 630, getAxisChannelValue(wide, 630, 90))).toBeCloseTo(90, 9);
   });
 
   // a value travelling from the one of the step before, like a preset shows it between two of its steps
