@@ -121,12 +121,31 @@ export class AiLooksService {
     return beatsPerMinute > 0 ? Math.round(beatsPerMinute) : EffectCurve.defaultBeatsPerMinute;
   }
 
-  getRequest(rig: AiRig, settings: AiSettings, prompt: string, current?: AiLooks, instruction?: string): AiLooksRequest {
+  // The request of looks, or of a change of the current looks: all of them, one scene (its index) or one more scene,
+  // which needs no instruction
+  getRequest(
+    rig: AiRig,
+    settings: AiSettings,
+    prompt: string,
+    current?: AiLooks,
+    instruction?: string,
+    change?: { scene?: number; add?: boolean }
+  ): AiLooksRequest {
     const request: AiLooksRequest = { rig: { groups: rig.groups.map((group) => group.group) }, settings, prompt: prompt || '' };
+    const add = !!change && change.add === true;
 
-    if (current && instruction) {
+    if (current && (instruction || add)) {
       request.current = current;
-      request.instruction = instruction;
+
+      if (instruction) {
+        request.instruction = instruction;
+      }
+
+      if (add) {
+        request.add = true;
+      } else if (change && change.scene !== undefined) {
+        request.scene = change.scene;
+      }
     }
 
     return request;

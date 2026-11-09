@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import {
   AiLooks,
+  AiLooksResponse,
   AiLooksStatus,
   AiScene,
   aiMoods,
@@ -25,10 +26,14 @@ import { UserService } from '../../services/user.service';
 // what the panel shows: the settings, the wait for the AI, or the looks it designed
 type AiLooksView = 'settings' | 'designing' | 'looks';
 
+// what the user asks the AI for, once it designed the looks: to change the scene on the stage, all of them, or to add
+// one more scene
+export type AiLooksScope = 'scene' | 'all' | 'add';
+
 // The AI looks (see AiLooksService), in a panel beside the designer: the user describes the looks and picks colors, a
 // mood, the energy, the tempo and how much the heads move, and the AI designs presets and scenes for the fixtures of
 // the project. The stage plays each scene picked before anything is added: the user adds the scenes they want to the
-// project, has the looks changed or discards them.
+// project, has the AI change the scene on the stage, all of them or add one more scene, or discards them.
 @Component({
   selector: 'lib-ai-looks',
   templateUrl: './ai-looks.component.html',
@@ -41,6 +46,7 @@ export class AiLooksComponent implements OnInit, OnDestroy {
   readonly movements = aiMovements;
   readonly palettes = aiPalettes;
   readonly energies = [1, 2, 3, 4, 5];
+  readonly scopes: AiLooksScope[] = ['scene', 'all', 'add'];
   readonly maxColors = 4;
 
   view: AiLooksView = 'settings';
@@ -52,6 +58,11 @@ export class AiLooksComponent implements OnInit, OnDestroy {
   prompt = '';
   looks: AiLooks;
   instruction = '';
+  scope: AiLooksScope = 'scene';
+
+  // the scene the AI changes (its index), or 'add' while it adds one: the looks stay on the stage meanwhile
+  working: number | 'add';
+  private destroyed = false;
 
   // the error of the last request, as a key of the translations
   errorKey: string;
@@ -121,7 +132,12 @@ export class AiLooksComponent implements OnInit, OnDestroy {
   }
 
   get canDesign(): boolean {
-    return this.available && this.hasFixtures && this.requestsLeft !== 0 && this.view !== 'designing';
+    return this.available && this.hasFixtures && this.requestsLeft !== 0 && this.view !== 'designing' && this.working === undefined;
+  }
+
+  // a change needs an instruction, one more scene can be left to the AI
+  get canAsk(): boolean {
+    return this.canDesign && (this.scope === 'add' || !!this.instruction.trim());
   }
 
   setOutput(output: AiSettings['output']) {
@@ -231,10 +247,27 @@ export class AiLooksComponent implements OnInit, OnDestroy {
     this.request(undefined, undefined);
   }
 
-  // have the AI change the looks as the user says
-  change() {
-    if (this.instruction.trim()) {
-      this.request(this.looks, this.instruction.trim());
+  setScope(scope: AiLooksScope) {
+    this.scope = scope;
+  }
+
+  // the name of the scene on the stage, which the AI changes when it is asked for this scene
+  get playingName(): string {
+    return this.compiled && this.compiled.sources[this.playing] ? this.compiled.sources[this.playing].name : '';
+  }
+
+  // have the AI change the scene on the stage, all of the looks, or add one more scene, as the user says
+  ask() {
+    if (!this.canAsk) {
+      return;
+    }
+
+    const instruction = this.instruction.trim();
+
+    if (this.scope === 'all') {
+      this.request(this.looks, instruction);
+    } else {
+      this.requestScene(this.scope === 'scene' ? this.playing : 'add', instruction);
     }
   }
 
@@ -250,21 +283,61 @@ export class AiLooksComponent implements OnInit, OnDestroy {
 
     this.aiLooksService.design(this.aiLooksService.getRequest(this.rig, this.settings, this.prompt, current, instruction)).subscribe({
       next: (response) => {
-        this.looks = response.looks;
-        this.instruction = '';
-        this.status = {
-          available: true,
-          requestsLast24Hours: response.requestsLast24Hours,
-          requestsPerUserPerDay: response.requestsPerUserPerDay,
-        };
-        this.showLooks();
-        this.remember();
+        this.answered(response);
+
+        // closed meanwhile: the looks are there the next time it opens
+        if (!this.destroyed) {
+          this.showLooks();
+        }
       },
       error: (error) => {
         this.view = from;
         this.showError(error);
       },
     });
+  }
+
+  // The AI changes one scene of the looks (its index) or adds one: the stage plays the looks on meanwhile. The other
+  // scenes stay as they are, and so do the ones the user left out. The stage plays the scene changed or added then.
+  private requestScene(scene: number | 'add', instruction: string) {
+    this.working = scene;
+    this.errorKey = undefined;
+    this.remember();
+
+    const change = scene === 'add' ? { add: true } : { scene };
+    const request = this.aiLooksService.getRequest(this.rig, this.settings, this.prompt, this.looks, instruction, change);
+
+    this.aiLooksService.design(request).subscribe({
+      next: (response) => {
+        this.working = undefined;
+        const left = this.scenes.map((added) => this.left.has(added));
+        this.answered(response);
+
+        if (this.destroyed) {
+          return;
+        }
+
+        this.compiled = this.aiLooksService.compile(this.looks, this.rig, this.settings.bpm);
+        this.left = new Set(this.scenes.filter((added, index) => left[index]));
+        this.play(scene === 'add' ? this.scenes.length - 1 : scene);
+      },
+      error: (error) => {
+        this.working = undefined;
+        this.showError(error);
+      },
+    });
+  }
+
+  // the looks the AI answered with, and how many requests the user has left
+  private answered(response: AiLooksResponse) {
+    this.looks = response.looks;
+    this.instruction = '';
+    this.status = {
+      available: true,
+      requestsLast24Hours: response.requestsLast24Hours,
+      requestsPerUserPerDay: response.requestsPerUserPerDay,
+    };
+    this.remember();
   }
 
   private remember() {
@@ -407,6 +480,7 @@ export class AiLooksComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     this.endPreview();
   }
 }

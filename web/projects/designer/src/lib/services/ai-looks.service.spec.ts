@@ -753,7 +753,31 @@ describe('AiLooksService', () => {
 
       expect(request.current).toBe(looks);
       expect(request.instruction).toBe('Warmer');
+      expect(request.scene).toBeUndefined();
+      expect(request.add).toBeUndefined();
       expect(service.getRequest(service.getRig(), defaultAiSettings(), '', looks, '').current).toBeUndefined();
+    });
+
+    it('send only the scene to change, or ask for one more scene, with or without an instruction', () => {
+      const looks = oneLook({ groups: ['rgb-par'], dimmer: 1 });
+      const scene = service.getRequest(service.getRig(), defaultAiSettings(), '', looks, 'Slower', { scene: 0 });
+
+      expect(scene.current).toBe(looks);
+      expect(scene.instruction).toBe('Slower');
+      expect(scene.scene).toBe(0);
+      expect(scene.add).toBeUndefined();
+      // a change of a scene needs an instruction
+      expect(service.getRequest(service.getRig(), defaultAiSettings(), '', looks, '', { scene: 0 }).current).toBeUndefined();
+
+      const add = service.getRequest(service.getRig(), defaultAiSettings(), '', looks, '', { add: true });
+      expect(add.current).toBe(looks);
+      expect(add.instruction).toBeUndefined();
+      expect(add.add).toBe(true);
+      expect(add.scene).toBeUndefined();
+      expect(service.getRequest(service.getRig(), defaultAiSettings(), '', looks, 'A calm one', { add: true }).instruction).toBe(
+        'A calm one'
+      );
+      expect(service.getRequest(service.getRig(), defaultAiSettings(), '', looks, 'Warmer', {}).scene).toBeUndefined();
     });
   });
 });

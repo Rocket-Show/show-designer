@@ -230,7 +230,7 @@ test.describe('AI looks', () => {
       await expect(panel.getByLabel('What should the show look like?')).toBeVisible();
     });
 
-    test('changes the looks as the user says', async ({ designer, api, page }) => {
+    test('changes all of the looks as the user says', async ({ designer, api, page }) => {
       api.aiLooks = [neonNight, { ...neonNight, name: 'Warm night', scenes: neonNight.scenes.slice(0, 2) }];
       await designer.open();
       await openAiLooks(designer);
@@ -239,18 +239,84 @@ test.describe('AI looks', () => {
       await dialog.getByRole('button', { name: 'Design', exact: true }).click();
       await expect(dialog.getByRole('heading', { name: 'Neon night' })).toBeVisible();
 
-      await dialog.getByLabel('Change the looks').fill('Warmer, and fewer scenes');
-      await dialog.getByRole('button', { name: 'Change', exact: true }).click();
+      await dialog.getByRole('button', { name: 'All scenes' }).click();
+      await expect(dialog.getByText('Changes all scenes as you say.')).toBeVisible();
+      await dialog.getByRole('textbox', { name: 'Ask the AI' }).fill('Warmer, and fewer scenes');
+      await dialog.getByRole('button', { name: 'Change all', exact: true }).click();
       await expect(dialog.getByRole('heading', { name: 'Warm night' })).toBeVisible();
       await expect(dialog.locator('.ai-scene')).toHaveCount(2);
 
       const [, change] = api.requestsTo('POST ai-looks');
       expect(change.body.current.name).toBe('Neon night');
       expect(change.body.instruction).toBe('Warmer, and fewer scenes');
+      expect(change.body.scene).toBeUndefined();
+      expect(change.body.add).toBeUndefined();
 
       // back to the settings, as they were picked
       await dialog.getByRole('button', { name: 'Back' }).click();
       await expect(dialog.getByLabel('What should the show look like?')).toBeVisible();
+    });
+
+    test('changes only the scene on the stage, the others playing on meanwhile', async ({ designer, api, page }) => {
+      // what the API answers: the verse changed, the other scenes as they were (see aiMergeScene in the spark repository)
+      const slowVerse = { name: 'Slow verse', section: 'verse', energy: 1, presets: ['blue-wash'], fadeInBeats: 8, fadeOutBeats: 4 };
+      api.aiLooks = [neonNight, { ...neonNight, scenes: neonNight.scenes.map((scene, index) => (index === 1 ? slowVerse : scene)) }];
+      await designer.open();
+      await openAiLooks(designer);
+      const dialog = aiPanel(page);
+      await dialog.getByRole('button', { name: 'Design', exact: true }).click();
+      await dialog.getByRole('checkbox', { name: 'Add Blackout to the project' }).uncheck();
+
+      // the verse on the stage, which the AI is asked to change
+      await dialog.locator('.ai-scene-play').nth(1).click();
+      await expect(designer.previewPanel).toContainText('Verse');
+      await expect(dialog.getByRole('button', { name: 'This scene' })).toHaveAttribute('aria-pressed', 'true');
+      await expect(dialog.getByText('Changes only “Verse”, the scene on the stage. The others stay as they are.')).toBeVisible();
+      const change = dialog.getByRole('button', { name: 'Change', exact: true });
+      await expect(change).toBeDisabled();
+      api.aiDelayMillis = 1500;
+      await dialog.getByRole('textbox', { name: 'Ask the AI' }).fill('Slower, and no bars');
+      await change.click();
+
+      await expect(dialog.locator('.ai-scene-working')).toContainText('The AI is changing this scene…');
+      await expect(dialog.getByRole('button', { name: /Add to project/ })).toBeDisabled();
+      await expect(designer.previewPanel).toContainText('Not in your project yet');
+
+      // the verse changed and on the stage, the blackout still left out
+      await expect(dialog.locator('.ai-scene').nth(1)).toContainText('Slow verse');
+      await expect(dialog.locator('.ai-scene-playing')).toContainText('Slow verse');
+      await expect(dialog.locator('.ai-scene-working')).toHaveCount(0);
+      await expect(designer.previewPanel).toContainText('Slow verse');
+      await expect(dialog.getByRole('checkbox', { name: 'Add Blackout to the project' })).not.toBeChecked();
+      await expect(dialog.getByRole('button', { name: 'Add to project (3)' })).toBeEnabled();
+
+      const [, request] = api.requestsTo('POST ai-looks');
+      expect(request.body.current.name).toBe('Neon night');
+      expect(request.body.instruction).toBe('Slower, and no bars');
+      expect(request.body.scene).toBe(1);
+    });
+
+    test('adds one more scene to the looks, left to the AI', async ({ designer, api, page }) => {
+      const talk = { name: 'Talk', section: 'talk', energy: 1, presets: ['blue-wash'], fadeInBeats: 4, fadeOutBeats: 4 };
+      api.aiLooks = [neonNight, { ...neonNight, scenes: [...neonNight.scenes, talk] }];
+      await designer.open();
+      await openAiLooks(designer);
+      const dialog = aiPanel(page);
+      await dialog.getByRole('button', { name: 'Design', exact: true }).click();
+      await expect(dialog.locator('.ai-scene')).toHaveCount(4);
+
+      await dialog.getByRole('button', { name: 'One more scene' }).click();
+      await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+
+      await expect(dialog.locator('.ai-scene')).toHaveCount(5);
+      await expect(dialog.locator('.ai-scene-playing')).toContainText('Talk');
+      await expect(designer.previewPanel).toContainText('Talk');
+      await expect(dialog.getByRole('button', { name: 'Add to project (5)' })).toBeVisible();
+
+      const [, request] = api.requestsTo('POST ai-looks');
+      expect(request.body.current.scenes.length).toBe(4);
+      expect(request.body.add).toBe(true);
+      expect(request.body.instruction).toBeUndefined();
     });
 
     test('tells the user when the AI can not design the looks', async ({ designer, api, page }) => {

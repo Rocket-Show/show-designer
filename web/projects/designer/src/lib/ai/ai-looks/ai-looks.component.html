@@ -205,7 +205,12 @@
     <p class="small text-muted mb-2">{{ 'designer.ai.preview-hint' | translate }}</p>
     <ul class="list-unstyled mb-2 ai-scenes">
       @for (added of scenes; track added.uuid; let index = $index) { @if (sourceOf(index); as scene) {
-      <li class="ai-scene d-flex align-items-start" [class.ai-scene-playing]="playing === index">
+      <li
+        class="ai-scene d-flex align-items-start"
+        [class.ai-scene-playing]="playing === index"
+        [class.ai-scene-working]="working === index"
+        [attr.aria-busy]="working === index"
+      >
         <input
           type="checkbox"
           class="ai-scene-pick"
@@ -229,16 +234,25 @@
             </span>
           </span>
           <small class="text-muted d-block">{{ presetNames(scene.presets) }}</small>
-          @if (playing === index) {
+          @if (working === index) {
+          <small class="ai-working"
+            ><i class="fa fa-magic mr-1 ai-designing" aria-hidden="true"></i>{{ 'designer.ai.working-scene' | translate }}</small
+          >
+          } @else if (playing === index) {
           <small class="ai-on-stage"><i class="fa fa-play mr-1" aria-hidden="true"></i>{{ 'designer.ai.on-stage' | translate }}</small>
           }
         </button>
       </li>
-      } }
+      } } @if (working === 'add') {
+      <li class="ai-scene ai-scene-working ai-scene-adding d-flex align-items-center" aria-busy="true">
+        <i class="fa fa-magic mr-2 ai-designing" aria-hidden="true"></i>
+        <small class="ai-working">{{ 'designer.ai.working-add' | translate }}</small>
+      </li>
+      }
     </ul>
 
     <!-- one scene after the other on the stage -->
-    <div class="d-flex align-items-center mb-3 ai-player">
+    <div class="d-flex align-items-center ai-player">
       <button type="button" class="btn btn-sm btn-secondary" (click)="previous()" [attr.aria-label]="'designer.ai.previous' | translate">
         <i class="fa fa-step-backward" aria-hidden="true"></i>
       </button>
@@ -250,28 +264,51 @@
         <label class="custom-control-label" for="aiAutoplay">{{ 'designer.ai.autoplay' | translate }}</label>
       </div>
     </div>
+    } @if (errorKey && view !== 'looks') {
+    <div class="alert alert-danger mt-3 mb-0" role="alert">{{ errorKey | translate }}</div>
+    } }
+  </div>
 
-    <label for="aiInstruction">{{ 'designer.ai.change' | translate }}</label>
+  <!-- the AI changes the scene on the stage, all of them, or adds one more scene: it stays, the scenes scroll -->
+  @if (view === 'looks' && looks) {
+  <div class="ai-ask">
+    @if (errorKey) {
+    <div class="alert alert-danger py-2 mb-2" role="alert">{{ errorKey | translate }}</div>
+    }
+    <label for="aiInstruction">{{ 'designer.ai.ask' | translate }}</label>
+    <div class="btn-group btn-group-sm d-flex mb-2" role="group" [attr.aria-label]="'designer.ai.ask' | translate">
+      @for (option of scopes; track option) {
+      <button
+        type="button"
+        class="btn flex-fill ai-scope"
+        [class.btn-primary]="scope === option"
+        [class.btn-secondary]="scope !== option"
+        [attr.aria-pressed]="scope === option"
+        (click)="setScope(option)"
+      >
+        {{ 'designer.ai.scope-' + option | translate }}
+      </button>
+      }
+    </div>
     <div class="input-group">
       <input
         id="aiInstruction"
         type="text"
         class="form-control"
         maxlength="500"
-        [placeholder]="'designer.ai.change-placeholder' | translate"
+        [placeholder]="'designer.ai.ask-placeholder-' + scope | translate"
         [(ngModel)]="instruction"
-        (keydown.enter)="change()"
+        (keydown.enter)="ask()"
       />
       <div class="input-group-append">
-        <button type="button" class="btn btn-secondary" [disabled]="!instruction.trim() || !canDesign" (click)="change()">
-          {{ 'designer.ai.change-button' | translate }}
+        <button type="button" class="btn btn-secondary ai-ask-button" [disabled]="!canAsk" (click)="ask()">
+          {{ 'designer.ai.ask-button-' + scope | translate }}
         </button>
       </div>
     </div>
-    } @if (errorKey) {
-    <div class="alert alert-danger mt-3 mb-0" role="alert">{{ errorKey | translate }}</div>
-    } }
+    <small class="form-text text-muted">{{ 'designer.ai.ask-hint-' + scope | translate : { name: playingName } }}</small>
   </div>
+  }
 
   <div class="card-footer d-flex align-items-center flex-wrap ai-panel-footer">
     @if (requestsLeft !== undefined) {
@@ -280,10 +317,13 @@
     }}</small>
     } @else {
     <span class="mr-auto"></span>
-    } @if (view === 'looks') {
+    } @if (view === 'looks') { @if (working === undefined) {
     <a class="mr-3 my-auto" href="#" role="button" (click)="back(); (false)">{{ 'designer.misc.nav-back' | translate }}</a>
-    <button type="button" class="btn btn-secondary mr-2" (click)="discard()">{{ 'designer.ai.discard' | translate }}</button>
-    <button type="button" class="btn btn-primary" [disabled]="pickedScenes.length === 0" (click)="add()">
+    }
+    <button type="button" class="btn btn-secondary mr-2" [disabled]="working !== undefined" (click)="discard()">
+      {{ 'designer.ai.discard' | translate }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="pickedScenes.length === 0 || working !== undefined" (click)="add()">
       <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{ 'designer.ai.add-scenes' | translate : { count: pickedScenes.length } }}
     </button>
     } @else {

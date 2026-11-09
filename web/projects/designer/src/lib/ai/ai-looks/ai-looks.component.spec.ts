@@ -81,7 +81,7 @@ describe('AiLooksComponent', () => {
       getStatus: () => status,
       getRequest: jasmine
         .createSpy('getRequest')
-        .and.callFake((r, settings, prompt, current, instruction) => ({ settings, prompt, current, instruction })),
+        .and.callFake((r, settings, prompt, current, instruction, change) => ({ settings, prompt, current, instruction, ...change })),
       design: jasmine.createSpy('design').and.returnValue(of({ looks, requestsLast24Hours: 3, requestsPerUserPerDay: 20 })),
       compile: jasmine.createSpy('compile').and.callFake(() => compiled),
       getScenePresets: (c: AiCompiled, scene: Scene) => (scene === chorus ? [wash] : []),
@@ -250,16 +250,18 @@ describe('AiLooksComponent', () => {
     expect(component.presetNames(['wash', 'missing', 'solid'])).toBe('Wash, Solid');
   });
 
-  it('changes the looks as the user says, and goes back to the settings', () => {
+  it('changes all of the looks as the user says, and goes back to the settings', () => {
     open();
     component.design();
+    component.setScope('all');
 
     component.instruction = '   ';
-    component.change();
+    expect(component.canAsk).toBe(false);
+    component.ask();
     expect(service.design).toHaveBeenCalledTimes(1);
 
     component.instruction = ' Warmer ';
-    component.change();
+    component.ask();
     expect(service.getRequest).toHaveBeenCalledWith(rig, component.settings, '', looks, 'Warmer');
     expect(component.instruction).toBe('');
 
@@ -269,6 +271,132 @@ describe('AiLooksComponent', () => {
     expect(component.errorKey).toBeUndefined();
     // the stage plays the project again
     expect(preview.endAiPreview).toHaveBeenCalled();
+  });
+
+  // the looks after the AI changed the chorus (or added a scene), made into scenes anew
+  function answer(scenes: Scene[]): Subject<any> {
+    const answered = new Subject<any>();
+    service.design.and.returnValue(answered);
+    const sources = scenes.map((scene) => ({ ...looks.scenes[1], name: scene.name }));
+    service.compile.and.callFake(() => ({ presets: [wash], scenes, sources }));
+
+    return answered;
+  }
+
+  it('changes only the scene on the stage, which plays it then, keeping what the user picked', () => {
+    open();
+    expect(component.playingName).toBe('');
+    component.design();
+    component.setPicked(blackout, false);
+    fixture.detectChanges();
+    expect(component.scope).toBe('scene');
+    expect(component.playingName).toBe('Chorus');
+    expect(text()).toContain('designer.ai.ask-hint-scene');
+
+    // a change of the scene needs an instruction
+    expect(component.canAsk).toBe(false);
+    component.ask();
+    expect(service.design).toHaveBeenCalledTimes(1);
+
+    const slowChorus = new Scene({ uuid: 'slow-chorus', name: 'Slow chorus', presetUuids: ['wash'] });
+    const sameBlackout = new Scene({ uuid: 'same-blackout', name: 'Blackout', presetUuids: [] });
+    const answered = answer([slowChorus, sameBlackout]);
+    component.instruction = ' Slower ';
+    component.ask();
+    fixture.detectChanges();
+
+    expect(service.getRequest).toHaveBeenCalledWith(rig, component.settings, '', looks, 'Slower', { scene: 0 });
+    // the stage plays on meanwhile, nothing else can be asked or added
+    expect(component.view).toBe('looks');
+    expect(component.working).toBe(0);
+    expect(component.canDesign).toBe(false);
+    expect(fixture.nativeElement.querySelector('.ai-scene-working').textContent).toContain('designer.ai.working-scene');
+    expect(fixture.nativeElement.querySelector('.ai-panel-footer .btn-primary').disabled).toBe(true);
+    expect(text()).not.toContain('designer.misc.nav-back');
+
+    const changed = { ...looks, scenes: [{ ...looks.scenes[0], name: 'Slow chorus' }, looks.scenes[1]] };
+    preview.previewAiScene.calls.reset();
+    answered.next({ looks: changed, requestsLast24Hours: 4, requestsPerUserPerDay: 20 });
+    fixture.detectChanges();
+
+    expect(component.working).toBeUndefined();
+    expect(component.looks).toBe(changed);
+    expect(service.last.looks).toBe(changed);
+    expect(component.instruction).toBe('');
+    expect(component.requestsLeft).toBe(16);
+    expect(component.scenes).toEqual([slowChorus, sameBlackout]);
+    expect(component.isPicked(slowChorus)).toBe(true);
+    expect(component.isPicked(sameBlackout)).toBe(false);
+    expect(component.playing).toBe(0);
+    expect(preview.previewAiScene).toHaveBeenCalledWith(slowChorus, [], 1000);
+  });
+
+  it('adds one more scene, described or left to the AI, which plays then', () => {
+    open();
+    component.design();
+    component.play(1);
+    component.setScope('add');
+    fixture.detectChanges();
+    expect(text()).toContain('designer.ai.ask-hint-add');
+
+    const talk = new Scene({ uuid: 'talk', name: 'Talk', presetUuids: [] });
+    const answered = answer([chorus, blackout, talk]);
+    expect(component.canAsk).toBe(true);
+    component.ask();
+    fixture.detectChanges();
+
+    expect(service.getRequest).toHaveBeenCalledWith(rig, component.settings, '', looks, '', { add: true });
+    expect(component.working).toBe('add');
+    expect(fixture.nativeElement.querySelector('.ai-scene-adding').textContent).toContain('designer.ai.working-add');
+
+    answered.next({ looks, requestsLast24Hours: 4, requestsPerUserPerDay: 20 });
+
+    expect(component.scenes.length).toBe(3);
+    expect(component.pickedScenes).toEqual([chorus, blackout, talk]);
+    expect(component.playing).toBe(2);
+    expect(component.playingName).toBe('Talk');
+  });
+
+  it('tells what went wrong with a change of a scene, and keeps the looks', () => {
+    open();
+    component.design();
+    service.design.and.returnValue(throwError(httpError(503, { error: 'ai-busy' })));
+    component.instruction = 'Slower';
+
+    component.ask();
+
+    expect(component.errorKey).toBe('designer.ai.error.ai-busy');
+    expect(component.working).toBeUndefined();
+    expect(component.view).toBe('looks');
+    expect(component.instruction).toBe('Slower');
+    expect(component.canAsk).toBe(true);
+  });
+
+  it('keeps the looks the AI answers once the panel is closed, without playing them', () => {
+    open();
+    let answered = answer([chorus, blackout]);
+    component.design();
+    fixture.destroy();
+    preview.previewAiScene.calls.reset();
+
+    answered.next({ looks, requestsLast24Hours: 3, requestsPerUserPerDay: 20 });
+    expect(service.last.looks).toBe(looks);
+    expect(preview.previewAiScene).not.toHaveBeenCalled();
+
+    // the same for a change of a scene
+    open();
+    answered = answer([chorus, blackout]);
+    component.instruction = 'Slower';
+    component.ask();
+    service.compile.calls.reset();
+    fixture.destroy();
+    preview.previewAiScene.calls.reset();
+
+    const changed = { ...looks, name: 'Changed' };
+    answered.next({ looks: changed, requestsLast24Hours: 4, requestsPerUserPerDay: 20 });
+    expect(service.last.looks).toBe(changed);
+    expect(service.compile).not.toHaveBeenCalled();
+    expect(preview.previewAiScene).not.toHaveBeenCalled();
   });
 
   it("doesn't ask while it can't design", () => {

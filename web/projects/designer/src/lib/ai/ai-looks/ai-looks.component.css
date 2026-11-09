@@ -24,6 +24,13 @@
   gap: var(--sd-space-1);
 }
 
+/* what the user asks the AI for, below the scenes which scroll */
+.ai-ask {
+  flex: 0 0 auto;
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border-top: 1px solid var(--sd-border);
+}
+
 .ai-looks-name {
   font-size: 1.1rem;
   font-weight: 600;
@@ -64,6 +71,26 @@
   display: block;
   margin-top: 2px;
   color: var(--sd-primary);
+}
+
+/* the scene the AI changes, or the one it adds: the others play on meanwhile */
+.ai-scene-working {
+  border-style: dashed;
+  border-color: var(--sd-primary);
+}
+
+.ai-scene-adding {
+  min-height: 44px;
+}
+
+.ai-working {
+  display: block;
+  margin-top: 2px;
+  color: var(--sd-primary);
+}
+
+.ai-ask .btn-group .btn {
+  white-space: nowrap;
 }
 
 .ai-player .custom-control-label {

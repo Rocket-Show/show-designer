@@ -99,6 +99,9 @@ export interface AiLooksRequest {
   prompt: string;
   current?: AiLooks;
   instruction?: string;
+  // only this scene of the current looks (its index) is changed, or one scene is added to them
+  scene?: number;
+  add?: boolean;
 }
 
 export interface AiFan {
