@@ -3252,6 +3252,48 @@ function channelValuesPixelAudio() {
     });
   });
 
+  // patterns whose size follows the audio with everything else of them set: a shape, a comet bouncing back, a text
+  // and an image with the way they are shown
+  const sized = [
+    { pattern: 'shapes', shape: 'star', direction: 'out', softness: 0.3 },
+    { pattern: 'comet', bounce: true, direction: 'left' },
+    { pattern: 'text', bitmap: randomBitmap(random, 'text'), scroll: 'right', align: 'left', offsetY: 1, textColors: 'letters' },
+    { pattern: 'image', bitmap: randomBitmap(random, 'image'), scroll: 'none', fit: 'cover', imageColors: 'palette' },
+  ];
+
+  sized.forEach((settings, index) => {
+    const uuid = `audio-sized-${index}`;
+    const effect = {
+      type: 'pixel',
+      uuid: uuid + '-effect',
+      size: 0.8,
+      audioSource: 'composition',
+      audioFollows: 'size',
+      palette: pixelPalettes[1],
+      lengthMillis: 2000,
+      capabilities: [],
+      channels: [],
+      ...settings,
+    };
+    const preset = {
+      ...edgePreset(
+        uuid,
+        fixtures.flatMap((fixture) => presetFixtures(fixture.uuid, libraryProfile(fixture.profileUuid))),
+        { fixtureCapabilityValues: [capability('Intensity', 1)] }
+      ),
+      effects: [effect],
+    };
+
+    cases.push({
+      name: `${uuid} ${settings.pattern} with its size following the audio`,
+      input: {
+        project: edgeProject([bar, matrix, par], fixtures, [preset], [{ uuid, name: uuid, presetUuids: [uuid] }]),
+        runs: previewScenes([uuid]).map((run) => ({ ...run, times: [0, 260, 1000.5, 2450, 3300, 4990] })),
+        audio,
+      },
+    });
+  });
+
   return write(
     'channel-values-pixel-audio.json',
     'channelValues',
