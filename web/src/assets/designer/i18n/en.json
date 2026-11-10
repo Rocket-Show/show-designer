@@ -848,7 +848,6 @@
     },
     "ai": {
       "title": "Design with AI",
-      "open": "Design scenes with AI",
       "unavailable": "The AI looks aren't available on this server.",
       "no-fixtures": "Add fixtures to the fixture pool first: the AI designs the looks for them.",
       "prompt": "What should the show look like?",
@@ -948,10 +947,6 @@
       "autoplay": "Play through the scenes, 8 bars each",
       "discard": "Discard",
       "add-scenes": "Add to project ({{count}})",
-      "start-title": "Let AI light your show",
-      "start-text": "Your {{count}} fixtures are ready. Describe the music and the mood, and the AI designs the scenes and presets for them.",
-      "start-no-fixtures": "Add your fixtures in the fixture pool, then let the AI design the scenes and presets for them.",
-      "more": "Design more scenes with AI",
       "tip-title": "Let AI design your looks",
       "tip-text": "Tell it about the song and the mood. It designs scenes for your {{count}} fixtures, and you preview them on the stage before anything is added.",
       "tip-try": "Try it",

@@ -90,7 +90,7 @@ The PHP API of the online designer, its database schema and its tests live in th
 
 ### The AI looks
 
-With `[aiLooks]="true"` (the online designer), the scenes panel offers to design scenes with AI (the magic wand). The AI
+With `[aiLooks]="true"` (the online designer), the menu bar offers to design scenes with AI (Design with AI). The AI
 designs presets and scenes for the fixtures of the project through the `ai-looks` endpoint of the API (see the README of
 the spark repository for its settings and the API key), so the user has to be logged in, like for saving: a visitor is
 asked to log in or to register first. A Rocket Show device has no such endpoint and leaves it off.
@@ -107,10 +107,10 @@ asked to log in or to register first. A Rocket Show device has no such endpoint 
 - `ai/ai-looks` is the panel beside the designer (over it in a narrow window): what the user asks for (the output,
   colors or a palette, the mood, the energy, the tempo, the movement, the contrast, the strobe), the scenes the AI
   designed, each played on the stage before anything is added (`PreviewService.previewAiScene`, like a scene triggered
-  when it is picked), having the AI change the scene on the stage, all of them or add one more scene (the API merges
-  one scene into the others, which stay as they are), and adding the scenes picked to the project in folders named
-  after them, as one step to undo, or discarding them. It opens from the menu bar, the scenes (a card while nothing is designed yet), a
-  tip shown once the project has fixtures and the welcome tour (`AiLooksService.start`).
+  when it is picked), having the AI change the scene on the stage, all of them or add one more scene (the API merges one
+  scene into the others, which stay as they are), and adding the scenes picked to the project in folders named after
+  them, as one step to undo, or discarding them. It opens from the menu bar, a tip shown once the project has fixtures
+  and the welcome tour (`AiLooksService.start`).
 
 ## Build & publish as NPM package
 

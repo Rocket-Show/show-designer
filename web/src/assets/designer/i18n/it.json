@@ -848,7 +848,6 @@
     },
     "ai": {
       "title": "Progetta con l'IA",
-      "open": "Progetta scene con l'IA",
       "unavailable": "I look con IA non sono disponibili su questo server.",
       "no-fixtures": "Aggiungi prima dei dispositivi al pool: l'IA progetta i look per loro.",
       "prompt": "Come dovrebbe essere lo show?",
@@ -948,10 +947,6 @@
       "autoplay": "Riproduci le scene una dopo l'altra, 8 battute ciascuna",
       "discard": "Scarta",
       "add-scenes": "Aggiungi al progetto ({{count}})",
-      "start-title": "Lascia che l'IA illumini il tuo show",
-      "start-text": "I tuoi {{count}} dispositivi sono pronti. Descrivi la musica e l'atmosfera, e l'IA progetta le scene e i preset per loro.",
-      "start-no-fixtures": "Aggiungi i tuoi dispositivi al pool, poi lascia che l'IA progetti le scene e i preset per loro.",
-      "more": "Progetta altre scene con l'IA",
       "tip-title": "Lascia che l'IA progetti i tuoi look",
       "tip-text": "Raccontale la canzone e l'atmosfera. Progetta scene per i tuoi {{count}} dispositivi, e le vedi sul palco prima che venga aggiunto qualcosa.",
       "tip-try": "Prova",

@@ -848,7 +848,6 @@
     },
     "ai": {
       "title": "用 AI 设计",
-      "open": "用 AI 设计场景",
       "unavailable": "此服务器上无法使用 AI 灯光效果。",
       "no-fixtures": "请先在灯具库中添加灯具：AI 会为它们设计效果。",
       "prompt": "演出应该是什么样子？",
@@ -948,10 +947,6 @@
       "autoplay": "依次播放各场景，每个 8 小节",
       "discard": "放弃",
       "add-scenes": "添加到项目（{{count}}）",
-      "start-title": "让 AI 点亮你的演出",
-      "start-text": "你的 {{count}} 台灯具已就绪。描述音乐和氛围，AI 会为它们设计场景和预设。",
-      "start-no-fixtures": "先在灯具库中添加你的灯具，然后让 AI 为它们设计场景和预设。",
-      "more": "用 AI 设计更多场景",
       "tip-title": "让 AI 设计你的效果",
       "tip-text": "告诉它歌曲和氛围。它会为你的 {{count}} 台灯具设计场景，你可以先在舞台上预览，再决定是否添加。",
       "tip-try": "试一试",

@@ -848,7 +848,6 @@
     },
     "ai": {
       "title": "Criar com IA",
-      "open": "Criar cenas com IA",
       "unavailable": "Os looks com IA não estão disponíveis neste servidor.",
       "no-fixtures": "Adicione primeiro aparelhos ao pool: a IA cria os looks para eles.",
       "prompt": "Como o show deve ser?",
@@ -948,10 +947,6 @@
       "autoplay": "Reproduzir as cenas uma após a outra, 8 compassos cada",
       "discard": "Descartar",
       "add-scenes": "Adicionar ao projeto ({{count}})",
-      "start-title": "Deixe a IA iluminar o seu show",
-      "start-text": "Os seus {{count}} aparelhos estão prontos. Descreva a música e o ambiente, e a IA cria as cenas e os presets para eles.",
-      "start-no-fixtures": "Adicione os seus aparelhos ao pool e deixe a IA criar as cenas e os presets para eles.",
-      "more": "Criar mais cenas com IA",
       "tip-title": "Deixe a IA criar os seus looks",
       "tip-text": "Conte-lhe a música e o ambiente. Ela cria cenas para os seus {{count}} aparelhos, e você as vê no palco antes de algo ser adicionado.",
       "tip-try": "Experimentar",

@@ -18,10 +18,6 @@ import { Scene } from '../models/scene';
 import { PresetSettingsComponent } from '../preset/preset-settings/preset-settings.component';
 import { ColorService } from '../services/color.service';
 import { LivePreviewService } from '../services/live-preview.service';
-import { ConfigService } from '../services/config.service';
-import { AiLooksService } from '../services/ai-looks.service';
-import { Fixture } from '../models/fixture';
-import { PresetFixture } from '../models/preset-fixture';
 import { PresetService } from '../services/preset.service';
 import { ProjectService } from '../services/project.service';
 import { SceneService } from '../services/scene.service';
@@ -292,53 +288,6 @@ describe('SceneComponent', () => {
     press('fa-compress');
 
     expect(project.scenes.some((candidate) => candidate.expanded)).toBe(false);
-  });
-
-  describe('the AI looks', () => {
-    let start: jasmine.Spy;
-
-    beforeEach(() => {
-      start = spyOn(TestBed.inject(AiLooksService), 'start');
-    });
-
-    function aiOffered(): HTMLElement {
-      return element.querySelector('.scene-ai-start, .scene-ai-more');
-    }
-
-    it('offers nothing where they are not there, like on a Rocket Show', () => {
-      expect(aiOffered()).toBeNull();
-    });
-
-    it('offers them in a card while nothing is designed yet, asking for the fixtures first', () => {
-      TestBed.inject(ConfigService).aiLooks = true;
-      fixture.detectChanges();
-
-      expect(aiOffered().classList).toContain('scene-ai-start');
-      expect(aiOffered().textContent).toContain('designer.ai.start-no-fixtures');
-
-      project.fixtures = [new Fixture({ uuid: 'par' })];
-      fixture.detectChanges();
-      expect(aiOffered().textContent).toContain('designer.ai.start-text');
-
-      (aiOffered().querySelector('button') as HTMLButtonElement).click();
-      expect(start).toHaveBeenCalled();
-    });
-
-    it('offers more of them in a row below the scenes, once a preset lights fixtures', () => {
-      TestBed.inject(ConfigService).aiLooks = true;
-      preset('red').fixtures = [new PresetFixture({ fixtureUuid: 'par' })];
-      fixture.detectChanges();
-
-      expect(aiOffered().classList).toContain('scene-ai-more');
-      aiOffered().click();
-      expect(start).toHaveBeenCalled();
-    });
-
-    it('opens them from the wand in the header as well', () => {
-      component().designWithAi();
-
-      expect(start).toHaveBeenCalled();
-    });
   });
 
   describe('adding a scene', () => {

@@ -849,7 +849,6 @@
     },
     "ai": {
       "title": "Mit KI gestalten",
-      "open": "Szenen mit KI gestalten",
       "unavailable": "Die KI-Looks sind auf diesem Server nicht verfügbar.",
       "no-fixtures": "Füge zuerst Geräte zum Gerätepool hinzu: die KI gestaltet die Looks für sie.",
       "prompt": "Wie soll die Show aussehen?",
@@ -949,10 +948,6 @@
       "autoplay": "Szenen nacheinander abspielen, je 8 Takte",
       "discard": "Verwerfen",
       "add-scenes": "Zum Projekt hinzufügen ({{count}})",
-      "start-title": "Lass die KI deine Show beleuchten",
-      "start-text": "Deine {{count}} Geräte sind bereit. Beschreibe die Musik und die Stimmung, und die KI gestaltet die Szenen und Presets dafür.",
-      "start-no-fixtures": "Füge deine Geräte im Gerätepool hinzu, dann gestaltet die KI die Szenen und Presets dafür.",
-      "more": "Weitere Szenen mit KI gestalten",
       "tip-title": "Lass die KI deine Looks gestalten",
       "tip-text": "Erzähl ihr vom Song und der Stimmung. Sie gestaltet Szenen für deine {{count}} Geräte, und du siehst sie dir auf der Bühne an, bevor etwas hinzugefügt wird.",
       "tip-try": "Ausprobieren",

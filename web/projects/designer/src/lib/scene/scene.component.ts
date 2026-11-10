@@ -15,8 +15,6 @@ import { SceneService } from '../services/scene.service';
 import { TreeDropZone, TreeNode } from '../tree/tree.component';
 import { PresetSettingsComponent } from '../preset/preset-settings/preset-settings.component';
 import { SceneSettingsComponent } from './scene-settings/scene-settings.component';
-import { ConfigService } from '../services/config.service';
-import { AiLooksService } from '../services/ai-looks.service';
 
 @Component({
   selector: 'lib-app-scene',
@@ -51,9 +49,7 @@ export class SceneComponent implements OnInit, OnDestroy {
     private translateService: TranslateService,
     private modalService: BsModalService,
     private livePreviewService: LivePreviewService,
-    public introService: IntroService,
-    public configService: ConfigService,
-    public aiLooksService: AiLooksService
+    public introService: IntroService
   ) {}
 
   ngOnInit() {
@@ -522,19 +518,5 @@ export class SceneComponent implements OnInit, OnDestroy {
       class: '',
       initialState: { scene },
     });
-  }
-
-  // whether nothing is designed yet: no preset lights a fixture (like the preset of a new project)
-  get nothingDesigned(): boolean {
-    return !this.projectService.project.presets.some((preset) => preset.fixtures.length > 0);
-  }
-
-  get fixtureCount(): number {
-    return this.projectService.project.fixtures.length;
-  }
-
-  // Let the AI design presets and scenes for the fixtures of the project (see AiLooksService.start)
-  designWithAi() {
-    this.aiLooksService.start();
   }
 }

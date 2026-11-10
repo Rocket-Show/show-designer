@@ -83,8 +83,9 @@ export function patchRig(api: FakeApi) {
   fixtures.slice(6, 8).forEach((fixture: any) => (fixture.positioning = 'bottomFront'));
 }
 
+// from the menu bar, where it always is
 async function openAiLooks(designer: Designer) {
-  await designer.clickTool(designer.panel('Scenes'), 'fa-magic', 'Design scenes with AI');
+  await designer.page.locator('.ai-start-button').click();
 }
 
 // the panel of the AI looks beside the designer
@@ -345,7 +346,7 @@ test.describe('AI looks', () => {
   test.describe('for a new visitor', () => {
     test.use({ signedIn: true, introSeen: false, aiTipSeen: false });
 
-    test('is offered in the welcome tour, in the menu bar, in the scenes and once as a tip', async ({ designer, page }) => {
+    test('is offered in the welcome tour, in the menu bar and once as a tip', async ({ designer, page }) => {
       await designer.open();
       const tip = page.getByRole('dialog', { name: 'Let AI design your looks' });
 
@@ -357,12 +358,8 @@ test.describe('AI looks', () => {
       await expect(page.getByText('No time for the tour?')).toBeHidden();
       await aiPanel(page).getByRole('button', { name: 'Close' }).click();
 
-      // nothing designed yet: the scenes offer it in a card
-      const scenes = designer.panel('Scenes');
-      await expect(scenes.getByText('Let AI light your show')).toBeVisible();
-      await scenes.getByRole('button', { name: 'Design with AI' }).click();
-      await expect(aiPanel(page)).toBeVisible();
-      await aiPanel(page).getByRole('button', { name: 'Close' }).click();
+      // the scenes keep to the scenes
+      await expect(designer.panel('Scenes').locator('.fa-magic')).toHaveCount(0);
 
       // the tip, once
       await expect(tip).toBeVisible();

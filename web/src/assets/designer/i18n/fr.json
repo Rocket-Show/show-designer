@@ -848,7 +848,6 @@
     },
     "ai": {
       "title": "Concevoir avec l'IA",
-      "open": "Concevoir des scènes avec l'IA",
       "unavailable": "Les looks IA ne sont pas disponibles sur ce serveur.",
       "no-fixtures": "Ajoutez d'abord des appareils au parc : l'IA conçoit les looks pour eux.",
       "prompt": "À quoi le show doit-il ressembler ?",
@@ -948,10 +947,6 @@
       "autoplay": "Jouer les scènes l'une après l'autre, 8 mesures chacune",
       "discard": "Abandonner",
       "add-scenes": "Ajouter au projet ({{count}})",
-      "start-title": "Laissez l'IA éclairer votre show",
-      "start-text": "Vos {{count}} appareils sont prêts. Décrivez la musique et l'ambiance, et l'IA conçoit les scènes et les presets pour eux.",
-      "start-no-fixtures": "Ajoutez vos appareils au parc, puis laissez l'IA concevoir les scènes et les presets pour eux.",
-      "more": "Concevoir plus de scènes avec l'IA",
       "tip-title": "Laissez l'IA concevoir vos looks",
       "tip-text": "Parlez-lui de la chanson et de l'ambiance. Elle conçoit des scènes pour vos {{count}} appareils, et vous les voyez sur la scène avant que rien ne soit ajouté.",
       "tip-try": "Essayer",
