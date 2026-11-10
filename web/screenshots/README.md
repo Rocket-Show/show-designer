@@ -1,19 +1,20 @@
-# Website pictures of the online designer
+# Website picture of the online designer
 
-`website.spec.ts` takes the pictures of the online designer for
+`website.spec.ts` takes the picture of the online designer designing looks with AI for
 [rocketshow.net](https://rocketshow.net/lighting-designer), the way the end-to-end tests run it: the app on the dev
 server, its API faked in the page (`../e2e/fake-api.ts`), with the demo project of the documentation screenshots of
 Rocket Show opened by a user who is signed in. No request reaches the AI: the spec answers the looks itself, made for the
 groups of fixtures the designer sends.
 
-| Picture                 | Where it goes                 | What it shows                                                                                                |
-| ----------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `preview.webp`          | `website/assets/images/`      | the designer with the chorus on the 3D stage (the hero image of the designer page, the home page and others) |
-| `docs/designer-ai.webp` | `website/assets/images/docs/` | Design with AI beside the designer, the chorus it designed on the stage (the designer page and the docs)     |
+| Picture                 | Where it goes                 | What it shows                                                                                            |
+| ----------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `docs/designer-ai.webp` | `website/assets/images/docs/` | Design with AI beside the designer, the chorus it designed on the stage (the designer page and the docs) |
 
-Both are 1600 × 923 pixels, the size the pages reserve for them.
+It is 1600 × 923 pixels, the size the pages reserve for it. The main picture of the designer on the website is the one
+of the Rocket Show docs (`docs/designer.webp`, taken by `docs/screenshots/capture.js` in the rocketshow repository), with
+the whole of the preset editor in view.
 
-## Taking them
+## Taking it
 
 With the rocketshow and spark repositories checked out next to this one:
 

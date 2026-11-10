@@ -14,7 +14,7 @@ const demoProject = resolve(
 );
 const outDir = resolve(process.env.OUT_DIR || join(__dirname, '../../../spark/website/assets/images'));
 // where each picture goes in there: the AI on the documentation page too, which has its pictures in docs/
-const files: { [name: string]: string } = { preview: 'preview', 'designer-ai': 'docs/designer-ai' };
+const files: { [name: string]: string } = { 'designer-ai': 'docs/designer-ai' };
 
 // 1600 x 923 pixels, the size the pages reserve for them
 test.use({ signedIn: true, viewport: { width: 1280, height: 738 }, deviceScaleFactor: 1.25, colorScheme: 'dark' });
@@ -204,13 +204,6 @@ test.describe('Website pictures of the online designer', () => {
         body: JSON.stringify({ looks: looksFor(body.rig.groups), requestsLast24Hours: 3, requestsPerUserPerDay: 20 }),
       });
     });
-  });
-
-  test('preview: the designer with the chorus on the 3D stage', async ({ designer, page }) => {
-    await designer.open();
-    await expect(designer.row(designer.panel('Scenes'), 'Chorus')).toBeVisible();
-    await page.waitForTimeout(4000);
-    await shoot(page, 'preview');
   });
 
   test('designer-ai: the AI designing the looks of a song for the rig', async ({ designer, page }) => {

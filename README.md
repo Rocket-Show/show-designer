@@ -28,8 +28,8 @@ If the linter fails, you can check and try to automatically fix it with `ng lint
 
 ## Website pictures
 
-The pictures of the online designer on rocketshow.net (the designer with its 3D preview, and the AI designing looks) are
-taken from the demo project of the Rocket Show docs, like the end-to-end tests run the designer: see
+The picture of the online designer on rocketshow.net with the AI designing looks is taken from the demo project of the
+Rocket Show docs, like the end-to-end tests run the designer: see
 [web/screenshots/README.md](web/screenshots/README.md).
 
 ## Tests
