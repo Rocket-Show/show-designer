@@ -84,7 +84,9 @@ test.describe('Saving and opening projects', () => {
     await page.keyboard.press('Enter');
     await expect(login).toBeHidden();
     await expect(navigation.getByRole('link', { name: 'Jane' })).toBeVisible();
-    expect(api.requestsTo('POST login').map((request) => request.params.password)).toEqual(['wrong', jane.password]);
+    // in the body: the web server logs the address
+    expect(api.requestsTo('POST login').map((request) => request.form.password)).toEqual(['wrong', jane.password]);
+    expect(api.requestsTo('POST login').map((request) => request.params.password)).toEqual([undefined, undefined]);
 
     await designer.menu('Jane', 'Log out');
     await expect(navigation.getByText('Sign in')).toBeVisible();
