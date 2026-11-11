@@ -31,15 +31,16 @@ describe('UserService', () => {
     clearStorage();
   });
 
-  it('registers a user, named and with a password for an address', () => {
+  // the web server logs the address: the password is sent in the body of a form
+  it('registers a user, named and with a password, in the body of a form', () => {
     const service = createService();
 
     service.register('a+b@example.com', 'Rock & Roll', 'p&ss=w#rd+', true).subscribe();
 
-    const request = http.expectOne(
-      'register?email=a%2Bb%40example.com&username=Rock%20%26%20Roll&password=p%26ss%3Dw%23rd%2B&newsletter=true'
-    );
+    const request = http.expectOne('register');
     expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded');
+    expect(request.request.body).toBe('email=a%2Bb%40example.com&username=Rock%20%26%20Roll&password=p%26ss%3Dw%23rd%2B&newsletter=true');
     request.flush(null);
   });
 
@@ -49,7 +50,11 @@ describe('UserService', () => {
     expect(service.getHeaders()).toBeNull();
 
     service.login('a+b@example.com', 'p&ss').subscribe();
-    http.expectOne('login?email=a%2Bb%40example.com&password=p%26ss').flush({ token: 'secret', username: 'Moritz' });
+    const request = http.expectOne('login');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded');
+    expect(request.request.body).toBe('email=a%2Bb%40example.com&password=p%26ss');
+    request.flush({ token: 'secret', username: 'Moritz' });
 
     expect(service.isLoggedIn()).toBe(true);
     expect(service.username).toBe('Moritz');

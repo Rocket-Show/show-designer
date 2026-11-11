@@ -175,6 +175,16 @@ describe('DesignerComponent', () => {
       expect(projectLoadService.load).toHaveBeenCalledWith(5, null, '');
     });
 
+    // the designer put the template into the address up to October 2026: opened as the template itself, the audio
+    // files picked for its compositions were refused
+    it('starts a new project from the template, linked like the designer linked it before', async () => {
+      linked('?id=1&token=53171cec-7c65-4d86-929b-8b8c1e3f5957');
+      await open();
+
+      expect(projectLoadService.template).toHaveBeenCalled();
+      expect(projectLoadService.load).not.toHaveBeenCalled();
+    });
+
     it('opens the project saved last again, for the user logged in', async () => {
       configService.loginAvailable = true;
       spyOn(TestBed.inject(UserService), 'isLoggedIn').and.returnValue(true);

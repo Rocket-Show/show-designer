@@ -21,6 +21,8 @@ export interface ApiRequest {
   // the script called, e.g. 'project'
   endpoint: string;
   params: { [name: string]: string };
+  // the fields of a form sent as the body (like $_POST of PHP), e.g. the credentials
+  form: { [name: string]: string };
   authorization: string | undefined;
   body: any;
 }
@@ -195,8 +197,10 @@ export class FakeApi {
     } catch {
       body = text;
     }
+    const isForm = (request.headers()['content-type'] ?? '').startsWith('application/x-www-form-urlencoded');
+    const form = isForm && text ? Object.fromEntries(new URLSearchParams(text).entries()) : {};
     const authorization = request.headers()['authorization'];
-    this.requests.push({ method: request.method(), endpoint, params, authorization, body });
+    this.requests.push({ method: request.method(), endpoint, params, form, authorization, body });
 
     // the requests are sent with credentials: the origin is named, a wildcard is refused by the browser (see global.php)
     const answer = (data: any, status = 200) =>
@@ -287,21 +291,21 @@ export class FakeApi {
       case 'GET manufacturer':
         return answer([{ shortName: 'test', name: 'Test', website: null }]);
       case 'POST register':
-        if (!params.email || !params.username || !params.password) {
+        if (!form.email || !form.username || !form.password) {
           return error('missing-parameters', 400);
         }
-        if (this.users.some((user) => user.email === params.email)) {
+        if (this.users.some((user) => user.email === form.email)) {
           return error('email-exists', 400);
         }
         this.users.push({
-          email: params.email,
-          username: params.username,
-          password: params.password,
-          newsletter: params.newsletter === 'true',
+          email: form.email,
+          username: form.username,
+          password: form.password,
+          newsletter: form.newsletter === 'true',
         });
         return answer(undefined);
       case 'POST login': {
-        const user = this.users.find((candidate) => candidate.email === params.email && candidate.password === params.password);
+        const user = this.users.find((candidate) => candidate.email === form.email && candidate.password === form.password);
         if (!user) {
           return error('wrong-credentials', 400);
         }

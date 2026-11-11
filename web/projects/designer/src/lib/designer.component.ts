@@ -219,7 +219,13 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     const projectName = urlParams.get('name');
     let shareToken = urlParams.get('token');
 
-    if (projectId) {
+    if (Number.parseInt(projectId, 10) === ProjectLoadService.templateProjectId) {
+      // a link to the template, like the designer put into the address up to October 2026 (and still kept in bookmarks
+      // and the history of the browser): it starts a new project from the template, like opening the designer without
+      // a link. Opened as the template itself, the audio files picked for its compositions were refused, as were saving
+      // it (only an admin may change the template of everyone, from the projects)
+      this.projectLoadService.template();
+    } else if (projectId) {
       // load a project by query param ID
       if (!shareToken) {
         shareToken = '';

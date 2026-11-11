@@ -84,7 +84,9 @@ describe('UserLoginComponent', () => {
     expect(field('email').disabled).toBe(true);
     expect(fixture.nativeElement.querySelector('button[type=submit] .fa-spinner')).not.toBeNull();
 
-    http.expectOne('login?email=user%40example.com&password=secret').flush({ token: 'token', username: 'Moritz' });
+    http
+      .expectOne((request) => request.url === 'login' && request.body === 'email=user%40example.com&password=secret')
+      .flush({ token: 'token', username: 'Moritz' });
 
     expect(TestBed.inject(UserService).isLoggedIn()).toBe(true);
     expect(hide).toHaveBeenCalled();
@@ -97,7 +99,9 @@ describe('UserLoginComponent', () => {
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
-    http.expectOne('login?email=user%40example.com&password=secret').flush({ token: 'token', username: 'Moritz' });
+    http
+      .expectOne((request) => request.url === 'login' && request.body === 'email=user%40example.com&password=secret')
+      .flush({ token: 'token', username: 'Moritz' });
     expect(hide).toHaveBeenCalled();
   });
 

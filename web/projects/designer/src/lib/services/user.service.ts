@@ -27,25 +27,24 @@ export class UserService {
     this.username = localStorage.getItem('username');
   }
 
+  // The credentials as the body of a form: an address with the password would end up in the logs of the web server.
+  // Every character is encoded, as a password may hold ones which mean something in a form (e.g. "&", "=" or "+").
+  private credentials(fields: { [name: string]: string }): [string, { headers: HttpHeaders }] {
+    const body = Object.keys(fields)
+      .map((name) => encodeURIComponent(name) + '=' + encodeURIComponent(fields[name]))
+      .join('&');
+
+    return [body, { headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' }) }];
+  }
+
   // register a new user
   register(email: string, username: string, password: string, newsletter: boolean): Observable<any> {
-    // the address carries them: a password may hold characters which mean something in it (e.g. "&" or "+")
-    return this.http.post(
-      'register?email=' +
-        encodeURIComponent(email) +
-        '&username=' +
-        encodeURIComponent(username) +
-        '&password=' +
-        encodeURIComponent(password) +
-        '&newsletter=' +
-        newsletter,
-      null
-    );
+    return this.http.post('register', ...this.credentials({ email, username, password, newsletter: String(newsletter) }));
   }
 
   // login a user in the api
   login(email: string, password: string): Observable<any> {
-    return this.http.post('login?email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password), null).pipe(
+    return this.http.post('login', ...this.credentials({ email, password })).pipe(
       map((result: any) => {
         this.token = result.token;
         this.username = result.username;

@@ -28,6 +28,9 @@ import { assignTracks } from '../models/timeline-track';
   providedIn: 'root',
 })
 export class ProjectLoadService {
+  // the project a new one starts from, online and on a Rocket Show device
+  static readonly templateProjectId = 1;
+
   constructor(
     private projectService: ProjectService,
     private previewService: PreviewService,
@@ -497,8 +500,8 @@ export class ProjectLoadService {
   }
 
   template() {
-    // load the template project with id 1
-    this.load(1, null, undefined, true).subscribe();
+    // load the template project
+    this.load(ProjectLoadService.templateProjectId, null, undefined, true).subscribe();
   }
 
   import(data: string) {
