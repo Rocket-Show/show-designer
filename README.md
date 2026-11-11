@@ -77,6 +77,12 @@ patterns, palettes, texts and images, across the stage, and how they follow the 
 differs (the designer analyzes the audio file, Rocket Show the audio while it plays), so the cases bring the frames of an
 analysis along.
 
+### The shared lighting engine
+
+The engine of the preview and the engine of Rocket Show are to be replaced by one engine, written once in Rust
+(`Rocket-Show/lighting-engine`). How the designer loads it, what goes and what stays, and what happens to the
+conformance cases is in [docs/lighting-engine.md](docs/lighting-engine.md).
+
 ### Whole flows in the browser
 
 The end-to-end tests in `web/e2e` (Playwright) go through the designer like a user: adding fixtures, presets, scenes,
