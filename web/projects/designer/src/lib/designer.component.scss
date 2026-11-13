@@ -1014,6 +1014,13 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   pointer-events: auto;
   max-width: 26rem;
   font-size: 0.8125rem;
+
+  // The versions load after the popover opened, below its button: a long list scrolls in it instead of growing past
+  // the window, where it was moved to when it didn't fit
+  .popover-body {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
 }
 
 .popover-header {

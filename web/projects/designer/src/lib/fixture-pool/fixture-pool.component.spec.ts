@@ -152,6 +152,7 @@ describe('FixturePoolComponent', () => {
 
   afterEach(() => {
     http.verify();
+    FixturePoolComponent.offerEnabled = false;
   });
 
   async function open(searchProfiles: any[] = library) {
@@ -1945,7 +1946,19 @@ describe('FixturePoolComponent', () => {
       expect(pool.fixturePool.length).toBe(7);
     });
 
+    it('offers no profile to the library while that is switched off', async () => {
+      const fromFile = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'acme/par-64', name: 'Par 64', createdFromFile: true });
+      project.fixtureProfiles = [...project.fixtureProfiles, fromFile];
+      config.loginAvailable = true;
+      await open();
+
+      expect(FixturePoolComponent.offerEnabled).toBe(false);
+      expect(pool.canOffer(fromFile)).toBe(false);
+      expect(element().querySelector('#settings .fixture-offer-button')).toBeNull();
+    });
+
     it('offers a profile from a file to the library, and changes its fixtures to the version it became', async () => {
+      FixturePoolComponent.offerEnabled = true;
       const fromFile = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'acme/par-64', name: 'Par 64', createdFromFile: true });
       project.fixtureProfiles = [...project.fixtureProfiles, fromFile];
       project.fixtures = project.fixtures.map((candidate) =>

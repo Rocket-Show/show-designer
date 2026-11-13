@@ -1154,9 +1154,13 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  // Offering a profile from a file to the library is switched off for now (decided on 2026-11-13): this switch turns it
+  // on again, for the users with an account
+  static offerEnabled = false;
+
   // a profile from a file can be offered to the library by a user with an account
   canOffer(profile: FixtureProfile): boolean {
-    return profile.createdFromFile && !isVersionUuid(profile.uuid) && this.configService.hasAccount();
+    return FixturePoolComponent.offerEnabled && profile.createdFromFile && !isVersionUuid(profile.uuid) && this.configService.hasAccount();
   }
 
   // "Offer to the library": the fixtures of the profile from the file change to the version of the library it became
