@@ -955,6 +955,28 @@
     },
     "account": {
       "link-device": "Associez cet appareil à votre compte dans Paramètres → Compte."
+    },
+    "fixture-library": {
+      "origin-ofl": "Open Fixture Library",
+      "origin-ai": "Généré par l'IA",
+      "origin-user": "D'un utilisateur",
+      "state-unconfirmed": "pas encore confirmé",
+      "state-confirmed": "confirmé par {{count}} utilisateurs",
+      "state-confirmed-one": "confirmé par 1 utilisateur",
+      "state-problems": "{{count}} problèmes signalés",
+      "state-problems-one": "1 problème signalé",
+      "usage": "Utilisé dans {{count}} projets et appareils",
+      "generated-ai": "L'IA a créé ce profil à partir du manuel du fixture.",
+      "generated-user": "Un utilisateur a créé ce profil et l'a proposé à la bibliothèque.",
+      "generated-test": "Il peut contenir des erreurs. Testez-le avec le fixture avant un spectacle, et marquez le mode que vous utilisez comme bon ou mauvais dans le parc de fixtures, pour que les autres sachent s'il fonctionne.",
+      "manual": "Ouvrir le manuel",
+      "manual-file": "Créé à partir du manuel {{name}}.",
+      "versions-failed": "Les versions n'ont pas pu être chargées.",
+      "best": "Meilleure",
+      "in-use": "Utilisée",
+      "hidden": "Masquée",
+      "retired": "Plus dans l'Open Fixture Library",
+      "improve": "Améliorer"
     }
   }
 }

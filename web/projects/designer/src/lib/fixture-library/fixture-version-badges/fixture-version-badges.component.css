@@ -1,0 +1,49 @@
+/* The badges sit in a line of their own below the name of a profile, small enough not to push the buttons of the row
+   aside. */
+.fixture-version-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-1);
+  font-size: 0.75rem;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+/* a generated version is a button, which opens what it means */
+button.badge {
+  border: none;
+  cursor: pointer;
+}
+
+.fixture-origin-ofl {
+  background-color: var(--sd-surface-4);
+  color: var(--sd-text-muted);
+}
+
+.fixture-origin-ai,
+.fixture-origin-user {
+  background-color: var(--sd-primary-soft-strong);
+  color: var(--sd-primary-text);
+}
+
+.fixture-state-unconfirmed {
+  background-color: rgba(240, 169, 46, 0.18);
+  color: var(--sd-warning);
+}
+
+.fixture-state-confirmed {
+  background-color: rgba(46, 184, 114, 0.18);
+  color: var(--sd-success);
+}
+
+.fixture-state-problems {
+  background-color: rgba(229, 84, 75, 0.18);
+  color: var(--sd-danger);
+}
+
+.fixture-usage {
+  color: var(--sd-text-muted);
+}

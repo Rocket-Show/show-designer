@@ -955,6 +955,28 @@
     },
     "account": {
       "link-device": "请在 设置 → 账户 中将此设备与你的账户关联。"
+    },
+    "fixture-library": {
+      "origin-ofl": "Open Fixture Library",
+      "origin-ai": "AI 生成",
+      "origin-user": "来自用户",
+      "state-unconfirmed": "尚未确认",
+      "state-confirmed": "已由 {{count}} 位用户确认",
+      "state-confirmed-one": "已由 1 位用户确认",
+      "state-problems": "{{count}} 个已报告的问题",
+      "state-problems-one": "1 个已报告的问题",
+      "usage": "在 {{count}} 个项目和设备中使用",
+      "generated-ai": "AI 根据灯具的说明书创建了此配置文件。",
+      "generated-user": "一位用户创建了此配置文件并提供给了库。",
+      "generated-test": "它可能包含错误。请在演出前用灯具测试它，并在灯具库中将你使用的模式标记为好或坏，让其他人知道它是否可用。",
+      "manual": "打开说明书",
+      "manual-file": "根据说明书 {{name}} 创建。",
+      "versions-failed": "无法加载版本。",
+      "best": "最佳",
+      "in-use": "使用中",
+      "hidden": "已隐藏",
+      "retired": "已不在 Open Fixture Library 中",
+      "improve": "改进"
     }
   }
 }

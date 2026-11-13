@@ -1006,6 +1006,14 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   color: $sd-text;
 }
 
+// The popovers of the fixture library are opened with a click and hold what they explain or list, with links and
+// buttons: they take the clicks, and are wider than the ones explaining an icon.
+.popover.fixture-library-popover {
+  pointer-events: auto;
+  max-width: 26rem;
+  font-size: 0.8125rem;
+}
+
 .popover-header {
   background-color: $sd-surface-4;
   border-bottom-color: $sd-border-strong;

@@ -1,0 +1,40 @@
+<span class="fixture-version-badges">
+  @if (version?.origin) { @if (generated) {
+  <!-- a generated version explains itself on a click: what it was made from, and that it has to be tested -->
+  <button
+    type="button"
+    class="badge fixture-origin fixture-origin-{{ version.origin }}"
+    [popover]="generatedInfo"
+    [popoverTitle]="'designer.fixture-library.origin-' + version.origin | translate"
+    containerClass="fixture-library-popover"
+    container="body"
+    placement="bottom"
+    [outsideClick]="true"
+  >
+    <i class="fa fa-fw" [class.fa-magic]="version.origin === 'ai'" [class.fa-user]="version.origin === 'user'" aria-hidden="true"></i>
+    {{ 'designer.fixture-library.origin-' + version.origin | translate }}
+  </button>
+  } @else {
+  <span class="badge fixture-origin fixture-origin-{{ version.origin }}">{{
+    'designer.fixture-library.origin-' + version.origin | translate
+  }}</span>
+  } } @if (stateBadge) {
+  <span class="badge fixture-state fixture-state-{{ stateBadge.state }}">{{ stateKey | translate : { count: stateBadge.count } }}</span>
+  } @if (usage !== undefined) {
+  <span class="fixture-usage" [title]="'designer.fixture-library.usage' | translate : { count: usage }"
+    ><i class="fa fa-users" aria-hidden="true"></i> {{ usage }}</span
+  >
+  }
+</span>
+
+<ng-template #generatedInfo>
+  <p class="mb-2">{{ 'designer.fixture-library.generated-' + version.origin | translate }}</p>
+  @if (version.manual?.url) {
+  <p class="mb-2">
+    <a [href]="version.manual.url" target="_blank" rel="noopener">{{ 'designer.fixture-library.manual' | translate }}</a>
+  </p>
+  } @else if (version.manual?.name) {
+  <p class="mb-2">{{ 'designer.fixture-library.manual-file' | translate : { name: version.manual.name } }}</p>
+  }
+  <p class="mb-0">{{ 'designer.fixture-library.generated-test' | translate }}</p>
+</ng-template>
