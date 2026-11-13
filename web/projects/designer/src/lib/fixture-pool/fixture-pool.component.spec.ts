@@ -1864,11 +1864,22 @@ describe('FixturePoolComponent', () => {
       // the votes on its mode
       expect(http.match('fixture-vote?uuid=test%2Frgb-par~1').length).toBeGreaterThan(0);
 
-      // a fixture of a plain uuid has neither
+      // the copy of an older project knows nothing of a version, but the versions of its fixture are there to change to
       await click(treeRow('Head'));
-      expect(pool.isVersion(pool.selectedFixtureProfile)).toBe(false);
-      expect(element().querySelector('#settings .fixture-versions-button')).toBeNull();
       expect(pool.modeBadge(pool.selectedFixtureProfile.modes[0])).toBeUndefined();
+
+      await click(element().querySelector('#settings .fixture-versions-button'));
+      http.expectOne('fixtures?fixture=test%2Fmoving-head').flush([{ uuid: 'test/moving-head~1', best: true }]);
+      await update();
+
+      (document.querySelector('popover-container .fixture-version-use') as HTMLElement).click();
+      await loadVersion('test/moving-head~1', { uuid: 'test/moving-head~1' }, json('test/moving-head'));
+      expect(poolFixture('head').profileUuid).toBe('test/moving-head~1');
+
+      // a profile from a file is of no fixture of the library
+      fixtureService.getProfileByUuid('test/moving-head~1').createdFromFile = true;
+      await update();
+      expect(element().querySelector('#settings .fixture-versions-button')).toBeNull();
     });
 
     it('has the AI improve the version of the fixture edited, for a user logged in, and changes the fixture to it', async () => {

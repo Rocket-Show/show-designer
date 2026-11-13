@@ -999,7 +999,8 @@
       "better-change": "Mudar para ela",
       "offer": "Oferecer à biblioteca",
       "load-error": "A biblioteca não tem este perfil. Num dispositivo Rocket Show, atualize primeiro os perfis.",
-      "load-error-title": "Perfil não encontrado"
+      "load-error-title": "Perfil não encontrado",
+      "versions-none": "A biblioteca não tem versões deste fixture."
     },
     "fixture-ai": {
       "title": "Criar perfil com IA",

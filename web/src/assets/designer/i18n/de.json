@@ -1000,7 +1000,8 @@
       "better-change": "Dazu wechseln",
       "offer": "Der Bibliothek anbieten",
       "load-error": "Die Bibliothek hat dieses Profil nicht. Aktualisiere auf einem Rocket Show Gerät zuerst die Profile.",
-      "load-error-title": "Profil nicht gefunden"
+      "load-error-title": "Profil nicht gefunden",
+      "versions-none": "Die Bibliothek hat keine Versionen dieses Fixtures."
     },
     "fixture-ai": {
       "title": "Profil mit KI erstellen",

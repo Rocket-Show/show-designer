@@ -115,6 +115,14 @@ describe('FixtureVersionsComponent', () => {
     expect(element().querySelector('.fixture-version-use')).toBeNull();
   });
 
+  it('says so when the library has no versions of the fixture', () => {
+    fixture.detectChanges();
+    versions.next([]);
+    fixture.detectChanges();
+
+    expect(element().querySelector('.fixture-versions-none').textContent).toContain('designer.fixture-library.versions-none');
+  });
+
   it('says so when the versions could not be loaded', () => {
     fixture.detectChanges();
     versions.error(new Error('offline'));

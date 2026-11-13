@@ -999,7 +999,8 @@
       "better-change": "更改为它",
       "offer": "提供给库",
       "load-error": "库中没有此配置文件。在 Rocket Show 设备上，请先更新配置文件。",
-      "load-error-title": "未找到配置文件"
+      "load-error-title": "未找到配置文件",
+      "versions-none": "库中没有此灯具的版本。"
     },
     "fixture-ai": {
       "title": "用 AI 创建配置文件",

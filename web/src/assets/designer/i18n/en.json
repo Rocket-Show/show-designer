@@ -999,7 +999,8 @@
       "better-change": "Change to it",
       "offer": "Offer to the library",
       "load-error": "The library does not have this profile. On a Rocket Show device, update the profiles first.",
-      "load-error-title": "Profile not found"
+      "load-error-title": "Profile not found",
+      "versions-none": "The library has no versions of this fixture."
     },
     "fixture-ai": {
       "title": "Create profile with AI",

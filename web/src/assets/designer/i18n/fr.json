@@ -999,7 +999,8 @@
       "better-change": "Passer à celle-ci",
       "offer": "Proposer à la bibliothèque",
       "load-error": "La bibliothèque n'a pas ce profil. Sur un appareil Rocket Show, mettez d'abord les profils à jour.",
-      "load-error-title": "Profil introuvable"
+      "load-error-title": "Profil introuvable",
+      "versions-none": "La bibliothèque n'a aucune version de ce fixture."
     },
     "fixture-ai": {
       "title": "Créer un profil avec l'IA",

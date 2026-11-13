@@ -1085,9 +1085,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ---- the fixture library: versions, votes, the AI ------------------------------
 
-  // a version of the library, which can be voted on and has versions to change to (not a plain uuid)
-  isVersion(profile: FixtureProfile): boolean {
-    return isVersionUuid(profile?.uuid);
+  // The versions of the fixture of a profile, to change to: of a version of the library, and of the copy of an older
+  // project (a plain uuid names its fixture), whose fixtures have a version once they changed to one. A profile from a
+  // file is of no fixture of the library.
+  hasVersions(profile: FixtureProfile): boolean {
+    return !profile.createdFromFile;
   }
 
   // What the badge of a mode of the profile edited says (see FixtureVersionBadgesComponent), where the mode is chosen:

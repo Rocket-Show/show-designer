@@ -366,7 +366,8 @@
                 <!-- what the library knows about the version, its other versions, and a profile from a file offered to it -->
                 <div class="fixture-type-library">
                   <lib-fixture-version-badges [version]="selectedFixtureProfile"></lib-fixture-version-badges>
-                  @if (isVersion(selectedFixtureProfile)) {
+                  @if (hasVersions(selectedFixtureProfile)) {
+
                   <button
                     type="button"
                     class="btn btn-link btn-sm p-0 fixture-versions-button"
