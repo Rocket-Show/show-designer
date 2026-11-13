@@ -76,6 +76,7 @@ import { FixtureVoteComponent } from './fixture-library/fixture-vote/fixture-vot
 import { FixtureAiComponent } from './fixture-library/fixture-ai/fixture-ai.component';
 import { FixtureOfferComponent } from './fixture-library/fixture-offer/fixture-offer.component';
 import { FixtureMaintenanceConfirmComponent } from './fixture-library/fixture-maintenance-confirm/fixture-maintenance-confirm.component';
+import { UserDevicesComponent } from './user/user-devices/user-devices.component';
 import { ColorService } from './services/color.service';
 import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
 import { keepSliderValues } from './slider-value';
@@ -147,6 +148,7 @@ import { keepSliderValues } from './slider-value';
     FixtureAiComponent,
     FixtureOfferComponent,
     FixtureMaintenanceConfirmComponent,
+    UserDevicesComponent,
   ],
 
   exports: [DesignerComponent],

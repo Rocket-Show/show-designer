@@ -60,7 +60,8 @@
       "logout": "Se déconnecter",
       "support": "Assistance",
       "reset-intro": "Afficher l'introduction",
-      "view": "Affichage"
+      "view": "Affichage",
+      "devices": "Mes appareils"
     },
     "user": {
       "register-title": "S'inscrire",
@@ -1086,6 +1087,20 @@
       "log-in": "Veuillez vous reconnecter pour proposer un profil.",
       "invalid-profile": "La bibliothèque n'a pas accepté le profil. Ce qui ne va pas :",
       "failed": "Le profil n'a pas pu être proposé. Réessayez."
+    },
+    "devices": {
+      "title": "Mes appareils",
+      "none": "Aucun appareil n'est encore associé à votre compte. Connectez-vous dans les paramètres d'un appareil Rocket Show (Paramètres → Compte) pour l'associer.",
+      "name": "Appareil",
+      "version": "Version",
+      "last-seen": "Dernière connexion",
+      "compositions": "Compositions",
+      "kind-rocketshow": "Rocket Show",
+      "kind-ember": "Ember",
+      "unlink": "Dissocier",
+      "unlink-warning": "Dissocier cet appareil de votre compte ? Il ne pourra plus utiliser l'IA ni voter jusqu'à ce qu'il soit à nouveau associé.",
+      "log-in": "Veuillez vous reconnecter.",
+      "failed": "Les appareils n'ont pas pu être chargés. Réessayez."
     }
   }
 }

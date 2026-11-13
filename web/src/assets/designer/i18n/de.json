@@ -60,7 +60,8 @@
       "logout": "Ausloggen",
       "support": "Support",
       "reset-intro": "Einführung anzeigen",
-      "view": "Ansicht"
+      "view": "Ansicht",
+      "devices": "Meine Geräte"
     },
     "user": {
       "register-title": "Registrieren",
@@ -1087,6 +1088,20 @@
       "log-in": "Bitte melde dich erneut an, um ein Profil anzubieten.",
       "invalid-profile": "Die Bibliothek hat das Profil nicht angenommen. Was falsch ist:",
       "failed": "Das Profil konnte nicht angeboten werden. Bitte versuche es erneut."
+    },
+    "devices": {
+      "title": "Meine Geräte",
+      "none": "Noch kein Gerät ist mit deinem Konto verknüpft. Melde dich in den Einstellungen eines Rocket Show Geräts an (Einstellungen → Konto), um es zu verknüpfen.",
+      "name": "Gerät",
+      "version": "Version",
+      "last-seen": "Zuletzt online",
+      "compositions": "Kompositionen",
+      "kind-rocketshow": "Rocket Show",
+      "kind-ember": "Ember",
+      "unlink": "Trennen",
+      "unlink-warning": "Dieses Gerät von deinem Konto trennen? Es kann die KI nicht mehr verwenden und nicht mehr bewerten, bis es wieder verknüpft wird.",
+      "log-in": "Bitte melde dich erneut an.",
+      "failed": "Die Geräte konnten nicht geladen werden. Bitte versuche es erneut."
     }
   }
 }

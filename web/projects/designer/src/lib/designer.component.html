@@ -191,6 +191,9 @@
           {{ userService.username }}
         </a>
         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="settingsDropdown">
+          <a class="dropdown-item" href="#" (click)="userDevices(); (false)"
+            ><i class="fa fa-hdd-o" aria-hidden="true"></i> {{ 'designer.navigation.devices' | translate }}</a
+          >
           <a class="dropdown-item" href="#" (click)="userService.logout(); (false)" target="_blank"
             ><i class="fa fa-sign-out" aria-hidden="true"></i> {{ 'designer.navigation.logout' | translate }}</a
           >

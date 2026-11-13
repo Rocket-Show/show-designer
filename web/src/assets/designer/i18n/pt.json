@@ -60,7 +60,8 @@
       "logout": "Terminar sessão",
       "support": "Suporte",
       "reset-intro": "Mostrar introdução",
-      "view": "Ver"
+      "view": "Ver",
+      "devices": "Os meus dispositivos"
     },
     "user": {
       "register-title": "Registar",
@@ -1086,6 +1087,20 @@
       "log-in": "Faça login novamente para oferecer um perfil.",
       "invalid-profile": "A biblioteca não aceitou o perfil. O que está errado:",
       "failed": "Não foi possível oferecer o perfil. Tente novamente."
+    },
+    "devices": {
+      "title": "Os meus dispositivos",
+      "none": "Ainda não há nenhum dispositivo associado à sua conta. Inicie sessão nas definições de um dispositivo Rocket Show (Definições → Conta) para o associar.",
+      "name": "Dispositivo",
+      "version": "Versão",
+      "last-seen": "Última vez online",
+      "compositions": "Composições",
+      "kind-rocketshow": "Rocket Show",
+      "kind-ember": "Ember",
+      "unlink": "Desassociar",
+      "unlink-warning": "Desassociar este dispositivo da sua conta? Não poderá usar a IA nem votar até ser associado novamente.",
+      "log-in": "Faça login novamente.",
+      "failed": "Não foi possível carregar os dispositivos. Tente novamente."
     }
   }
 }

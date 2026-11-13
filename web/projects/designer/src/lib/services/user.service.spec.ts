@@ -104,6 +104,35 @@ describe('UserService', () => {
     expect(service.tokenExpiration).toBeUndefined();
   });
 
+  it('lists the devices linked with the account of the user', () => {
+    localStorage.setItem('token', 'secret');
+    localStorage.setItem('tokenExpiration', new Date(Date.now() + 60000).toISOString());
+    const service = createService();
+    let devices: any;
+
+    service.getDevices().subscribe((result) => (devices = result));
+    const request = http.expectOne('devices');
+    request.flush([{ id: 5, kind: 'rocketshow', name: 'Spark of the band' }]);
+
+    expect(request.request.headers.get('Authorization')).toBe('secret');
+    expect(devices[0].name).toBe('Spark of the band');
+  });
+
+  it('unlinks a device of the user, named by its id in a form', () => {
+    localStorage.setItem('token', 'secret');
+    localStorage.setItem('tokenExpiration', new Date(Date.now() + 60000).toISOString());
+    const service = createService();
+
+    service.unlinkDevice(5).subscribe();
+    const request = http.expectOne('device-unlink');
+    request.flush({});
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBe('id=5');
+    expect(request.request.headers.get('Authorization')).toBe('secret');
+    expect(request.request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded');
+  });
+
   it('remembers the project to open next time', () => {
     const service = createService();
     expect(service.getAutoLoadProjectId()).toBeNull();

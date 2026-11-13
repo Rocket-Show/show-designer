@@ -60,7 +60,8 @@
       "logout": "Log out",
       "support": "Support",
       "reset-intro": "Show intro",
-      "view": "View"
+      "view": "View",
+      "devices": "My devices"
     },
     "user": {
       "register-title": "Register",
@@ -1086,6 +1087,20 @@
       "log-in": "Please log in again to offer a profile.",
       "invalid-profile": "The library did not take the profile. What is wrong:",
       "failed": "The profile could not be offered. Please try again."
+    },
+    "devices": {
+      "title": "My devices",
+      "none": "No device is linked with your account yet. Log in in the settings of a Rocket Show device (Settings → Account) to link it.",
+      "name": "Device",
+      "version": "Version",
+      "last-seen": "Last online",
+      "compositions": "Compositions",
+      "kind-rocketshow": "Rocket Show",
+      "kind-ember": "Ember",
+      "unlink": "Unlink",
+      "unlink-warning": "Unlink this device from your account? It can't use the AI or vote until it is linked again.",
+      "log-in": "Please log in again.",
+      "failed": "The devices could not be loaded. Please try again."
     }
   }
 }

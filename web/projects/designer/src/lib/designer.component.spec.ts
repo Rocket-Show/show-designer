@@ -38,6 +38,7 @@ import { UserEnsureLoginService } from './services/user-ensure-login.service';
 import { UserService } from './services/user.service';
 import { WarningDialogService } from './services/warning-dialog.service';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
+import { UserDevicesComponent } from './user/user-devices/user-devices.component';
 import { AiLooksService } from './services/ai-looks.service';
 import { Fixture } from './models/fixture';
 
@@ -671,6 +672,10 @@ describe('DesignerComponent', () => {
 
       expect(menuItem('designer.navigation.login')).toBeUndefined();
       expect(menuItem('Moritz')).toBeDefined();
+
+      // the devices linked with the account
+      click('designer.navigation.devices');
+      expect(show).toHaveBeenCalledWith(UserDevicesComponent, { keyboard: true, ignoreBackdropClick: false, class: 'modal-lg' });
 
       const logout = spyOn(userService, 'logout');
       click('designer.navigation.logout');

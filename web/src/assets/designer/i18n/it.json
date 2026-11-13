@@ -60,7 +60,8 @@
       "logout": "Esci",
       "support": "Supporto",
       "reset-intro": "Mostra introduzione",
-      "view": "Vista"
+      "view": "Vista",
+      "devices": "I miei dispositivi"
     },
     "user": {
       "register-title": "Registrati",
@@ -1086,6 +1087,20 @@
       "log-in": "Accedi di nuovo per offrire un profilo.",
       "invalid-profile": "La libreria non ha accettato il profilo. Cosa non va:",
       "failed": "Non è stato possibile offrire il profilo. Riprova."
+    },
+    "devices": {
+      "title": "I miei dispositivi",
+      "none": "Nessun dispositivo è ancora collegato al tuo account. Accedi nelle impostazioni di un dispositivo Rocket Show (Impostazioni → Account) per collegarlo.",
+      "name": "Dispositivo",
+      "version": "Versione",
+      "last-seen": "Ultimo accesso",
+      "compositions": "Composizioni",
+      "kind-rocketshow": "Rocket Show",
+      "kind-ember": "Ember",
+      "unlink": "Scollega",
+      "unlink-warning": "Scollegare questo dispositivo dal tuo account? Non potrà più usare l'IA né votare finché non sarà collegato di nuovo.",
+      "log-in": "Accedi di nuovo.",
+      "failed": "Non è stato possibile caricare i dispositivi. Riprova."
     }
   }
 }
