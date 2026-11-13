@@ -7,33 +7,33 @@ and votes. Devices register themselves with each sync, which tells which version
 can be logged in to an account of the online designer, so that the AI features work on a device as well.
 
 Status: plan, 13 November 2026, with the decisions taken on the first draft the same day and the changes of a review of
-it: a project knows the version of each profile it holds, the votes count per mode, states take the place of the stars,
-and a manual is limited by its size. Nothing of it is implemented. It touches four repositories:
-`Rocket-Show/show-designer` (this one), `Rocket-Show/spark` (the API and the database of the online designer, the image
-of the Spark), `Rocket-Show/rocketshow` (the backend and the web app of the devices) and
+it: every version of a profile has a uuid of its own, which a project holds with its copy, the votes count per mode,
+states take the place of the stars, and a manual is limited by its size. Nothing of it is implemented. It touches four
+repositories: `Rocket-Show/show-designer` (this one), `Rocket-Show/spark` (the API and the database of the online
+designer, the image of the Spark), `Rocket-Show/rocketshow` (the backend and the web app of the devices) and
 `Rocket-Show/show-designer-ofl-import`, which moves into spark. Ember (`Rocket-Show/ember`) takes part through the
 online designer or a designer app (section 13).
 
 ## 1. Decisions
 
-| Topic                  | Decision                                                                                                                                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The library            | **One library**, the database of the online designer, for the online designer and the devices                                                                                                   |
-| The zip                | **`fixtures.zip` goes.** Devices take the profiles directly from the database, by a sync; no zip is built                                                                                       |
-| Registration           | **A device registers with each sync**: its version, its hardware, a few counts. Usage statistics, active versions                                                                               |
-| Unconfirmed profiles   | **Shown online and on the devices alike**, clearly marked, with a popover which explains what that means                                                                                        |
-| An account on a device | **A login in the settings of Rocket Show.** A device which is online and logged in has the AI features                                                                                          |
-| Devices and accounts   | **Remembered online** by a device identifier: account, name, last online, version, counts. The identifier is a pseudonym, and personal data once the device is linked to an account (section 7) |
-| AI profiles            | **The AI generates fixture profiles** from a manual (PDF), a link to one, or a manufacturer and a model                                                                                         |
-| Versions               | **Every profile is kept** as a version of its fixture, ranked by its state (confirmed, open, a problem), then by usage (section 11)                                                             |
-| The version of a copy  | **A project knows the version of each profile it holds** (`versionId`): usage, votes and the hint of a better version go by it, not by the uuid                                                 |
-| Votes                  | **Users mark a mode of a version good or bad**, only from a logged-in account: online, or on a device linked to one. A vote counts for every version which has the mode unchanged               |
-| Statistics             | **Always sent** with the sync, no switch to turn them off. The privacy policy says what is sent                                                                                                 |
-| Manuals                | **Kept**, privately: the PDFs uploaded and what was read from a link, to improve a version and trace a mistake                                                                                  |
-| The OFL import         | **Moves into `spark/show-designer-api`** as a command line script; `show-designer-ofl-import` is archived                                                                                       |
-| Ember                  | **Only through the online designer or a new designer app** (section 13): the stick itself never goes online, and a Rocket Show device doesn't talk to it                                        |
+| Topic                  | Decision                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The library            | **One library**, the database of the online designer, for the online designer and the devices                                                                                                                                                                                                                                     |
+| The zip                | **`fixtures.zip` goes.** Devices take the profiles directly from the database, by a sync; no zip is built                                                                                                                                                                                                                         |
+| Registration           | **A device registers with each sync**: its version, its hardware, a few counts. Usage statistics, active versions                                                                                                                                                                                                                 |
+| Unconfirmed profiles   | **Shown online and on the devices alike**, clearly marked, with a popover which explains what that means                                                                                                                                                                                                                          |
+| An account on a device | **A login in the settings of Rocket Show.** A device which is online and logged in has the AI features                                                                                                                                                                                                                            |
+| Devices and accounts   | **Remembered online** by a device identifier: account, name, last online, version, counts. The identifier is a pseudonym, and personal data once the device is linked to an account (section 7)                                                                                                                                   |
+| AI profiles            | **The AI generates fixture profiles** from a manual (PDF), a link to one, or a manufacturer and a model                                                                                                                                                                                                                           |
+| Versions               | **Every profile is kept** as a version of its fixture, ranked by its state (confirmed, open, a problem), then by usage (section 11)                                                                                                                                                                                               |
+| The uuid of a profile  | **Every version has a uuid of its own, which never names another profile** (`<manufacturer>/<fixture-key>~<version id>`), the versions of OFL as well. A project holds it with its copy: usage, votes and the hint of a better version go by it. The plain `<manufacturer>/<fixture-key>` names a fixture, no version (section 4) |
+| Votes                  | **Users mark a mode of a version good or bad**, only from a logged-in account: online, or on a device linked to one. A vote counts for every version which has the mode unchanged                                                                                                                                                 |
+| Statistics             | **Always sent** with the sync, no switch to turn them off. The privacy policy says what is sent                                                                                                                                                                                                                                   |
+| Manuals                | **Kept**, privately: the PDFs uploaded and what was read from a link, to improve a version and trace a mistake                                                                                                                                                                                                                    |
+| The OFL import         | **Moves into `spark/show-designer-api`** as a command line script; `show-designer-ofl-import` is archived                                                                                                                                                                                                                         |
+| Ember                  | **Only through the online designer or a new designer app** (section 13): the stick itself never goes online, and a Rocket Show device doesn't talk to it                                                                                                                                                                          |
 
-The version of a copy, the votes per mode and the states come from the review. The numbers marked _proposed_ are to
+The uuid of a profile, the votes per mode and the states come from the review. The numbers marked _proposed_ are to
 confirm.
 
 ## 2. Today
@@ -95,18 +95,37 @@ One upgrade script in `spark/show-designer-database`, which moves the rows of to
 | `library_counter`      | One row: the change counter of the library (section 6)                                                                                                                                                                                                                                                                                                                                            |
 | `ai_request` (exists)  | Two more columns: `feature` (`looks`, `fixture`) and `device_id`                                                                                                                                                                                                                                                                                                                                  |
 
-**The uuids of the profiles.** The current OFL version of a fixture keeps `<manufacturer>/<fixture-key>`, as today: the
-projects and the files of the devices which use it keep working, and a new version of OFL updates it, as the import does
-today. Every other version gets `<manufacturer>/<fixture-key>~<version id>`, also an OFL version which a newer one
-replaced. OFL keys are made of lowercase letters, digits and dashes, so `~` never clashes with one. A new manufacturer
-(one OFL doesn't know) gets a row in `manufacturer` the same way. The uuid of a version never changes.
+**The uuids of the profiles.** Every version has a uuid of its own, `<manufacturer>/<fixture-key>~<version id>`, which
+the server makes when it stores the version: the versions of OFL as well, the current one included. OFL keys are made of
+lowercase letters, digits and dashes, so `~` never clashes with one. The uuid of a version never changes and never names
+another profile: a new version of OFL is a new version with a new uuid, and the one before stays what it was. The
+current version of OFL of a fixture is its newest version of the source `ofl`. A new manufacturer (one OFL doesn't know)
+gets a row in `manufacturer`.
 
-**The version of a copy.** The uuid alone doesn't say what a project holds: the plain uuid is the OFL version of the day
-the fixture was added, or a file of the user. So the library hands out the id of the version with every profile
-(`versionId`, with the metadata of `fixtures.php` and of the search of a device), and the designer keeps it on the copy
-in `project.fixtureProfiles`. Usage, votes and the hint of a better version go by it. A copy without one (a project
-older than this, a profile from a file) counts for no version and can't be voted on. The designer doesn't hash the copy
-instead: it reads a profile into its own model, so the JSON of a copy isn't the JSON of the library anymore.
+The key in a uuid is the one the fixture had when the version was stored. After a merge, or once a fixture took the key
+of OFL (section 5), it isn't the key of the fixture anymore: the fixture of a version is on its row and comes with the
+sync (section 6), and is never read out of the uuid.
+
+**The plain uuid.** `<manufacturer>/<fixture-key>`, the uuid of a profile until now, names a fixture and no version. The
+library doesn't hand it out anymore. It stays where it is: on the copies of the projects made before this, in the files
+of the frozen zip (section 6) and on a profile from a file.
+
+**The version of a copy.** The designer finds the copies of a project by their uuid, and loads a profile from the
+library only when the project has no copy with that uuid (`getProfileByUuid`, `loadProfileByUuid`). That stays, and with
+a uuid per version it is right: the library hands out the uuid of the version with every profile (`fixtures.php`, the
+search of a device), and the designer keeps it as today, on the copy in `project.fixtureProfiles` and on the fixtures
+which use it (`profileUuid`). Two versions of a fixture are two copies, side by side: a project changes to another
+version fixture by fixture, and a newer version is never taken for the copy the project already has. Usage, votes and
+the hint of a better version go by the uuid of the copy.
+
+A copy with a plain uuid is one of a project older than this (the OFL version of the day the fixture was added) or a
+profile from a file. It counts for no version, can't be voted on and gets no hint of a better version. Exchanged for the
+profile of the library ("exchange profile"), its fixtures have a version. The designer doesn't hash such a copy to find
+its version: it reads a profile into its own model, so the JSON of a copy isn't the JSON of the library anymore.
+
+A profile from a file keeps the uuid `<manufacturerKey>/<fixtureKey>` of its file, and the designer refuses a file with
+a `~` in one of the two keys. So it is never taken for a version of the library, and it doesn't stand in the way of the
+profile the library has under the same keys anymore, which comes with the uuid of its version.
 
 **One fixture, one row.** A generated profile mustn't become a second fixture next to the one the library has, under
 another spelling ("ADJ" for `american-dj`). So:
@@ -122,8 +141,8 @@ another spelling ("ADJ" for `american-dj`). So:
 ## 5. The OFL import
 
 - **It updates instead of replacing:** a fixture new in OFL gets a fixture and a version, a fixture whose JSON changed
-  gets a new version (compared by hash), a fixture gone from OFL is marked retired. It never deletes, and never touches
-  a version which doesn't come from OFL.
+  gets a new version with a uuid of its own (compared by hash), a fixture gone from OFL is marked retired. It never
+  deletes, and never touches a version which doesn't come from OFL.
 - **It finds a fixture the library already has:** a fixture new in OFL whose manufacturer and `match_key` a fixture made
   from generated profiles has becomes a version of that one, which takes the key of OFL, and is listed for an admin to
   look at.
@@ -142,10 +161,11 @@ change counter it got last (0 the first time). The answer:
 
 - `cursor`: the new one, and `more`, when there is another page.
 - `manufacturers` changed since the cursor.
-- `versions`: what changed since the cursor about any version (its id, name, category, source, state, confirmations,
-  usage, best version of its fixture, hidden, retired, and its modes with their hashes and states). This part is small.
-- `profiles`: the JSON of the versions new since the cursor only, and of a current OFL version which a new version of
-  OFL updated. Any other profile never changes: a change is a new version.
+- `versions`: what changed since the cursor about any version (its uuid, its fixture, name, category, source, state,
+  confirmations, usage, best version of its fixture, hidden, retired, and its modes with their hashes and states). This
+  part is small.
+- `profiles`: the JSON of the versions new since the cursor only. A profile never changes: a change is a new version
+  with a new uuid (section 4).
 
 Pages of a few hundred versions, gzipped. The first sync is about as large as the zip of today (1.5 MB), the next ones a
 few KB. A change counter, not a time, so that the clocks of the devices don't matter.
@@ -163,13 +183,14 @@ don't load a version again for every vote.
 
 - Syncs in the background: once after boot, then daily while it is online, and on "Update profiles". Boot doesn't wait
   for it anymore.
-- Keeps the files as today (`<manufacturer>/<fixture-key>.json`, `<manufacturer>/<fixture-key>~<id>.json` for the other
-  versions) and a `library.json` with what the search needs (version id, source, state, confirmations, usage, hidden,
-  the modes with their hashes and states). `checkUuid` takes the `~`. The new library replaces the old one only once it
-  is complete, as today. Offline, the last library stays.
+- Keeps one file per version, named by its uuid (`<manufacturer>/<fixture-key>~<id>.json`, where the zip had
+  `<manufacturer>/<fixture-key>.json`), and a `library.json` with what the search needs (the uuid and the fixture of
+  each version, source, state, confirmations, usage, hidden, the modes with their hashes and states). `checkUuid` takes
+  the `~`. The new library replaces the old one only once it is complete, as today. Offline, the last library stays.
 - The first sync after the update starts at 0 and replaces the library from the zip.
-- `SearchFixtureTemplate` gets the version id, source, state, confirmations, usage and the number of versions, which the
-  designer shows (section 12) and keeps on the copy of the project (section 4).
+- `SearchFixtureTemplate` carries the uuid of the best version of a fixture, and gets the source, state, confirmations,
+  usage and the number of versions, which the designer shows (section 12). The uuid stays on the copy of the project
+  (section 4).
 
 **Online,** `fixtures.php` gives the same fields, one row per fixture with its best version, and all versions of a
 fixture on request.
@@ -186,17 +207,17 @@ the zip show that none of them are left.
 
 **The sync is the registration**, there is no call of its own. The device sends:
 
-| What                                                                             | Why                                                |
-| -------------------------------------------------------------------------------- | -------------------------------------------------- |
-| Device identifier (hashed)                                                       | Tells devices apart, links a device to its account |
-| Edition (Spark, community); for a Spark its model, SKU and hardware revision     | Which hardware is out there                        |
-| Raspberry Pi model, architecture, operating system                               | Which platforms to keep supporting                 |
-| Version and build number of Rocket Show, update branch (stable, test)            | Which versions are still in use                    |
-| Language of the web app                                                          | Which translations matter                          |
-| Number of compositions, sets, designer projects and fixtures in the projects     | How a device is used                               |
-| The version ids of the profiles its projects use, the uuid of a copy without one | The usage of the versions (section 11)             |
-| The name of the device, only while it is linked to an account                    | "My devices" of the account (section 8)            |
-| The cursor of the library                                                        | Section 6                                          |
+| What                                                                         | Why                                                                                                 |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Device identifier (hashed)                                                   | Tells devices apart, links a device to its account                                                  |
+| Edition (Spark, community); for a Spark its model, SKU and hardware revision | Which hardware is out there                                                                         |
+| Raspberry Pi model, architecture, operating system                           | Which platforms to keep supporting                                                                  |
+| Version and build number of Rocket Show, update branch (stable, test)        | Which versions are still in use                                                                     |
+| Language of the web app                                                      | Which translations matter                                                                           |
+| Number of compositions, sets, designer projects and fixtures in the projects | How a device is used                                                                                |
+| The uuids of the profiles its projects use                                   | The usage of the versions (section 11); a plain uuid counts for its fixture, in the statistics only |
+| The name of the device, only while it is linked to an account                | "My devices" of the account (section 8)                                                             |
+| The cursor of the library                                                    | Section 6                                                                                           |
 
 **Never sent, or not stored:** the IP address, the names and the content of files, compositions and projects, a
 location.
@@ -319,8 +340,9 @@ the JSON of the parent. The other modes stay the same byte for byte, and with th
 11).
 
 **From a user:** "Offer to the library" on a profile created from a file, for a logged-in account. It goes through the
-checks of step 5 and becomes an unconfirmed version with the source `user`. That is how a mistake of the AI is corrected
-by hand, without another request.
+checks of step 5 and becomes an unconfirmed version with the source `user`, and the fixtures of the project are
+exchanged for it, so that they count for it and can be voted on. That is how a mistake of the AI is corrected by hand,
+without another request.
 
 **The cost:** $4 per million tokens in, $20 out. A manual of 40 pages and the answer come to roughly $0.30–1 per new
 profile (an estimate, to measure on real manuals), a manual at the limit to roughly $2. The profiles have limits of
@@ -340,7 +362,7 @@ existing "exchange profile".
 
 - **Votes:** good or bad, with an optional "what is wrong", in the fixture pool, for the mode the fixture is used in
   (`modeShortName` of the fixture). Only from a logged-in account (decided): online when logged in, on a device when it
-  is linked. That keeps out spam. A copy without a version id can't be voted on (section 4).
+  is linked. That keeps out spam. A copy with a plain uuid can't be voted on (section 4).
 - **A vote counts for a mode, not for a version.** A profile is right or wrong mode by mode, and nobody tests the modes
   they don't use. The server keeps a hash of what each mode of a version does (`fixture_version_mode`): its channel
   list, and the channels and wheels it uses. A vote counts for its fixture and that hash, so for every version which has
@@ -351,15 +373,15 @@ existing "exchange profile".
   of whoever generated or uploaded the mode is shown, but isn't one of the 2.
 - **The state of a version:** a problem when one of its modes is one; confirmed when at least one mode is confirmed and
   none is a problem; else open. Its confirmations are the accounts with a good vote on one of its modes.
-- **Usage:** the number of different online projects and devices which use a version, by the version id of their copy:
-  counted when a project is saved online and with each sync. Not the clicks on "add". Devices not seen for 90 days stop
+- **Usage:** the number of different online projects and devices which use a version, by the uuid of their copy: counted
+  when a project is saved online and with each sync. Not the clicks on "add". Devices not seen for 90 days stop
   counting. For the ranking, only the projects of an account and the linked devices count (`fixture_usage`): the sync of
-  a device which isn't linked can be made up (section 7). The statistics count all of them, and a copy without a version
-  id for its fixture.
-- **The order** of the versions of a fixture: the confirmed ones (most good votes less bad ones first), then the open
-  one of OFL, then the other open ones, then the problems. Within these, by usage, then the newer one. The best version
-  of a fixture is the first one which isn't hidden; the search shows it. So a version of OFL nobody voted on stays ahead
-  of a generated one with a single vote.
+  a device which isn't linked can be made up (section 7). The statistics count all of them, and a copy with a plain uuid
+  for its fixture.
+- **The order** of the versions of a fixture: the confirmed ones (most good votes less bad ones first), then the current
+  version of OFL (section 4) while it is open, then the other open ones, then the problems. Within these, by usage, then
+  the newer one. The best version of a fixture is the first one which isn't hidden; the search shows it. So a version of
+  OFL nobody voted on stays ahead of a generated one with a single vote.
 - **No stars.** A fixture gets a few votes at most. The usual rating for that (the lower bound of Wilson) gives 1.8
   stars for one good vote and 3.3 for five of five, and needs 27 votes without a bad one for 4.5: nearly every profile
   would look bad. "Confirmed by 3 users" says what is known.
@@ -368,9 +390,10 @@ existing "exchange profile".
 - **"There is a better version":** when a project is opened online, and on a device after a sync, the designer compares
   the version of each copy with the library. The fixture pool marks a fixture whose mode is a problem, whose version is
   hidden, or whose mode has other channels in the best version of the fixture. The mark opens the existing "exchange
-  profile", whose report says what is carried over and what is lost. No mark when the best version has the mode
-  unchanged (the same hash): nothing would change. Without it a correction never reaches a project, which plays from its
-  own copy.
+  profile", whose report says what is carried over and what is lost. The better version has a uuid of its own, so the
+  exchange loads it next to the copy it replaces, also when both are versions of OFL. No mark when the best version has
+  the mode unchanged (the same hash): nothing would change. Without it a correction never reaches a project, which plays
+  from its own copy.
 - **Hidden:** an admin hides a version (junk, abuse). It disappears from the search, a project which uses it keeps its
   copy and is told (above).
 
@@ -420,22 +443,24 @@ library.
 
 Each phase can be released on its own.
 
-| Phase                                              | spark | rocketshow | show-designer                                | ofl-import        |
-| -------------------------------------------------- | ----- | ---------- | -------------------------------------------- | ----------------- |
-| 1. Database and OFL import                         | ✔     |            |                                              | ✔ (move, archive) |
-| 2. Sync of the library                             | ✔     | ✔          | ✔ (badges, fields, the version id of a copy) |                   |
-| 3. Registration and statistics                     | ✔     | ✔          |                                              |                   |
-| 4. The account on the device                       | ✔     | ✔          | ✔ (My devices)                               |                   |
-| 5. The AI on the device                            | ✔     | ✔          | ✔ (`aiAccount`)                              |                   |
-| 6. AI fixture profiles                             | ✔     |            | ✔                                            |                   |
-| 7. Votes, ranking and the hint of a better version | ✔     | ✔          | ✔                                            |                   |
-| 8. Ember through the designer and its app          | ✔     |            | ✔                                            |                   |
+| Phase                                              | spark | rocketshow | show-designer                                    | ofl-import        |
+| -------------------------------------------------- | ----- | ---------- | ------------------------------------------------ | ----------------- |
+| 1. Database and OFL import                         | ✔     |            |                                                  | ✔ (move, archive) |
+| 2. Sync of the library                             | ✔     | ✔          | ✔ (badges, fields, no `~` in the keys of a file) |                   |
+| 3. Registration and statistics                     | ✔     | ✔          |                                                  |                   |
+| 4. The account on the device                       | ✔     | ✔          | ✔ (My devices)                                   |                   |
+| 5. The AI on the device                            | ✔     | ✔          | ✔ (`aiAccount`)                                  |                   |
+| 6. AI fixture profiles                             | ✔     |            | ✔                                                |                   |
+| 7. Votes, ranking and the hint of a better version | ✔     | ✔          | ✔                                                |                   |
+| 8. Ember through the designer and its app          | ✔     |            | ✔                                                |                   |
 
 - Rocket Show takes the designer as a package (`@rocketshow/designer`): a change of the designer is released before
   Rocket Show uses it.
 - Phase 6 works online first, so it can go along with phases 3 to 5.
-- Phase 1 already writes the modes with their hashes and the `match_key`, and phase 2 the version id onto the copies:
-  votes and usage are only worth something for the copies which have one.
+- Phase 1 already gives every version its uuid and writes the modes with their hashes and the `match_key`. A profile
+  added to a project comes with the uuid of its version from then on online (`fixtures.php` hands it out, the designer
+  keeps a uuid as it is), and from phase 2 on on a device: votes and usage are only worth something for the copies which
+  have one.
 - Phase 8 follows the connection to the stick and the offline cache of the Ember concept, in the online designer and in
   the designer app; the firmware already answers `INFO`.
 - The zip goes once phase 2 is out and no device which still needs it is left (section 6).
