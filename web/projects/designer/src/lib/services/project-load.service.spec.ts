@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { Project } from '../models/project';
 import { ConfigService } from './config.service';
 import { EffectService } from './effect.service';
+import { FixtureLibraryService } from './fixture-library.service';
 import { SceneService } from './scene.service';
 import { FixtureService } from './fixture.service';
 import { PresetService } from './preset.service';
@@ -504,6 +505,19 @@ describe('ProjectLoadService opening projects', () => {
     expect(projectService.project).toBe(saved);
     expect(presetService.selectedPreset.uuid).toBe('preset-1');
     expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { id: 7, token: 'token' } }));
+  });
+
+  it('looks the versions of its profiles up in the library, when it is opened from the server or imported', () => {
+    const checkVersions = spyOn(TestBed.inject(FixtureLibraryService), 'checkVersions');
+    const saved = new Project({ ...projectWithSelectedPreset(), id: 7 });
+    spyOn(projectService, 'getProject').and.returnValue(of(saved));
+
+    service.load(7, 'Imported').subscribe();
+    expect(checkVersions).toHaveBeenCalledWith(saved.fixtureProfiles);
+
+    service.import(JSON.stringify(projectWithSelectedPreset()));
+    expect(checkVersions).toHaveBeenCalledWith(projectService.project.fixtureProfiles);
+    expect(checkVersions).toHaveBeenCalledTimes(2);
   });
 
   it('refuses a project of a newer designer', () => {
