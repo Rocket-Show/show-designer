@@ -976,7 +976,16 @@
       "in-use": "En uso",
       "hidden": "Oculta",
       "retired": "Ya no está en la Open Fixture Library",
-      "improve": "Mejorar"
+      "improve": "Mejorar",
+      "vote-question": "¿Funciona este modo con tu fixture?",
+      "vote-good": "Funciona",
+      "vote-bad": "Algo está mal",
+      "vote-revoke": "Retirar mi voto",
+      "vote-comment": "¿Qué está mal? (opcional)",
+      "vote-send": "Enviar",
+      "vote-failed": "No se pudieron cargar o enviar los votos. Inténtalo de nuevo.",
+      "vote-log-in": "Vuelve a iniciar sesión para votar.",
+      "vote-plain": "Solo se puede votar una versión de la biblioteca. Cambia el fixture a una de sus versiones para votarla."
     }
   }
 }

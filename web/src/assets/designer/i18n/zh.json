@@ -976,7 +976,16 @@
       "in-use": "使用中",
       "hidden": "已隐藏",
       "retired": "已不在 Open Fixture Library 中",
-      "improve": "改进"
+      "improve": "改进",
+      "vote-question": "此模式能用于你的灯具吗？",
+      "vote-good": "可以用",
+      "vote-bad": "有问题",
+      "vote-revoke": "撤回我的投票",
+      "vote-comment": "哪里有问题？（可选）",
+      "vote-send": "发送",
+      "vote-failed": "无法加载或发送投票，请重试。",
+      "vote-log-in": "请重新登录后投票。",
+      "vote-plain": "只能为库中的版本投票。请将灯具更改为它的某个版本后再投票。"
     }
   }
 }

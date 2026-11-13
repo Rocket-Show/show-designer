@@ -1,0 +1,7 @@
+/* what the users who marked the mode bad found wrong, kept short below the buttons */
+.fixture-vote-comments {
+  max-height: 6rem;
+  overflow-y: auto;
+  padding-left: 1.25rem;
+  color: var(--sd-text-muted);
+}

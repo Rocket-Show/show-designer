@@ -977,7 +977,16 @@
       "in-use": "Verwendet",
       "hidden": "Ausgeblendet",
       "retired": "Nicht mehr in der Open Fixture Library",
-      "improve": "Verbessern"
+      "improve": "Verbessern",
+      "vote-question": "Funktioniert dieser Modus mit deinem Fixture?",
+      "vote-good": "Funktioniert",
+      "vote-bad": "Etwas stimmt nicht",
+      "vote-revoke": "Meine Bewertung zurücknehmen",
+      "vote-comment": "Was stimmt nicht? (optional)",
+      "vote-send": "Senden",
+      "vote-failed": "Die Bewertungen konnten nicht geladen oder gesendet werden. Bitte versuche es erneut.",
+      "vote-log-in": "Bitte melde dich erneut an, um zu bewerten.",
+      "vote-plain": "Nur eine Version der Bibliothek kann bewertet werden. Wechsle das Fixture zu einer ihrer Versionen, um es zu bewerten."
     }
   }
 }

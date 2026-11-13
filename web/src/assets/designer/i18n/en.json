@@ -976,7 +976,16 @@
       "in-use": "In use",
       "hidden": "Hidden",
       "retired": "No longer in the Open Fixture Library",
-      "improve": "Improve"
+      "improve": "Improve",
+      "vote-question": "Does this mode work with your fixture?",
+      "vote-good": "It works",
+      "vote-bad": "Something is wrong",
+      "vote-revoke": "Take my vote back",
+      "vote-comment": "What is wrong? (optional)",
+      "vote-send": "Send",
+      "vote-failed": "The votes could not be loaded or sent. Please try again.",
+      "vote-log-in": "Please log in again to vote.",
+      "vote-plain": "Only a version of the library can be voted on. Change the fixture to one of its versions to vote on it."
     }
   }
 }
