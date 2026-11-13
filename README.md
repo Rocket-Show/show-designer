@@ -7,7 +7,11 @@ This project allows editing lighting shows for Rocket Show as a web application 
 The Rocket Show Designer relies on the Open Fixture Library (OFL). There is currently no plugin, which maps the OFL profiles to the Rocket Show format. Currently, we rely on the OFL JSON-format.
 
 Use this repo to update the database with the newest fixtures:
-https://github.com/moritzvieli/show-designer-ofl-import
+https://github.com/Rocket-Show/show-designer-ofl-import
+
+One library for the online designer and the devices, which grows with fixture profiles the AI generates from a manual,
+keeps their versions and ranks them by usage and votes, with devices which register themselves and log in to an
+account, is planned in [docs/fixture-library.md](docs/fixture-library.md).
 
 ## Example project for the online designer
 
