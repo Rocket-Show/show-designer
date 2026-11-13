@@ -137,3 +137,33 @@ lib-tree,
   overflow-y: auto;
   padding-left: 1.25rem;
 }
+
+/* The profiles of the library: a version which tells where it comes from takes a second line for it. */
+.profiles-card {
+  height: 240px;
+}
+
+.profile-library,
+.fixture-type-library {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-1);
+}
+
+.profile-versions,
+.fixture-versions-button {
+  font-size: 0.75rem;
+}
+
+/* a fixture for which the library has a better version than the one of its copy */
+.fixture-better-version {
+  color: var(--sd-warning);
+  margin-right: var(--sd-space-1, 0.25rem);
+}
+
+.fixture-better-version-hint {
+  margin-top: var(--sd-space-1);
+  font-size: 0.8125rem;
+  color: var(--sd-warning);
+}

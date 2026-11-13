@@ -985,7 +985,20 @@
       "vote-send": "发送",
       "vote-failed": "无法加载或发送投票，请重试。",
       "vote-log-in": "请重新登录后投票。",
-      "vote-plain": "只能为库中的版本投票。请将灯具更改为它的某个版本后再投票。"
+      "vote-plain": "只能为库中的版本投票。请将灯具更改为它的某个版本后再投票。",
+      "versions": "{{count}} 个版本",
+      "versions-title": "此灯具的版本",
+      "all-versions": "版本",
+      "add": "添加灯具",
+      "change": "更改为此版本",
+      "create-with-ai": "用 AI 创建配置文件",
+      "better-problem": "有更好的版本：用户报告了此模式的问题。",
+      "better-hidden": "有更好的版本：此版本已从库中移除。",
+      "better-changed": "有更好的版本，它以不同的方式实现此模式。",
+      "better-change": "更改为它",
+      "offer": "提供给库",
+      "load-error": "库中没有此配置文件。在 Rocket Show 设备上，请先更新配置文件。",
+      "load-error-title": "未找到配置文件"
     },
     "fixture-ai": {
       "title": "用 AI 创建配置文件",

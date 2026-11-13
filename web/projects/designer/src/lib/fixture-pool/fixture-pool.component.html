@@ -18,7 +18,7 @@
       />
 
       <!-- Profiles -->
-      <div class="card border-secondary w-100" style="height: 200px">
+      <div class="card border-secondary w-100 profiles-card">
         <div class="card-body p-0 w-100">
           <div class="list-group list-group-flush w-100">
             @if (loadingProfiles) {
@@ -35,6 +35,37 @@
                     <span class="icon-{{ fixtureService.getFixtureIconClass(profile) }} mr-1"></span> {{ profile.manufacturerName }} -
                     {{ profile.name }}
                   </p>
+                  <!-- where the version comes from and what is known about it, and the other versions of the fixture -->
+                  @if (profile.origin) {
+                  <div class="profile-library">
+                    <lib-fixture-version-badges [version]="profile"></lib-fixture-version-badges>
+                    @if (profile.versions > 1) {
+                    <button
+                      type="button"
+                      class="btn btn-link btn-sm p-0 ml-1 profile-versions"
+                      [popover]="searchVersions"
+                      #searchVersionsPopover="bs-popover"
+                      [popoverTitle]="'designer.fixture-library.versions-title' | translate"
+                      containerClass="fixture-library-popover"
+                      container="body"
+                      placement="bottom"
+                      [outsideClick]="true"
+                    >
+                      <i class="fa fa-code-fork" aria-hidden="true"></i>
+                      {{ 'designer.fixture-library.versions' | translate : { count: profile.versions } }}
+                    </button>
+                    <ng-template #searchVersions>
+                      <lib-fixture-versions
+                        [uuid]="profile.uuid"
+                        useLabel="designer.fixture-library.add"
+                        [canImprove]="canUseAi"
+                        (use)="searchVersionsPopover.hide(); addFixture($event)"
+                        (improve)="searchVersionsPopover.hide(); createProfileWithAi($event)"
+                      ></lib-fixture-versions>
+                    </ng-template>
+                    }
+                  </div>
+                  }
                 </div>
                 <div class="col-3 my-auto">
                   <a
@@ -108,6 +139,12 @@
           <button type="button" class="btn btn-secondary" (click)="createFixtureFromProfileFile()" role="button">
             <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.create-fixture-from-profile-file' | translate }}
           </button>
+          <!-- a profile the AI makes from the manual of the fixture -->
+          @if (configService.aiFixtures) {
+          <button type="button" class="btn btn-secondary mt-2 create-profile-ai" (click)="createProfileWithAi()">
+            <i class="fa fa-magic" aria-hidden="true"></i> {{ 'designer.fixture-library.create-with-ai' | translate }}
+          </button>
+          }
         </div>
 
         <!-- Universe -->
@@ -200,11 +237,24 @@
                 <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
                 <!-- no tooltip on the rows: one is built, placed and thrown away again for
                      every row the cursor crosses, and a minus on a fixture speaks for itself -->
+                <!-- the library has a better version of the profile for the fixture: a click changes it to that one -->
+                @if (getBetterVersion(node.fixture); as better) {
+                <a
+                  href="#"
+                  class="fixture-better-version ml-auto my-auto"
+                  role="button"
+                  [attr.aria-label]="'designer.fixture-library.better-' + better.reason | translate"
+                  [title]="'designer.fixture-library.better-' + better.reason | translate"
+                  (click)="exchangeToBetter(node.fixture); $event.stopPropagation(); (false)"
+                  ><i class="fa fa-arrow-circle-up fa-fw" aria-hidden="true"></i
+                ></a>
+                }
                 <!-- the fixture resets itself or switches its lamp on, on the stage -->
                 @if (canMaintain(node.fixture, 'reset')) {
                 <a
                   href="#"
-                  class="fixture-maintenance ml-auto my-auto"
+                  class="fixture-maintenance my-auto"
+                  [class.ml-auto]="!getBetterVersion(node.fixture)"
                   role="button"
                   [class.maintaining]="isMaintaining(node.fixture, 'reset')"
                   [attr.aria-label]="'designer.fixture-pool.reset' | translate"
@@ -216,7 +266,7 @@
                 <a
                   href="#"
                   class="fixture-maintenance my-auto"
-                  [class.ml-auto]="!canMaintain(node.fixture, 'reset')"
+                  [class.ml-auto]="!getBetterVersion(node.fixture) && !canMaintain(node.fixture, 'reset')"
                   role="button"
                   [class.maintaining]="isMaintaining(node.fixture, 'lamp-on')"
                   [attr.aria-label]="'designer.fixture-pool.lamp-on' | translate"
@@ -229,7 +279,9 @@
                 <a
                   href="#"
                   class="fixture-identify my-auto"
-                  [class.ml-auto]="!canMaintain(node.fixture, 'reset') && !canMaintain(node.fixture, 'lamp-on')"
+                  [class.ml-auto]="
+                    !getBetterVersion(node.fixture) && !canMaintain(node.fixture, 'reset') && !canMaintain(node.fixture, 'lamp-on')
+                  "
                   role="button"
                   [class.identifying]="isIdentified(node.fixture)"
                   [attr.aria-label]="'designer.fixture-pool.identify' | translate"
@@ -311,6 +363,53 @@
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.fixture-type' | translate }}</label>
               <div class="col-lg-9">
                 <p class="form-control-plaintext mb-0 fixture-type">{{ profileName(selectedFixtureProfile) }}</p>
+                <!-- what the library knows about the version, its other versions, and a profile from a file offered to it -->
+                <div class="fixture-type-library">
+                  <lib-fixture-version-badges [version]="selectedFixtureProfile"></lib-fixture-version-badges>
+                  @if (isVersion(selectedFixtureProfile)) {
+                  <button
+                    type="button"
+                    class="btn btn-link btn-sm p-0 fixture-versions-button"
+                    [popover]="settingsVersions"
+                    #settingsVersionsPopover="bs-popover"
+                    [popoverTitle]="'designer.fixture-library.versions-title' | translate"
+                    containerClass="fixture-library-popover"
+                    container="body"
+                    placement="bottom"
+                    [outsideClick]="true"
+                  >
+                    <i class="fa fa-code-fork" aria-hidden="true"></i> {{ 'designer.fixture-library.all-versions' | translate }}
+                  </button>
+                  <ng-template #settingsVersions>
+                    <lib-fixture-versions
+                      [uuid]="selectedFixtureProfile.uuid"
+                      [currentUuid]="selectedFixtureProfile.uuid"
+                      useLabel="designer.fixture-library.change"
+                      [canImprove]="canUseAi"
+                      (use)="settingsVersionsPopover.hide(); exchangeProfile($event)"
+                      (improve)="settingsVersionsPopover.hide(); createProfileWithAi($event, true)"
+                    ></lib-fixture-versions>
+                  </ng-template>
+                  } @if (canOffer(selectedFixtureProfile)) {
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm fixture-offer-button"
+                    (click)="offerProfile(selectedFixtureProfile)"
+                  >
+                    <i class="fa fa-share" aria-hidden="true"></i> {{ 'designer.fixture-library.offer' | translate }}
+                  </button>
+                  }
+                </div>
+                <!-- the library has a better version for the mode of the fixture -->
+                @if (getBetterVersion(selectedFixture); as better) {
+                <div class="fixture-better-version-hint">
+                  <i class="fa fa-arrow-circle-up fa-fw" aria-hidden="true"></i>
+                  {{ 'designer.fixture-library.better-' + better.reason | translate }}
+                  <a href="#" role="button" class="ml-1" (click)="exchangeToBetter(selectedFixture); (false)">{{
+                    'designer.fixture-library.better-change' | translate
+                  }}</a>
+                </div>
+                }
                 <!-- what would have to be carried over to another model -->
                 @if (modelSpecificCount > 0) {
                 <small class="form-text text-muted mt-0 model-specific-count">
@@ -352,15 +451,23 @@
             <div class="form-group row">
               <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.mode' | translate }}</label>
               <div class="col-lg-9">
+                <!-- each mode has a state of its own -->
                 <select class="custom-select" [ngModel]="selectedFixture.modeShortName" (ngModelChange)="selectMode($event)">
                   @for (mode of selectedFixtureProfile.modes; track mode) {
                   <option [ngValue]="mode.shortName || mode.name">
                     {{ mode.name }}
                     - {{ fixtureService.getModeChannelCount(selectedFixtureProfile, mode) }}
                     {{ 'designer.fixture-pool.channels' | translate }}
+                    @if (modeBadge(mode); as state) { · {{ state.key | translate : { count: state.badge.count } }} }
                   </option>
                   }
                 </select>
+                <!-- whether the mode works with the real fixture, from the votes of the users -->
+                <lib-fixture-vote
+                  class="d-block mt-2"
+                  [profile]="selectedFixtureProfile"
+                  [mode]="selectedFixture.modeShortName"
+                ></lib-fixture-vote>
               </div>
             </div>
             <div class="form-group row">

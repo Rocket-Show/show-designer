@@ -811,6 +811,15 @@ describe('FixtureService with the fixture library and the pool', () => {
     expect(service.addFixture(service.getProfileByUuid('head'), []).modeShortName).toBe('Basic');
   });
 
+  it('adds a fixture in the mode asked for, with the channels of it, if its profile has it', () => {
+    const pool = [fixture('head', 'Basic', 0)];
+
+    const added = service.addFixture(service.getProfileByUuid('head'), pool, undefined, 'Full');
+    expect(added.modeShortName).toBe('Full');
+    expect(service.addFixture(service.getProfileByUuid('par'), pool, undefined, '3ch').dmxFirstChannel).toBe(7);
+    expect(service.addFixture(service.getProfileByUuid('head'), pool, undefined, '9ch').modeShortName).toBe('Basic');
+  });
+
   it('takes the channels of another pool, the fixtures of the universe', () => {
     const universe = [fixture('par', '3ch', 0)];
 

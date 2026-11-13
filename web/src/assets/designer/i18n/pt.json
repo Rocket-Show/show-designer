@@ -985,7 +985,20 @@
       "vote-send": "Enviar",
       "vote-failed": "Não foi possível carregar ou enviar os votos. Tente novamente.",
       "vote-log-in": "Faça login novamente para votar.",
-      "vote-plain": "Só se pode votar numa versão da biblioteca. Mude o fixture para uma das suas versões para votar."
+      "vote-plain": "Só se pode votar numa versão da biblioteca. Mude o fixture para uma das suas versões para votar.",
+      "versions": "{{count}} versões",
+      "versions-title": "Versões deste fixture",
+      "all-versions": "Versões",
+      "add": "Adicionar um fixture",
+      "change": "Mudar para esta versão",
+      "create-with-ai": "Criar perfil com IA",
+      "better-problem": "Há uma versão melhor: utilizadores reportaram problemas com este modo.",
+      "better-hidden": "Há uma versão melhor: esta foi retirada da biblioteca.",
+      "better-changed": "Há uma versão melhor, que faz este modo de outra forma.",
+      "better-change": "Mudar para ela",
+      "offer": "Oferecer à biblioteca",
+      "load-error": "A biblioteca não tem este perfil. Num dispositivo Rocket Show, atualize primeiro os perfis.",
+      "load-error-title": "Perfil não encontrado"
     },
     "fixture-ai": {
       "title": "Criar perfil com IA",

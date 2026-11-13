@@ -985,7 +985,20 @@
       "vote-send": "Send",
       "vote-failed": "The votes could not be loaded or sent. Please try again.",
       "vote-log-in": "Please log in again to vote.",
-      "vote-plain": "Only a version of the library can be voted on. Change the fixture to one of its versions to vote on it."
+      "vote-plain": "Only a version of the library can be voted on. Change the fixture to one of its versions to vote on it.",
+      "versions": "{{count}} versions",
+      "versions-title": "Versions of this fixture",
+      "all-versions": "Versions",
+      "add": "Add a fixture",
+      "change": "Change to this version",
+      "create-with-ai": "Create profile with AI",
+      "better-problem": "There is a better version: users reported problems with this mode.",
+      "better-hidden": "There is a better version: this one was taken out of the library.",
+      "better-changed": "There is a better version, which does this mode differently.",
+      "better-change": "Change to it",
+      "offer": "Offer to the library",
+      "load-error": "The library does not have this profile. On a Rocket Show device, update the profiles first.",
+      "load-error-title": "Profile not found"
     },
     "fixture-ai": {
       "title": "Create profile with AI",

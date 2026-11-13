@@ -1277,7 +1277,9 @@ export class FixtureService {
     return -1;
   }
 
-  addFixture(profile: FixtureProfile, fixturePool: Fixture[], channelPool?: Fixture[]): Fixture {
+  // A new fixture of the profile, in the passed mode, if the profile has it, else in the mode of the fixtures of the
+  // profile in the pool, else in its first mode: on the first channels free for it
+  addFixture(profile: FixtureProfile, fixturePool: Fixture[], channelPool?: Fixture[], modeShortName?: string): Fixture {
     const fixture = new Fixture();
 
     fixture.uuid = this.uuidService.getUuid();
@@ -1299,7 +1301,9 @@ export class FixtureService {
       }
     }
 
-    if (existingModeShortName) {
+    if (profile.modes.some((candidate) => (candidate.shortName || candidate.name) === modeShortName)) {
+      fixture.modeShortName = modeShortName;
+    } else if (existingModeShortName) {
       fixture.modeShortName = existingModeShortName;
     } else {
       fixture.modeShortName = profile.modes[0].shortName || profile.modes[0].name;

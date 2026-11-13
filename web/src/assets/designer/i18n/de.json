@@ -986,7 +986,20 @@
       "vote-send": "Senden",
       "vote-failed": "Die Bewertungen konnten nicht geladen oder gesendet werden. Bitte versuche es erneut.",
       "vote-log-in": "Bitte melde dich erneut an, um zu bewerten.",
-      "vote-plain": "Nur eine Version der Bibliothek kann bewertet werden. Wechsle das Fixture zu einer ihrer Versionen, um es zu bewerten."
+      "vote-plain": "Nur eine Version der Bibliothek kann bewertet werden. Wechsle das Fixture zu einer ihrer Versionen, um es zu bewerten.",
+      "versions": "{{count}} Versionen",
+      "versions-title": "Versionen dieses Fixtures",
+      "all-versions": "Versionen",
+      "add": "Fixture hinzufügen",
+      "change": "Zu dieser Version wechseln",
+      "create-with-ai": "Profil mit KI erstellen",
+      "better-problem": "Es gibt eine bessere Version: Benutzer haben Probleme mit diesem Modus gemeldet.",
+      "better-hidden": "Es gibt eine bessere Version: diese wurde aus der Bibliothek genommen.",
+      "better-changed": "Es gibt eine bessere Version, die diesen Modus anders umsetzt.",
+      "better-change": "Dazu wechseln",
+      "offer": "Der Bibliothek anbieten",
+      "load-error": "Die Bibliothek hat dieses Profil nicht. Aktualisiere auf einem Rocket Show Gerät zuerst die Profile.",
+      "load-error-title": "Profil nicht gefunden"
     },
     "fixture-ai": {
       "title": "Profil mit KI erstellen",
