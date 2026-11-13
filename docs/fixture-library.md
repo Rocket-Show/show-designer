@@ -6,9 +6,11 @@ which grows with fixture profiles the AI generates from a manual, keeps every ve
 votes. Devices register themselves with each sync, which tells which versions of Rocket Show are still in use, and can be
 logged in to an account of the online designer, so that the AI features work on a device as well.
 
-Status: plan, 13 November 2026. Nothing of it is implemented. It touches four repositories: `Rocket-Show/show-designer`
-(this one), `Rocket-Show/spark` (the API and the database of the online designer, the image of the Spark),
-`Rocket-Show/rocketshow` (the backend and the web app of the devices) and `Rocket-Show/show-designer-ofl-import`.
+Status: plan, 13 November 2026, with the decisions taken on the first draft the same day. Nothing of it is implemented.
+It touches four repositories: `Rocket-Show/show-designer` (this one), `Rocket-Show/spark` (the API and the database of
+the online designer, the image of the Spark), `Rocket-Show/rocketshow` (the backend and the web app of the devices) and
+`Rocket-Show/show-designer-ofl-import`, which moves into spark. Ember (`Rocket-Show/ember`) takes part through the
+designer (section 13).
 
 ## 1. Decisions
 
@@ -22,9 +24,13 @@ Status: plan, 13 November 2026. Nothing of it is implemented. It touches four re
 | Devices and accounts   | **Remembered online** by a hardware identifier: account, name, last online, version, counts. No personal data     |
 | AI profiles            | **The AI generates fixture profiles** from a manual (PDF), a link to one, or a manufacturer and a model           |
 | Versions               | **Every profile is kept** as a version of its fixture, ranked by usage and stars                                  |
-| Votes                  | **Users mark a version good or bad**                                                                              |
+| Votes                  | **Users mark a version good or bad**, only from a logged-in account: online, or on a device linked to one         |
+| Statistics             | **Always sent** with the sync, no switch to turn them off. The privacy policy says what is sent                   |
+| Manuals                | **Kept**, privately: the PDFs uploaded and what was read from a link, to improve a version and trace a mistake    |
+| The OFL import         | **Moves into `spark/show-designer-api`** as a command line script; `show-designer-ofl-import` is archived         |
+| Ember                  | **Takes part through the designer** (_proposed_, section 13): the stick itself never goes online                  |
 
-Questions which are still open are in section 14.
+The question still open is in section 15.
 
 ## 2. Today
 
@@ -70,14 +76,15 @@ and the token of the account stays on the device.
 
 One upgrade script in `spark/show-designer-database`, which moves the rows of today into the new tables.
 
-| Table                 | Holds                                                                                                                                                                                                                                                                                                                   |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fixture`             | One row per real fixture: manufacturer, fixture key, name, main category, its best version                                                                                                                                                                                                                              |
-| `fixture_version`     | Every profile: uuid, the OFL JSON and its hash, the source (`ofl`, `ai`), how it was generated (PDF hash, URL, manufacturer and model, the DMX mode asked for), parent version, created by (user, device), AI request, good and bad votes, usage, stars, hidden, retired (gone from OFL), a change counter for the sync |
-| `fixture_vote`        | One vote per account and version: good or bad, an optional comment, can be changed                                                                                                                                                                                                                                      |
-| `fixture_usage`       | Which version an online project or a device uses, and when that was last seen                                                                                                                                                                                                                                           |
-| `device`              | The hashed hardware identifier, what the device reports (section 7), first and last seen, the linked account, the hash of its token                                                                                                                                                                                     |
-| `ai_request` (exists) | Two more columns: `feature` (`looks`, `fixture`) and `device_id`                                                                                                                                                                                                                                                        |
+| Table                 | Holds                                                                                                                                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fixture`             | One row per real fixture: manufacturer, fixture key, name, main category, its best version                                                                                                                                                                                                                               |
+| `fixture_version`     | Every profile: uuid, the OFL JSON and its hash, the source (`ofl`, `ai`), how it was generated (the manual, the manufacturer and model asked for, the DMX mode), parent version, created by (user, device), AI request, good and bad votes, usage, stars, hidden, retired (gone from OFL), a change counter for the sync |
+| `fixture_manual`      | A manual a version was made from: its SHA-256, size and pages, the file, the link it came from, who gave it (section 10)                                                                                                                                                                                                 |
+| `fixture_vote`        | One vote per account and version: good or bad, an optional comment, can be changed                                                                                                                                                                                                                                       |
+| `fixture_usage`       | Which version an online project or a device uses, and when that was last seen                                                                                                                                                                                                                                            |
+| `device`              | The kind (`rocketshow`, `ember`), the hashed hardware identifier, what the device reports (sections 7 and 13), first and last seen, the linked account, the hash of its token                                                                                                                                            |
+| `ai_request` (exists) | Two more columns: `feature` (`looks`, `fixture`) and `device_id`                                                                                                                                                                                                                                                         |
 
 **The uuids of the profiles.** The current OFL version of a fixture keeps `<manufacturer>/<fixture-key>`, as today: the
 projects and the files of the devices which use it keep working, and a new version of OFL updates it, as the import does
@@ -91,9 +98,10 @@ OFL doesn't know) gets a row in `manufacturer` the same way.
   gets a new version (compared by hash), a fixture gone from OFL is marked retired. It never deletes, and never touches a
   version which doesn't come from OFL.
 - **It escapes everything** it writes, or uses prepared statements.
-- **Where it lives** (open question 1): as a command line script in `spark/show-designer-api`, it uses the same code for
-  the database as the API and can run on a schedule on the server. `show-designer-ofl-import` is then archived, with a
-  pointer in its README. Otherwise the Node script is rewritten in place.
+- **Where it lives** (decided): a command line script in `spark/show-designer-api`, with the same code for the database
+  as the API, which can run on a schedule on the server. It reads a checkout of OFL, as the Node script does today.
+- **The old repository:** `show-designer-ofl-import` gets a pointer to the script in its README and is then archived (a
+  setting of the repository on GitHub, for an owner).
 
 ## 6. The sync of the library (instead of `fixtures.zip`)
 
@@ -125,6 +133,9 @@ A change counter, not a time, so that the clocks of the devices don't matter.
 **Online,** `fixtures.php` gives the same fields, one row per fixture with its best version, and all versions of a
 fixture on request.
 
+**The designer in the browser** uses the same sync for the library it caches to work offline (planned for Ember, section
+13): without a registration of its own, with its cursor in the storage of the browser.
+
 **The image of the Spark** fills its library with the same sync (from 0) instead of downloading the zip.
 
 **The zip stays, frozen**, for devices which aren't updated yet, until the statistics (section 7) and the access log of
@@ -148,6 +159,10 @@ the zip show that none of them are left.
 
 **Never sent, or not stored:** the IP address, the names and the content of files, compositions and projects, a
 location.
+
+**Always sent** (decided): there is no switch to turn the statistics off, they come with the sync of the library. The
+privacy policy of rocketshow.net (`spark/website/privacy.php`) says what a device sends and why, and the settings of
+Rocket Show point to it.
 
 **The hardware identifier:** the serial of a Spark, else the serial of the Raspberry Pi board
 (`/sys/firmware/devicetree/base/serial-number`), else `/etc/machine-id`, else a random id which the device keeps in its
@@ -222,8 +237,18 @@ base path. It is sent as a SHA-256 with a fixed salt; a Spark can still be found
 wasn't sure about. Maintenance (reset, lamp on and off) and strobe stand out: the fixture pool has buttons for reset and
 lamp, and a wrong range could fire during a show.
 
+**The manuals are kept** (decided), privately, in `fixture_manual`:
+
+- **An uploaded PDF** is stored once, named by its SHA-256, in a directory the web server doesn't serve (like
+  `ai-config.php`). The lookup of step 1 finds it by its hash.
+- **A link, or a manufacturer and model:** the links the AI read, and what web fetch returned. Whether that is the PDF
+  itself is to check; if not, the text it read.
+- **Never handed to other users:** a manual belongs to its manufacturer. The popover of a version links to the public
+  address of its manual when there is one, else it names the file.
+
 **Improve:** from a version and the comments of its bad votes, or an instruction ("channel 6 is the strobe"), the AI
-makes a new version with the old one as its parent. That is how the versions of a fixture grow.
+reads the same manual again and makes a new version with the old one as its parent. That is how the versions of a
+fixture grow.
 
 **The cost:** $4 per million tokens in, $20 out. A manual of 40 pages and the answer come to roughly $0.30–1 per new
 profile (an estimate, to measure on real manuals). The profiles count against a daily limit of their own
@@ -235,8 +260,9 @@ existing "exchange profile".
 
 ## 11. Versions, votes and ranking
 
-- **Votes:** good or bad, with an optional "what is wrong", in the fixture pool. Online when logged in, on a device when
-  it is linked. Only accounts vote, which keeps out spam. Devices without an account still count for the usage.
+- **Votes:** good or bad, with an optional "what is wrong", in the fixture pool. Only from a logged-in account
+  (decided): online when logged in, on a device when it is linked. That keeps out spam. Devices without an account still
+  count for the usage.
 - **Usage:** the number of different online projects and devices which use a version: counted when a project is saved
   online and with each sync, from the profiles the projects use. Not the clicks on "add". Devices not seen for 90 days
   stop counting.
@@ -260,7 +286,31 @@ The same online and on the devices:
 Next to it the stars and the usage. The popover of a generated version: made by AI from this manual (with the link), may
 contain mistakes, test it with the fixture before a show, and mark it good or bad.
 
-## 13. Plan
+## 13. Ember
+
+Ember (`Rocket-Show/ember`, its `concept.md`) is a USB stick which plays the shows compiled in the designer. It has no
+Wi-Fi, no Bluetooth and no app, so it never reaches the internet itself. Everything goes through the designer in the
+browser, which talks to it over Web Serial (Chrome, Edge, Firefox) or writes a show file onto its drive (any browser).
+Over Web Serial the designer reads `INFO` (`firmware/docs/serial.md` there): the firmware version, the behaviour version
+of the engine, the show formats and feature bits it plays, its setlist, its last error, the longest frame it worked out
+and the serial number of its chip.
+
+_Proposed:_
+
+| Topic                | For Ember                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The library          | Nothing on the stick: a show carries what it needs, compiled. The offline designer of the Ember concept caches the library in the browser with the same sync as the devices (section 6): what the search needs of every version, the JSON of the best version of each fixture, the others loaded when online                                                                                                      |
+| Registration         | The designer registers a stick when it is connected over Web Serial and the designer is online: kind `ember`, the serial of the chip (hashed), firmware version, behaviour version of the engine, show formats, the number of entries, the last error, the longest frame, the profiles of the show on it. "Last online" is when a designer last saw it. A stick only ever filled by dropping a file stays unknown |
+| Account              | No login on the stick. The designer links a stick it registers to the account it is logged in with, so it shows up in "My devices"                                                                                                                                                                                                                                                                                |
+| AI                   | In the designer, with its own login: nothing on the stick                                                                                                                                                                                                                                                                                                                                                         |
+| Unconfirmed profiles | Marked in the designer as everywhere. The stick plays without a laptop, so copying a show which uses a version not confirmed yet warns once: test it with the fixture first                                                                                                                                                                                                                                       |
+| Votes                | In the designer, e.g. after trying the show live through the stick                                                                                                                                                                                                                                                                                                                                                |
+| Statistics           | The firmware and engine versions in use say which shows the sticks out there can play, and when a firmware update is worth offering. The question of the Ember concept, who connects (band, church, installation, home) and how to count it without a tracker, goes to the same API with the registration                                                                                                         |
+
+This needs what the Ember concept builds in the designer first: Web Serial to the stick and the offline cache of the
+library.
+
+## 14. Plan
 
 Each phase can be released on its own.
 
@@ -273,24 +323,19 @@ Each phase can be released on its own.
 | 5. The AI on the device        | ✔     | ✔          | ✔ (`aiAccount`)    |                   |
 | 6. AI fixture profiles         | ✔     |            | ✔                  |                   |
 | 7. Votes and ranking           | ✔     | ✔          | ✔                  |                   |
+| 8. Ember through the designer  | ✔     |            | ✔                  |                   |
 
 - Rocket Show takes the designer as a package (`@rocketshow/designer`): a change of the designer is released before
   Rocket Show uses it.
 - Phase 6 works online first, so it can go along with phases 3 to 5.
+- Phase 8 follows the Web Serial and the offline cache of the Ember concept; the firmware already answers `INFO`.
 - The zip goes once phase 2 is out and no device which still needs it is left (section 6).
 
-## 14. Open questions
+## 15. Open questions
 
-1. **The OFL import:** moved into `spark/show-designer-api` and the repository archived (_proposed_), or rewritten in
-   place?
-2. **Manuals:** keep the uploaded PDFs, private, so that a version can be improved later and a mistake traced, or only
-   their hash and link?
-3. **Statistics:** always sent, or a switch "Send usage statistics" in the settings, on by default? The version and the
-   registration come with the sync either way.
-4. **Votes:** only from accounts (_proposed_)?
-5. **Ember**, which takes the same engine: should it register, sync the library and log in the same way?
+1. **Ember:** as proposed in section 13?
 
-## 15. More ideas
+## 16. More ideas
 
 - **"There is a better version":** a hint in a project which uses a version ranked lower than the best one, or with bad
   votes, with the exchange in one click.
