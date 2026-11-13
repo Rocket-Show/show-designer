@@ -1,40 +1,24 @@
-import { HttpHeaders, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
 import { AiFixturesService } from './ai-fixtures.service';
-import { ConfigService } from './config.service';
 import { UserService } from './user.service';
 
-// The requests for profiles made by the AI: the status and the review through the application around the designer,
-// the forms (a lookup, a profile with its manual) straight to the API, past the interceptors which would give them the
-// content type of JSON.
+// The requests for profiles made by the AI: the status, the review, and the forms of a lookup and of a profile with
+// its manual, which the browser gives the type of a form.
 describe('AiFixturesService', () => {
   let service: AiFixturesService;
   let http: HttpTestingController;
   let headers: HttpHeaders;
-  let intercepted: string[];
 
   beforeEach(() => {
     headers = new HttpHeaders({ Authorization: 'session' });
-    intercepted = [];
 
     TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(
-          withInterceptors([
-            (request, next) => {
-              intercepted.push(request.url);
-              return next(request);
-            },
-          ])
-        ),
-        provideHttpClientTesting(),
-        { provide: UserService, useValue: { getHeaders: () => headers } },
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: UserService, useValue: { getHeaders: () => headers } }],
     });
 
-    TestBed.inject(ConfigService).restUrl = 'https://example.com/api/';
     service = TestBed.inject(AiFixturesService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -72,21 +56,19 @@ describe('AiFixturesService', () => {
     expect(reviews).toEqual([{ channels: {}, uncertain: [] }, null, null]);
   });
 
-  it('looks a fixture up with a form sent to the API itself, with the credentials', () => {
+  it('looks a fixture up with a form, which leaves its type to the browser', () => {
     let found: any;
 
     service.lookup('acme', 'Par 64', 'abc').subscribe((result) => (found = result));
     service.lookup(undefined, 'Par 64', '').subscribe();
 
-    const [lookup, withoutManufacturer] = http.match('https://example.com/api/ai-fixtures');
+    const [lookup, withoutManufacturer] = http.match('ai-fixtures');
 
     expect(lookup.request.method).toBe('POST');
-    expect(lookup.request.withCredentials).toBe(true);
     expect(lookup.request.headers.get('Authorization')).toBe('session');
     expect(lookup.request.headers.has('Content-Type')).toBe(false);
     expect(fields(lookup.request.body)).toEqual({ action: 'lookup', manufacturerShortName: 'acme', model: 'Par 64', manualSha256: 'abc' });
     expect(fields(withoutManufacturer.request.body).manufacturerShortName).toBe('');
-    expect(intercepted).toEqual([]);
 
     lookup.flush({ versions: [], manualKnown: false });
     withoutManufacturer.flush({ versions: [], manualKnown: false });
@@ -100,7 +82,7 @@ describe('AiFixturesService', () => {
 
     service.generate({ manual, manufacturerShortName: 'acme', model: 'Par 64', link: undefined, mode: null }).subscribe();
 
-    const request = http.expectOne('https://example.com/api/ai-fixtures');
+    const request = http.expectOne('ai-fixtures');
     const sent = fields(request.request.body);
 
     expect(request.request.headers.has('Authorization')).toBe(false);

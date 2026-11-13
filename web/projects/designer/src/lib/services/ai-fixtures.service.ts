@@ -1,9 +1,8 @@
-import { HttpBackend, HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AiFixturesLookup, AiFixturesRequest, AiFixturesResponse, AiFixturesStatus, FixtureReview } from '../models/ai-fixtures';
-import { ConfigService } from './config.service';
 import { UserService } from './user.service';
 
 // The fixture profiles the AI makes from a manual (see docs/fixture-library.md, section 10), through the API the
@@ -13,15 +12,7 @@ import { UserService } from './user.service';
   providedIn: 'root',
 })
 export class AiFixturesService {
-  // The requests with a form go around the interceptors of the application around the designer: they give a request
-  // without a content type the one of JSON, where the browser has to set the one of a form itself (with the boundary
-  // between its parts). Like the uploads of the dropzone, they go to the address of the API and carry the credentials
-  // themselves.
-  private direct: HttpClient;
-
-  constructor(private http: HttpClient, httpBackend: HttpBackend, private configService: ConfigService, private userService: UserService) {
-    this.direct = new HttpClient(httpBackend);
-  }
+  constructor(private http: HttpClient, private userService: UserService) {}
 
   // can the user have profiles made, and how many more today
   getStatus(): Observable<AiFixturesStatus> {
@@ -62,7 +53,8 @@ export class AiFixturesService {
       .join('');
   }
 
-  // a form of the passed fields, the ones without a value left out
+  // A form of the passed fields, the ones without a value left out. It has no content type: the browser sets the one of
+  // a form, with the boundary between its parts (the application around the designer leaves a form alone as well).
   private post<T>(fields: { [name: string]: string | Blob }): Observable<T> {
     const form = new FormData();
 
@@ -72,11 +64,6 @@ export class AiFixturesService {
       }
     }
 
-    const headers = this.userService.getHeaders();
-
-    return this.direct.post<T>(this.configService.restUrl + 'ai-fixtures', form, {
-      headers: headers || new HttpHeaders(),
-      withCredentials: true,
-    });
+    return this.http.post<T>('ai-fixtures', form, { headers: this.userService.getHeaders() || new HttpHeaders() });
   }
 }
