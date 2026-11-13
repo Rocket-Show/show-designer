@@ -1062,6 +1062,17 @@
       "question": "Cela correspond-il au manuel de votre fixture ? La question ne vous est posée qu'une fois dans ce projet.",
       "ok-reset": "Réinitialiser",
       "ok-lamp-on": "Allumer la lampe"
+    },
+    "fixture-offer": {
+      "title": "Proposer à la bibliothèque",
+      "intro": "{{name}} devient une version de la bibliothèque d'un utilisateur, que chacun peut utiliser et évaluer. La bibliothèque la vérifie d'abord. Les fixtures de ce projet passent à la nouvelle version.",
+      "file": "Sélectionnez à nouveau le fichier de profil",
+      "hint": "Ne proposez qu'un profil que vous avez testé avec le fixture.",
+      "wrong-file": "Ce n'est pas le fichier de profil de ce fixture.",
+      "send": "Proposer",
+      "log-in": "Veuillez vous reconnecter pour proposer un profil.",
+      "invalid-profile": "La bibliothèque n'a pas accepté le profil. Ce qui ne va pas :",
+      "failed": "Le profil n'a pas pu être proposé. Réessayez."
     }
   }
 }

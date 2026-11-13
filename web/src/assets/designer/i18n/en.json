@@ -1062,6 +1062,17 @@
       "question": "Does this match the manual of your fixture? You are only asked once in this project.",
       "ok-reset": "Reset",
       "ok-lamp-on": "Switch the lamp on"
+    },
+    "fixture-offer": {
+      "title": "Offer to the library",
+      "intro": "{{name}} becomes a version of the library from a user, which everyone can use and vote on. The library checks it first. The fixtures of this project change to the new version.",
+      "file": "Select the profile file again",
+      "hint": "Only offer a profile you tested with the fixture.",
+      "wrong-file": "This is not the profile file of this fixture.",
+      "send": "Offer",
+      "log-in": "Please log in again to offer a profile.",
+      "invalid-profile": "The library did not take the profile. What is wrong:",
+      "failed": "The profile could not be offered. Please try again."
     }
   }
 }

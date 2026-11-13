@@ -1062,6 +1062,17 @@
       "question": "¿Coincide con el manual de tu fixture? Solo se te pregunta una vez en este proyecto.",
       "ok-reset": "Reiniciar",
       "ok-lamp-on": "Encender la lámpara"
+    },
+    "fixture-offer": {
+      "title": "Ofrecer a la biblioteca",
+      "intro": "{{name}} se convierte en una versión de la biblioteca de un usuario, que todos pueden usar y votar. La biblioteca la revisa primero. Los fixtures de este proyecto cambian a la nueva versión.",
+      "file": "Selecciona de nuevo el archivo de perfil",
+      "hint": "Ofrece solo un perfil que hayas probado con el fixture.",
+      "wrong-file": "Este no es el archivo de perfil de este fixture.",
+      "send": "Ofrecer",
+      "log-in": "Vuelve a iniciar sesión para ofrecer un perfil.",
+      "invalid-profile": "La biblioteca no aceptó el perfil. Lo que está mal:",
+      "failed": "No se pudo ofrecer el perfil. Inténtalo de nuevo."
     }
   }
 }

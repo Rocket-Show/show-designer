@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { hasVersionMark } from '../../models/fixture-version';
+import { FixtureLibraryService } from '../../services/fixture-library.service';
 import { FixtureService } from '../../services/fixture.service';
 import { ProjectService } from '../../services/project.service';
 
@@ -26,7 +27,8 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
     private translateService: TranslateService,
     private toastrService: ToastrService,
     private fixtureService: FixtureService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private fixtureLibraryService: FixtureLibraryService
   ) {}
 
   ngOnInit() {
@@ -67,6 +69,9 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
             profile.manufacturerName = manufacturerName;
             profile.uuid = uuid;
             profile.createdFromFile = true;
+
+            // the file as it is, which the profile can be offered to the library as
+            this.fixtureLibraryService.files.set(uuid, json);
 
             // add the profile to the project, if not already added
             const loadedProfile = this.fixtureService.getProfileByUuid(uuid);

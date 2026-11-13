@@ -1062,6 +1062,17 @@
       "question": "Corrisponde al manuale del tuo fixture? Te lo chiediamo solo una volta in questo progetto.",
       "ok-reset": "Resetta",
       "ok-lamp-on": "Accendi la lampada"
+    },
+    "fixture-offer": {
+      "title": "Offri alla libreria",
+      "intro": "{{name}} diventa una versione della libreria di un utente, che tutti possono usare e votare. La libreria la controlla prima. I fixture di questo progetto passano alla nuova versione.",
+      "file": "Seleziona di nuovo il file del profilo",
+      "hint": "Offri solo un profilo che hai provato con il fixture.",
+      "wrong-file": "Questo non è il file del profilo di questo fixture.",
+      "send": "Offri",
+      "log-in": "Accedi di nuovo per offrire un profilo.",
+      "invalid-profile": "La libreria non ha accettato il profilo. Cosa non va:",
+      "failed": "Non è stato possibile offrire il profilo. Riprova."
     }
   }
 }

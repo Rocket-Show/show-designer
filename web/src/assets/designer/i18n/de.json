@@ -1063,6 +1063,17 @@
       "question": "Stimmt das mit dem Handbuch deines Fixtures überein? Du wirst in diesem Projekt nur einmal gefragt.",
       "ok-reset": "Zurücksetzen",
       "ok-lamp-on": "Lampe einschalten"
+    },
+    "fixture-offer": {
+      "title": "Der Bibliothek anbieten",
+      "intro": "{{name}} wird eine Version der Bibliothek von einem Benutzer, die alle verwenden und bewerten können. Die Bibliothek prüft sie zuerst. Die Fixtures dieses Projekts wechseln zur neuen Version.",
+      "file": "Wähle die Profil-Datei noch einmal",
+      "hint": "Biete nur ein Profil an, das du mit dem Fixture getestet hast.",
+      "wrong-file": "Das ist nicht die Profil-Datei dieses Fixtures.",
+      "send": "Anbieten",
+      "log-in": "Bitte melde dich erneut an, um ein Profil anzubieten.",
+      "invalid-profile": "Die Bibliothek hat das Profil nicht angenommen. Was falsch ist:",
+      "failed": "Das Profil konnte nicht angeboten werden. Bitte versuche es erneut."
     }
   }
 }

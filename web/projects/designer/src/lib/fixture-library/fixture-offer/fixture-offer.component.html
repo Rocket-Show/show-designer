@@ -1,0 +1,55 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.fixture-offer.title' | translate }}</h4>
+  <button type="button" class="close pull-right" [attr.aria-label]="'designer.misc.cancel' | translate" (click)="cancel()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <p>{{ 'designer.fixture-offer.intro' | translate : { name: profile.name } }}</p>
+  <div class="form-group">
+    <label for="fixtureOfferManufacturer">{{ 'designer.fixture-ai.manufacturer' | translate }}</label>
+    <select id="fixtureOfferManufacturer" class="custom-select" [(ngModel)]="manufacturerShortName">
+      @for (manufacturer of manufacturers; track manufacturer.shortName) {
+      <option [value]="manufacturer.shortName">{{ manufacturer.name }}</option>
+      }
+      <option value="~new">{{ 'designer.fixture-ai.manufacturer-new' | translate }}</option>
+    </select>
+    @if (newManufacturer) {
+    <input
+      type="text"
+      class="form-control mt-2"
+      maxlength="100"
+      [attr.aria-label]="'designer.fixture-ai.manufacturer-name' | translate"
+      [placeholder]="'designer.fixture-ai.manufacturer-name' | translate"
+      [(ngModel)]="manufacturerName"
+    />
+    }
+  </div>
+  @if (!file) {
+  <!-- the file isn't at hand anymore after a reload: the copy in the project is no profile file -->
+  <div class="form-group">
+    <label for="fixtureOfferFile">{{ 'designer.fixture-offer.file' | translate }}</label>
+    <input id="fixtureOfferFile" type="file" class="form-control-file" accept=".json" (change)="setFile($any($event.target).files[0])" />
+  </div>
+  }
+  <small class="form-text text-muted">{{ 'designer.fixture-offer.hint' | translate }}</small>
+  @if (errorKey) {
+  <div class="alert alert-danger mt-3 mb-0 fixture-offer-error" role="alert">
+    {{ errorKey | translate }} @if (errors.length > 0) {
+    <ul class="mb-0 mt-1">
+      @for (text of errors; track $index) {
+      <li>{{ text }}</li>
+      }
+    </ul>
+    }
+  </div>
+  }
+</div>
+<div class="modal-footer">
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">{{ 'designer.misc.cancel' | translate }}</a>
+  <button type="button" class="btn btn-primary fixture-offer-send" [disabled]="!canOffer" (click)="offer()">
+    @if (sending) {
+    <i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i>
+    } {{ 'designer.fixture-offer.send' | translate }}
+  </button>
+</div>
