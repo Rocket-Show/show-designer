@@ -641,28 +641,70 @@ describe('FixtureService with the fixture library and the pool', () => {
     expect(service.getCachedFixtureByUuid('b', undefined)).toBeUndefined();
   });
 
-  it('lists the profiles of the library to search them', () => {
+  it('lists the profiles of the library to search them, with what the library knows about their versions', () => {
     let profiles: FixtureProfile[];
 
     service.getSearchProfiles().subscribe((result) => (profiles = result));
-    http.expectOne('fixtures').flush([{ uuid: 'one', name: 'One' }, { uuid: 'two' }]);
+    http.expectOne('fixtures').flush([{ uuid: 'one~1', name: 'One', origin: 'ai', state: 'open', usage: 3, versions: 2 }, { uuid: 'two' }]);
 
-    expect(profiles.map((profile) => profile instanceof FixtureProfile && profile.uuid)).toEqual(['one', 'two']);
+    expect(profiles.map((profile) => profile instanceof FixtureProfile && profile.uuid)).toEqual(['one~1', 'two']);
+    expect(profiles[0].origin).toBe('ai');
+    expect(profiles[0].usage).toBe(3);
+    expect(profiles[0].versions).toBe(2);
   });
 
   it('loads a profile of the library once, with its metadata', () => {
-    let done = false;
+    let loaded: FixtureProfile;
 
-    service.loadProfileByUuid('par').subscribe(() => (done = true));
-    expect(done).toBe(true);
+    service.loadProfileByUuid('par').subscribe((profile) => (loaded = profile));
+    expect(loaded).toBe(service.getProfileByUuid('par'));
 
-    service.loadProfileByUuid('stairville/mh-100').subscribe();
-    http.expectOne('fixtures?uuid=stairville/mh-100').flush([{ uuid: 'stairville/mh-100', manufacturerShortName: 'stairville' }]);
-    http.expectOne('fixture?uuid=stairville/mh-100').flush({ name: 'MH-100', modes: [{ name: 'Basic', channels: [] }] });
+    service.loadProfileByUuid('stairville/mh-100~12').subscribe((profile) => (loaded = profile));
+    http
+      .expectOne('fixtures?uuid=stairville/mh-100~12')
+      .flush([{ uuid: 'stairville/mh-100~12', manufacturerShortName: 'stairville', origin: 'ofl', currentOfl: true }]);
+    http.expectOne('fixture?uuid=stairville/mh-100~12').flush({ name: 'MH-100', modes: [{ name: 'Basic', channels: [] }] });
 
-    const loaded = service.getProfileByUuid('stairville/mh-100');
+    expect(loaded).toBe(service.getProfileByUuid('stairville/mh-100~12'));
     expect(loaded.name).toBe('MH-100');
     expect(loaded.manufacturerShortName).toBe('stairville');
+    expect(loaded.origin).toBe('ofl');
+    expect(loaded.currentOfl).toBe(true);
+  });
+
+  it('keeps the version the library answers a plain uuid with, once', () => {
+    const loaded: FixtureProfile[] = [];
+
+    for (let i = 0; i < 2; i++) {
+      service.loadProfileByUuid('stairville/mh-100').subscribe((profile) => loaded.push(profile));
+      http.expectOne('fixtures?uuid=stairville/mh-100').flush([{ uuid: 'stairville/mh-100~12' }]);
+      http.expectOne('fixture?uuid=stairville/mh-100').flush({ name: 'MH-100', modes: [] });
+    }
+
+    expect(loaded[0].uuid).toBe('stairville/mh-100~12');
+    expect(loaded[1]).toBe(loaded[0]);
+    expect(project.fixtureProfiles.filter((profile) => profile.name === 'MH-100').length).toBe(1);
+  });
+
+  it('keeps the uuid asked for where the library tells nothing about the profile', () => {
+    let loaded: FixtureProfile;
+
+    service.loadProfileByUuid('acme/old').subscribe((profile) => (loaded = profile));
+    http.expectOne('fixtures?uuid=acme/old').flush([]);
+    http.expectOne('fixture?uuid=acme/old').flush({ name: 'Old', modes: [] });
+
+    expect(loaded.uuid).toBe('acme/old');
+  });
+
+  it("fails where the library doesn't have the profile, e.g. a version newer than the library of a device", () => {
+    let failed: any;
+
+    service.loadProfileByUuid('acme/new~4').subscribe({ error: (error) => (failed = error) });
+    http.expectOne('fixtures?uuid=acme/new~4').flush([]);
+    http.expectOne('fixture?uuid=acme/new~4').flush(null);
+
+    expect(failed).toBeDefined();
+    expect(service.getProfileByUuid('acme/new~4')).toBeUndefined();
   });
 
   it('writes a color as hex, also one which is no whole step out of 255', () => {
