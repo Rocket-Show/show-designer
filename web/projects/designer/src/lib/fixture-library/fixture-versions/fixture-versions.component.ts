@@ -10,7 +10,8 @@ interface VersionRow {
 
 // All versions of a fixture in the library, the best one first (see docs/fixture-library.md, section 11): where each
 // comes from, the state of each of its modes and how many use it. The one the project uses is marked, any other one
-// can be taken instead of it, and a logged in user can have the AI improve one.
+// can be taken instead of it, but one an admin hid (junk, abuse), and a logged in user can have the AI improve one.
+
 @Component({
   selector: 'lib-fixture-versions',
   templateUrl: './fixture-versions.component.html',

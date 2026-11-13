@@ -94,6 +94,8 @@ describe('FixtureVersionsComponent', () => {
 
     component.useLabel = 'designer.fixture-library.add';
     component.canImprove = true;
+    component.currentUuid = undefined;
+
     component.use.subscribe((version) => used.push(version));
     component.improve.subscribe((version) => improved.push(version));
     fixture.detectChanges();
@@ -105,6 +107,9 @@ describe('FixtureVersionsComponent', () => {
 
     expect(used).toEqual([best]);
     expect(improved).toEqual([old]);
+
+    // a version taken out of the library is not taken anew
+    expect(rows()[1].querySelector('.fixture-version-use')).toBeNull();
   });
 
   it('lists the versions without a button to take one where it has nothing to do', () => {
