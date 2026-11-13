@@ -73,6 +73,7 @@ import { InlineEditComponent } from './inline-edit/inline-edit.component';
 import { FixtureVersionBadgesComponent } from './fixture-library/fixture-version-badges/fixture-version-badges.component';
 import { FixtureVersionsComponent } from './fixture-library/fixture-versions/fixture-versions.component';
 import { FixtureVoteComponent } from './fixture-library/fixture-vote/fixture-vote.component';
+import { FixtureAiComponent } from './fixture-library/fixture-ai/fixture-ai.component';
 import { ColorService } from './services/color.service';
 import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
 import { keepSliderValues } from './slider-value';
@@ -141,6 +142,7 @@ import { keepSliderValues } from './slider-value';
     FixtureVersionBadgesComponent,
     FixtureVersionsComponent,
     FixtureVoteComponent,
+    FixtureAiComponent,
   ],
 
   exports: [DesignerComponent],

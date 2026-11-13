@@ -1,0 +1,44 @@
+/* the versions the library has already, one below the other */
+.fixture-ai-found {
+  padding: var(--sd-space-2) 0;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.fixture-ai-generating .fa-magic {
+  animation: fixture-ai-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes fixture-ai-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* The channels which reset the fixture, switch its lamp or strobe stand out: a wrong range could fire during a show. */
+.fixture-ai-maintenance td,
+.fixture-ai-strobe td {
+  background-color: rgba(240, 169, 46, 0.1);
+}
+
+.fixture-ai-flag,
+.fixture-state-unconfirmed {
+  background-color: rgba(240, 169, 46, 0.18);
+  color: var(--sd-warning);
+  font-weight: 500;
+}
+
+.fixture-ai-range {
+  color: var(--sd-warning);
+}
+
+.fixture-state-confirmed {
+  color: var(--sd-success);
+}
+
+.fixture-state-problems {
+  color: var(--sd-danger);
+}
+
+.fixture-ai-review q {
+  font-style: italic;
+}
