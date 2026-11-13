@@ -952,6 +952,9 @@
       "tip-text": "Raccontale la canzone e l'atmosfera. Progetta scene per i tuoi {{count}} dispositivi, e le vedi sul palco prima che venga aggiunto qualcosa.",
       "tip-try": "Prova",
       "tip-later": "Non ora"
+    },
+    "account": {
+      "link-device": "Collega questo dispositivo al tuo account in Impostazioni → Account."
     }
   }
 }

@@ -37,7 +37,22 @@ export class ConfigService {
   // user, through the API of the online designer (ai-looks). A Rocket Show device has no such API.
   public aiLooks = false;
 
+  // When true, the designer offers fixture profiles the AI makes from a manual, through the API it talks to: the one of
+  // the online designer, or the backend of a Rocket Show device, which forwards them (see AiFixturesService).
+  public aiFixtures = false;
+
+  // Whose account the AI and the votes on the profiles go by: 'designer' logs the user in with the login of the
+  // designer (online), 'host' leaves it to the application around it, e.g. a Rocket Show device linked with an account
+  // in its settings, which the designer can't log in.
+  public aiAccount: 'designer' | 'host' = 'designer';
+
   public menuHeightChanged: Subject<void> = new Subject<void>();
 
   constructor() {}
+
+  // Can the user have an account to vote on the profiles and to offer one to the library with: online with the login of
+  // the designer, or on a host which links itself with one
+  hasAccount(): boolean {
+    return this.loginAvailable || this.aiAccount === 'host';
+  }
 }

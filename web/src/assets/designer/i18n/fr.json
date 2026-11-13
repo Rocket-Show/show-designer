@@ -952,6 +952,9 @@
       "tip-text": "Parlez-lui de la chanson et de l'ambiance. Elle conçoit des scènes pour vos {{count}} appareils, et vous les voyez sur la scène avant que rien ne soit ajouté.",
       "tip-try": "Essayer",
       "tip-later": "Pas maintenant"
+    },
+    "account": {
+      "link-device": "Associez cet appareil à votre compte dans Paramètres → Compte."
     }
   }
 }

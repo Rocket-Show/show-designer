@@ -110,6 +110,17 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   @Input()
+  set aiFixtures(value: boolean) {
+    this.configService.aiFixtures = value;
+  }
+
+  // the login of the designer, or the account of the host (see ConfigService.aiAccount)
+  @Input()
+  set aiAccount(value: 'designer' | 'host') {
+    this.configService.aiAccount = value || 'designer';
+  }
+
+  @Input()
   set uniqueProjectNames(value: boolean) {
     this.configService.uniqueProjectNames = value;
   }

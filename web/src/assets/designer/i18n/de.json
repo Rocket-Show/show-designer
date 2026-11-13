@@ -953,6 +953,9 @@
       "tip-text": "Erzähl ihr vom Song und der Stimmung. Sie gestaltet Szenen für deine {{count}} Geräte, und du siehst sie dir auf der Bühne an, bevor etwas hinzugefügt wird.",
       "tip-try": "Ausprobieren",
       "tip-later": "Nicht jetzt"
+    },
+    "account": {
+      "link-device": "Verknüpfe dieses Gerät in Einstellungen → Konto mit deinem Konto."
     }
   }
 }

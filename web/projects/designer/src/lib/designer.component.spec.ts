@@ -272,6 +272,9 @@ describe('DesignerComponent', () => {
         dropzoneChunking: false,
         freeUniverseEdit: true,
         hardwarePromo: true,
+        aiLooks: true,
+        aiFixtures: true,
+        aiAccount: 'host',
       };
       for (const name of Object.keys(inputs)) {
         fixture.componentRef.setInput(name, inputs[name]);
@@ -291,6 +294,11 @@ describe('DesignerComponent', () => {
       expect(TestBed.inject(IntroService).showIntro).toBe(true);
       // the menu of the host and the one of the designer are taken away from the height
       expect(fixture.nativeElement.querySelector('#designer').style.height).toBe('calc(100% - 84px)');
+
+      // a host which doesn't say whose account it is uses the login of the designer
+      fixture.componentRef.setInput('aiAccount', undefined);
+      fixture.detectChanges();
+      expect(configService.aiAccount).toBe('designer');
     });
   });
 

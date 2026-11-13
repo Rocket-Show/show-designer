@@ -952,6 +952,9 @@
       "tip-text": "Conte-lhe a música e o ambiente. Ela cria cenas para os seus {{count}} aparelhos, e você as vê no palco antes de algo ser adicionado.",
       "tip-try": "Experimentar",
       "tip-later": "Agora não"
+    },
+    "account": {
+      "link-device": "Associe este dispositivo à sua conta em Definições → Conta."
     }
   }
 }
