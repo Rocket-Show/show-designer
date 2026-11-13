@@ -5,19 +5,20 @@ The specs in this folder test whole user flows through the designer in a real br
 embedded, the 3D preview rendered with WebGL. The unit specs of the library (`ng test designer`) test its parts on
 their own, these test that the parts work together the way a user goes through them.
 
-| Spec                    | What it covers                                                                                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start.spec.ts`         | the template project opening with all the panels, the intro walking a new user through them and staying closed once closed                                  |
-| `fixtures.spec.ts`      | the fixture pool: finding profiles of the library, patching fixtures, naming and removing them, cancelling, a fixture with pixels in one row                |
-| `presets.spec.ts`       | adding a preset to a scene, selecting its fixtures, dimming and coloring them, the color the preset is marked with, the preview lit, the steps              |
-| `pixel-effects.spec.ts` | a pixel effect on a bar: adding it to a preset, picking its pattern and its palette, the bar lit in its card                                                |
-| `timeline.spec.ts`      | a scene with a preset on a track of a composition without an audio file, playing, pausing, rewinding, stopping at the end, holding at a hold point until GO |
-| `projects.spec.ts`      | registering and signing in on the way to saving, saving, opening the saved project again on the next visit and in the project browser, sharing              |
-| `undo.spec.ts`          | undo and redo with the keyboard and the Edit menu                                                                                                           |
-| `dmx.spec.ts`           | the DMX channels: the channels of each fixture with the values sent on them, the faders lighting the fixtures in the preview until the page is closed       |
-| `layout.spec.ts`        | folding panels with the arrows in the gutters and in the View menu, the layouts of the View menu, kept through a reload                                     |
-| `errors.spec.ts`        | what the user is told when a project can't be opened or saved, or is shared before it has been saved                                                        |
-| `phone.spec.ts`         | the panels stacked down the page of a phone without the 3D preview, editing a preset and the timeline there, the View menu, the intro                       |
+| Spec                      | What it covers                                                                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start.spec.ts`           | the template project opening with all the panels, the intro walking a new user through them and staying closed once closed                                  |
+| `fixtures.spec.ts`        | the fixture pool: finding profiles of the library, patching fixtures, naming and removing them, cancelling, a fixture with pixels in one row                |
+| `fixture-library.spec.ts` | the versions of the library: their badges in the search, a fixture changed to a better version and voted on, a profile the AI makes from a manual, reviewed |
+| `presets.spec.ts`         | adding a preset to a scene, selecting its fixtures, dimming and coloring them, the color the preset is marked with, the preview lit, the steps              |
+| `pixel-effects.spec.ts`   | a pixel effect on a bar: adding it to a preset, picking its pattern and its palette, the bar lit in its card                                                |
+| `timeline.spec.ts`        | a scene with a preset on a track of a composition without an audio file, playing, pausing, rewinding, stopping at the end, holding at a hold point until GO |
+| `projects.spec.ts`        | registering and signing in on the way to saving, saving, opening the saved project again on the next visit and in the project browser, sharing              |
+| `undo.spec.ts`            | undo and redo with the keyboard and the Edit menu                                                                                                           |
+| `dmx.spec.ts`             | the DMX channels: the channels of each fixture with the values sent on them, the faders lighting the fixtures in the preview until the page is closed       |
+| `layout.spec.ts`          | folding panels with the arrows in the gutters and in the View menu, the layouts of the View menu, kept through a reload                                     |
+| `errors.spec.ts`          | what the user is told when a project can't be opened or saved, or is shared before it has been saved                                                        |
+| `phone.spec.ts`           | the panels stacked down the page of a phone without the 3D preview, editing a preset and the timeline there, the View menu, the intro                       |
 
 ## Running them
 
@@ -46,7 +47,13 @@ repository), which the app served for the tests (`ng serve --configuration e2e`)
   the saved projects to their owner or with their share token, and saves a project for a user who is signed in,
   handing out its id and share token. `projects` lists the projects of the user.
 - `fixtures` lists the profiles of the fixture library (the test profiles of the conformance cases in
-  `projects/designer/conformance/profiles/test`), `fixture?uuid=` serves one.
+  `projects/designer/conformance/profiles/test`), `fixture?uuid=` serves one. A test can let the library hold a test
+  profile as a version of its fixture (`addVersion`), which `fixtures?fixture=` lists with the other versions.
+- `fixture-vote` counts the votes on the modes of the versions, for a user who is signed in.
+- `ai-fixtures` answers the profiles of the AI for a user who is signed in: the versions the lookup finds
+  (`aiFixturesFound`) and the profile the AI makes (`aiFixture`, with its version and its review). The fields of the
+  form it is sent (multipart, with the manual) are in `form`, a file by its name.
+
 - `register` and `login` keep the users and their sessions (the token in the `Authorization` header).
 - `ai-looks` answers the AI looks for a user who is signed in: the looks a test sets (`aiLooks`, one for each request),
   as many requests a day as `aiRequestsPerUserPerDay` allows, after `aiDelayMillis`, or none (`aiAvailable`). No
