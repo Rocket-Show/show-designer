@@ -10,27 +10,25 @@ Status: plan, 13 November 2026, with the decisions taken on the first draft the 
 It touches four repositories: `Rocket-Show/show-designer` (this one), `Rocket-Show/spark` (the API and the database of
 the online designer, the image of the Spark), `Rocket-Show/rocketshow` (the backend and the web app of the devices) and
 `Rocket-Show/show-designer-ofl-import`, which moves into spark. Ember (`Rocket-Show/ember`) takes part through the
-designer (section 13).
+online designer or a designer app (section 13).
 
 ## 1. Decisions
 
-| Topic                  | Decision                                                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| The library            | **One library**, the database of the online designer, for the online designer and the devices                     |
-| The zip                | **`fixtures.zip` goes.** Devices take the profiles directly from the database, by a sync; no zip is built         |
-| Registration           | **A device registers with each sync**: its version, its hardware, a few counts. Usage statistics, active versions |
-| Unconfirmed profiles   | **Shown online and on the devices alike**, clearly marked, with a popover which explains what that means          |
-| An account on a device | **A login in the settings of Rocket Show.** A device which is online and logged in has the AI features            |
-| Devices and accounts   | **Remembered online** by a hardware identifier: account, name, last online, version, counts. No personal data     |
-| AI profiles            | **The AI generates fixture profiles** from a manual (PDF), a link to one, or a manufacturer and a model           |
-| Versions               | **Every profile is kept** as a version of its fixture, ranked by usage and stars                                  |
-| Votes                  | **Users mark a version good or bad**, only from a logged-in account: online, or on a device linked to one         |
-| Statistics             | **Always sent** with the sync, no switch to turn them off. The privacy policy says what is sent                   |
-| Manuals                | **Kept**, privately: the PDFs uploaded and what was read from a link, to improve a version and trace a mistake    |
-| The OFL import         | **Moves into `spark/show-designer-api`** as a command line script; `show-designer-ofl-import` is archived         |
-| Ember                  | **Takes part through the designer** (_proposed_, section 13): the stick itself never goes online                  |
-
-The question still open is in section 15.
+| Topic                  | Decision                                                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The library            | **One library**, the database of the online designer, for the online designer and the devices                                                            |
+| The zip                | **`fixtures.zip` goes.** Devices take the profiles directly from the database, by a sync; no zip is built                                                |
+| Registration           | **A device registers with each sync**: its version, its hardware, a few counts. Usage statistics, active versions                                        |
+| Unconfirmed profiles   | **Shown online and on the devices alike**, clearly marked, with a popover which explains what that means                                                 |
+| An account on a device | **A login in the settings of Rocket Show.** A device which is online and logged in has the AI features                                                   |
+| Devices and accounts   | **Remembered online** by a hardware identifier: account, name, last online, version, counts. No personal data                                            |
+| AI profiles            | **The AI generates fixture profiles** from a manual (PDF), a link to one, or a manufacturer and a model                                                  |
+| Versions               | **Every profile is kept** as a version of its fixture, ranked by usage and stars                                                                         |
+| Votes                  | **Users mark a version good or bad**, only from a logged-in account: online, or on a device linked to one                                                |
+| Statistics             | **Always sent** with the sync, no switch to turn them off. The privacy policy says what is sent                                                          |
+| Manuals                | **Kept**, privately: the PDFs uploaded and what was read from a link, to improve a version and trace a mistake                                           |
+| The OFL import         | **Moves into `spark/show-designer-api`** as a command line script; `show-designer-ofl-import` is archived                                                |
+| Ember                  | **Only through the online designer or a new designer app** (section 13): the stick itself never goes online, and a Rocket Show device doesn't talk to it |
 
 ## 2. Today
 
@@ -133,8 +131,8 @@ A change counter, not a time, so that the clocks of the devices don't matter.
 **Online,** `fixtures.php` gives the same fields, one row per fixture with its best version, and all versions of a
 fixture on request.
 
-**The designer in the browser** uses the same sync for the library it caches to work offline (planned for Ember, section
-13): without a registration of its own, with its cursor in the storage of the browser.
+**The online designer and a designer app** use the same sync for the library they cache to work offline (planned for
+Ember, section 13): without a registration of their own, with the cursor in their storage.
 
 **The image of the Spark** fills its library with the same sync (from 0) instead of downloading the zip.
 
@@ -289,17 +287,18 @@ contain mistakes, test it with the fixture before a show, and mark it good or ba
 ## 13. Ember
 
 Ember (`Rocket-Show/ember`, its `concept.md`) is a USB stick which plays the shows compiled in the designer. It has no
-Wi-Fi, no Bluetooth and no app, so it never reaches the internet itself. Everything goes through the designer in the
-browser, which talks to it over Web Serial (Chrome, Edge, Firefox) or writes a show file onto its drive (any browser).
-Over Web Serial the designer reads `INFO` (`firmware/docs/serial.md` there): the firmware version, the behaviour version
-of the engine, the show formats and feature bits it plays, its setlist, its last error, the longest frame it worked out
-and the serial number of its chip.
+Wi-Fi, no Bluetooth and no app of its own, so it never reaches the internet itself.
 
-_Proposed:_
+**Decided:** everything of the stick goes only through the online designer or a new designer app, never through a
+Rocket Show device. "The designer" in the table below is either of them: the app does what the online designer does,
+with the same API. The online designer talks to the stick over Web Serial (Chrome, Edge, Firefox) or writes a show file
+onto its drive (any browser). Over Web Serial it reads `INFO` (`firmware/docs/serial.md` there): the firmware version,
+the behaviour version of the engine, the show formats and feature bits it plays, its setlist, its last error, the
+longest frame it worked out and the serial number of its chip.
 
 | Topic                | For Ember                                                                                                                                                                                                                                                                                                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The library          | Nothing on the stick: a show carries what it needs, compiled. The offline designer of the Ember concept caches the library in the browser with the same sync as the devices (section 6): what the search needs of every version, the JSON of the best version of each fixture, the others loaded when online                                                                                                      |
+| The library          | Nothing on the stick: a show carries what it needs, compiled. The designer caches the library for working offline with the same sync as the devices (section 6): what the search needs of every version, the JSON of the best version of each fixture, the others loaded when online                                                                                                                              |
 | Registration         | The designer registers a stick when it is connected over Web Serial and the designer is online: kind `ember`, the serial of the chip (hashed), firmware version, behaviour version of the engine, show formats, the number of entries, the last error, the longest frame, the profiles of the show on it. "Last online" is when a designer last saw it. A stick only ever filled by dropping a file stays unknown |
 | Account              | No login on the stick. The designer links a stick it registers to the account it is logged in with, so it shows up in "My devices"                                                                                                                                                                                                                                                                                |
 | AI                   | In the designer, with its own login: nothing on the stick                                                                                                                                                                                                                                                                                                                                                         |
@@ -307,33 +306,34 @@ _Proposed:_
 | Votes                | In the designer, e.g. after trying the show live through the stick                                                                                                                                                                                                                                                                                                                                                |
 | Statistics           | The firmware and engine versions in use say which shows the sticks out there can play, and when a firmware update is worth offering. The question of the Ember concept, who connects (band, church, installation, home) and how to count it without a tracker, goes to the same API with the registration                                                                                                         |
 
-This needs what the Ember concept builds in the designer first: Web Serial to the stick and the offline cache of the
+This needs what the Ember concept builds in the designer first: the connection to the stick and the offline cache of the
 library.
 
 ## 14. Plan
 
 Each phase can be released on its own.
 
-| Phase                          | spark | rocketshow | show-designer      | ofl-import        |
-| ------------------------------ | ----- | ---------- | ------------------ | ----------------- |
-| 1. Database and OFL import     | ✔     |            |                    | ✔ (move, archive) |
-| 2. Sync of the library         | ✔     | ✔          | ✔ (badges, fields) |                   |
-| 3. Registration and statistics | ✔     | ✔          |                    |                   |
-| 4. The account on the device   | ✔     | ✔          | ✔ (My devices)     |                   |
-| 5. The AI on the device        | ✔     | ✔          | ✔ (`aiAccount`)    |                   |
-| 6. AI fixture profiles         | ✔     |            | ✔                  |                   |
-| 7. Votes and ranking           | ✔     | ✔          | ✔                  |                   |
-| 8. Ember through the designer  | ✔     |            | ✔                  |                   |
+| Phase                                     | spark | rocketshow | show-designer      | ofl-import        |
+| ----------------------------------------- | ----- | ---------- | ------------------ | ----------------- |
+| 1. Database and OFL import                | ✔     |            |                    | ✔ (move, archive) |
+| 2. Sync of the library                    | ✔     | ✔          | ✔ (badges, fields) |                   |
+| 3. Registration and statistics            | ✔     | ✔          |                    |                   |
+| 4. The account on the device              | ✔     | ✔          | ✔ (My devices)     |                   |
+| 5. The AI on the device                   | ✔     | ✔          | ✔ (`aiAccount`)    |                   |
+| 6. AI fixture profiles                    | ✔     |            | ✔                  |                   |
+| 7. Votes and ranking                      | ✔     | ✔          | ✔                  |                   |
+| 8. Ember through the designer and its app | ✔     |            | ✔                  |                   |
 
 - Rocket Show takes the designer as a package (`@rocketshow/designer`): a change of the designer is released before
   Rocket Show uses it.
 - Phase 6 works online first, so it can go along with phases 3 to 5.
-- Phase 8 follows the Web Serial and the offline cache of the Ember concept; the firmware already answers `INFO`.
+- Phase 8 follows the connection to the stick and the offline cache of the Ember concept, in the online designer and in
+  the designer app; the firmware already answers `INFO`.
 - The zip goes once phase 2 is out and no device which still needs it is left (section 6).
 
 ## 15. Open questions
 
-1. **Ember:** as proposed in section 13?
+None: the questions of the first draft are answered in section 1.
 
 ## 16. More ideas
 
