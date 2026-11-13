@@ -10,6 +10,7 @@ import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { profiles } from '../../../../conformance/index';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { Project } from '../../models/project';
+import { FixtureLibraryService } from '../../services/fixture-library.service';
 import { ProjectService } from '../../services/project.service';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file.component';
 
@@ -79,6 +80,20 @@ describe('FixturePoolCreateFromFileComponent', () => {
     expect(closed).toEqual([profile]);
     expect(hide).toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
+
+    // the file itself, which the profile can be offered to the library as
+    expect(TestBed.inject(FixtureLibraryService).files.get('acme/par-64')).toEqual(JSON.parse(profileFile()));
+  });
+
+  it('refuses a file whose keys hold a "~", which only the versions of the library have', async () => {
+    const file = { ...JSON.parse(profileFile()), fixtureKey: 'par-64~2' };
+
+    expect(await drop(JSON.stringify(file))).toBe('noerr');
+
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.calls.argsFor(0)[0]).toBe('designer.fixture-pool.profile-file-version-mark');
+    expect(project.fixtureProfiles).toEqual([]);
+    expect(closed).toEqual([]);
   });
 
   it('takes the file of a released schema as well', async () => {

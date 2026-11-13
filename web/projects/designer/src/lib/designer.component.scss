@@ -1006,6 +1006,23 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   color: $sd-text;
 }
 
+// The popovers of the fixture library are opened with a click and hold what they explain or list, with links and
+// buttons: they take the clicks, and are wider than the ones explaining an icon. They open in the fixture pool, a modal,
+// so they stand in front of the modals.
+.popover.fixture-library-popover {
+  z-index: 10002;
+  pointer-events: auto;
+  max-width: 26rem;
+  font-size: 0.8125rem;
+
+  // The versions load after the popover opened, below its button: a long list scrolls in it instead of growing past
+  // the window, where it was moved to when it didn't fit
+  .popover-body {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
+
 .popover-header {
   background-color: $sd-surface-4;
   border-bottom-color: $sd-border-strong;

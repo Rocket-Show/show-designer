@@ -1,0 +1,49 @@
+/* The versions of a fixture, in a popover: it scrolls when a fixture has many of them. */
+.fixture-versions {
+  max-height: 22rem;
+  overflow-y: auto;
+  min-width: 16rem;
+}
+
+.fixture-version {
+  padding: var(--sd-space-2) 0;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.fixture-version:last-child {
+  border-bottom: none;
+}
+
+.fixture-version-current {
+  border-left: 2px solid var(--sd-primary);
+  padding-left: var(--sd-space-2);
+}
+
+.fixture-version-modes {
+  margin-top: var(--sd-space-1);
+  color: var(--sd-text-muted);
+}
+
+.fixture-mode-state {
+  margin-left: var(--sd-space-1);
+}
+
+.fixture-state-unconfirmed {
+  color: var(--sd-warning);
+}
+
+.fixture-state-confirmed {
+  color: var(--sd-success);
+}
+
+.fixture-state-problems {
+  color: var(--sd-danger);
+}
+
+.fixture-version-actions:not(:empty) {
+  margin-top: var(--sd-space-2);
+}
+
+.fixture-version-actions .btn + .btn {
+  margin-left: var(--sd-space-1);
+}

@@ -1,0 +1,50 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.devices.title' | translate }}</h4>
+  <button type="button" class="close pull-right" [attr.aria-label]="'designer.misc.cancel' | translate" (click)="close()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  @if (loading) {
+  <p class="text-center my-3"><i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i></p>
+  } @else if (devices.length === 0 && !errorKey) {
+  <p class="mb-0 user-devices-none">{{ 'designer.devices.none' | translate }}</p>
+  } @else if (devices.length > 0) {
+  <table class="table table-sm mb-0 user-devices">
+    <thead>
+      <tr>
+        <th>{{ 'designer.devices.name' | translate }}</th>
+        <th>{{ 'designer.devices.version' | translate }}</th>
+        <th>{{ 'designer.devices.last-seen' | translate }}</th>
+        <th>{{ 'designer.devices.compositions' | translate }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (device of devices; track device.id) {
+      <tr>
+        <td>
+          {{ device.name || ('designer.devices.kind-' + device.kind | translate) }}
+          @if (device.edition) {
+          <span class="text-muted small">{{ device.edition }}</span>
+          }
+        </td>
+        <td>{{ device.version || device.firmwareVersion }}</td>
+        <td>{{ device.lastSeen | date : 'yyyy-MM-dd HH:mm' }}</td>
+        <td>{{ device.compositions }}</td>
+        <td class="text-right">
+          <button type="button" class="btn btn-secondary btn-sm user-devices-unlink" (click)="unlink(device)">
+            {{ 'designer.devices.unlink' | translate }}
+          </button>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+  } @if (errorKey) {
+  <div class="alert alert-danger mt-3 mb-0" role="alert">{{ errorKey | translate }}</div>
+  }
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-primary" (click)="close()">{{ 'designer.misc.ok' | translate }}</button>
+</div>

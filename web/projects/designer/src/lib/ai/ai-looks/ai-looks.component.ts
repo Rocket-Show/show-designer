@@ -16,12 +16,13 @@ import {
   defaultAiSettings,
 } from '../../models/ai-looks';
 import { AiCompiled } from '../../models/ai-looks-compiler';
+import { getForwardingErrorKey } from '../../models/api-error';
 import { builtInPixelPalettes, pixelPaletteCss } from '../../models/pixel-palettes';
 import { Scene } from '../../models/scene';
 import { AiLooksService } from '../../services/ai-looks.service';
 import { AnimationService } from '../../services/animation.service';
 import { PreviewService } from '../../services/preview.service';
-import { UserService } from '../../services/user.service';
+import { UserEnsureLoginService } from '../../services/user-ensure-login.service';
 
 // what the panel shows: the settings, the wait for the AI, or the looks it designed
 type AiLooksView = 'settings' | 'designing' | 'looks';
@@ -82,7 +83,7 @@ export class AiLooksComponent implements OnInit, OnDestroy {
     private aiLooksService: AiLooksService,
     private previewService: PreviewService,
     private animationService: AnimationService,
-    private userService: UserService,
+    private userEnsureLoginService: UserEnsureLoginService,
     private toastrService: ToastrService,
     private translateService: TranslateService
   ) {}
@@ -349,16 +350,22 @@ export class AiLooksComponent implements OnInit, OnDestroy {
   }
 
   private showError(error: any) {
+    if (this.userEnsureLoginService.isRefused(error)) {
+      // the session ran out and the user has to log in again, or the device isn't linked with an account
+      this.errorKey = this.userEnsureLoginService.refused('designer.ai.error.unauthorized');
+      return;
+    }
+
+    // a device couldn't forward the request to the online designer
+    if (getForwardingErrorKey(error)) {
+      this.errorKey = getForwardingErrorKey(error);
+      return;
+    }
+
     const code =
       error instanceof HttpErrorResponse && error.error && typeof error.error.error === 'string' ? error.error.error : 'ai-failed';
 
-    if (code === 'unauthorized') {
-      // the session ran out: the user has to log in again
-      this.userService.logout();
-    }
-
     const known = [
-      'unauthorized',
       'invalid-request',
       'ai-unavailable',
       'ai-user-limit-reached',

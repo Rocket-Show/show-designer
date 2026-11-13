@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, 
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrService } from 'ngx-toastr';
-import { EMPTY, Subject } from 'rxjs';
+import { EMPTY, Subject, Subscription } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { Fixture } from '../models/fixture';
 import { FixtureProfile } from '../models/fixture-profile';
@@ -26,6 +26,21 @@ import { TreeDropZone, TreeNode } from '../tree/tree.component';
 import { FixtureExchangeReport, FixtureExchangeService } from '../services/fixture-exchange.service';
 import { FixtureMode } from '../models/fixture-mode';
 import { getMaintenanceCapability, getMaintenanceHoldMillis, MaintenanceAction } from '../models/maintenance';
+import {
+  FixtureBetterVersion,
+  FixtureStateBadge,
+  FixtureVersion,
+  getModeStateBadge,
+  getStateBadgeKey,
+  isGenerated,
+  isVersionUuid,
+} from '../models/fixture-version';
+import { FixtureLibraryService } from '../services/fixture-library.service';
+import { UserEnsureLoginService } from '../services/user-ensure-login.service';
+import { UserService } from '../services/user.service';
+import { FixtureAiComponent, FixtureAiResult } from '../fixture-library/fixture-ai/fixture-ai.component';
+import { FixtureOfferComponent } from '../fixture-library/fixture-offer/fixture-offer.component';
+import { FixtureMaintenanceConfirmComponent } from '../fixture-library/fixture-maintenance-confirm/fixture-maintenance-confirm.component';
 
 // One row of the fixture tree: a fixture of the pool and the folder it is in. The
 // fixture panel shows a fixture with all its pixels, here it is a single row which
@@ -117,6 +132,11 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   // the fixtures blinking to be told apart on the stage (see identify), while this dialog is open
   public identifiedFixtureUuids: string[] = [];
 
+  // the better version the library has for the fixtures of each profile and mode, as far as it was looked up (see
+  // FixtureLibraryService.checkVersions), worked out once for the rows of the tree
+  private betterVersions = new Map<string, FixtureBetterVersion>();
+  private versionsChanged: Subscription;
+
   // how many values the presets set which only the model of the fixture edited plays (see model-specific)
   public modelSpecificCount = 0;
 
@@ -169,9 +189,15 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     private hotkeyTargetExcludeService: HotkeyTargetExcludeService,
     private livePreviewService: LivePreviewService,
     public hardwarePromoService: HardwarePromoService,
-    private fixtureExchangeService: FixtureExchangeService
+    private fixtureExchangeService: FixtureExchangeService,
+    private fixtureLibraryService: FixtureLibraryService,
+    private userEnsureLoginService: UserEnsureLoginService,
+    private userService: UserService
   ) {
     this.promoLink = this.hardwarePromoService.link('dmx-overview');
+
+    // the versions of the fixtures arrived (or changed): the marks of a better version are worked out anew
+    this.versionsChanged = this.fixtureLibraryService.versionsChanged.subscribe(() => this.betterVersions.clear());
 
     this.fixturePool = structuredClone(this.projectService.project.fixtures);
 
@@ -253,6 +279,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.versionsChanged.unsubscribe();
     this.endMaintenance();
     this.endIdentify();
     this.mapResized?.disconnect();
@@ -734,17 +761,34 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  addFixture(searchProfile: FixtureProfile) {
-    // Load the profile details, if not already done. There is only a
-    // minimal profile passed from the search.
-    this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe(() => {
-      const profile = this.fixtureService.getProfileByUuid(searchProfile.uuid);
-      const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures);
-      if (newFixture) {
-        newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
-        this.addFixtureItem(newFixture, this.targetFolderUuid());
-        this.selectFixture(newFixture);
-      }
+  // Add a fixture of a version of the library: the one the search lists, or another one of its fixture. There is only
+  // what the search needs of it, the profile is loaded unless the project has it already.
+  addFixture(searchProfile: FixtureVersion, modeShortName?: string) {
+    this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe({
+      next: (profile) => this.addFixtureOf(profile, modeShortName),
+      error: () => this.profileLoadError(),
+    });
+  }
+
+  // add a fixture of a profile of the project, in the passed mode, if it has it
+  private addFixtureOf(profile: FixtureProfile, modeShortName?: string) {
+    const newFixture = this.fixtureService.addFixture(profile, this.fixturePool, this.currentUniverseFixtures, modeShortName);
+
+    if (newFixture) {
+      newFixture.dmxUniverseUuid = this.selectedUniverse?.uuid;
+
+      this.addFixtureItem(newFixture, this.targetFolderUuid());
+      this.selectFixture(newFixture);
+    }
+  }
+
+  // the library doesn't have the profile, e.g. a version newer than the library of a device
+  private profileLoadError() {
+    const msg = 'designer.fixture-library.load-error';
+    const title = 'designer.fixture-library.load-error-title';
+
+    this.translateService.get([msg, title]).subscribe((result) => {
+      this.toastrService.error(result[msg], result[title]);
     });
   }
 
@@ -867,61 +911,67 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // The mode of the new model a fixture is given: the one with as many channels as the mode it was in (so it fits its
   // address), else the one the other fixtures of the profile are in, else the first one
-  private getExchangeMode(profile: FixtureProfile, channelCount: number): FixtureMode {
-    const sameSize = profile.modes.find((mode) => this.fixtureService.getModeChannelCount(profile, mode) === channelCount);
+  private getExchangeMode(profile: FixtureProfile, channelCount: number, modeShortName: string): FixtureMode {
+    // (another version of the same fixture has the mode of the same name)
+    const sameSize =
+      profile.modes.find(
+        (mode) => this.fixtureService.getModeChannelCount(profile, mode) === channelCount && (mode.shortName || mode.name) === modeShortName
+      ) || profile.modes.find((mode) => this.fixtureService.getModeChannelCount(profile, mode) === channelCount);
     const others = this.fixturePool.find((fixture) => fixture.profileUuid === profile.uuid);
     const ofOthers = others && this.fixtureService.getModeByFixture(profile, others);
 
     return sameSize || ofOthers || profile.modes[0];
   }
 
-  // change the fixtures acted on to the passed profile from the library, e.g. the model the venue has
-  exchangeProfile(searchProfile: FixtureProfile) {
-    const fixtures = this.actedOnFixtures;
-
+  // Change the fixtures acted on (or the ones passed) to the passed profile from the library, e.g. the model the venue
+  // has, or another version of the profile they are of
+  exchangeProfile(searchProfile: FixtureVersion, fixtures: Fixture[] = this.actedOnFixtures) {
     if (fixtures.length === 0) {
       return;
     }
 
-    this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe(() => {
-      const profile = this.fixtureService.getProfileByUuid(searchProfile.uuid);
+    this.fixtureService.loadProfileByUuid(searchProfile.uuid).subscribe({
+      next: (profile) => this.exchangeTo(profile, fixtures),
+      error: () => this.profileLoadError(),
+    });
+  }
 
-      for (const fixture of fixtures) {
-        const oldProfile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+  private exchangeTo(profile: FixtureProfile, fixtures: Fixture[]) {
+    for (const fixture of fixtures) {
+      const oldProfile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
 
-        if (!profile || !profile.modes.length || oldProfile === profile) {
-          continue;
-        }
-
-        // a fixture of the project remembers what it was, one added here has nothing to carry over
-        const projectFixture = this.projectService.project.fixtures.find((candidate) => candidate.uuid === fixture.uuid);
-
-        if (projectFixture && !this.exchanges.has(fixture.uuid)) {
-          this.exchanges.set(fixture.uuid, { profileUuid: projectFixture.profileUuid, modeShortName: projectFixture.modeShortName });
-        }
-
-        const mode = this.getExchangeMode(profile, oldProfile ? this.fixtureChannelCount(fixture) : 0);
-
-        // a fixture still named after its model is named after the new one
-        if (oldProfile && fixture.name === oldProfile.name) {
-          fixture.name = profile.name;
-        }
-
-        fixture.profileUuid = profile.uuid;
-        fixture.modeShortName = mode.shortName || mode.name;
-
-        // changed back to what it was
-        const origin = this.exchanges.get(fixture.uuid);
-
-        if (origin && origin.profileUuid === fixture.profileUuid) {
-          this.exchanges.delete(fixture.uuid);
-        }
+      if (!profile.modes.length || oldProfile === profile) {
+        continue;
       }
 
-      this.buildTree();
-      this.selectFixture(this.selectedFixture);
-      this.livePreviewIdentify();
-    });
+      // a fixture of the project remembers what it was, one added here has nothing to carry over
+      const projectFixture = this.projectService.project.fixtures.find((candidate) => candidate.uuid === fixture.uuid);
+
+      if (projectFixture && !this.exchanges.has(fixture.uuid)) {
+        this.exchanges.set(fixture.uuid, { profileUuid: projectFixture.profileUuid, modeShortName: projectFixture.modeShortName });
+      }
+
+      const mode = this.getExchangeMode(profile, oldProfile ? this.fixtureChannelCount(fixture) : 0, fixture.modeShortName);
+
+      // a fixture still named after its model is named after the new one
+      if (oldProfile && fixture.name === oldProfile.name) {
+        fixture.name = profile.name;
+      }
+
+      fixture.profileUuid = profile.uuid;
+      fixture.modeShortName = mode.shortName || mode.name;
+
+      // changed back to what it was
+      const origin = this.exchanges.get(fixture.uuid);
+
+      if (origin && origin.profileUuid === fixture.profileUuid) {
+        this.exchanges.delete(fixture.uuid);
+      }
+    }
+
+    this.buildTree();
+    this.selectFixture(this.selectedFixture);
+    this.livePreviewIdentify();
   }
 
   // the mode of the fixture edited, which also decides what its old values are carried to
@@ -1033,6 +1083,100 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.updateChannelMap();
   }
 
+  // ---- the fixture library: versions, votes, the AI ------------------------------
+
+  // The versions of the fixture of a profile, to change to: of a version of the library, and of the copy of an older
+  // project (a plain uuid names its fixture), whose fixtures have a version once they changed to one. A profile from a
+  // file is of no fixture of the library.
+  hasVersions(profile: FixtureProfile): boolean {
+    return !profile.createdFromFile;
+  }
+
+  // What the badge of a mode of the profile edited says (see FixtureVersionBadgesComponent), where the mode is chosen:
+  // the badge and the key of its translation
+  modeBadge(mode: FixtureMode): { badge: FixtureStateBadge; key: string } {
+    const badge = getModeStateBadge(this.selectedFixtureProfile, mode.shortName || mode.name);
+
+    return badge ? { badge, key: getStateBadgeKey(badge) } : undefined;
+  }
+
+  // The better version the library has for a fixture, if there is one: its mode is a problem, its version is hidden or
+  // the best version does its mode differently (see FixtureLibraryService.getBetterVersion)
+  getBetterVersion(fixture: Fixture): FixtureBetterVersion {
+    const key = fixture.profileUuid + '/' + fixture.modeShortName;
+
+    if (!this.betterVersions.has(key)) {
+      this.betterVersions.set(key, this.fixtureLibraryService.getBetterVersion(fixture));
+    }
+
+    return this.betterVersions.get(key);
+  }
+
+  // the mark of a better version: the fixture is changed to it, which tells what is carried over and what is lost
+  exchangeToBetter(fixture: Fixture) {
+    const better = this.getBetterVersion(fixture);
+
+    this.targetFolder = undefined;
+    this.selectedNodes = [];
+    this.selectFixture(fixture);
+    this.exchangeProfile(better.version, [fixture]);
+  }
+
+  // can the AI be asked for a profile, or to improve one: for a logged in user, or where the host holds the account
+  get canUseAi(): boolean {
+    return this.configService.aiFixtures && (this.configService.aiAccount === 'host' || this.userService.isLoggedIn());
+  }
+
+  // "Create profile with AI", or improve a version of the library (parent): the fixtures acted on change to the
+  // improved version (exchange), else a fixture of the profile is added
+  createProfileWithAi(parent?: FixtureVersion, exchange = false) {
+    this.userEnsureLoginService.login().subscribe(() => {
+      const ref = this.modalService.show(FixtureAiComponent, {
+        keyboard: false,
+        ignoreBackdropClick: true,
+        class: 'modal-lg',
+        initialState: { parent, exchange },
+      });
+
+      (ref.content as FixtureAiComponent).onClose.subscribe((result: FixtureAiResult) => {
+        if (!result) {
+          return;
+        }
+
+        if (!result.profile) {
+          this.addFixture({ uuid: result.uuid }, result.mode);
+        } else if (exchange) {
+          this.exchangeTo(result.profile, this.actedOnFixtures);
+        } else {
+          this.addFixtureOf(result.profile, result.mode);
+        }
+      });
+    });
+  }
+
+  // Offering a profile from a file to the library is switched off for now (decided on 2026-11-13): this switch turns it
+  // on again, for the users with an account
+  static offerEnabled = false;
+
+  // a profile from a file can be offered to the library by a user with an account
+  canOffer(profile: FixtureProfile): boolean {
+    return FixturePoolComponent.offerEnabled && profile.createdFromFile && !isVersionUuid(profile.uuid) && this.configService.hasAccount();
+  }
+
+  // "Offer to the library": the fixtures of the profile from the file change to the version of the library it became
+  offerProfile(profile: FixtureProfile) {
+    const ref = this.modalService.show(FixtureOfferComponent, { keyboard: true, ignoreBackdropClick: false, initialState: { profile } });
+
+    (ref.content as FixtureOfferComponent).onClose.subscribe((version: FixtureProfile) => {
+      if (version) {
+        this.exchangeTo(
+          version,
+          this.fixturePool.filter((fixture) => fixture.profileUuid === profile.uuid)
+        );
+      }
+    });
+  }
+
   // ---- identifying fixtures on the stage ------------------------------------
 
   isIdentified(fixture: Fixture): boolean {
@@ -1116,10 +1260,44 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.maintenanceTimers.has(this.maintenanceKey(fixture, action));
   }
 
-  // ask the fixture on the stage to reset itself or to switch its lamp on: the value is held for as long as the
-  // fixture asks for (three seconds at least), then the fixture plays the presets again
+  // Ask the fixture on the stage to reset itself or to switch its lamp on. A profile of the AI or a user may have the
+  // channel or the range wrong: the user is shown what is sent and asked first, once per project and profile.
   maintain(fixture: Fixture, action: MaintenanceAction) {
+    const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+
+    // (a fixture which can't do it isn't asked either)
+    if (!this.canMaintain(fixture, action) || !isGenerated(profile) || profile.confirmedMaintenance.indexOf(action) >= 0) {
+      this.startMaintenance(fixture, action);
+      return;
+    }
+
+    const mode = this.fixtureService.getModeByFixture(profile, fixture);
+    const found = getMaintenanceCapability(this.fixtureService.getCachedChannels(profile, mode, null), action);
+    const ref = this.modalService.show(FixtureMaintenanceConfirmComponent, {
+      keyboard: true,
+      ignoreBackdropClick: false,
+      initialState: {
+        action,
+        profile,
+        channelName: found.channel.name,
+        range: found.capability.capability.dmxRange,
+        label: found.capability.capability.comment,
+      },
+    });
+
+    (ref.content as FixtureMaintenanceConfirmComponent).onClose.subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        profile.confirmedMaintenance.push(action);
+        this.startMaintenance(fixture, action);
+      }
+    });
+  }
+
+  // the value is held for as long as the fixture asks for (three seconds at least), then the fixture plays the presets
+  // again
+  private startMaintenance(fixture: Fixture, action: MaintenanceAction) {
     const hold = this.getMaintenanceHold(fixture, action);
+
     const key = this.maintenanceKey(fixture, action);
 
     if (hold === undefined || this.maintenanceTimers.has(key)) {

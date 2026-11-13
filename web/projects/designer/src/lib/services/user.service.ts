@@ -4,6 +4,21 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
 
+// a device linked with the account of the user: a Rocket Show device logged in in its settings, or an Ember stick the
+// designer linked when it was connected (see docs/fixture-library.md, section 8)
+export interface UserDevice {
+  id: number;
+  kind: string;
+  name: string;
+  version: string;
+  edition: string;
+  lastSeen: string;
+  compositions: number;
+  sets: number;
+  projects: number;
+  firmwareVersion: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -92,6 +107,18 @@ export class UserService {
     let headers = new HttpHeaders();
     headers = headers.append('Authorization', this.token);
     return headers;
+  }
+
+  // the devices linked with the account of the user
+  getDevices(): Observable<UserDevice[]> {
+    return this.http.get<UserDevice[]>('devices', { headers: this.getHeaders() });
+  }
+
+  // Unlink a device from the account of the user: it has no AI and no votes until it is linked again
+  unlinkDevice(id: number): Observable<any> {
+    const [body, options] = this.credentials({ id: String(id) });
+
+    return this.http.post('device-unlink', body, { headers: options.headers.set('Authorization', this.token) });
   }
 
   setAutoLoadProject(project: Project) {

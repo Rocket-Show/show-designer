@@ -25,7 +25,8 @@ export class AppHttpInterceptor implements HttpInterceptor {
       newUrl = this.restUrl + req.url;
     }
 
-    if (!req.headers.has('Content-Type')) {
+    // A form (e.g. a manual for the AI) is left to the browser, which sets its type with the boundary between its parts
+    if (!req.headers.has('Content-Type') && !(req.body instanceof FormData)) {
       req = req.clone({ headers: req.headers.set('Content-Type', 'application/json') });
     }
 

@@ -23,6 +23,7 @@ import { Composition } from '../models/composition';
 import { EffectCurve } from '../models/effect-curve';
 import { EffectPanTilt } from '../models/effect-pan-tilt';
 import { assignTracks } from '../models/timeline-track';
+import { FixtureLibraryService } from './fixture-library.service';
 
 @Injectable({
   providedIn: 'root',
@@ -46,7 +47,8 @@ export class ProjectLoadService {
     private warningDialogService: WarningDialogService,
     private livePreviewService: LivePreviewService,
     private configService: ConfigService,
-    private effectService: EffectService
+    private effectService: EffectService,
+    private fixtureLibraryService: FixtureLibraryService
   ) {}
 
   // the fixture itself (if it has a channel of its own) and its pixels, as a project of version 1
@@ -435,6 +437,9 @@ export class ProjectLoadService {
         this.selectScenesPresetComposition();
         this.afterLoad(startsNew);
 
+        // whether the library has better versions of its profiles by now
+        this.fixtureLibraryService.checkVersions(project.fixtureProfiles);
+
         const queryParams: Params = asTemplate ? { id: '', token: '' } : { id, token: project.shareToken };
         this.router.navigate([], {
           relativeTo: this.activatedRoute,
@@ -512,9 +517,11 @@ export class ProjectLoadService {
 
     this.selectScenesPresetComposition();
     this.afterLoad();
+    this.fixtureLibraryService.checkVersions(project.fixtureProfiles);
   }
 
   // the composition the timeline shows after a state of the project has been put back.
+
   // Its audio file is only loaded again, if another composition is selected now, so
   // that undoing an edit does not interrupt what is playing.
   private restoreSelectedComposition(previousComposition: Composition) {

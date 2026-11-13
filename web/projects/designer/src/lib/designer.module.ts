@@ -70,6 +70,13 @@ import { DropzoneComponent } from './dropzone/dropzone.component';
 import { TreeComponent } from './tree/tree.component';
 import { SortablejsDirective } from './sortablejs/sortablejs.directive';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
+import { FixtureVersionBadgesComponent } from './fixture-library/fixture-version-badges/fixture-version-badges.component';
+import { FixtureVersionsComponent } from './fixture-library/fixture-versions/fixture-versions.component';
+import { FixtureVoteComponent } from './fixture-library/fixture-vote/fixture-vote.component';
+import { FixtureAiComponent } from './fixture-library/fixture-ai/fixture-ai.component';
+import { FixtureOfferComponent } from './fixture-library/fixture-offer/fixture-offer.component';
+import { FixtureMaintenanceConfirmComponent } from './fixture-library/fixture-maintenance-confirm/fixture-maintenance-confirm.component';
+import { UserDevicesComponent } from './user/user-devices/user-devices.component';
 import { ColorService } from './services/color.service';
 import { SCENE_COLOR_SOURCE } from './services/scene-color-source';
 import { keepSliderValues } from './slider-value';
@@ -135,7 +142,15 @@ import { keepSliderValues } from './slider-value';
     IconPickerComponent,
     HardwarePromoBarComponent,
     HardwarePromoDialogComponent,
+    FixtureVersionBadgesComponent,
+    FixtureVersionsComponent,
+    FixtureVoteComponent,
+    FixtureAiComponent,
+    FixtureOfferComponent,
+    FixtureMaintenanceConfirmComponent,
+    UserDevicesComponent,
   ],
+
   exports: [DesignerComponent],
   imports: [
     RouterModule.forRoot([], {}),

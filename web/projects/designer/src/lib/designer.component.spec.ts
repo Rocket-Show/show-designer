@@ -38,6 +38,7 @@ import { UserEnsureLoginService } from './services/user-ensure-login.service';
 import { UserService } from './services/user.service';
 import { WarningDialogService } from './services/warning-dialog.service';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
+import { UserDevicesComponent } from './user/user-devices/user-devices.component';
 import { AiLooksService } from './services/ai-looks.service';
 import { Fixture } from './models/fixture';
 
@@ -272,6 +273,9 @@ describe('DesignerComponent', () => {
         dropzoneChunking: false,
         freeUniverseEdit: true,
         hardwarePromo: true,
+        aiLooks: true,
+        aiFixtures: true,
+        aiAccount: 'host',
       };
       for (const name of Object.keys(inputs)) {
         fixture.componentRef.setInput(name, inputs[name]);
@@ -291,6 +295,11 @@ describe('DesignerComponent', () => {
       expect(TestBed.inject(IntroService).showIntro).toBe(true);
       // the menu of the host and the one of the designer are taken away from the height
       expect(fixture.nativeElement.querySelector('#designer').style.height).toBe('calc(100% - 84px)');
+
+      // a host which doesn't say whose account it is uses the login of the designer
+      fixture.componentRef.setInput('aiAccount', undefined);
+      fixture.detectChanges();
+      expect(configService.aiAccount).toBe('designer');
     });
   });
 
@@ -663,6 +672,10 @@ describe('DesignerComponent', () => {
 
       expect(menuItem('designer.navigation.login')).toBeUndefined();
       expect(menuItem('Moritz')).toBeDefined();
+
+      // the devices linked with the account
+      click('designer.navigation.devices');
+      expect(show).toHaveBeenCalledWith(UserDevicesComponent, { keyboard: true, ignoreBackdropClick: false, class: 'modal-lg' });
 
       const logout = spyOn(userService, 'logout');
       click('designer.navigation.logout');

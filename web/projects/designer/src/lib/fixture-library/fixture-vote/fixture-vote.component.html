@@ -1,0 +1,73 @@
+@if (votable) {
+<div class="fixture-vote">
+  @if (loading) {
+  <i class="fa fa-spinner fa-pulse fa-fw text-muted" aria-hidden="true"></i>
+  } @else if (votes) {
+  <div class="d-flex align-items-center flex-wrap">
+    <span class="mr-2">{{ 'designer.fixture-library.vote-question' | translate }}</span>
+    @if (configService.hasAccount()) {
+    <button
+      type="button"
+      class="btn btn-sm mr-1 fixture-vote-good"
+      [class.btn-success]="votes.myVote?.good === true"
+      [class.btn-secondary]="votes.myVote?.good !== true"
+      [attr.aria-pressed]="votes.myVote?.good === true"
+      [title]="'designer.fixture-library.vote-good' | translate"
+      [disabled]="sending"
+      (click)="voteGood()"
+    >
+      <i class="fa fa-thumbs-o-up" aria-hidden="true"></i> {{ votes.good }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm mr-2 fixture-vote-bad"
+      [class.btn-danger]="votes.myVote?.good === false"
+      [class.btn-secondary]="votes.myVote?.good !== false"
+      [attr.aria-pressed]="votes.myVote?.good === false"
+      [title]="'designer.fixture-library.vote-bad' | translate"
+      [disabled]="sending"
+      (click)="voteBad()"
+    >
+      <i class="fa fa-thumbs-o-down" aria-hidden="true"></i> {{ votes.bad }}
+    </button>
+    @if (votes.myVote) {
+    <a href="#" class="small fixture-vote-revoke" role="button" (click)="revoke(); (false)">{{
+      'designer.fixture-library.vote-revoke' | translate
+    }}</a>
+    } } @else {
+    <span class="text-muted small">
+      <i class="fa fa-thumbs-o-up" aria-hidden="true"></i> {{ votes.good }} <i class="fa fa-thumbs-o-down ml-2" aria-hidden="true"></i>
+      {{ votes.bad }}
+    </span>
+    }
+  </div>
+  @if (askingComment) {
+  <div class="input-group input-group-sm mt-2">
+    <input
+      type="text"
+      class="form-control fixture-vote-comment"
+      maxlength="500"
+      [placeholder]="'designer.fixture-library.vote-comment' | translate"
+      [(ngModel)]="comment"
+      (keydown.enter)="sendBad(); $event.stopPropagation()"
+    />
+    <div class="input-group-append">
+      <button type="button" class="btn btn-danger fixture-vote-send" [disabled]="sending" (click)="sendBad()">
+        {{ 'designer.fixture-library.vote-send' | translate }}
+      </button>
+      <button type="button" class="btn btn-secondary" (click)="cancelBad()">{{ 'designer.misc.cancel' | translate }}</button>
+    </div>
+  </div>
+  } @if (votes.comments?.length > 0) {
+  <ul class="fixture-vote-comments small mb-0 mt-2">
+    @for (text of votes.comments; track $index) {
+    <li>{{ text }}</li>
+    }
+  </ul>
+  } } @if (errorKey) {
+  <div class="text-danger small mt-1 fixture-vote-error">{{ errorKey | translate }}</div>
+  }
+</div>
+} @else if (configService.hasAccount()) {
+<small class="text-muted fixture-vote-plain">{{ 'designer.fixture-library.vote-plain' | translate }}</small>
+}

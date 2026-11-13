@@ -1,0 +1,255 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">
+    <i class="fa fa-magic text-primary mr-1" aria-hidden="true"></i>
+    {{ (parent ? 'designer.fixture-ai.improve-title' : 'designer.fixture-ai.title') | translate }}
+  </h4>
+  <button type="button" class="close pull-right" [attr.aria-label]="'designer.misc.cancel' | translate" (click)="cancel()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body fixture-ai">
+  @if (loadingStatus) {
+  <p class="text-center my-4"><i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i></p>
+  } @else { @if (!available && !error) {
+  <div class="alert alert-secondary" role="alert">{{ 'designer.fixture-ai.unavailable' | translate }}</div>
+  } @if (view === 'input') { @if (parent) {
+  <!-- a version the AI improves, from the manual it was made from -->
+  <p>
+    {{ 'designer.fixture-ai.improve-intro' | translate : { name: parent.name, created: (parent.created | date : 'yyyy-MM-dd') } }}
+  </p>
+  <div class="form-group">
+    <label for="fixtureAiInstruction">{{ 'designer.fixture-ai.instruction' | translate }}</label>
+    <textarea
+      id="fixtureAiInstruction"
+      class="form-control"
+      rows="3"
+      maxlength="1000"
+      [placeholder]="'designer.fixture-ai.instruction-placeholder' | translate"
+      [(ngModel)]="instruction"
+    ></textarea>
+  </div>
+  } @else {
+  <p class="text-muted">{{ 'designer.fixture-ai.intro' | translate }}</p>
+  <div class="form-row">
+    <div class="form-group col-sm-6">
+      <label for="fixtureAiManufacturer">{{ 'designer.fixture-ai.manufacturer' | translate }}</label>
+      <select id="fixtureAiManufacturer" class="custom-select" [(ngModel)]="manufacturerShortName">
+        <option value="" disabled>{{ 'designer.fixture-ai.manufacturer-choose' | translate }}</option>
+        @for (manufacturer of manufacturers; track manufacturer.shortName) {
+        <option [value]="manufacturer.shortName">{{ manufacturer.name }}</option>
+        }
+        <option value="~new">{{ 'designer.fixture-ai.manufacturer-new' | translate }}</option>
+      </select>
+      @if (newManufacturer) {
+      <input
+        type="text"
+        class="form-control mt-2"
+        maxlength="100"
+        [attr.aria-label]="'designer.fixture-ai.manufacturer-name' | translate"
+        [placeholder]="'designer.fixture-ai.manufacturer-name' | translate"
+        [(ngModel)]="manufacturerName"
+      />
+      }
+    </div>
+    <div class="form-group col-sm-6">
+      <label for="fixtureAiModel">{{ 'designer.fixture-ai.model' | translate }}</label>
+      <input id="fixtureAiModel" type="text" class="form-control" maxlength="200" [(ngModel)]="model" />
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{ 'designer.fixture-ai.source' | translate }}</label>
+    <div class="btn-group btn-group-sm d-flex mb-2" role="group">
+      @for (option of sources; track option) {
+      <button
+        type="button"
+        class="btn flex-fill fixture-ai-source"
+        [class.btn-primary]="source === option"
+        [class.btn-secondary]="source !== option"
+        [attr.aria-pressed]="source === option"
+        (click)="setSource(option)"
+      >
+        {{ 'designer.fixture-ai.source-' + option | translate }}
+      </button>
+      }
+    </div>
+    @if (source === 'manual') {
+    <input
+      type="file"
+      class="form-control-file fixture-ai-manual"
+      accept="application/pdf,.pdf"
+      [attr.aria-label]="'designer.fixture-ai.source-manual' | translate"
+      (change)="setManual($any($event.target).files[0])"
+    />
+    } @else if (source === 'link') {
+    <input
+      type="url"
+      class="form-control fixture-ai-link"
+      maxlength="2000"
+      placeholder="https://"
+      [attr.aria-label]="'designer.fixture-ai.source-link' | translate"
+      [(ngModel)]="link"
+    />
+    }
+    <small class="form-text text-muted">{{ 'designer.fixture-ai.source-' + source + '-hint' | translate }}</small>
+  </div>
+  }
+  <div class="form-group mb-0">
+    <label for="fixtureAiMode">{{ 'designer.fixture-ai.mode' | translate }}</label>
+    <input
+      id="fixtureAiMode"
+      type="text"
+      class="form-control"
+      maxlength="100"
+      [placeholder]="'designer.fixture-ai.mode-placeholder' | translate"
+      [(ngModel)]="mode"
+    />
+    <small class="form-text text-muted">{{ 'designer.fixture-ai.mode-hint' | translate }}</small>
+  </div>
+  } @if (view === 'looking') {
+  <p class="text-center my-4">
+    <i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i> {{ 'designer.fixture-ai.looking' | translate }}
+  </p>
+  } @if (view === 'found') { @if (foundVersions.length > 0) {
+  <p>{{ 'designer.fixture-ai.found' | translate }}</p>
+  @for (found of foundVersions; track found.version.uuid) {
+  <div class="fixture-ai-found">
+    <div class="d-flex align-items-center flex-wrap">
+      <strong class="mr-2">{{ found.version.manufacturerName }} - {{ found.version.name }}</strong>
+      <lib-fixture-version-badges [version]="found.version"></lib-fixture-version-badges>
+    </div>
+    <ul class="list-unstyled mb-2 mt-1">
+      @for (mode of found.modes; track mode.shortName) {
+      <li class="d-flex align-items-center">
+        <span class="mr-2">{{ mode.name }}</span>
+        @if (mode.badge) {
+        <span class="small fixture-state-{{ mode.badge.state }} mr-2">{{ mode.key | translate : { count: mode.badge.count } }}</span>
+        }
+        <a href="#" class="small ml-auto fixture-ai-use-mode" role="button" (click)="use(found.version, mode.shortName); (false)">{{
+          'designer.fixture-ai.use-mode' | translate
+        }}</a>
+      </li>
+      }
+    </ul>
+    <button type="button" class="btn btn-primary btn-sm mr-1 fixture-ai-use" (click)="use(found.version)">
+      {{ 'designer.fixture-ai.use' | translate }}
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm fixture-ai-improve" (click)="improveFound(found.version)">
+      <i class="fa fa-magic" aria-hidden="true"></i> {{ 'designer.fixture-library.improve' | translate }}
+    </button>
+  </div>
+  }
+  <p class="text-muted small mt-3 mb-0">{{ 'designer.fixture-ai.found-generate' | translate }}</p>
+  } @else {
+  <p class="mb-0">{{ 'designer.fixture-ai.not-found' | translate }}</p>
+  } } @if (view === 'generating') {
+  <div class="text-center my-4 fixture-ai-generating">
+    <i class="fa fa-magic fa-3x text-primary" aria-hidden="true"></i>
+    <p class="mt-3 mb-1">{{ 'designer.fixture-ai.generating' | translate }} {{ elapsed }}</p>
+    <small class="text-muted">{{ 'designer.fixture-ai.generating-hint' | translate }}</small>
+  </div>
+  } @if (view === 'review' && response) {
+  <!-- what the AI read where: the user compares it with the manual before the profile plays a show -->
+  <p>{{ 'designer.fixture-ai.review-intro' | translate }}</p>
+  @if (response.review?.manualUrl) {
+  <p>
+    <a [href]="response.review.manualUrl" target="_blank" rel="noopener">{{ 'designer.fixture-library.manual' | translate }}</a>
+  </p>
+  } @if (response.review?.uncertain?.length > 0) {
+  <div class="alert alert-primary fixture-ai-uncertain">
+    <strong>{{ 'designer.fixture-ai.uncertain' | translate }}</strong>
+    <ul class="mb-0">
+      @for (text of response.review.uncertain; track $index) {
+      <li>{{ text }}</li>
+      }
+    </ul>
+  </div>
+  }
+  <div class="form-group">
+    <label for="fixtureAiReviewMode">{{ 'designer.fixture-pool.mode' | translate }}</label>
+    <select id="fixtureAiReviewMode" class="custom-select" [(ngModel)]="reviewMode">
+      @for (reviewed of reviewModes; track reviewed.shortName) {
+      <option [ngValue]="reviewed">{{ reviewed.name }}</option>
+      }
+    </select>
+  </div>
+  @if (reviewMode) {
+  <table class="table table-sm fixture-ai-review">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>{{ 'designer.fixture-ai.channel' | translate }}</th>
+        <th>{{ 'designer.fixture-ai.page' | translate }}</th>
+        <th>{{ 'designer.fixture-ai.quote' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (channel of reviewMode.channels; track $index) {
+      <tr [class.fixture-ai-maintenance]="channel.maintenance" [class.fixture-ai-strobe]="channel.strobe">
+        <td>{{ channel.perPixel ? '×' : channel.number }}</td>
+        <td>
+          {{ channel.name || ('designer.fixture-ai.unused' | translate) }} @if (channel.perPixel) {
+          <span class="text-muted small">{{ 'designer.fixture-ai.per-pixel' | translate }}</span>
+          } @if (channel.maintenance) {
+          <span class="badge fixture-ai-flag">{{ 'designer.fixture-ai.maintenance' | translate }}</span>
+          } @if (channel.strobe) {
+          <span class="badge fixture-ai-flag">{{ 'designer.fixture-ai.strobe' | translate }}</span>
+          } @for (range of channel.ranges; track $index) {
+          <div class="small fixture-ai-range">{{ range.range[0] }}–{{ range.range[1] }}: {{ range.label }}</div>
+          }
+        </td>
+        <td>{{ channel.note?.page }}</td>
+        <td>
+          @if (channel.note) {
+          <q>{{ channel.note.quote }}</q>
+          @if (!channel.note.verified) {
+          <span class="badge fixture-state-unconfirmed fixture-ai-unverified">{{ 'designer.fixture-ai.not-verified' | translate }}</span>
+          } @if (channel.note.uncertain) {
+          <div class="small text-warning">{{ channel.note.uncertain }}</div>
+          } } @else {
+          <span class="text-muted">–</span>
+          }
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+  } } @if (error) {
+  <div class="alert alert-danger mt-3 mb-0 fixture-ai-error" role="alert">
+    {{ error.key | translate : error.params }} @if (error.errors?.length > 0) {
+    <ul class="mb-0 mt-1">
+      @for (text of error.errors; track $index) {
+      <li>{{ text }}</li>
+      }
+    </ul>
+    }
+  </div>
+  } }
+</div>
+<div class="modal-footer">
+  @if (requestsLeft !== undefined) {
+  <small class="text-muted mr-auto">{{
+    'designer.fixture-ai.requests-left' | translate : { left: requestsLeft, limit: status.requestsPerUserPerDay }
+  }}</small>
+  } @if (view === 'found' || view === 'review') {
+  <a class="mr-3 my-auto" href="#" role="button" (click)="back(); (false)">{{ 'designer.misc.nav-back' | translate }}</a>
+  } @else {
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">{{ 'designer.misc.cancel' | translate }}</a>
+  } @if (view === 'input') {
+  <button type="button" class="btn btn-primary fixture-ai-next" [disabled]="!available || !complete" (click)="next()">
+    @if (parent) {
+    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.fixture-ai.generate' | translate }}
+    } @else {
+    {{ 'designer.fixture-ai.look-up' | translate }}
+    }
+  </button>
+  } @if (view === 'found') {
+  <button type="button" class="btn btn-primary fixture-ai-generate" [disabled]="!canGenerate" (click)="generate()">
+    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.fixture-ai.generate' | translate }}
+  </button>
+  } @if (view === 'review') {
+  <button type="button" class="btn btn-primary fixture-ai-add" (click)="add()">
+    {{ (exchange ? 'designer.fixture-ai.exchange' : 'designer.fixture-ai.add') | translate }}
+  </button>
+  }
+</div>

@@ -159,20 +159,35 @@ export class FixtureService {
     return this.profileIndex.byUuid.get(uuid);
   }
 
-  loadProfileByUuid(uuid: string): Observable<void> {
+  // The profile of the library with the passed uuid, from the copy the project has of it, else loaded into the project:
+  // the profile with what the library knows about its version. The library answers a plain uuid (of a fixture, see
+  // fixture-version) with one of its versions, under the uuid of that version, which may be in the project already.
+  loadProfileByUuid(uuid: string): Observable<FixtureProfile> {
     const loadedProfile = this.getProfileByUuid(uuid);
 
     if (loadedProfile) {
       // This profile is already loaded
-      return of(undefined);
+      return of(loadedProfile);
     }
 
     // Load the metadata and the profile
     return forkJoin([this.http.get('fixtures?uuid=' + encodeURI(uuid)), this.http.get('fixture?uuid=' + encodeURI(uuid))]).pipe(
       map((result) => {
-        const mergedData = { ...result[0][0], ...result[1] };
-        const fixtureProfile = new FixtureProfile(mergedData);
+        if (!result[1]) {
+          // e.g. a version newer than the library of a device
+          throw new Error('The library has no profile ' + uuid);
+        }
+
+        const fixtureProfile = new FixtureProfile({ uuid, ...result[0][0], ...result[1] });
+        const existing = this.getProfileByUuid(fixtureProfile.uuid);
+
+        if (existing) {
+          return existing;
+        }
+
         this.projectService.project.fixtureProfiles.push(fixtureProfile);
+
+        return fixtureProfile;
       })
     );
   }
@@ -1262,7 +1277,9 @@ export class FixtureService {
     return -1;
   }
 
-  addFixture(profile: FixtureProfile, fixturePool: Fixture[], channelPool?: Fixture[]): Fixture {
+  // A new fixture of the profile, in the passed mode, if the profile has it, else in the mode of the fixtures of the
+  // profile in the pool, else in its first mode: on the first channels free for it
+  addFixture(profile: FixtureProfile, fixturePool: Fixture[], channelPool?: Fixture[], modeShortName?: string): Fixture {
     const fixture = new Fixture();
 
     fixture.uuid = this.uuidService.getUuid();
@@ -1284,7 +1301,9 @@ export class FixtureService {
       }
     }
 
-    if (existingModeShortName) {
+    if (profile.modes.some((candidate) => (candidate.shortName || candidate.name) === modeShortName)) {
+      fixture.modeShortName = modeShortName;
+    } else if (existingModeShortName) {
       fixture.modeShortName = existingModeShortName;
     } else {
       fixture.modeShortName = profile.modes[0].shortName || profile.modes[0].name;

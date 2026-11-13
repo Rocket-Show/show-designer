@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { of, Subject, throwError } from 'rxjs';
 
@@ -11,6 +12,7 @@ import { Preset } from '../../models/preset';
 import { Scene } from '../../models/scene';
 import { AiLooksService } from '../../services/ai-looks.service';
 import { AnimationService } from '../../services/animation.service';
+import { ConfigService } from '../../services/config.service';
 import { PreviewService } from '../../services/preview.service';
 import { UserService } from '../../services/user.service';
 import { AiLooksComponent } from './ai-looks.component';
@@ -97,6 +99,7 @@ describe('AiLooksComponent', () => {
         { provide: PreviewService, useValue: preview },
         { provide: AnimationService, useValue: { timeMillis: 1000 } },
         { provide: UserService, useValue: { logout } },
+        { provide: BsModalService, useValue: {} },
       ],
     });
   });
@@ -412,6 +415,10 @@ describe('AiLooksComponent', () => {
     const cases: [any, string][] = [
       [httpError(429, { error: 'ai-user-limit-reached' }), 'designer.ai.error.ai-user-limit-reached'],
       [httpError(503, { error: 'ai-busy' }), 'designer.ai.error.ai-busy'],
+      // (a device which can't forward the request to the online designer)
+      [httpError(502, { error: 'api-unreachable' }), 'designer.device.api-unreachable'],
+      [httpError(504, { error: 'api-timeout' }), 'designer.device.api-timeout'],
+
       [httpError(502, { error: 'something-new' }), 'designer.ai.error.ai-failed'],
       [httpError(0, 'offline'), 'designer.ai.error.ai-failed'],
       [new Error('broken'), 'designer.ai.error.ai-failed'],
@@ -434,6 +441,20 @@ describe('AiLooksComponent', () => {
 
     expect(logout).toHaveBeenCalled();
     expect(component.errorKey).toBe('designer.ai.error.unauthorized');
+  });
+
+  it('asks to link the device where the host holds the account, instead of logging the user out', () => {
+    TestBed.inject(ConfigService).aiAccount = 'host';
+    open();
+
+    for (const error of [httpError(401, { error: 'unauthorized' }), httpError(403, { error: 'device-not-linked' })]) {
+      service.design.and.returnValue(throwError(error));
+      component.design();
+
+      expect(component.errorKey).toBe('designer.account.link-device');
+    }
+
+    expect(logout).not.toHaveBeenCalled();
   });
 
   it('plays the scene clicked on the stage, the one before and the one after', () => {

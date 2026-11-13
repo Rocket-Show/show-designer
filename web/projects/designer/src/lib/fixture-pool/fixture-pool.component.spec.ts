@@ -6,12 +6,15 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { Subject } from 'rxjs';
 
 import { profiles } from '../../../conformance/index';
 import { Fixture } from '../models/fixture';
+import { FixtureMode } from '../models/fixture-mode';
 import { FixtureProfile } from '../models/fixture-profile';
+
 import { Preset } from '../models/preset';
 import { Project } from '../models/project';
 import { InlineEditComponent } from '../inline-edit/inline-edit.component';
@@ -26,6 +29,14 @@ import { TreeComponent, TreeNode } from '../tree/tree.component';
 import { FixturePoolCreateFromFileComponent } from './fixture-pool-create-from-file/fixture-pool-create-from-file.component';
 import { FixturePoolEditUniversesComponent } from './fixture-pool-edit-universes/fixture-pool-edit-universes.component';
 import { FixturePoolComponent } from './fixture-pool.component';
+import { FixtureVersionBadgesComponent } from '../fixture-library/fixture-version-badges/fixture-version-badges.component';
+import { FixtureVersionsComponent } from '../fixture-library/fixture-versions/fixture-versions.component';
+import { FixtureVoteComponent } from '../fixture-library/fixture-vote/fixture-vote.component';
+import { FixtureAiComponent } from '../fixture-library/fixture-ai/fixture-ai.component';
+import { FixtureOfferComponent } from '../fixture-library/fixture-offer/fixture-offer.component';
+import { FixtureMaintenanceConfirmComponent } from '../fixture-library/fixture-maintenance-confirm/fixture-maintenance-confirm.component';
+import { FixtureLibraryService } from '../services/fixture-library.service';
+import { UserService } from '../services/user.service';
 
 // The fixture pool patches the fixtures of the project: which profiles they are, in which
 // folder, universe, mode and on which channels. It works on a copy, the project only takes
@@ -66,8 +77,16 @@ describe('FixturePoolComponent', () => {
     show = jasmine.createSpy('show').and.callFake(() => ({ content: dialog }));
 
     TestBed.configureTestingModule({
-      declarations: [FixturePoolComponent, TreeComponent, InlineEditComponent],
-      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot()],
+      declarations: [
+        FixturePoolComponent,
+        TreeComponent,
+        InlineEditComponent,
+        FixtureVersionBadgesComponent,
+        FixtureVersionsComponent,
+        FixtureVoteComponent,
+      ],
+      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot(), PopoverModule.forRoot()],
+
       providers: [
         { provide: BsModalRef, useValue: { hide } },
         { provide: BsModalService, useValue: { show, getModalsCount: () => modalsCount } },
@@ -133,6 +152,7 @@ describe('FixturePoolComponent', () => {
 
   afterEach(() => {
     http.verify();
+    FixturePoolComponent.offerEnabled = false;
   });
 
   async function open(searchProfiles: any[] = library) {
@@ -1276,6 +1296,46 @@ describe('FixturePoolComponent', () => {
       expect(endPatchPreview).toHaveBeenCalled();
     });
 
+    it('asks first for a profile of the AI or a user, what it sends, once per project and profile', async () => {
+      const wideMover = project.fixtureProfiles.find((candidate) => candidate.uuid === 'test/wide-mover');
+      wideMover.origin = 'ai';
+      await open();
+
+      pool.maintain(wide(), 'reset');
+
+      expect(show.calls.mostRecent().args[0]).toBe(FixtureMaintenanceConfirmComponent);
+      expect(show.calls.mostRecent().args[1].initialState).toEqual({
+        action: 'reset',
+        profile: wideMover,
+        channelName: 'Control',
+        range: [40, 49],
+        label: 'Reset',
+      });
+      expect(project.resetFixtureUuids).toEqual([]);
+
+      // declined, it is asked again the next time
+      dialog.onClose.next(false);
+      expect(project.resetFixtureUuids).toEqual([]);
+      expect(wideMover.confirmedMaintenance).toEqual([]);
+
+      dialog = { onClose: new Subject() };
+      pool.maintain(wide(), 'reset');
+      dialog.onClose.next(true);
+
+      expect(project.resetFixtureUuids).toEqual(['wide']);
+      expect(wideMover.confirmedMaintenance).toEqual(['reset']);
+
+      // the lamp is asked for apart, the reset not anymore
+      const asked = show.calls.count();
+      pool.maintain(wide(), 'lamp-on');
+      expect(show.calls.count()).toBe(asked + 1);
+
+      wideMover.confirmedMaintenance.push('lamp-on');
+      pool.maintain(wide(), 'lamp-on');
+      expect(show.calls.count()).toBe(asked + 1);
+      expect(project.lampOnFixtureUuids).toEqual(['wide']);
+    });
+
     it('asks nothing of a fixture which can not, and stops asking when it is closed', async () => {
       await open();
 
@@ -1632,5 +1692,305 @@ describe('FixturePoolComponent', () => {
         fixture.detectChanges();
       }
     }
+  });
+
+  // The versions of the library: what is known about them, the better version for a fixture, the AI, the votes and a
+  // profile from a file offered to the library
+  describe('the fixture library', () => {
+    let library$: FixtureLibraryService;
+
+    // the RGB par of the library in two versions: the copy of the project and the best one, which does its mode
+    // differently
+    const best = {
+      uuid: 'test/rgb-par~2',
+      name: 'RGB par',
+      manufacturerName: 'Test',
+      mainCategory: 'Color Changer',
+      origin: 'ai',
+      state: 'open',
+      usage: 3,
+      versions: 2,
+      best: true,
+      modeStates: [{ shortName: '6ch', name: '6-channel', hash: 'b', state: 'open', good: 0, bad: 0 }],
+    };
+    const current = {
+      ...best,
+      uuid: 'test/rgb-par~1',
+      origin: 'ofl',
+      best: false,
+      modeStates: [{ shortName: '6ch', name: '6-channel', hash: 'a', state: 'open', good: 0, bad: 0 }],
+    };
+
+    // the pars of the project are of a version of the library
+    function parsOfVersion() {
+      project.fixtureProfiles = project.fixtureProfiles.map((candidate) =>
+        candidate.uuid === 'test/rgb-par' ? new FixtureProfile({ ...profile('test/rgb-par'), ...current }) : candidate
+      );
+      project.fixtures = project.fixtures.map((candidate) =>
+        candidate.profileUuid === 'test/rgb-par' ? new Fixture({ ...candidate, profileUuid: 'test/rgb-par~1' }) : candidate
+      );
+      fixtureService.updateCachedFixtures();
+    }
+
+    async function loadVersion(uuid: string, metadata: any, json: any) {
+      http.expectOne('fixtures?uuid=' + uuid).flush([metadata]);
+      http.expectOne('fixture?uuid=' + uuid).flush(json);
+      await update();
+    }
+
+    beforeEach(() => {
+      library$ = TestBed.inject(FixtureLibraryService);
+    });
+
+    afterEach(() => {
+      document.querySelectorAll('popover-container').forEach((popover) => popover.remove());
+
+      // the votes the settings of a fixture of a version asked for
+      http.match((request) => request.url.startsWith('fixture-vote')).forEach((request) => request.flush({ modes: [] }));
+    });
+
+    // a profile as the library answers it, without the uuid the profiles of the project have
+    function json(name: string): any {
+      const { uuid, ...rest } = profile(name);
+      return rest;
+    }
+
+    it('marks a profile of the search by where it comes from, and lists the versions of its fixture to add one of', async () => {
+      await open([...library, best]);
+
+      const row = (Array.from(element().querySelectorAll('.list-group-flush > .list-group-item')) as HTMLElement[]).find((candidate) =>
+        candidate.querySelector('.profile-library')
+      );
+      expect(row.textContent).toContain('designer.fixture-library.origin-ai');
+      expect(row.textContent).toContain('designer.fixture-library.state-unconfirmed');
+
+      await click(row.querySelector('.profile-versions'));
+      http.expectOne('fixtures?fixture=test%2Frgb-par~2').flush([best, current]);
+      await update();
+
+      const popover = document.querySelector('popover-container');
+      expect(popover.querySelectorAll('.fixture-version').length).toBe(2);
+
+      (popover.querySelectorAll('.fixture-version-use')[1] as HTMLElement).click();
+      await loadVersion('test/rgb-par~1', current, json('test/rgb-par'));
+
+      expect(pool.selectedFixture.profileUuid).toBe('test/rgb-par~1');
+      expect(document.querySelector('popover-container')).toBeNull();
+    });
+
+    it('adds a fixture in the mode asked for, if the profile has it', async () => {
+      await open();
+
+      pool.addFixture({ uuid: 'chauvet-dj/colorband-pix' }, '3ch');
+      expect(pool.selectedFixture.modeShortName).toBe('3ch');
+
+      // (else the one of the fixtures of the profile in the pool)
+      pool.addFixture({ uuid: 'chauvet-dj/colorband-pix' }, '5ch');
+      expect(pool.selectedFixture.modeShortName).toBe('6ch');
+    });
+
+    it("tells the user when the library doesn't have the profile, e.g. one newer than the library of a device", async () => {
+      await open();
+
+      pool.addFixture({ uuid: 'test/new~4' });
+      await loadVersion('test/new~4', { uuid: 'test/new~4' }, null);
+      pool.exchangeProfile({ uuid: 'test/new~4' });
+      await loadVersion('test/new~4', { uuid: 'test/new~4' }, null);
+
+      expect(error).toHaveBeenCalledTimes(2);
+      expect(error.calls.argsFor(0)[0]).toBe('designer.fixture-library.load-error');
+      expect(pool.fixturePool.length).toBe(5);
+    });
+
+    it('changes a fixture to the mode of the same name of another version, where several have as many channels', async () => {
+      await open();
+
+      const other = json('test/rgb-par');
+      other.modes.unshift({ ...other.modes[0], name: 'Six', shortName: '6x' });
+      pool.exchangeProfile({ uuid: 'test/rgb-par~3' }, [pool.fixturePool[0]]);
+      await loadVersion('test/rgb-par~3', { uuid: 'test/rgb-par~3' }, other);
+
+      expect(poolFixture('par-1').profileUuid).toBe('test/rgb-par~3');
+      expect(poolFixture('par-1').modeShortName).toBe('6ch');
+      expect(poolFixture('par-2').profileUuid).toBe('test/rgb-par');
+    });
+
+    it('marks a fixture for which the library has a better version once it knows, and changes it to that one', async () => {
+      parsOfVersion();
+      await open();
+      expect(treeRow('Par 1').querySelector('.fixture-better-version')).toBeNull();
+
+      // the versions arrive while the pool is open
+      library$.checkVersions(project.fixtureProfiles);
+      http.expectOne('fixtures?fixture=test%2Frgb-par~1').flush([best, current]);
+      await update();
+
+      expect(pool.getBetterVersion(poolFixture('par-1'))).toEqual({ reason: 'changed', version: best as any });
+      expect(treeRow('Par 1').querySelector('.fixture-better-version')).not.toBeNull();
+      expect(treeRow('Par 1').querySelector('.fixture-maintenance')).toBeNull();
+      expect(treeRow('Head').querySelector('.fixture-better-version')).toBeNull();
+
+      await click(treeRow('Par 2').querySelector('.fixture-better-version'));
+      await loadVersion('test/rgb-par~2', best, json('test/rgb-par'));
+
+      expect(pool.selectedFixture.uuid).toBe('par-2');
+      expect(poolFixture('par-2').profileUuid).toBe('test/rgb-par~2');
+      expect(poolFixture('par-2').modeShortName).toBe('6ch');
+      expect(poolFixture('par-1').profileUuid).toBe('test/rgb-par~1');
+      expect(treeRow('Par 2').querySelector('.fixture-better-version')).toBeNull();
+
+      // the settings of a fixture tell why, and change it as well
+      await click(treeRow('Par 1'));
+      const hint: HTMLElement = element().querySelector('#settings .fixture-better-version-hint');
+      expect(hint.textContent).toContain('designer.fixture-library.better-changed');
+
+      await click(hint.querySelector('a'));
+      expect(poolFixture('par-1').profileUuid).toBe('test/rgb-par~2');
+    });
+
+    it('shows what is known about the version of the fixture edited, and the state of each of its modes', async () => {
+      parsOfVersion();
+      const copy = fixtureService.getProfileByUuid('test/rgb-par~1');
+      copy.modeStates = [{ shortName: '6ch', name: '6-channel', hash: 'a', state: 'problem', good: 0, bad: 1 }];
+      await open();
+
+      expect(element().querySelector('#settings .fixture-type-library').textContent).toContain('designer.fixture-library.origin-ofl');
+      expect(selects()[1].options[0].textContent).toContain('· designer.fixture-library.state-problems-one');
+      expect(pool.modeBadge(copy.modes[0])).toEqual({
+        badge: { state: 'problems', count: 1 },
+        key: 'designer.fixture-library.state-problems-one',
+      });
+      expect(pool.modeBadge(new FixtureMode({ name: '6ch' })).key).toBe('designer.fixture-library.state-problems-one');
+
+      // the votes on its mode
+      expect(http.match('fixture-vote?uuid=test%2Frgb-par~1').length).toBeGreaterThan(0);
+
+      // the copy of an older project knows nothing of a version, but the versions of its fixture are there to change to
+      await click(treeRow('Head'));
+      expect(pool.modeBadge(pool.selectedFixtureProfile.modes[0])).toBeUndefined();
+
+      await click(element().querySelector('#settings .fixture-versions-button'));
+      http.expectOne('fixtures?fixture=test%2Fmoving-head').flush([{ uuid: 'test/moving-head~1', best: true }]);
+      await update();
+
+      (document.querySelector('popover-container .fixture-version-use') as HTMLElement).click();
+      await loadVersion('test/moving-head~1', { uuid: 'test/moving-head~1' }, json('test/moving-head'));
+      expect(poolFixture('head').profileUuid).toBe('test/moving-head~1');
+
+      // a profile from a file is of no fixture of the library
+      fixtureService.getProfileByUuid('test/moving-head~1').createdFromFile = true;
+      await update();
+      expect(element().querySelector('#settings .fixture-versions-button')).toBeNull();
+    });
+
+    it('has the AI improve the version of the fixture edited, for a user logged in, and changes the fixture to it', async () => {
+      parsOfVersion();
+      config.aiFixtures = true;
+      const loggedIn = spyOn(TestBed.inject(UserService), 'isLoggedIn').and.returnValue(false);
+      await open();
+
+      expect(pool.canUseAi).toBe(false);
+      loggedIn.and.returnValue(true);
+      expect(pool.canUseAi).toBe(true);
+
+      await click(element().querySelector('#settings .fixture-versions-button'));
+      http.expectOne('fixtures?fixture=test%2Frgb-par~1').flush([best, current]);
+      await update();
+
+      (document.querySelector('popover-container .fixture-version-improve') as HTMLElement).click();
+
+      expect(show.calls.mostRecent().args[0]).toBe(FixtureAiComponent);
+      expect(show.calls.mostRecent().args[1]).toEqual({
+        keyboard: false,
+        ignoreBackdropClick: true,
+        class: 'modal-lg',
+        initialState: { parent: best, exchange: true },
+      });
+
+      // the improved version, in the project already
+      const improved = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'test/rgb-par~5', origin: 'ai' });
+      project.fixtureProfiles.push(improved);
+      dialog.onClose.next({ profile: improved, mode: '6ch' });
+      await update();
+
+      expect(poolFixture('par-1').profileUuid).toBe('test/rgb-par~5');
+      expect(poolFixture('par-2').profileUuid).toBe('test/rgb-par~1');
+    });
+
+    it('creates a profile with the AI, next to the one from a file, and adds a fixture of it or of a version found', async () => {
+      await open();
+      expect(element().querySelector('.create-profile-ai')).toBeNull();
+
+      config.aiFixtures = true;
+      config.aiAccount = 'host';
+      await update();
+      expect(pool.canUseAi).toBe(true);
+
+      await click(element().querySelector('.create-profile-ai'));
+      expect(show.calls.mostRecent().args[1].initialState).toEqual({ parent: undefined, exchange: false });
+
+      const made = new FixtureProfile({ ...profile('chauvet-dj/colorband-pix'), uuid: 'chauvet-dj/colorband-pix~9', name: 'Made' });
+      project.fixtureProfiles.push(made);
+      dialog.onClose.next({ profile: made, mode: '3ch' });
+      await update();
+
+      expect(pool.selectedFixture.profileUuid).toBe('chauvet-dj/colorband-pix~9');
+      expect(pool.selectedFixture.modeShortName).toBe('3ch');
+
+      dialog.onClose.next({ uuid: 'test/moving-head', mode: '6ch' });
+      await update();
+      expect(pool.selectedFixture.profileUuid).toBe('test/moving-head');
+
+      dialog.onClose.next(undefined);
+      await update();
+      expect(pool.fixturePool.length).toBe(7);
+    });
+
+    it('offers no profile to the library while that is switched off', async () => {
+      const fromFile = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'acme/par-64', name: 'Par 64', createdFromFile: true });
+      project.fixtureProfiles = [...project.fixtureProfiles, fromFile];
+      config.loginAvailable = true;
+      await open();
+
+      expect(FixturePoolComponent.offerEnabled).toBe(false);
+      expect(pool.canOffer(fromFile)).toBe(false);
+      expect(element().querySelector('#settings .fixture-offer-button')).toBeNull();
+    });
+
+    it('offers a profile from a file to the library, and changes its fixtures to the version it became', async () => {
+      FixturePoolComponent.offerEnabled = true;
+      const fromFile = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'acme/par-64', name: 'Par 64', createdFromFile: true });
+      project.fixtureProfiles = [...project.fixtureProfiles, fromFile];
+      project.fixtures = project.fixtures.map((candidate) =>
+        candidate.profileUuid === 'test/rgb-par' ? new Fixture({ ...candidate, profileUuid: 'acme/par-64' }) : candidate
+      );
+      fixtureService.updateCachedFixtures();
+      await open();
+
+      // only for a user who can have an account
+      expect(pool.canOffer(fromFile)).toBe(false);
+      config.loginAvailable = true;
+      await update();
+      expect(pool.canOffer(fixtureService.getProfileByUuid('test/moving-head'))).toBe(false);
+
+      await click(element().querySelector('#settings .fixture-offer-button'));
+      expect(show.calls.mostRecent().args[0]).toBe(FixtureOfferComponent);
+      expect(show.calls.mostRecent().args[1].initialState).toEqual({ profile: fromFile });
+
+      const version = new FixtureProfile({ ...profile('test/rgb-par'), uuid: 'acme/par-64~1', origin: 'user' });
+      project.fixtureProfiles.push(version);
+      expect(pool.canOffer(version)).toBe(false);
+
+      dialog.onClose.next(version);
+      await update();
+
+      expect(poolFixture('par-1').profileUuid).toBe('acme/par-64~1');
+      expect(poolFixture('par-2').profileUuid).toBe('acme/par-64~1');
+      expect(poolFixture('par-1').modeShortName).toBe('6ch');
+      expect(poolFixture('head').profileUuid).toBe('test/moving-head');
+
+      dialog.onClose.next(undefined);
+      expect(poolFixture('par-1').profileUuid).toBe('acme/par-64~1');
+    });
   });
 });

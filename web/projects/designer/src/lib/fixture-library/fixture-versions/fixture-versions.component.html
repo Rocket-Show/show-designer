@@ -1,0 +1,51 @@
+<div class="fixture-versions">
+  @if (loading) {
+  <p class="text-center my-2"><i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i></p>
+  } @else if (failed) {
+  <p class="text-muted my-1">{{ 'designer.fixture-library.versions-failed' | translate }}</p>
+  } @else if (rows.length === 0) {
+  <p class="text-muted my-1 fixture-versions-none">{{ 'designer.fixture-library.versions-none' | translate }}</p>
+  } @else { @for (row of rows; track row.version.uuid) {
+
+  <div class="fixture-version" [class.fixture-version-current]="row.version.uuid === currentUuid">
+    <div class="d-flex align-items-center flex-wrap">
+      <strong class="mr-2">{{ row.version.created | date : 'yyyy-MM-dd' }}</strong>
+      @if (row.version.best) {
+      <span class="badge badge-primary mr-1">{{ 'designer.fixture-library.best' | translate }}</span>
+      } @if (row.version.uuid === currentUuid) {
+      <span class="badge badge-secondary mr-1">{{ 'designer.fixture-library.in-use' | translate }}</span>
+      } @if (row.version.hidden) {
+      <span class="badge badge-danger mr-1">{{ 'designer.fixture-library.hidden' | translate }}</span>
+      } @if (row.version.retired) {
+      <span class="badge badge-secondary mr-1">{{ 'designer.fixture-library.retired' | translate }}</span>
+      }
+    </div>
+    <lib-fixture-version-badges [version]="row.version"></lib-fixture-version-badges>
+    @if (row.modes.length > 0) {
+    <ul class="fixture-version-modes list-unstyled mb-0">
+      @for (mode of row.modes; track $index) {
+      <li>
+        {{ mode.name }} @if (mode.badge) {
+        <span class="fixture-mode-state fixture-state-{{ mode.badge.state }}">{{
+          mode.key | translate : { count: mode.badge.count }
+        }}</span>
+        }
+      </li>
+      }
+    </ul>
+    }
+    <div class="fixture-version-actions">
+      @if (useLabel && row.version.uuid !== currentUuid && !row.version.hidden) {
+
+      <button type="button" class="btn btn-primary btn-sm fixture-version-use" (click)="use.emit(row.version)">
+        {{ useLabel | translate }}
+      </button>
+      } @if (canImprove) {
+      <button type="button" class="btn btn-secondary btn-sm fixture-version-improve" (click)="improve.emit(row.version)">
+        <i class="fa fa-magic" aria-hidden="true"></i> {{ 'designer.fixture-library.improve' | translate }}
+      </button>
+      }
+    </div>
+  </div>
+  } }
+</div>

@@ -2,7 +2,9 @@ import { FixtureChannel } from './fixture-channel';
 import { FixtureMatrix } from './fixture-matrix';
 import { FixtureMode } from './fixture-mode';
 import { FixturePhysical } from './fixture-physical';
+import { FixtureManual, FixtureModeState, FixtureOrigin, FixtureVersion, FixtureVersionState } from './fixture-version';
 import { FixtureWheel } from './fixture-wheel';
+import { MaintenanceAction } from './maintenance';
 
 export enum FixtureCategory {
   Blinder = 'Blinder',
@@ -24,13 +26,38 @@ export enum FixtureCategory {
   'Barrel Scanner' = 'Barrel Scanner',
 }
 
-export class FixtureProfile {
+export class FixtureProfile implements FixtureVersion {
   uuid: string;
   name: string;
 
   // set to file, if the profile is not loaded from the backend
   source: string;
   createdFromFile = false;
+
+  // What the library tells about the version the profile is (see fixture-version), kept with the copy in the project.
+  // Where it comes from is its origin: the source above is something else. A profile from a file and the copy of a
+  // project older than the versions know nothing of it.
+  fixture: string;
+  origin: FixtureOrigin;
+  state: FixtureVersionState;
+  confirmations: number;
+  problems: number;
+  usage: number;
+  versions: number;
+  best: boolean;
+  bestUuid: string;
+  currentOfl: boolean;
+  hidden: boolean;
+  retired: boolean;
+  created: string;
+  parentUuid: string;
+  manual: FixtureManual;
+  modeStates: FixtureModeState[];
+
+  // What the fixture pool may ask the fixtures of this profile to do without asking the user first: they confirmed the
+  // channel and the range it sends on, which a profile of the AI or a user may have wrong (see FixturePoolComponent).
+  // Kept with the copy, so it asks once per project.
+  confirmedMaintenance: MaintenanceAction[] = [];
   manufacturerShortName: string;
   manufacturerName: string;
   categories: FixtureCategory[] = [];
@@ -93,6 +120,27 @@ export class FixtureProfile {
     }
     if (data.createdFromFile) {
       this.createdFromFile = data.createdFromFile;
+    }
+
+    this.fixture = data.fixture;
+    this.origin = data.origin;
+    this.state = data.state;
+    this.confirmations = data.confirmations;
+    this.problems = data.problems;
+    this.usage = data.usage;
+    this.versions = data.versions;
+    this.best = data.best;
+    this.bestUuid = data.bestUuid;
+    this.currentOfl = data.currentOfl;
+    this.hidden = data.hidden;
+    this.retired = data.retired;
+    this.created = data.created;
+    this.parentUuid = data.parentUuid;
+    this.manual = data.manual;
+    this.modeStates = data.modeStates;
+
+    if (Array.isArray(data.confirmedMaintenance)) {
+      this.confirmedMaintenance = data.confirmedMaintenance;
     }
   }
 }

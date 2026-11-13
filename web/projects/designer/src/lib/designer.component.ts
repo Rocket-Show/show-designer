@@ -43,6 +43,7 @@ import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
 import { LayoutService } from './services/layout.service';
 import { AiLooksService } from './services/ai-looks.service';
+import { UserDevicesComponent } from './user/user-devices/user-devices.component';
 
 @Component({
   selector: 'lib-designer',
@@ -107,6 +108,17 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   @Input()
   set aiLooks(value: boolean) {
     this.configService.aiLooks = value;
+  }
+
+  @Input()
+  set aiFixtures(value: boolean) {
+    this.configService.aiFixtures = value;
+  }
+
+  // the login of the designer, or the account of the host (see ConfigService.aiAccount)
+  @Input()
+  set aiAccount(value: 'designer' | 'host') {
+    this.configService.aiAccount = value || 'designer';
   }
 
   @Input()
@@ -396,6 +408,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   userRegister() {
     this.modalService.show(UserRegisterComponent, { keyboard: true, ignoreBackdropClick: false });
+  }
+
+  // the devices linked with the account of the user (online only: a device holds its own account)
+  userDevices() {
+    this.modalService.show(UserDevicesComponent, { keyboard: true, ignoreBackdropClick: false, class: 'modal-lg' });
   }
 
   projectImport() {

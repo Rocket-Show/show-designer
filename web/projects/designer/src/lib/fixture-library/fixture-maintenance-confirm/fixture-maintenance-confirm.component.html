@@ -1,0 +1,36 @@
+<div class="modal-header">
+  <h4 class="modal-title pull-left">{{ 'designer.fixture-maintenance.title-' + action | translate }}</h4>
+  <button type="button" class="close pull-right" [attr.aria-label]="'designer.misc.cancel' | translate" (click)="cancel()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <p>{{ 'designer.fixture-maintenance.intro-' + profile.origin | translate }}</p>
+  <dl class="row mb-0">
+    <dt class="col-sm-4">{{ 'designer.fixture-ai.channel' | translate }}</dt>
+    <dd class="col-sm-8 fixture-maintenance-channel">{{ channelName }}</dd>
+    <dt class="col-sm-4">{{ 'designer.fixture-maintenance.range' | translate }}</dt>
+    <dd class="col-sm-8 fixture-maintenance-range">
+      {{ range[0] }}–{{ range[1] }} @if (label) {
+      <span class="text-muted">({{ label }})</span>
+      }
+    </dd>
+    @if (loading) {
+    <dd class="col-sm-8 offset-sm-4"><i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i></dd>
+    } @else if (note) {
+    <dt class="col-sm-4">{{ 'designer.fixture-ai.quote' | translate }}</dt>
+    <dd class="col-sm-8 fixture-maintenance-quote">
+      <q>{{ note.quote }}</q> ({{ 'designer.fixture-maintenance.page' | translate : { page: note.page } }}) @if (!note.verified) {
+      <span class="badge badge-warning">{{ 'designer.fixture-ai.not-verified' | translate }}</span>
+      }
+    </dd>
+    }
+  </dl>
+  <p class="mt-3 mb-0">{{ 'designer.fixture-maintenance.question' | translate }}</p>
+</div>
+<div class="modal-footer">
+  <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">{{ 'designer.misc.cancel' | translate }}</a>
+  <button type="button" class="btn btn-primary fixture-maintenance-ok" (click)="ok()">
+    {{ 'designer.fixture-maintenance.ok-' + action | translate }}
+  </button>
+</div>

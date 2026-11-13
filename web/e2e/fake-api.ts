@@ -5,7 +5,9 @@ import { join } from 'path';
 // where the app served for the tests finds the API (web/src/environments/environment.e2e.ts)
 export const apiUrl = 'http://localhost:8080/api/';
 
-// a profile of the fixture library: the metadata the search lists (`fixtures`) and the profile itself (`fixture`)
+// a profile of the fixture library: the metadata the search lists (`fixtures`) and the profile itself (`fixture`). A
+// version of a fixture tells about itself as well (the VersionInfo of the API: origin, state, best, the states of its
+// modes, ...), with the plain uuid of its fixture.
 export interface LibraryProfile {
   uuid: string;
   name: string;
@@ -13,6 +15,9 @@ export interface LibraryProfile {
   manufacturerName: string;
   mainCategory: string;
   profile: any;
+  fixture?: string;
+  best?: boolean;
+  [field: string]: any;
 }
 
 // a request the designer sent to the API
@@ -21,7 +26,7 @@ export interface ApiRequest {
   // the script called, e.g. 'project'
   endpoint: string;
   params: { [name: string]: string };
-  // the fields of a form sent as the body (like $_POST of PHP), e.g. the credentials
+  // the fields of a form sent as the body (like $_POST of PHP), e.g. the credentials; of a file the name of the file
   form: { [name: string]: string };
   authorization: string | undefined;
   body: any;
@@ -103,6 +108,14 @@ export class FakeApi {
   aiDelayMillis = 0;
   private readonly aiRequests = new Map<string, number>();
 
+  // The profiles the AI makes from a manual (see show-designer-api/ai-fixtures.php in the spark repository): what the
+  // lookup finds in the library, and the profile, its version and its review the AI answers with
+  aiFixturesFound: any[] = [];
+  aiFixture: { version: any; profile: any; review: any } | undefined;
+
+  // the votes on the modes of the versions, by the uuid of the version, the mode and the user (see fixture-vote.php)
+  readonly votes = new Map<string, { good: boolean; comment?: string }>();
+
   // the endpoints which fail (e.g. 'GET project'), with the status and the error they answer
   private readonly failures = new Map<string, { status: number; error: string }>();
 
@@ -112,6 +125,22 @@ export class FakeApi {
   // let the library offer one more of the test profiles, e.g. addTestProfile('pixel-bar.json')
   addTestProfile(file: string) {
     this.library.push(testProfile(file, 'Test'));
+  }
+
+  // Let the library hold a test profile as a version of its fixture, e.g. addVersion('rgb-par.json', 2, { best: true }).
+  // The search lists the versions then, the plain uuid of the fixture still answers for older projects.
+  addVersion(file: string, id: number, info: { [field: string]: any }): LibraryProfile {
+    const profile = testProfile(file, 'Test');
+    const version = { ...profile, uuid: profile.uuid + '~' + id, fixture: profile.uuid, ...info };
+    const plain = this.library.find((entry) => entry.uuid === profile.uuid);
+
+    if (plain) {
+      plain.best = false;
+    }
+
+    this.library.push(version);
+
+    return version;
   }
 
   async attach(context: BrowserContext) {
@@ -197,8 +226,10 @@ export class FakeApi {
     } catch {
       body = text;
     }
-    const isForm = (request.headers()['content-type'] ?? '').startsWith('application/x-www-form-urlencoded');
-    const form = isForm && text ? Object.fromEntries(new URLSearchParams(text).entries()) : {};
+    const contentType = request.headers()['content-type'] ?? '';
+    const isForm = contentType.startsWith('application/x-www-form-urlencoded');
+    const form =
+      isForm && text ? Object.fromEntries(new URLSearchParams(text).entries()) : multipartForm(contentType, request.postDataBuffer());
     const authorization = request.headers()['authorization'];
     this.requests.push({ method: request.method(), endpoint, params, form, authorization, body });
 
@@ -278,14 +309,19 @@ export class FakeApi {
             .filter(([, stored]) => stored.active && stored.ownerEmail === userEmail)
             .map(([id, stored]) => ({ id: String(id), name: stored.object.name, roleAlias: 'manager' }))
         );
-      case 'GET fixtures':
-        return answer(
-          this.library
-            .filter((entry) => !params.uuid || entry.uuid === params.uuid)
-            .filter((entry) => !params.mainCategory || entry.mainCategory === params.mainCategory)
-            .sort((entry1, entry2) => (entry1.manufacturerName + entry1.name).localeCompare(entry2.manufacturerName + entry2.name))
-            .map(({ profile, ...metadata }) => metadata)
-        );
+      case 'GET fixtures': {
+        // all versions of the fixture of a version, the best one first; else the best version of each fixture
+        const fixtureOf = (uuid: string) => this.library.find((entry) => entry.uuid === uuid)?.fixture ?? uuid;
+        const versions = params.fixture
+          ? this.library
+              .filter((entry) => (entry.fixture ?? entry.uuid) === fixtureOf(params.fixture))
+              .sort((entry1, entry2) => Number(!!entry2.best) - Number(!!entry1.best))
+          : this.library
+              .filter((entry) => (params.uuid ? entry.uuid === params.uuid : entry.best !== false))
+              .filter((entry) => !params.mainCategory || entry.mainCategory === params.mainCategory)
+              .sort((entry1, entry2) => (entry1.manufacturerName + entry1.name).localeCompare(entry2.manufacturerName + entry2.name));
+        return answer(versions.map(({ profile, ...metadata }) => metadata));
+      }
       case 'GET fixture':
         return answer(this.library.find((entry) => entry.uuid === params.uuid)?.profile ?? null);
       case 'GET manufacturer':
@@ -339,8 +375,90 @@ export class FakeApi {
         const looks = this.aiLooks[Math.min(used, this.aiLooks.length - 1)];
         return answer({ looks, requestsLast24Hours: used + 1, requestsPerUserPerDay: this.aiRequestsPerUserPerDay });
       }
+      case 'GET fixture-vote':
+      case 'POST fixture-vote':
+      case 'DELETE fixture-vote': {
+        const uuid = body?.uuid ?? params.uuid;
+        const version = this.library.find((entry) => entry.uuid === uuid);
+        if (request.method() !== 'GET' && !userEmail) {
+          return error('unauthorized', 401);
+        }
+        if (!version) {
+          return error('unknown-version', 404);
+        }
+        if (request.method() === 'POST') {
+          this.votes.set([uuid, body.mode, userEmail].join('/'), { good: body.good, comment: body.comment });
+        } else if (request.method() === 'DELETE') {
+          this.votes.delete([uuid, params.mode, userEmail].join('/'));
+        }
+        // the votes are counted at once, a mode is confirmed by a good vote here (two on the server)
+        const modes = (version.modeStates ?? []).map((mode: any) => {
+          const votes = [...this.votes.entries()]
+            .filter(([key]) => key.startsWith(uuid + '/' + mode.shortName + '/'))
+            .map(([, vote]) => vote);
+          const good = mode.good + votes.filter((vote) => vote.good).length;
+          const bad = mode.bad + votes.filter((vote) => !vote.good).length;
+          return {
+            shortName: mode.shortName,
+            hash: mode.hash,
+            state: good > bad ? 'confirmed' : bad > good ? 'problem' : mode.state,
+            good,
+            bad,
+            comments: votes.filter((vote) => !vote.good && vote.comment).map((vote) => vote.comment),
+            myVote: (userEmail && this.votes.get([uuid, mode.shortName, userEmail].join('/'))) || null,
+          };
+        });
+        return answer({ modes });
+      }
+      case 'GET ai-fixtures':
+      case 'POST ai-fixtures': {
+        if (params.review !== undefined) {
+          return answer({ review: this.aiFixture?.version.uuid === params.review ? this.aiFixture.review : null });
+        }
+        if (!userEmail) {
+          return error('unauthorized', 401);
+        }
+        const usage = { requestsLast24Hours: this.aiRequests.get(userEmail) || 0, requestsPerUserPerDay: this.aiRequestsPerUserPerDay };
+        if (request.method() === 'GET') {
+          return answer({ available: this.aiAvailable, ...usage, maxManualBytes: 33554432, maxInputTokens: 400000 });
+        }
+        if (form.action === 'lookup') {
+          return answer({ versions: this.aiFixturesFound, manualKnown: false });
+        }
+        if (form.action !== 'generate' || !form.model || !this.aiFixture) {
+          return error('wrong-parameters', 400);
+        }
+        this.aiRequests.set(userEmail, usage.requestsLast24Hours + 1);
+        return answer({
+          ...this.aiFixture,
+          requestsLast24Hours: usage.requestsLast24Hours + 1,
+          requestsPerUserPerDay: usage.requestsPerUserPerDay,
+        });
+      }
       default:
         return error('not-found', 404);
     }
   }
+}
+
+// The fields of a form sent as multipart/form-data (like $_POST of PHP, a file by its name), e.g. a manual for the AI
+function multipartForm(contentType: string, body: Buffer | null): { [name: string]: string } {
+  const boundary = /boundary=(.+)$/.exec(contentType)?.[1];
+  const form: { [name: string]: string } = {};
+
+  if (!boundary || !body) {
+    return form;
+  }
+
+  for (const part of body.toString('latin1').split('--' + boundary)) {
+    const [headers, ...content] = part.split('\r\n\r\n');
+    const name = /name="([^"]*)"/.exec(headers)?.[1];
+    const file = /filename="([^"]*)"/.exec(headers)?.[1];
+
+    if (name !== undefined) {
+      form[name] = file ?? content.join('\r\n\r\n').replace(/\r\n$/, '');
+    }
+  }
+
+  return form;
 }
