@@ -1052,6 +1052,17 @@
         "ai-timeout": "Die Antwort kam zu spät. Das Profil wird vielleicht trotzdem erstellt: schlage das Fixture in ein paar Minuten noch einmal nach.",
         "ai-failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
       }
+    },
+    "fixture-maintenance": {
+      "title-reset": "Fixture zurücksetzen?",
+      "title-lamp-on": "Lampe einschalten?",
+      "intro-ai": "Die KI hat dieses Profil erstellt, es kann den Kanal oder den Bereich falsch haben. Ein falscher Wert könnte am echten Fixture etwas anderes tun. Das wird gesendet:",
+      "intro-user": "Ein Benutzer hat dieses Profil erstellt, es kann den Kanal oder den Bereich falsch haben. Ein falscher Wert könnte am echten Fixture etwas anderes tun. Das wird gesendet:",
+      "range": "Bereich",
+      "page": "Seite {{page}}",
+      "question": "Stimmt das mit dem Handbuch deines Fixtures überein? Du wirst in diesem Projekt nur einmal gefragt.",
+      "ok-reset": "Zurücksetzen",
+      "ok-lamp-on": "Lampe einschalten"
     }
   }
 }

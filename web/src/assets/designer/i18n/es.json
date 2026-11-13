@@ -1051,6 +1051,17 @@
         "ai-timeout": "La respuesta tardó demasiado. Puede que el perfil se cree de todos modos: vuelve a buscar el fixture en unos minutos.",
         "ai-failed": "Algo salió mal. Inténtalo de nuevo."
       }
+    },
+    "fixture-maintenance": {
+      "title-reset": "¿Reiniciar el fixture?",
+      "title-lamp-on": "¿Encender la lámpara?",
+      "intro-ai": "La IA creó este perfil, puede tener mal el canal o el rango. Un valor equivocado podría hacer otra cosa en el fixture real. Esto es lo que se envía:",
+      "intro-user": "Un usuario creó este perfil, puede tener mal el canal o el rango. Un valor equivocado podría hacer otra cosa en el fixture real. Esto es lo que se envía:",
+      "range": "Rango",
+      "page": "página {{page}}",
+      "question": "¿Coincide con el manual de tu fixture? Solo se te pregunta una vez en este proyecto.",
+      "ok-reset": "Reiniciar",
+      "ok-lamp-on": "Encender la lámpara"
     }
   }
 }

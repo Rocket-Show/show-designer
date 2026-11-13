@@ -1051,6 +1051,17 @@
         "ai-timeout": "La risposta ha impiegato troppo tempo. Il profilo potrebbe essere creato comunque: cerca di nuovo il fixture tra qualche minuto.",
         "ai-failed": "Qualcosa è andato storto. Riprova."
       }
+    },
+    "fixture-maintenance": {
+      "title-reset": "Resettare il fixture?",
+      "title-lamp-on": "Accendere la lampada?",
+      "intro-ai": "L'IA ha creato questo profilo, potrebbe avere il canale o l'intervallo sbagliato. Un valore sbagliato potrebbe fare altro sul fixture reale. Ecco cosa viene inviato:",
+      "intro-user": "Un utente ha creato questo profilo, potrebbe avere il canale o l'intervallo sbagliato. Un valore sbagliato potrebbe fare altro sul fixture reale. Ecco cosa viene inviato:",
+      "range": "Intervallo",
+      "page": "pagina {{page}}",
+      "question": "Corrisponde al manuale del tuo fixture? Te lo chiediamo solo una volta in questo progetto.",
+      "ok-reset": "Resetta",
+      "ok-lamp-on": "Accendi la lampada"
     }
   }
 }

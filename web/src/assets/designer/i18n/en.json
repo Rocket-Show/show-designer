@@ -1051,6 +1051,17 @@
         "ai-timeout": "The answer took too long to arrive. The profile may still be made: look the fixture up again in a few minutes.",
         "ai-failed": "Something went wrong. Please try again."
       }
+    },
+    "fixture-maintenance": {
+      "title-reset": "Reset the fixture?",
+      "title-lamp-on": "Switch the lamp on?",
+      "intro-ai": "The AI made this profile, it may have the channel or the range wrong. A wrong value could do something else on the real fixture. This is what is sent:",
+      "intro-user": "A user made this profile, it may have the channel or the range wrong. A wrong value could do something else on the real fixture. This is what is sent:",
+      "range": "Range",
+      "page": "page {{page}}",
+      "question": "Does this match the manual of your fixture? You are only asked once in this project.",
+      "ok-reset": "Reset",
+      "ok-lamp-on": "Switch the lamp on"
     }
   }
 }

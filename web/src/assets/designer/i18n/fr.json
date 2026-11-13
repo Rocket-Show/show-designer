@@ -1051,6 +1051,17 @@
         "ai-timeout": "La réponse a mis trop de temps à arriver. Le profil sera peut-être quand même créé : recherchez le fixture à nouveau dans quelques minutes.",
         "ai-failed": "Quelque chose s'est mal passé. Réessayez."
       }
+    },
+    "fixture-maintenance": {
+      "title-reset": "Réinitialiser le fixture ?",
+      "title-lamp-on": "Allumer la lampe ?",
+      "intro-ai": "L'IA a créé ce profil, le canal ou la plage peuvent être faux. Une valeur fausse pourrait faire autre chose sur le vrai fixture. Voici ce qui est envoyé :",
+      "intro-user": "Un utilisateur a créé ce profil, le canal ou la plage peuvent être faux. Une valeur fausse pourrait faire autre chose sur le vrai fixture. Voici ce qui est envoyé :",
+      "range": "Plage",
+      "page": "page {{page}}",
+      "question": "Cela correspond-il au manuel de votre fixture ? La question ne vous est posée qu'une fois dans ce projet.",
+      "ok-reset": "Réinitialiser",
+      "ok-lamp-on": "Allumer la lampe"
     }
   }
 }
