@@ -428,7 +428,8 @@
       "reset": "Reset",
       "reset-hint": "Demande à l’appareil sur scène de se réinitialiser, p. ex. une lyre qui a perdu sa position",
       "lamp-on": "Lampe allumée",
-      "lamp-on-hint": "Allume la lampe de l’appareil sur scène"
+      "lamp-on-hint": "Allume la lampe de l’appareil sur scène",
+      "profile-file-version-mark": "La clé du fabricant ou du fixture de ce fichier contient un \"~\", que seuls les profils de la bibliothèque ont. Veuillez changer la clé dans le fichier."
     },
     "dmx": {
       "title": "Canaux DMX",

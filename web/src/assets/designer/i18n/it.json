@@ -428,7 +428,8 @@
       "reset": "Reset",
       "reset-hint": "Chiede all’apparecchio sul palco di resettarsi, ad es. una testa mobile che ha perso la posizione",
       "lamp-on": "Lampada accesa",
-      "lamp-on-hint": "Accende la lampada dell’apparecchio sul palco"
+      "lamp-on-hint": "Accende la lampada dell’apparecchio sul palco",
+      "profile-file-version-mark": "La chiave del produttore o del fixture di questo file contiene una \"~\", che hanno solo i profili della libreria. Per favore cambia la chiave nel file."
     },
     "dmx": {
       "title": "Canali DMX",

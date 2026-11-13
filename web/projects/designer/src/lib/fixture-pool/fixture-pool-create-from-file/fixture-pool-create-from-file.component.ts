@@ -6,6 +6,7 @@ import { ToastrService } from 'ngx-toastr';
 import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FixtureProfile } from '../../models/fixture-profile';
+import { hasVersionMark } from '../../models/fixture-version';
 import { FixtureService } from '../../services/fixture.service';
 import { ProjectService } from '../../services/project.service';
 
@@ -46,7 +47,11 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
           } catch (error) {
             json = undefined;
           }
-          if (
+          if (hasVersionMark(json)) {
+            // A uuid of a file is never taken for the one of a version of the library: the library hands out the
+            // uuids with a "~" (see fixture-version)
+            this.showError('designer.fixture-pool.profile-file-version-mark');
+          } else if (
             typeof json?.['$schema'] === 'string' &&
             json['$schema'].match(/open-fixture-library\/(?:schema-(.*?)|master)\/schemas\/fixture\.json/)
           ) {
@@ -73,12 +78,7 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
             this.onClose.next(profile);
             this.bsModalRef.hide();
           } else {
-            // show an error toast
-            const msg = 'designer.fixture-pool.invalid-fixture-profile-file';
-            const title = 'designer.misc.toast-upload-error-title';
-            this.translateService.get([msg, title]).subscribe((result) => {
-              this.toastrService.error(result[msg], result[title], { timeOut: 0, extendedTimeOut: 0, enableHtml: true });
-            });
+            this.showError('designer.fixture-pool.invalid-fixture-profile-file');
           }
 
           done('noerr');
@@ -100,6 +100,15 @@ export class FixturePoolCreateFromFileComponent implements OnInit {
         })
       )
       .subscribe();
+  }
+
+  // an error toast, which stays until it is closed
+  private showError(msg: string) {
+    const title = 'designer.misc.toast-upload-error-title';
+
+    this.translateService.get([msg, title]).subscribe((result) => {
+      this.toastrService.error(result[msg], result[title], { timeOut: 0, extendedTimeOut: 0, enableHtml: true });
+    });
   }
 
   public onUploadError(args: any) {

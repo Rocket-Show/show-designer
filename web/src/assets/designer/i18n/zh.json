@@ -428,7 +428,8 @@
       "reset": "复位",
       "reset-hint": "让舞台上的灯具复位，例如丢失了位置的摇头灯",
       "lamp-on": "开灯泡",
-      "lamp-on-hint": "打开舞台上灯具的灯泡"
+      "lamp-on-hint": "打开舞台上灯具的灯泡",
+      "profile-file-version-mark": "此文件的制造商或灯具键包含\"~\"，只有库中的配置文件才有。请修改文件中的键。"
     },
     "dmx": {
       "title": "DMX 通道",

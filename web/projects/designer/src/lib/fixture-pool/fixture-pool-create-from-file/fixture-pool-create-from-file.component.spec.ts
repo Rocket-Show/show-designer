@@ -81,6 +81,17 @@ describe('FixturePoolCreateFromFileComponent', () => {
     expect(error).not.toHaveBeenCalled();
   });
 
+  it('refuses a file whose keys hold a "~", which only the versions of the library have', async () => {
+    const file = { ...JSON.parse(profileFile()), fixtureKey: 'par-64~2' };
+
+    expect(await drop(JSON.stringify(file))).toBe('noerr');
+
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.calls.argsFor(0)[0]).toBe('designer.fixture-pool.profile-file-version-mark');
+    expect(project.fixtureProfiles).toEqual([]);
+    expect(closed).toEqual([]);
+  });
+
   it('takes the file of a released schema as well', async () => {
     await drop(
       profileFile('https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/schema-12.1.0/schemas/fixture.json')

@@ -428,7 +428,8 @@
       "reset": "Reset",
       "reset-hint": "Asks the fixture on stage to reset itself, e.g. a moving head which lost its position",
       "lamp-on": "Lamp on",
-      "lamp-on-hint": "Switches the lamp of the fixture on stage on"
+      "lamp-on-hint": "Switches the lamp of the fixture on stage on",
+      "profile-file-version-mark": "The manufacturer or fixture key of this file contains a \"~\", which only the profiles of the library have. Please change the key in the file."
     },
     "dmx": {
       "title": "DMX channels",

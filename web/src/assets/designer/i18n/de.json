@@ -429,7 +429,8 @@
       "reset": "Reset",
       "reset-hint": "Lässt das Gerät auf der Bühne einen Reset machen, z. B. ein Moving Head, der seine Position verloren hat",
       "lamp-on": "Lampe an",
-      "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein"
+      "lamp-on-hint": "Schaltet die Lampe des Geräts auf der Bühne ein",
+      "profile-file-version-mark": "Der Hersteller- oder Fixture-Schlüssel dieser Datei enthält ein \"~\", das nur die Profile der Bibliothek haben. Bitte ändere den Schlüssel in der Datei."
     },
     "dmx": {
       "title": "DMX-Kanäle",
