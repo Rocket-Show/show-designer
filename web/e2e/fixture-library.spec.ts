@@ -32,6 +32,15 @@ test.describe('The fixture library', () => {
     await expect(searchRow).toContainText('not confirmed yet');
     await expect(searchRow).toContainText('2 versions');
 
+    // the versions of the fixture open in front of the fixture pool, and can be clicked
+    await searchRow.getByText('2 versions').click();
+    const versions = designer.page.locator('.fixture-library-popover');
+    await expect(versions).toBeVisible();
+    await expect(versions.getByRole('button').first()).toBeVisible();
+    await versions.getByRole('button').first().click({ trial: true });
+    await designer.page.keyboard.press('Escape');
+    await searchRow.click({ position: { x: 5, y: 5 } });
+
     const better = 'There is a better version, which does this mode differently.';
     await designer.row(pool, 'Par right').getByRole('button', { name: better }).click();
     await expect(designer.row(pool, 'Par right').getByRole('button', { name: better })).toBeHidden();
