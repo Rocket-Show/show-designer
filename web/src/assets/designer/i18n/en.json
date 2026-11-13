@@ -1102,6 +1102,10 @@
       "unlink-warning": "Unlink this device from your account? It can't use the AI or vote until it is linked again.",
       "log-in": "Please log in again.",
       "failed": "The devices could not be loaded. Please try again."
+    },
+    "device": {
+      "api-unreachable": "This device can't reach the online designer at rocketshow.net. Please check its internet connection.",
+      "api-timeout": "The online designer took too long to answer this device. Please try again in a moment."
     }
   }
 }

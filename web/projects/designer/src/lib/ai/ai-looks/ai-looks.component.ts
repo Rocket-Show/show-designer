@@ -16,6 +16,7 @@ import {
   defaultAiSettings,
 } from '../../models/ai-looks';
 import { AiCompiled } from '../../models/ai-looks-compiler';
+import { getForwardingErrorKey } from '../../models/api-error';
 import { builtInPixelPalettes, pixelPaletteCss } from '../../models/pixel-palettes';
 import { Scene } from '../../models/scene';
 import { AiLooksService } from '../../services/ai-looks.service';
@@ -352,6 +353,12 @@ export class AiLooksComponent implements OnInit, OnDestroy {
     if (this.userEnsureLoginService.isRefused(error)) {
       // the session ran out and the user has to log in again, or the device isn't linked with an account
       this.errorKey = this.userEnsureLoginService.refused('designer.ai.error.unauthorized');
+      return;
+    }
+
+    // a device couldn't forward the request to the online designer
+    if (getForwardingErrorKey(error)) {
+      this.errorKey = getForwardingErrorKey(error);
       return;
     }
 

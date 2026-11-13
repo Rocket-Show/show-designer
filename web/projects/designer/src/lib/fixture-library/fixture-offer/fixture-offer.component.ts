@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
+import { getForwardingErrorKey } from '../../models/api-error';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { FixtureLibraryService, FixtureManufacturer } from '../../services/fixture-library.service';
 import { FixtureService } from '../../services/fixture.service';
@@ -134,7 +135,7 @@ export class FixtureOfferComponent implements OnInit {
             this.errorKey = 'designer.fixture-offer.invalid-profile';
             this.errors = Array.isArray(error.error.errors) ? error.error.errors : [];
           } else {
-            this.errorKey = 'designer.fixture-offer.failed';
+            this.errorKey = getForwardingErrorKey(error) || 'designer.fixture-offer.failed';
           }
         },
       });

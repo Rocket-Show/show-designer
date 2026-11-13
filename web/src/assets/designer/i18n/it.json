@@ -1102,6 +1102,10 @@
       "unlink-warning": "Scollegare questo dispositivo dal tuo account? Non potrà più usare l'IA né votare finché non sarà collegato di nuovo.",
       "log-in": "Accedi di nuovo.",
       "failed": "Non è stato possibile caricare i dispositivi. Riprova."
+    },
+    "device": {
+      "api-unreachable": "Questo dispositivo non riesce a raggiungere il designer online su rocketshow.net. Controlla la sua connessione a internet.",
+      "api-timeout": "Il designer online ha impiegato troppo tempo a rispondere a questo dispositivo. Riprova tra poco."
     }
   }
 }

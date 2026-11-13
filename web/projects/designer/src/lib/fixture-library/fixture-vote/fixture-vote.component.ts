@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { Observable } from 'rxjs';
+import { getForwardingErrorKey } from '../../models/api-error';
 import { FixtureProfile } from '../../models/fixture-profile';
 import { isVersionUuid } from '../../models/fixture-version';
 import { ConfigService } from '../../services/config.service';
@@ -92,10 +93,10 @@ export class FixtureVoteComponent {
           this.show(votes);
         }
       },
-      error: () => {
+      error: (error) => {
         if (profile === this._profile && mode === this._mode) {
           this.loading = false;
-          this.errorKey = 'designer.fixture-library.vote-failed';
+          this.errorKey = getForwardingErrorKey(error) || 'designer.fixture-library.vote-failed';
         }
       },
     });
@@ -159,7 +160,7 @@ export class FixtureVoteComponent {
           this.sending = false;
           this.errorKey = this.userEnsureLoginService.isRefused(error)
             ? this.userEnsureLoginService.refused('designer.fixture-library.vote-log-in')
-            : 'designer.fixture-library.vote-failed';
+            : getForwardingErrorKey(error) || 'designer.fixture-library.vote-failed';
         },
       });
     });

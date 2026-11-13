@@ -123,8 +123,13 @@ export function getAiFixturesError(error: any): AiFixturesError {
     return { key: errorPrefix + code };
   }
 
-  // a web server on the way gave up waiting, the profile may still be made
-  if (error?.status === 504) {
+  // a device can't forward the request to the online designer
+  if (code === 'api-unreachable') {
+    return { key: 'designer.device.api-unreachable' };
+  }
+
+  // a web server on the way, or the device forwarding the request, gave up waiting: the profile may still be made
+  if (code === 'api-timeout' || error?.status === 504) {
     return { key: errorPrefix + 'ai-timeout' };
   }
 

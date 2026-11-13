@@ -178,14 +178,24 @@ describe('FixtureVoteComponent', () => {
     fixture.detectChanges();
     expect(component.errorKey).toBe('designer.fixture-library.vote-failed');
     expect(element().querySelector('.fixture-vote-error')).not.toBeNull();
+
+    // a device which gave up waiting for the online designer
+    library.vote.and.returnValue(throwError(new HttpErrorResponse({ status: 504, error: { error: 'api-timeout' } })));
+    component.voteGood();
+    expect(component.errorKey).toBe('designer.device.api-timeout');
   });
 
-  it('says so when the votes could not be loaded', () => {
+  it('says so when the votes could not be loaded, also by a device which can not reach the online designer', () => {
     library.getVotes.and.returnValue(throwError(new Error('offline')));
     show(profile, '8ch');
 
     expect(component.loading).toBe(false);
     expect(component.errorKey).toBe('designer.fixture-library.vote-failed');
+
+    library.getVotes.and.returnValue(throwError(new HttpErrorResponse({ status: 502, error: { error: 'api-unreachable' } })));
+    show(new FixtureProfile({ uuid: 'acme/par~3' }), '8ch');
+
+    expect(component.errorKey).toBe('designer.device.api-unreachable');
   });
 
   it('leaves the answer of a fixture which is not shown anymore aside', () => {

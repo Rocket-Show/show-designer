@@ -187,9 +187,14 @@ describe('FixtureOfferComponent', () => {
     component.offer();
     expect(component.errorKey).toBe('designer.account.link-device');
 
+    library.offer.and.returnValue(throwError(new HttpErrorResponse({ status: 502, error: { error: 'api-unreachable' } })));
+    component.offer();
+    expect(component.errorKey).toBe('designer.device.api-unreachable');
+
     library.offer.and.returnValue(throwError(new HttpErrorResponse({ status: 500, error: 'oops' })));
     component.offer();
     expect(component.errorKey).toBe('designer.fixture-offer.failed');
+
     expect(closed).toEqual([]);
   });
 

@@ -41,6 +41,11 @@ describe('AI fixture profiles', () => {
       }
 
       expect(getAiFixturesError(httpError(504, 'Gateway Timeout'))).toEqual({ key: prefix + 'ai-timeout' });
+
+      // a device which can't reach the online designer, or gave up waiting for it
+      expect(getAiFixturesError(httpError(502, { error: 'api-unreachable' }))).toEqual({ key: 'designer.device.api-unreachable' });
+      expect(getAiFixturesError(httpError(504, { error: 'api-timeout' }))).toEqual({ key: prefix + 'ai-timeout' });
+
       expect(getAiFixturesError(httpError(502, { error: 'something-new' }))).toEqual({ key: prefix + 'ai-failed' });
       expect(getAiFixturesError(new Error('broken'))).toEqual({ key: prefix + 'ai-failed' });
       expect(getAiFixturesError(undefined)).toEqual({ key: prefix + 'ai-failed' });

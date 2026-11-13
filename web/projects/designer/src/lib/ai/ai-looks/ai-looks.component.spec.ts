@@ -415,6 +415,10 @@ describe('AiLooksComponent', () => {
     const cases: [any, string][] = [
       [httpError(429, { error: 'ai-user-limit-reached' }), 'designer.ai.error.ai-user-limit-reached'],
       [httpError(503, { error: 'ai-busy' }), 'designer.ai.error.ai-busy'],
+      // (a device which can't forward the request to the online designer)
+      [httpError(502, { error: 'api-unreachable' }), 'designer.device.api-unreachable'],
+      [httpError(504, { error: 'api-timeout' }), 'designer.device.api-timeout'],
+
       [httpError(502, { error: 'something-new' }), 'designer.ai.error.ai-failed'],
       [httpError(0, 'offline'), 'designer.ai.error.ai-failed'],
       [new Error('broken'), 'designer.ai.error.ai-failed'],

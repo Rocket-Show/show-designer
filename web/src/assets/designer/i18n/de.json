@@ -1103,6 +1103,10 @@
       "unlink-warning": "Dieses Gerät von deinem Konto trennen? Es kann die KI nicht mehr verwenden und nicht mehr bewerten, bis es wieder verknüpft wird.",
       "log-in": "Bitte melde dich erneut an.",
       "failed": "Die Geräte konnten nicht geladen werden. Bitte versuche es erneut."
+    },
+    "device": {
+      "api-unreachable": "Dieses Gerät erreicht den Online-Designer auf rocketshow.net nicht. Bitte prüfe seine Internetverbindung.",
+      "api-timeout": "Der Online-Designer hat diesem Gerät zu spät geantwortet. Bitte versuche es gleich noch einmal."
     }
   }
 }
