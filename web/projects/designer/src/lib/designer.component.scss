@@ -1023,6 +1023,58 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   }
 }
 
+// "Add missing profile": the ways to add a profile the library doesn't have, one below the other with a line on what
+// each does, the AI first
+.popover.add-profile-popover {
+  width: 22rem;
+
+  .popover-body {
+    padding: $sd-space-2;
+  }
+}
+
+.add-profile-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: $sd-space-2;
+  width: 100%;
+  padding: $sd-space-2;
+  border: 1px solid transparent;
+  text-align: left;
+  white-space: normal;
+  font-weight: 500;
+
+  & + & {
+    margin-top: $sd-space-2;
+  }
+
+  // the other ways stand out from the popover as buttons as well
+  &.btn-secondary {
+    background-color: $sd-surface-2;
+    border-color: $sd-border-strong;
+    color: $sd-text;
+
+    &:hover {
+      background-color: $sd-surface-4;
+    }
+  }
+
+  // the same width for every icon, so the texts start on one line
+  .fa {
+    flex: 0 0 1.25em;
+    width: 1.25em;
+    margin-top: 0.1875rem;
+    text-align: center;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.125rem;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+}
+
 .popover-header {
   background-color: $sd-surface-4;
   border-bottom-color: $sd-border-strong;

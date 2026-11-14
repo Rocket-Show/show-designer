@@ -647,7 +647,9 @@ describe('FixturePoolComponent', () => {
     it('adds a fixture from a profile file into the folder of the fixture edited', async () => {
       await open();
 
-      await click(element().querySelector('.col-md-6 > .row button.btn-secondary'));
+      await click(element().querySelector('.add-profile'));
+      (document.querySelector('popover-container .add-profile-file') as HTMLElement).click();
+      await update();
 
       expect(show.calls.mostRecent().args[0]).toBe(FixturePoolCreateFromFileComponent);
 
@@ -1917,17 +1919,38 @@ describe('FixturePoolComponent', () => {
       expect(poolFixture('par-2').profileUuid).toBe('test/rgb-par~1');
     });
 
-    it('creates a profile with the AI, next to the one from a file, and adds a fixture of it or of a version found', async () => {
+    it('adds a missing profile from a file, or from the editor of the Open Fixture Library, where there is no AI', async () => {
       await open();
-      expect(element().querySelector('.create-profile-ai')).toBeNull();
+      expect(element().querySelector('.add-profile').classList).toContain('btn-primary');
 
+      await click(element().querySelector('.add-profile'));
+      expect(document.querySelector('popover-container .add-profile-ai')).toBeNull();
+      expect(document.querySelector('popover-container .add-profile-file').classList).toContain('btn-primary');
+      expect(document.querySelector('popover-container .add-profile-ofl').getAttribute('href')).toBe(
+        'https://open-fixture-library.org/fixture-editor'
+      );
+
+      (document.querySelector('popover-container .add-profile-file') as HTMLElement).click();
+      await update();
+      expect(show.calls.mostRecent().args[0]).toBe(FixturePoolCreateFromFileComponent);
+      expect(document.querySelector('popover-container')).toBeNull();
+    });
+
+    it('creates a missing profile with the AI, the first choice, and adds a fixture of it or of a version found', async () => {
       config.aiFixtures = true;
       config.aiAccount = 'host';
-      await update();
+      await open();
       expect(pool.canUseAi).toBe(true);
 
-      await click(element().querySelector('.create-profile-ai'));
+      await click(element().querySelector('.add-profile'));
+      const choices = Array.from(document.querySelectorAll('popover-container .add-profile-choice'));
+      expect(choices.map((choice) => choice.classList.contains('add-profile-ai'))).toEqual([true, false, false]);
+      expect(choices.map((choice) => choice.classList.contains('btn-primary'))).toEqual([true, false, false]);
+
+      (choices[0] as HTMLElement).click();
+      await update();
       expect(show.calls.mostRecent().args[1].initialState).toEqual({ parent: undefined, exchange: false });
+      expect(document.querySelector('popover-container')).toBeNull();
 
       const made = new FixtureProfile({ ...profile('chauvet-dj/colorband-pix'), uuid: 'chauvet-dj/colorband-pix~9', name: 'Made' });
       project.fixtureProfiles.push(made);

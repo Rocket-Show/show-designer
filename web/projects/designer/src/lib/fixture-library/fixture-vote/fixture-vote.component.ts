@@ -10,7 +10,7 @@ import { UserEnsureLoginService } from '../../services/user-ensure-login.service
 // The votes on the mode a fixture of the project is used in (see docs/fixture-library.md, section 11): whether it works
 // with the real fixture, and what is wrong with it if not. A vote counts for every version having the mode unchanged.
 // Only a logged in account votes (online, or on a device linked with one), and only on a version of the library: a
-// copy with a plain uuid (of an older project, or of a profile from a file) is of no version.
+// copy with a plain uuid (of an older project, or of a profile from a file) is of no version, and shows nothing.
 @Component({
   selector: 'lib-fixture-vote',
   templateUrl: './fixture-vote.component.html',

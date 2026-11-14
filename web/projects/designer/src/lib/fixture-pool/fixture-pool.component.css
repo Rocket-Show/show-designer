@@ -143,6 +143,27 @@ lib-tree,
   height: 240px;
 }
 
+/* below the profiles: where they come from on the left, the ways to add a missing one on the right */
+.profiles-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2);
+  margin-top: var(--sd-space-2);
+}
+
+/* the universe of the channel map, on the line of the search next to it */
+.universe-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.universe-row .input-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .profile-library,
 .fixture-type-library {
   display: flex;

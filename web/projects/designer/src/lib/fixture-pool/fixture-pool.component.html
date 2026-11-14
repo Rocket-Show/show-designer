@@ -103,22 +103,13 @@
           </div>
         </div>
       </div>
-      <div>
-        <p class="d-inline-block mb-0 mt-2">
-          Powered by the <a href="https://open-fixture-library.org/" target="_blank">Open Fixture Library</a>
-        </p>
-        <a
-          class="mt-2 btn btn-secondary btn-sm float-right"
-          href="https://open-fixture-library.org/fixture-editor"
-          target="_blank"
-          role="button"
-        >
-          <i class="fa fa-file-o" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
-        </a>
+      <!-- the end of the list: where the profiles come from, and the ways to add one the library doesn't have -->
+      <div class="profiles-footer">
+        <p class="mb-0 mr-auto">Powered by the <a href="https://open-fixture-library.org/" target="_blank">Open Fixture Library</a></p>
         @if (configService.localProfiles) {
         <button
           type="button"
-          class="mr-2 mt-2 btn btn-secondary btn-sm float-right"
+          class="btn btn-secondary btn-sm update-profiles"
           (click)="updateProfiles(); (false)"
           [disabled]="updatingProfiles"
           role="button"
@@ -131,49 +122,88 @@
           {{ 'designer.fixture-pool.update-profiles' | translate }}
         </button>
         }
+        <!-- a profile the library doesn't have: by the AI from the manual (the first choice), from a file, or made in
+             the editor of the Open Fixture Library -->
+        <button
+          type="button"
+          class="btn btn-primary btn-sm add-profile"
+          [popover]="addProfileChoices"
+          #addProfilePopover="bs-popover"
+          containerClass="fixture-library-popover add-profile-popover"
+          container="body"
+          placement="bottom"
+          [adaptivePosition]="false"
+          [outsideClick]="true"
+        >
+          <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
+        </button>
+        <ng-template #addProfileChoices>
+          @if (configService.aiFixtures) {
+          <button
+            type="button"
+            class="btn btn-primary add-profile-choice add-profile-ai"
+            (click)="addProfilePopover.hide(); createProfileWithAi()"
+          >
+            <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
+            <span>
+              {{ 'designer.fixture-pool.add-profile-ai' | translate }}
+              <small>{{ 'designer.fixture-pool.add-profile-ai-hint' | translate }}</small>
+            </span>
+          </button>
+          }
+          <button
+            type="button"
+            class="btn add-profile-choice add-profile-file"
+            [class.btn-primary]="!configService.aiFixtures"
+            [class.btn-secondary]="configService.aiFixtures"
+            (click)="addProfilePopover.hide(); createFixtureFromProfileFile()"
+          >
+            <i class="fa fa-file-o fa-fw" aria-hidden="true"></i>
+            <span>
+              {{ 'designer.fixture-pool.add-profile-file' | translate }}
+              <small>{{ 'designer.fixture-pool.add-profile-file-hint' | translate }}</small>
+            </span>
+          </button>
+          <a
+            class="btn btn-secondary add-profile-choice add-profile-ofl"
+            href="https://open-fixture-library.org/fixture-editor"
+            target="_blank"
+            rel="noopener"
+            role="button"
+            (click)="addProfilePopover.hide()"
+          >
+            <i class="fa fa-external-link fa-fw" aria-hidden="true"></i>
+            <span>
+              {{ 'designer.fixture-pool.add-profile-ofl' | translate }}
+              <small>{{ 'designer.fixture-pool.add-profile-ofl-hint' | translate }}</small>
+            </span>
+          </a>
+        </ng-template>
       </div>
     </div>
     <div class="col-12 col-md-6 mt-3 mt-md-0 d-flex flex-column">
-      <div class="row">
-        <!-- Add fixture from local profile -->
-        <div class="col-6">
-          <button type="button" class="btn btn-secondary" (click)="createFixtureFromProfileFile()" role="button">
-            <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.create-fixture-from-profile-file' | translate }}
-          </button>
-          <!-- a profile the AI makes from the manual of the fixture -->
-          @if (configService.aiFixtures) {
-          <button type="button" class="btn btn-secondary mt-2 create-profile-ai" (click)="createProfileWithAi()">
-            <i class="fa fa-magic" aria-hidden="true"></i> {{ 'designer.fixture-library.create-with-ai' | translate }}
-          </button>
-          }
-        </div>
-
-        <!-- Universe -->
-        <div class="col-6">
-          <div class="form-group row">
-            <label class="col-lg-4 col-form-label">{{ 'designer.fixture-pool.universe' | translate }}</label>
-            <div class="col-lg-8">
-              <div class="input-group">
-                <select
-                  class="custom-select"
-                  [disabled]="universes.length === 0"
-                  [ngModel]="selectedUniverse"
-                  (ngModelChange)="selectUniverse($event)"
-                >
-                  @for (universe of universes; track universe.uuid) {
-                  <option [ngValue]="universe">{{ universe.name }}</option>
-                  }
-                </select>
-                @if (freeUniverseEdit) {
-                <div class="input-group-append">
-                  <button type="button" class="btn btn-secondary" (click)="openEditUniverses()">
-                    <i class="fa fa-pencil" aria-hidden="true"></i>
-                  </button>
-                </div>
-                }
-              </div>
-            </div>
+      <!-- Universe -->
+      <div class="universe-row">
+        <label class="mb-0 mr-2" for="poolUniverse">{{ 'designer.fixture-pool.universe' | translate }}</label>
+        <div class="input-group">
+          <select
+            class="custom-select"
+            id="poolUniverse"
+            [disabled]="universes.length === 0"
+            [ngModel]="selectedUniverse"
+            (ngModelChange)="selectUniverse($event)"
+          >
+            @for (universe of universes; track universe.uuid) {
+            <option [ngValue]="universe">{{ universe.name }}</option>
+            }
+          </select>
+          @if (freeUniverseEdit) {
+          <div class="input-group-append">
+            <button type="button" class="btn btn-secondary" (click)="openEditUniverses()">
+              <i class="fa fa-pencil" aria-hidden="true"></i>
+            </button>
           </div>
+          }
         </div>
       </div>
 
