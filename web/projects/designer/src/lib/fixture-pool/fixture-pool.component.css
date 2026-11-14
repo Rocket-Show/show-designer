@@ -143,7 +143,15 @@ lib-tree,
   height: 240px;
 }
 
-/* below the profiles: where they come from on the left, the ways to add a missing one on the right */
+/* the last row of the profiles: the question of a user who doesn't find the fixture, and the ways to add it */
+.add-profile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2);
+}
+
+/* below the profiles: where they come from on the left, the update of the library of a device on the right */
 .profiles-footer {
   display: flex;
   flex-wrap: wrap;

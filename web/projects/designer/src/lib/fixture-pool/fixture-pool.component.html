@@ -100,10 +100,73 @@
               </p>
             </div>
             }
+            <!-- the last row, where the user looks who doesn't find the fixture: a profile the library doesn't have -->
+            @if (!loadingProfiles) {
+            <div class="list-group-item add-profile-row">
+              <span class="text-muted mr-auto">{{ 'designer.fixture-pool.add-profile-question' | translate }}</span>
+              <!-- a profile the library doesn't have: by the AI from the manual (the first choice), from a file, or made in
+                   the editor of the Open Fixture Library -->
+              <button
+                type="button"
+                class="btn btn-primary btn-sm add-profile"
+                [popover]="addProfileChoices"
+                #addProfilePopover="bs-popover"
+                containerClass="fixture-library-popover add-profile-popover"
+                container="body"
+                placement="bottom"
+                [adaptivePosition]="false"
+                [outsideClick]="true"
+              >
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
+              </button>
+              <ng-template #addProfileChoices>
+                @if (configService.aiFixtures) {
+                <button
+                  type="button"
+                  class="btn btn-primary add-profile-choice add-profile-ai"
+                  (click)="addProfilePopover.hide(); createProfileWithAi()"
+                >
+                  <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-ai' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-ai-hint' | translate }}</small>
+                  </span>
+                </button>
+                }
+                <button
+                  type="button"
+                  class="btn add-profile-choice add-profile-file"
+                  [class.btn-primary]="!configService.aiFixtures"
+                  [class.btn-secondary]="configService.aiFixtures"
+                  (click)="addProfilePopover.hide(); createFixtureFromProfileFile()"
+                >
+                  <i class="fa fa-file-o fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-file' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-file-hint' | translate }}</small>
+                  </span>
+                </button>
+                <a
+                  class="btn btn-secondary add-profile-choice add-profile-ofl"
+                  href="https://open-fixture-library.org/fixture-editor"
+                  target="_blank"
+                  rel="noopener"
+                  role="button"
+                  (click)="addProfilePopover.hide()"
+                >
+                  <i class="fa fa-external-link fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-ofl' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-ofl-hint' | translate }}</small>
+                  </span>
+                </a>
+              </ng-template>
+            </div>
+            }
           </div>
         </div>
       </div>
-      <!-- the end of the list: where the profiles come from, and the ways to add one the library doesn't have -->
+      <!-- below the list: where the profiles come from, and on a device the update of its library -->
       <div class="profiles-footer">
         <p class="mb-0 mr-auto">Powered by the <a href="https://open-fixture-library.org/" target="_blank">Open Fixture Library</a></p>
         @if (configService.localProfiles) {
@@ -122,63 +185,6 @@
           {{ 'designer.fixture-pool.update-profiles' | translate }}
         </button>
         }
-        <!-- a profile the library doesn't have: by the AI from the manual (the first choice), from a file, or made in
-             the editor of the Open Fixture Library -->
-        <button
-          type="button"
-          class="btn btn-primary btn-sm add-profile"
-          [popover]="addProfileChoices"
-          #addProfilePopover="bs-popover"
-          containerClass="fixture-library-popover add-profile-popover"
-          container="body"
-          placement="bottom"
-          [adaptivePosition]="false"
-          [outsideClick]="true"
-        >
-          <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
-        </button>
-        <ng-template #addProfileChoices>
-          @if (configService.aiFixtures) {
-          <button
-            type="button"
-            class="btn btn-primary add-profile-choice add-profile-ai"
-            (click)="addProfilePopover.hide(); createProfileWithAi()"
-          >
-            <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
-            <span>
-              {{ 'designer.fixture-pool.add-profile-ai' | translate }}
-              <small>{{ 'designer.fixture-pool.add-profile-ai-hint' | translate }}</small>
-            </span>
-          </button>
-          }
-          <button
-            type="button"
-            class="btn add-profile-choice add-profile-file"
-            [class.btn-primary]="!configService.aiFixtures"
-            [class.btn-secondary]="configService.aiFixtures"
-            (click)="addProfilePopover.hide(); createFixtureFromProfileFile()"
-          >
-            <i class="fa fa-file-o fa-fw" aria-hidden="true"></i>
-            <span>
-              {{ 'designer.fixture-pool.add-profile-file' | translate }}
-              <small>{{ 'designer.fixture-pool.add-profile-file-hint' | translate }}</small>
-            </span>
-          </button>
-          <a
-            class="btn btn-secondary add-profile-choice add-profile-ofl"
-            href="https://open-fixture-library.org/fixture-editor"
-            target="_blank"
-            rel="noopener"
-            role="button"
-            (click)="addProfilePopover.hide()"
-          >
-            <i class="fa fa-external-link fa-fw" aria-hidden="true"></i>
-            <span>
-              {{ 'designer.fixture-pool.add-profile-ofl' | translate }}
-              <small>{{ 'designer.fixture-pool.add-profile-ofl-hint' | translate }}</small>
-            </span>
-          </a>
-        </ng-template>
       </div>
     </div>
     <div class="col-12 col-md-6 mt-3 mt-md-0 d-flex flex-column">

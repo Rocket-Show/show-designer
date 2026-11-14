@@ -180,7 +180,7 @@ describe('FixturePoolComponent', () => {
   const treeNames = (): string[] => treeRows().map((row) => row.textContent.trim());
   const treeRow = (name: string): HTMLElement => treeRows().find((row) => row.textContent.trim() === name);
   const profileRows = (): string[] =>
-    Array.from(element().querySelectorAll('.list-group-flush > .list-group-item')).map((row: HTMLElement) =>
+    Array.from(element().querySelectorAll('.list-group-flush > .list-group-item:not(.add-profile-row)')).map((row: HTMLElement) =>
       row.textContent.replace(/\s+/g, ' ').trim()
     );
   const selects = (): HTMLSelectElement[] => Array.from(element().querySelectorAll('select'));
@@ -472,7 +472,7 @@ describe('FixturePoolComponent', () => {
     it('updates the profiles of a designer which keeps them itself', async () => {
       config.localProfiles = true;
       await open();
-      const button: HTMLButtonElement = element().querySelector('button.btn-sm');
+      const button: HTMLButtonElement = element().querySelector('button.update-profiles');
 
       await click(button);
 
@@ -1922,6 +1922,16 @@ describe('FixturePoolComponent', () => {
     it('adds a missing profile from a file, or from the editor of the Open Fixture Library, where there is no AI', async () => {
       await open();
       expect(element().querySelector('.add-profile').classList).toContain('btn-primary');
+
+      // the last row of the list, where the user looks who doesn't find the fixture, also when the search finds nothing
+      const rows = () => element().querySelectorAll('.profiles-card .list-group-item');
+      expect(rows()[rows().length - 1].querySelector('.add-profile')).not.toBeNull();
+
+      pool.searchExpression = 'no such fixture';
+      pool.filterProfiles();
+      await update();
+      expect(rows().length).toBe(1);
+      expect(rows()[0].querySelector('.add-profile')).not.toBeNull();
 
       await click(element().querySelector('.add-profile'));
       expect(document.querySelector('popover-container .add-profile-ai')).toBeNull();

@@ -401,6 +401,7 @@
       "channel-occupied": "当前配置包含重叠通道。",
       "channel-occupied-title": "通道重叠",
       "add-profile": "添加缺失的配置文件",
+      "add-profile-question": "列表中没有你的灯具？",
       "add-profile-ai": "使用 AI 自动创建",
       "add-profile-ai-hint": "说明灯具型号并提供说明书：AI 编写配置文件，你在使用前检查它。",
       "add-profile-file": "从配置文件添加",

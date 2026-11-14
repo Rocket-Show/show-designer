@@ -401,6 +401,7 @@
       "channel-occupied": "A configuração atual contém canais sobrepostos.",
       "channel-occupied-title": "Canais sobrepostos",
       "add-profile": "Adicionar perfil em falta",
+      "add-profile-question": "O aparelho não está na lista?",
       "add-profile-ai": "Automaticamente, com IA",
       "add-profile-ai-hint": "Indique o aparelho e o seu manual: a IA escreve o perfil e você verifica-o antes de ser usado.",
       "add-profile-file": "A partir de um ficheiro de perfil",

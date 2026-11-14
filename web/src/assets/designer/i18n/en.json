@@ -401,6 +401,7 @@
       "channel-occupied": "The current configuration contains overlapping channels.",
       "channel-occupied-title": "Overlapping channels",
       "add-profile": "Add missing profile",
+      "add-profile-question": "Fixture not in the list?",
       "add-profile-ai": "Automatically, with AI",
       "add-profile-ai-hint": "Name the fixture and give its manual: the AI writes the profile, you check it before it's used.",
       "add-profile-file": "From a profile file",

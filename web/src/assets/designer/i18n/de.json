@@ -401,6 +401,7 @@
       "channel-occupied": "Die eingestellte Konfiguration hat überlappende Kanäle.",
       "channel-occupied-title": "Überlappende Kanäle",
       "add-profile": "Fehlendes Profil erfassen",
+      "add-profile-question": "Gerät nicht in der Liste?",
       "add-profile-ai": "Automatisch, mit KI",
       "add-profile-ai-hint": "Nenne das Gerät und gib die Anleitung an: Die KI schreibt das Profil, du prüfst es, bevor es verwendet wird.",
       "add-profile-file": "Aus einer Profil-Datei",

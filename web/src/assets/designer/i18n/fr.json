@@ -401,6 +401,7 @@
       "channel-occupied": "La configuration actuelle contient des canaux qui se chevauchent.",
       "channel-occupied-title": "Canaux se chevauchant",
       "add-profile": "Ajouter le profil manquant",
+      "add-profile-question": "Appareil absent de la liste ?",
       "add-profile-ai": "Automatiquement, avec l'IA",
       "add-profile-ai-hint": "Indiquez l'appareil et son manuel : l'IA écrit le profil, vous le vérifiez avant qu'il soit utilisé.",
       "add-profile-file": "Depuis un fichier de profil",

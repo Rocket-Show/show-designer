@@ -401,6 +401,7 @@
       "channel-occupied": "La configuración actual contiene canales superpuestos.",
       "channel-occupied-title": "Canales superpuestos",
       "add-profile": "Añadir perfil faltante",
+      "add-profile-question": "¿El equipo no está en la lista?",
       "add-profile-ai": "Automáticamente, con IA",
       "add-profile-ai-hint": "Indica el equipo y su manual: la IA escribe el perfil y tú lo revisas antes de usarlo.",
       "add-profile-file": "Desde un archivo de perfil",
