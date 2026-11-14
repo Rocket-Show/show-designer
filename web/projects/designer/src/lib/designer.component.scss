@@ -1023,6 +1023,31 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   }
 }
 
+// What the channels of the fixture edited do, on its block in the DMX map of the fixture pool: an icon each, or a dot
+// in the colour of a colour channel. The map builds them itself (see FixturePoolComponent.showChannelFunctions).
+.dmx-function {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.dmx-function-fine {
+  opacity: 0.55;
+  font-size: 0.6875rem;
+}
+
+.dmx-function-color {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
 // "Add missing profile": the ways to add a profile the library doesn't have, one below the other with a line on what
 // each does, the AI first
 .popover.add-profile-popover {

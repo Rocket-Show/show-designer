@@ -41,6 +41,7 @@ import { UserService } from '../services/user.service';
 import { FixtureAiComponent, FixtureAiResult } from '../fixture-library/fixture-ai/fixture-ai.component';
 import { FixtureOfferComponent } from '../fixture-library/fixture-offer/fixture-offer.component';
 import { FixtureMaintenanceConfirmComponent } from '../fixture-library/fixture-maintenance-confirm/fixture-maintenance-confirm.component';
+import { ChannelFunction, getChannelFunctions } from '../models/channel-function';
 
 // One row of the fixture tree: a fixture of the pool and the folder it is in. The
 // fixture panel shows a fixture with all its pixels, here it is a single row which
@@ -60,6 +61,25 @@ interface DmxChannel {
   end: boolean;
   selected: boolean;
   overlapped: boolean;
+}
+
+// Where a fixture is patched, for its row in the tree: its channels, counted from 1, and whether another fixture of its
+// universe is on one of them
+export interface FixturePatch {
+  count: number;
+  first: number;
+  last: number;
+  overlapped: boolean;
+}
+
+// Two fixtures of the universe shown on the same channels (counted from 1), and where the later one of them would fit:
+// the first channel of the first gap that takes it, 0 if there is none
+export interface PatchCollision {
+  fixture: Fixture;
+  other: Fixture;
+  first: number;
+  last: number;
+  free: number;
 }
 
 @Component({
@@ -98,6 +118,15 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('dmxMap') dmxMap: ElementRef<HTMLElement>;
   @ViewChild('dmxCanvas') dmxCanvas: ElementRef<HTMLCanvasElement>;
   @ViewChild('channelLabel') channelLabel: ElementRef<HTMLElement>;
+  @ViewChild('dmxFunctions') dmxFunctions: ElementRef<HTMLElement>;
+
+  // where each fixture of the pool is patched (see FixturePatch), by its uuid
+  public patches = new Map<string, FixturePatch>();
+
+  // the fixtures of the universe shown which collide with another one, and how full the universe is
+  public collisions: PatchCollision[] = [];
+  public usedChannels = 0;
+  public nextFreeChannel = 0;
 
   public selectedFixture: Fixture;
   public selectedFixtureProfile: FixtureProfile;
@@ -146,12 +175,27 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
   // many more there are.
   private static readonly maxShownProfiles = 50;
 
-  // the size of one channel on the map, in px
-  private static readonly channelWidth = 28;
-  private static readonly channelHeight = 20;
+  // The map, in px: the column with the number of the first channel of each row, the line with the numbers of the
+  // columns, a row, the taller rows of the fixture edited (its name, and below it what each of its channels does), the
+  // room between two rows, and how narrow or wide a channel may be.
+  private static readonly labelWidth = 36;
+  private static readonly headerHeight = 16;
+  private static readonly rowHeight = 24;
+  private static readonly openRowHeight = 44;
+  private static readonly openRowTitle = 20;
+  private static readonly rowGap = 3;
+  private static readonly minChannelWidth = 14;
+  private static readonly maxChannelWidth = 40;
 
-  // how many channels the map fits on a row, which follows the width it is given
-  private channelsPerRow = 1;
+  // how many channels the map fits on a row and how wide they are, which follows the width it is given, and where its
+  // rows are
+  private channelsPerRow = 32;
+  private channelWidth = 28;
+  private rowTops: number[] = [];
+  private rowHeights: number[] = [];
+
+  // what the channels of each profile and mode do (see channelFunctionsOf)
+  private channelFunctions = new Map<string, ChannelFunction[]>();
 
   // the channel the cursor is on, so the label is only moved when it changes
   private labelledChannel = -1;
@@ -301,12 +345,15 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private channelLeft = () => this.labelChannel(-1);
 
-  // the channel under the cursor, or -1 next to the last one of the map
+  // the channel under the cursor, or -1 off the channels (the numbers around them, the gap between two rows)
   private channelAt(event: MouseEvent): number {
-    const column = Math.floor(event.offsetX / FixturePoolComponent.channelWidth);
-    const row = Math.floor(event.offsetY / FixturePoolComponent.channelHeight);
+    const x = event.offsetX - FixturePoolComponent.labelWidth;
+    const column = Math.floor(x / this.channelWidth);
+    const row = this.rowTops.findIndex(
+      (top, index) => event.offsetY >= top && event.offsetY < top + this.rowHeights[index] + FixturePoolComponent.rowGap
+    );
 
-    if (column < 0 || column >= this.channelsPerRow || row < 0) {
+    if (x < 0 || column >= this.channelsPerRow || row < 0) {
       return -1;
     }
 
@@ -315,7 +362,21 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     return channel < this.dmxChannels.length ? channel : -1;
   }
 
-  // the number of the channel the cursor is on, in place of a tooltip
+  // Where a channel sits on the map, in px from its top left corner. The rows the fixture selected takes are taller:
+  // they show what each of its channels does.
+  channelBox(channel: number): { x: number; y: number; width: number; height: number } {
+    const row = Math.floor(channel / this.channelsPerRow);
+
+    return {
+      x: FixturePoolComponent.labelWidth + (channel % this.channelsPerRow) * this.channelWidth,
+      y: this.rowTops[row],
+      width: this.channelWidth,
+      height: this.rowHeights[row],
+    };
+  }
+
+  // The channel the cursor is on, in place of a tooltip: its number, and the fixture on it with the function of the
+  // channel, e.g. "52 · Beam R · Strobe"
   private labelChannel(channel: number) {
     if (channel === this.labelledChannel || !this.channelLabel) {
       return;
@@ -330,18 +391,70 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const column = channel % this.channelsPerRow;
-    const row = Math.floor(channel / this.channelsPerRow);
+    const box = this.channelBox(channel);
+    const fixture = this.fixtureOnChannel(channel);
+    const parts = [String(channel + 1)];
 
-    label.textContent = String(channel + 1);
+    if (fixture) {
+      parts.push(fixture.name);
+
+      const name = this.channelFunctionsOf(fixture)[channel - fixture.dmxFirstChannel]?.name;
+
+      if (name) {
+        parts.push(name);
+      }
+    }
+
+    label.textContent = parts.join(' · ');
     label.hidden = false;
-    label.style.left = (column + 0.5) * FixturePoolComponent.channelWidth + 'px';
-    label.style.top = row * FixturePoolComponent.channelHeight + 'px';
+    label.style.left = box.x + box.width / 2 + 'px';
+    label.style.top = box.y + 'px';
   }
 
-  // Draw the map: the grid of channels, the run of channels every fixture of the
-  // universe occupies, the one being edited and the ones two fixtures collide on. The
-  // colours are the stylesheet's, so the map is themed with everything else.
+  // the fixture on a channel of the universe shown: the one edited, if it is one of them
+  private fixtureOnChannel(channel: number): Fixture {
+    let found: Fixture;
+
+    for (const fixture of this.channelFixtures) {
+      if (channel >= fixture.dmxFirstChannel && channel < fixture.dmxFirstChannel + this.fixtureChannelCount(fixture)) {
+        if (fixture === this.selectedFixture) {
+          return fixture;
+        }
+
+        found = found || fixture;
+      }
+    }
+
+    return found;
+  }
+
+  // How the map is laid out over the width it is given: 32 channels on a row, or 16 or 8 where they wouldn't be wide
+  // enough, the number of the first channel of each row in front of it, the numbers of the columns above.
+  private layoutMap(width: number) {
+    const space = width - FixturePoolComponent.labelWidth;
+
+    this.channelsPerRow = [32, 16, 8].find((count) => space / count >= FixturePoolComponent.minChannelWidth) ?? 8;
+    this.channelWidth = Math.max(1, Math.min(FixturePoolComponent.maxChannelWidth, Math.floor(space / this.channelsPerRow)));
+
+    const rows = Math.ceil(this.dmxChannels.length / this.channelsPerRow);
+    let top = FixturePoolComponent.headerHeight;
+
+    this.rowTops = [];
+    this.rowHeights = [];
+
+    for (let row = 0; row < rows; row++) {
+      const channels = this.dmxChannels.slice(row * this.channelsPerRow, (row + 1) * this.channelsPerRow);
+      const height = channels.some((channel) => channel.selected) ? FixturePoolComponent.openRowHeight : FixturePoolComponent.rowHeight;
+
+      this.rowTops.push(top);
+      this.rowHeights.push(height);
+      top += height + FixturePoolComponent.rowGap;
+    }
+  }
+
+  // Draw the map: the numbers of the channels, the free ones, a labelled block per fixture of the universe, the one
+  // edited with what each of its channels does, and the channels two fixtures collide on. The colours are the
+  // stylesheet's, so the map is themed with everything else.
   private drawChannelMap() {
     const canvas = this.dmxCanvas?.nativeElement;
     const width = this.dmxMap?.nativeElement.clientWidth ?? 0;
@@ -350,14 +463,13 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const channelWidth = FixturePoolComponent.channelWidth;
-    const channelHeight = FixturePoolComponent.channelHeight;
+    this.layoutMap(width);
 
-    this.channelsPerRow = Math.max(1, Math.floor(width / channelWidth));
-
-    const rows = Math.ceil(this.dmxChannels.length / this.channelsPerRow);
-    const mapWidth = this.channelsPerRow * channelWidth;
-    const mapHeight = rows * channelHeight;
+    const labelWidth = FixturePoolComponent.labelWidth;
+    const channelWidth = this.channelWidth;
+    const lastRow = this.rowTops.length - 1;
+    const mapWidth = labelWidth + this.channelsPerRow * channelWidth;
+    const mapHeight = this.rowTops[lastRow] + this.rowHeights[lastRow];
     const ratio = window.devicePixelRatio || 1;
 
     canvas.width = Math.round(mapWidth * ratio);
@@ -368,83 +480,311 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
     const context = canvas.getContext('2d');
     const style = getComputedStyle(this.dmxMap.nativeElement);
     const colour = (name: string) => style.getPropertyValue(name).trim();
+    const font = style.fontFamily;
 
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, mapWidth, mapHeight);
 
-    // the grid of empty channels
-    context.strokeStyle = colour('--dmx-line');
-    context.lineWidth = 1;
+    // the numbers of the columns, and of the first channel of each row
+    context.fillStyle = colour('--dmx-number');
+    context.font = '10px ' + font;
+    context.textBaseline = 'middle';
+    context.textAlign = 'center';
 
-    for (let channel = 0; channel < this.dmxChannels.length; channel++) {
-      // the bar of a fixture is drawn in one piece, so it is not divided into channels
-      if (this.dmxChannels[channel].occupied) {
-        continue;
-      }
-
-      const column = channel % this.channelsPerRow;
-      const row = Math.floor(channel / this.channelsPerRow);
-
-      context.strokeRect(column * channelWidth + 0.5, row * channelHeight + 0.5, channelWidth - 1, channelHeight - 1);
+    for (let column = 0; column < this.channelsPerRow; column++) {
+      context.fillText(String(column + 1), labelWidth + (column + 0.5) * channelWidth, FixturePoolComponent.headerHeight / 2);
     }
 
-    // the fixtures on it, as one bar per run of channels which reads the same way. A
-    // fixture whose channels wrap onto the next row is drawn as a bar per row.
-    for (const run of this.channelRuns()) {
-      const overlapped = run.overlapped;
-      const selected = run.selected && !overlapped;
+    context.textAlign = 'right';
 
-      const x = (run.channel % this.channelsPerRow) * channelWidth;
-      const y = Math.floor(run.channel / this.channelsPerRow) * channelHeight;
-      const barWidth = run.length * channelWidth;
+    for (let row = 0; row <= lastRow; row++) {
+      context.fillText(String(row * this.channelsPerRow + 1), labelWidth - 8, this.rowTops[row] + this.rowHeights[row] / 2);
+    }
 
-      context.fillStyle = overlapped ? colour('--dmx-overlap-fill') : selected ? colour('--dmx-selected-fill') : colour('--dmx-fill');
-      context.strokeStyle = overlapped ? colour('--dmx-overlap-edge') : colour('--dmx-edge');
+    // the free channels
+    context.fillStyle = colour('--dmx-free');
 
-      this.channelBar(context, x + 0.5, y + 0.5, barWidth - 1, channelHeight - 1, run.start, run.end);
+    for (let channel = 0; channel < this.dmxChannels.length; channel++) {
+      if (!this.dmxChannels[channel].occupied) {
+        const box = this.channelBox(channel);
+
+        this.channelBar(context, box.x + 1.5, box.y, box.width - 3, box.height, true, true, 3);
+        context.fill();
+      }
+    }
+
+    // the fixtures, a block per row they take, the one edited on top
+    const blocks = this.mapBlocks();
+
+    for (const block of blocks) {
+      const selected = block.fixture === this.selectedFixture;
+
+      context.fillStyle = selected ? colour('--dmx-selected-fill') : colour('--dmx-fill');
+      context.strokeStyle = selected ? colour('--dmx-selected-fill') : colour('--dmx-edge');
+      context.lineWidth = 1;
+      this.blockPath(context, block);
       context.fill();
       context.stroke();
-    }
-  }
 
-  // the bars of the map: channels next to each other which are drawn the same way, cut
-  // at the end of the row they sit on and at the first and last channel of a fixture
-  private channelRuns(): { channel: number; length: number; start: boolean; end: boolean; selected: boolean; overlapped: boolean }[] {
-    const runs = [];
-    let run: { channel: number; length: number; start: boolean; end: boolean; selected: boolean; overlapped: boolean };
+      // the line between each channel of the one edited, below its name, where their functions are shown
+      if (selected) {
+        const box = this.channelBox(block.channel);
+
+        context.strokeStyle = colour('--dmx-selected-line');
+
+        for (let index = 1; index < block.length; index++) {
+          const x = Math.round(box.x + index * channelWidth) + 0.5;
+
+          context.beginPath();
+          context.moveTo(x, box.y + FixturePoolComponent.openRowTitle);
+          context.lineTo(x, box.y + box.height - 3);
+          context.stroke();
+        }
+      }
+    }
+
+    // the channels two fixtures collide on, hatched over both
+    context.fillStyle = this.hatch(context, colour('--dmx-overlap-fill')) || colour('--dmx-overlap-fill');
+    context.strokeStyle = colour('--dmx-overlap-edge');
 
     for (let channel = 0; channel < this.dmxChannels.length; channel++) {
-      const state = this.dmxChannels[channel];
-
-      const continues =
-        run &&
-        state.occupied &&
-        !state.start &&
-        !this.dmxChannels[channel - 1].end &&
-        state.selected === run.selected &&
-        state.overlapped === run.overlapped &&
-        channel % this.channelsPerRow !== 0;
-
-      if (continues) {
-        run.length++;
-        run.end = state.end;
+      if (!this.dmxChannels[channel].overlapped) {
         continue;
       }
 
-      run = undefined;
+      // one bar for the channels in a row which are collided on, up to the end of the row
+      let length = 1;
 
-      if (state.occupied) {
-        run = { channel, length: 1, start: state.start, end: state.end, selected: state.selected, overlapped: state.overlapped };
-        runs.push(run);
+      while (
+        channel + length < this.dmxChannels.length &&
+        this.dmxChannels[channel + length].overlapped &&
+        (channel + length) % this.channelsPerRow !== 0
+      ) {
+        length++;
+      }
+
+      const box = this.channelBox(channel);
+
+      this.channelBar(context, box.x + 1.5, box.y + 0.5, length * channelWidth - 3, box.height - 1, true, true, 3);
+      context.fill();
+      context.stroke();
+      channel += length - 1;
+    }
+
+    // The names on the blocks, above the hatching, so a fixture colliding with another one can still be read. Where
+    // another fixture starts on a block, its name goes no further: each name stays on the part of its block in view.
+    for (const block of blocks) {
+      const blockEnd = block.channel + block.length;
+      const nextStart = blocks
+        .filter((other) => other !== block && other.start && other.channel > block.channel && other.channel < blockEnd)
+        .reduce((end, other) => Math.min(end, other.channel), blockEnd);
+
+      this.blockLabel(context, { ...block, length: nextStart - block.channel }, colour, font);
+    }
+
+    this.showChannelFunctions();
+  }
+
+  // The blocks of the fixtures of the universe shown, the one edited last: a fixture which goes on past the end of a
+  // row is a block on each row it takes
+  private mapBlocks(): { fixture: Fixture; channel: number; length: number; start: boolean; end: boolean }[] {
+    const blocks = [];
+    const fixtures = this.channelFixtures.filter((fixture) => fixture !== this.selectedFixture);
+
+    if (this.selectedFixture && this.channelFixtures.includes(this.selectedFixture)) {
+      fixtures.push(this.selectedFixture);
+    }
+
+    for (const fixture of fixtures) {
+      const first = fixture.dmxFirstChannel;
+      const last = Math.min(first + this.fixtureChannelCount(fixture), this.dmxChannels.length) - 1;
+      let channel = first;
+
+      while (channel <= last) {
+        const rowEnd = (Math.floor(channel / this.channelsPerRow) + 1) * this.channelsPerRow - 1;
+        const end = Math.min(rowEnd, last);
+
+        blocks.push({ fixture, channel, length: end - channel + 1, start: channel === first, end: end === last });
+        channel = end + 1;
       }
     }
 
-    return runs;
+    return blocks;
+  }
+
+  private blockPath(context: CanvasRenderingContext2D, block: { channel: number; length: number; start: boolean; end: boolean }) {
+    const box = this.channelBox(block.channel);
+
+    this.channelBar(context, box.x + 1.5, box.y + 0.5, block.length * this.channelWidth - 3, box.height - 1, block.start, block.end, 5);
+  }
+
+  // the name of the fixture on its block and its channels at the right end, as far as they fit
+  private blockLabel(
+    context: CanvasRenderingContext2D,
+    block: { fixture: Fixture; channel: number; length: number },
+    colour: (name: string) => string,
+    font: string
+  ) {
+    const box = this.channelBox(block.channel);
+    const selected = block.fixture === this.selectedFixture;
+    const left = box.x + 8;
+    const right = box.x + block.length * this.channelWidth - 8;
+    const y = selected ? box.y + FixturePoolComponent.openRowTitle / 2 + 1 : box.y + box.height / 2;
+    const count = this.fixtureChannelCount(block.fixture);
+    const range = block.fixture.dmxFirstChannel + 1 + '–' + (block.fixture.dmxFirstChannel + count);
+
+    if (right - left < 12) {
+      return;
+    }
+
+    context.textBaseline = 'middle';
+
+    // the channels, if there is room for them next to a name
+    context.font = '10px ' + font;
+    context.fillStyle = selected ? colour('--dmx-selected-text') : colour('--dmx-text-muted');
+
+    const rangeWidth = context.measureText(range).width;
+    let nameRight = right;
+
+    if (right - left > rangeWidth + 40) {
+      context.textAlign = 'right';
+      context.fillText(range, right, y);
+      nameRight = right - rangeWidth - 8;
+    }
+
+    context.font = (selected ? '600 ' : '') + '11px ' + font;
+    context.fillStyle = selected ? colour('--dmx-selected-text') : colour('--dmx-text');
+    context.textAlign = 'left';
+    context.fillText(this.fitText(context, block.fixture.name || '', nameRight - left), left, y);
+  }
+
+  // the text, cut short with an ellipsis where it is wider than the room it has
+  private fitText(context: CanvasRenderingContext2D, text: string, width: number): string {
+    if (context.measureText(text).width <= width) {
+      return text;
+    }
+
+    let fitting = text;
+
+    while (fitting.length > 0 && context.measureText(fitting + '…').width > width) {
+      fitting = fitting.slice(0, -1);
+    }
+
+    return fitting.length > 0 ? fitting + '…' : '';
+  }
+
+  // the stripes the channels two fixtures collide on are filled with, undefined where the browser draws no pattern
+  private hatch(context: CanvasRenderingContext2D, stripe: string): CanvasPattern {
+    const tile = document.createElement('canvas');
+
+    tile.width = 8;
+    tile.height = 8;
+
+    const tileContext = tile.getContext('2d');
+
+    if (!tileContext) {
+      return undefined;
+    }
+
+    tileContext.strokeStyle = stripe;
+    tileContext.lineWidth = 3;
+    tileContext.beginPath();
+    tileContext.moveTo(-2, 10);
+    tileContext.lineTo(10, -2);
+    tileContext.moveTo(-2, 2);
+    tileContext.lineTo(2, -2);
+    tileContext.moveTo(6, 10);
+    tileContext.lineTo(10, 6);
+    tileContext.stroke();
+
+    return context.createPattern(tile, 'repeat');
+  }
+
+  // What each channel of the fixture edited does, shown on its block as an icon (or a dot in the colour of a colour
+  // channel). Only the channels of one fixture are built as elements; the map itself stays drawn.
+  private showChannelFunctions() {
+    const layer = this.dmxFunctions?.nativeElement;
+
+    if (!layer) {
+      return;
+    }
+
+    const fixture = this.selectedFixture;
+    const parts: string[] = [];
+
+    if (fixture && this.channelFixtures.includes(fixture)) {
+      const functions = this.channelFunctionsOf(fixture);
+
+      functions.forEach((channelFunction, index) => {
+        const channel = fixture.dmxFirstChannel + index;
+
+        if (channel >= this.dmxChannels.length || (!channelFunction.icon && !channelFunction.color)) {
+          return;
+        }
+
+        const box = this.channelBox(channel);
+        const place =
+          'left:' +
+          box.x +
+          'px;top:' +
+          (box.y + FixturePoolComponent.openRowTitle) +
+          'px;width:' +
+          box.width +
+          'px;height:' +
+          (box.height - FixturePoolComponent.openRowTitle - 3) +
+          'px';
+        const fine = channelFunction.fine ? ' dmx-function-fine' : '';
+
+        parts.push(
+          channelFunction.color
+            ? '<span class="dmx-function' +
+                fine +
+                '" style="' +
+                place +
+                '"><i class="dmx-function-color" style="background:' +
+                channelFunction.color +
+                '"></i></span>'
+            : '<span class="dmx-function ' + channelFunction.icon + fine + '" style="' + place + '"></span>'
+        );
+      });
+    }
+
+    layer.innerHTML = parts.join('');
+  }
+
+  // What each channel of the mode of a fixture does, in the order of its DMX channels, worked out once per profile and
+  // mode: its name, e.g. "Pan fine", and how the map shows it
+  private channelFunctionsOf(fixture: Fixture): ChannelFunction[] {
+    const profile = this.fixtureService.getProfileByUuid(fixture.profileUuid);
+    const mode = profile && this.fixtureService.getModeByFixture(profile, fixture);
+    const key = fixture.profileUuid + '/' + (mode?.shortName || mode?.name);
+
+    if (!mode) {
+      return [];
+    }
+
+    let functions = this.channelFunctions.get(key);
+
+    if (!functions) {
+      functions = getChannelFunctions(profile, mode, this.fixtureService);
+      this.channelFunctions.set(key, functions);
+    }
+
+    return functions;
   }
 
   // a bar with the ends of the fixture rounded and the cuts left square
-  private channelBar(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, start: boolean, end: boolean) {
-    const radius = Math.min(4, height / 2, width / 2);
+  private channelBar(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    start: boolean,
+    end: boolean,
+    rounding: number
+  ) {
+    const radius = Math.min(rounding, height / 2, width / 2);
     const left = start ? radius : 0;
     const right = end ? radius : 0;
 
@@ -875,7 +1215,7 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    if (this.selectedFixture) {
+    if (this.selectedFixture && this.channelFixtures.includes(this.selectedFixture)) {
       const lastChannel = this.selectedFixture.dmxFirstChannel + this.fixtureChannelCount(this.selectedFixture) - 1;
 
       for (let i = this.selectedFixture.dmxFirstChannel; i <= lastChannel && i < this.dmxChannels.length; i++) {
@@ -883,10 +1223,104 @@ export class FixturePoolComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
+    this.updatePatches();
     this.drawChannelMap();
 
     // the fixtures being identified are found on their new channels right away
     this.livePreviewIdentify();
+  }
+
+  // Where each fixture of the pool is patched, which fixtures of the universe shown collide, and how full it is. The
+  // collisions of the other universes are marked in the tree as well, they keep the dialog from closing.
+  private updatePatches() {
+    this.patches.clear();
+    this.collisions = [];
+
+    const byUniverse = new Map<string, Fixture[]>();
+
+    for (const fixture of this.fixturePool) {
+      const fixtures = byUniverse.get(fixture.dmxUniverseUuid) || [];
+
+      fixtures.push(fixture);
+      byUniverse.set(fixture.dmxUniverseUuid, fixtures);
+    }
+
+    byUniverse.forEach((fixtures) => {
+      // the fixture first on each channel, the ones after it collide with it unless they are the same lamp
+      const firstOn: Fixture[] = [];
+
+      for (const fixture of fixtures) {
+        const count = this.fixtureChannelCount(fixture);
+        const first = fixture.dmxFirstChannel;
+        const patch: FixturePatch = { count, first: first + 1, last: first + count, overlapped: false };
+        let collision: PatchCollision;
+
+        this.patches.set(fixture.uuid, patch);
+
+        for (let channel = first; channel < first + count && channel < this.dmxChannels.length; channel++) {
+          const other = firstOn[channel];
+
+          if (!other) {
+            firstOn[channel] = fixture;
+          } else if (this.lampKey(other) !== this.lampKey(fixture)) {
+            patch.overlapped = true;
+            this.patches.get(other.uuid).overlapped = true;
+
+            if (collision?.other === other) {
+              collision.last = channel + 1;
+            } else if (!collision) {
+              collision = { fixture, other, first: channel + 1, last: channel + 1, free: 0 };
+            }
+          }
+        }
+
+        if (collision && this.channelFixtures.includes(fixture)) {
+          this.collisions.push(collision);
+        }
+      }
+    });
+
+    // where the later fixture of each collision would fit, and how full the universe shown is
+    for (const collision of this.collisions) {
+      collision.free = this.freeChannelFor(collision.fixture) + 1;
+    }
+
+    this.usedChannels = this.dmxChannels.filter((channel) => channel.occupied).length;
+    this.nextFreeChannel = this.dmxChannels.findIndex((channel) => !channel.occupied) + 1;
+  }
+
+  // the first channel of the first gap of the universe shown the fixture fits in, the fixture itself left out, or -1
+  private freeChannelFor(fixture: Fixture): number {
+    const count = this.fixtureChannelCount(fixture);
+    const taken: boolean[] = [];
+
+    for (const other of this.channelFixtures) {
+      if (other !== fixture) {
+        for (let channel = other.dmxFirstChannel; channel < other.dmxFirstChannel + this.fixtureChannelCount(other); channel++) {
+          taken[channel] = true;
+        }
+      }
+    }
+
+    let gap = 0;
+
+    for (let channel = 0; channel < this.dmxChannels.length; channel++) {
+      gap = taken[channel] ? 0 : gap + 1;
+
+      if (gap === count) {
+        return channel - count + 1;
+      }
+    }
+
+    return -1;
+  }
+
+  // the fix a collision offers: the fixture moves to the first gap it fits in
+  moveToFree(collision: PatchCollision) {
+    if (collision.free > 0) {
+      collision.fixture.dmxFirstChannel = collision.free - 1;
+      this.updateChannelMap();
+    }
   }
 
   // the same lamp patched twice is not a collision, see updateChannelMap. Two profiles

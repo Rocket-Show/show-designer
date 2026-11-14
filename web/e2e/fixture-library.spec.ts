@@ -47,7 +47,6 @@ test.describe('The fixture library', () => {
     await expect(designer.row(pool, 'Par left').getByRole('button', { name: better })).toBeVisible();
 
     // the fixture changed to the best version, which tells what is carried over
-    await pool.getByRole('tab', { name: 'Settings' }).click();
     await expect(pool.getByText('Changed from Test - RGB par')).toBeVisible();
     await expect(pool.locator('.fixture-type-library')).toContainText('AI-generated');
 
