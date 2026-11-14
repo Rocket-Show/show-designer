@@ -1,5 +1,11 @@
 /* The badges sit in a line of their own below the name of a profile, small enough not to push the buttons of the row
-   aside. */
+   aside. The element itself is a box of its own: as a block it held the badges in a line of the font around them, on
+   whose baseline they sat lower than a link next to them, e.g. "2 versions". */
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
 .fixture-version-badges {
   display: inline-flex;
   flex-wrap: wrap;

@@ -177,10 +177,12 @@ describe('FixturePoolComponent', () => {
 
   const element = (): HTMLElement => fixture.nativeElement;
   const treeRows = (): HTMLElement[] => Array.from(element().querySelectorAll('.tree-node'));
-  const treeNames = (): string[] => treeRows().map((row) => row.textContent.trim());
-  const treeRow = (name: string): HTMLElement => treeRows().find((row) => row.textContent.trim() === name);
+  // the name on a row of the tree: of its fixture (the row tells its channels as well), or of its folder
+  const treeName = (row: HTMLElement): string => (row.querySelector('.fixture-name') ?? row).textContent.trim();
+  const treeNames = (): string[] => treeRows().map(treeName);
+  const treeRow = (name: string): HTMLElement => treeRows().find((row) => treeName(row) === name);
   const profileRows = (): string[] =>
-    Array.from(element().querySelectorAll('.list-group-flush > .list-group-item')).map((row: HTMLElement) =>
+    Array.from(element().querySelectorAll('.list-group-flush > .list-group-item:not(.add-profile-row)')).map((row: HTMLElement) =>
       row.textContent.replace(/\s+/g, ' ').trim()
     );
   const selects = (): HTMLSelectElement[] => Array.from(element().querySelectorAll('select'));
@@ -472,7 +474,7 @@ describe('FixturePoolComponent', () => {
     it('updates the profiles of a designer which keeps them itself', async () => {
       config.localProfiles = true;
       await open();
-      const button: HTMLButtonElement = element().querySelector('button.btn-sm');
+      const button: HTMLButtonElement = element().querySelector('button.update-profiles');
 
       await click(button);
 
@@ -647,7 +649,9 @@ describe('FixturePoolComponent', () => {
     it('adds a fixture from a profile file into the folder of the fixture edited', async () => {
       await open();
 
-      await click(element().querySelector('.col-md-6 > .row button.btn-secondary'));
+      await click(element().querySelector('.add-profile'));
+      (document.querySelector('popover-container .add-profile-file') as HTMLElement).click();
+      await update();
 
       expect(show.calls.mostRecent().args[0]).toBe(FixturePoolCreateFromFileComponent);
 
@@ -716,51 +720,59 @@ describe('FixturePoolComponent', () => {
     it('draws the channels on the map, in the colours of the stylesheet', async () => {
       await open();
 
+      // 32 channels of 16 px on a row
       const map: HTMLElement = element().querySelector('.dmx-map');
+      map.style.width = '560px';
+      map.style.setProperty('--dmx-free', 'rgb(64, 64, 64)');
       map.style.setProperty('--dmx-fill', 'rgb(0, 0, 255)');
       map.style.setProperty('--dmx-selected-fill', 'rgb(0, 255, 0)');
       map.style.setProperty('--dmx-overlap-fill', 'rgb(255, 0, 0)');
-      map.style.setProperty('--dmx-line', 'rgb(128, 128, 128)');
       map.style.setProperty('--dmx-edge', 'rgb(0, 0, 128)');
       map.style.setProperty('--dmx-overlap-edge', 'rgb(128, 0, 0)');
 
-      poolFixture('bar').dmxFirstChannel = 16;
+      poolFixture('bar').dmxFirstChannel = 29;
       pool.updateChannelMap();
 
       const canvas: HTMLCanvasElement = element().querySelector('canvas');
       const ratio = window.devicePixelRatio || 1;
       const context = canvas.getContext('2d');
 
-      // the middle of a channel: 20 channels of 28 x 20 px on a row
-      const colour = (channel: number) =>
-        Array.from(
-          context.getImageData(
-            Math.floor(((channel % 20) * 28 + 14) * ratio),
-            Math.floor((Math.floor(channel / 20) * 20 + 10) * ratio),
-            1,
-            1
-          ).data
-        ).join(',');
+      // the colours across the middle of a channel, below the names written on the blocks
+      const colours = (channel: number): string[] => {
+        const box = pool.channelBox(channel);
+        const data = context.getImageData(
+          Math.floor((box.x + 4) * ratio),
+          Math.floor((box.y + box.height - 4) * ratio),
+          Math.floor((box.width - 8) * ratio),
+          1
+        ).data;
+        const found = new Set<string>();
 
-      expect(canvas.style.width).toBe('560px');
-      expect(canvas.style.height).toBe(26 * 20 + 'px');
+        for (let i = 0; i < data.length; i += 4) {
+          found.add(Array.from(data.slice(i, i + 4)).join(','));
+        }
 
-      expect(colour(0)).toBe('0,255,0,255');
-      expect(colour(6)).toBe('0,0,255,255');
-      // the bar wraps onto the next row
-      expect(colour(19)).toBe('0,0,255,255');
-      expect(colour(20)).toBe('0,0,255,255');
-      expect(colour(30)).toBe('0,0,0,0');
+        return Array.from(found);
+      };
+
+      expect(colours(0)).toEqual(['0,255,0,255']);
+      expect(colours(6)).toEqual(['0,0,255,255']);
+      // the bar goes on past the end of the row, onto the next one
+      expect(pool.channelBox(32).x).toBe(36);
+      expect(colours(31)).toEqual(['0,0,255,255']);
+      expect(colours(32)).toEqual(['0,0,255,255']);
+      expect(colours(40)).toEqual(['64,64,64,255']);
 
       poolFixture('par-2').dmxFirstChannel = 3;
       pool.updateChannelMap();
 
-      expect(colour(4)).toBe('255,0,0,255');
-      expect(colour(1)).toBe('0,255,0,255');
-      expect(colour(7)).toBe('0,0,255,255');
+      // the channels two fixtures collide on are hatched
+      expect(colours(4)).toContain('255,0,0,255');
+      expect(colours(1)).toEqual(['0,255,0,255']);
+      expect(colours(7)).toEqual(['0,0,255,255']);
     });
 
-    it('lays the map out over the width it is given, without the browser complaining about it', async () => {
+    it('lays the map out over the width it is given, 32 channels on a row where they fit, without the browser complaining', async () => {
       const errors: string[] = [];
       const listener = (event: ErrorEvent) => errors.push(event.message);
       const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
@@ -773,24 +785,76 @@ describe('FixturePoolComponent', () => {
       window.removeEventListener('error', listener);
 
       expect(errors).toEqual([]);
-      expect(element().querySelector('canvas').style.width).toBe('560px');
+
+      // 400 px: 32 channels would be too narrow, 16 of 22 px go on a row, behind the column with the number of the
+      // first channel of each row
+      const map: HTMLElement = element().querySelector('.dmx-map');
+      map.style.width = '400px';
+      await frame();
+      await frame();
+
+      const canvas: HTMLCanvasElement = element().querySelector('canvas');
+      const last = pool.channelBox(511);
+
+      expect(canvas.style.width).toBe(36 + 16 * 22 + 'px');
+      expect(pool.channelBox(16)).toEqual(jasmine.objectContaining({ x: 36, width: 22 }));
+      expect(canvas.style.height).toBe(last.y + last.height + 'px');
+
+      // the row of the fixture edited is taller, it tells what each of its channels does
+      expect(pool.channelBox(0).height).toBeGreaterThan(pool.channelBox(16).height);
+
+      map.style.width = '1100px';
+      await frame();
+      await frame();
+
+      expect(pool.channelBox(32).x).toBe(36);
+      expect(pool.channelBox(31).x).toBe(36 + 31 * 33);
     });
 
-    it('shows the number of the channel under the cursor', async () => {
+    it('shows what each channel of the fixture edited does: an icon, or the colour of a colour channel', async () => {
+      await open();
+      pool.updateChannelMap();
+
+      const functions = Array.from(element().querySelectorAll('.dmx-functions .dmx-function')) as HTMLElement[];
+      const box = pool.channelBox(5);
+
+      // Dimmer, Red, Green, Blue, an unused channel, Strobe
+      expect(functions.length).toBe(5);
+      expect(functions[0].classList).toContain('icon-intensity');
+      expect(element().querySelectorAll('.dmx-functions .dmx-function-color').length).toBe(3);
+      expect(functions[4].classList).toContain('icon-strobe');
+      expect(functions[4].style.left).toBe(box.x + 'px');
+
+      await click(treeRow('Head'));
+
+      expect(Array.from(element().querySelectorAll('.dmx-functions .icon-pan')).length).toBeGreaterThan(0);
+    });
+
+    it('shows the number of the channel under the cursor, with the fixture on it and what the channel does', async () => {
       await open();
       const map: HTMLElement = element().querySelector('.dmx-map');
       const label: HTMLElement = element().querySelector('.dmx-channel-label');
 
       pool.updateChannelMap();
+      const box = pool.channelBox(45);
       move(map, 'mousemove', 45);
 
       expect(label.hidden).toBe(false);
       expect(label.textContent).toBe('46');
-      expect(label.style.left).toBe(5.5 * 28 + 'px');
-      expect(label.style.top).toBe('40px');
+      expect(label.style.left).toBe(box.x + box.width / 2 + 'px');
+      expect(label.style.top).toBe(box.y + 'px');
 
-      // right of the last channel of a row there is none
-      move(map, 'mousemove', 20.9 * 28, 0, true);
+      move(map, 'mousemove', 7);
+
+      expect(label.textContent).toBe('8 · Par 2 · Red');
+
+      // right of the last channel of a row there is none, nor on the numbers of the rows
+      move(map, 'mousemove', parseFloat(element().querySelector('canvas').style.width) + 4, box.y + 5, true);
+
+      expect(label.hidden).toBe(true);
+
+      move(map, 'mousemove', 1);
+      move(map, 'mousemove', 20, box.y + 5, true);
 
       expect(label.hidden).toBe(true);
 
@@ -873,10 +937,39 @@ describe('FixturePoolComponent', () => {
     });
 
     // a mouse event on the map, at the middle of a channel (or at a raw position in px)
+    it('tells the channels of each fixture in the tree and how full the universe is, and moves a fixture off another one', async () => {
+      await open();
+      const address = (name: string): HTMLElement => treeRow(name).querySelector('.fixture-address');
+
+      expect(address('Par 2').textContent.trim()).toBe('7–12');
+      expect(pool.usedChannels).toBe(18);
+      expect(pool.nextFreeChannel).toBe(19);
+      expect(element().querySelector('.patch-collision')).toBeNull();
+
+      await click(treeRow('Par 2'));
+      await type(element().querySelector('#fixtureFirstChannel'), '4');
+
+      // par 2 collides with par 1 on 4-6: both are marked in the tree, and par 2 is offered the first gap it fits in
+      expect(address('Par 2').classList).toContain('fixture-address-overlapped');
+      expect(address('Par 1').classList).toContain('fixture-address-overlapped');
+      expect(address('Bar').classList).not.toContain('fixture-address-overlapped');
+      expect(
+        pool.collisions.map((collision) => [collision.fixture.uuid, collision.other.uuid, collision.first, collision.last, collision.free])
+      ).toEqual([['par-2', 'par-1', 4, 6, 7]]);
+
+      await click(element().querySelector('.patch-collision-move'));
+
+      expect(poolFixture('par-2').dmxFirstChannel).toBe(6);
+      expect(element().querySelector('.patch-collision')).toBeNull();
+      expect(address('Par 1').classList).not.toContain('fixture-address-overlapped');
+    });
+
+    // the cursor on a channel of the map (its middle), or at a place in px (raw)
     function move(map: HTMLElement, type: string, channel: number, y = 0, raw = false) {
       const rect = map.getBoundingClientRect();
-      const x = raw ? channel : (channel % 20) * 28 + 14;
-      const top = raw ? y + 10 : Math.floor(channel / 20) * 20 + 10;
+      const box = raw ? undefined : pool.channelBox(channel);
+      const x = raw ? channel : box.x + box.width / 2;
+      const top = raw ? y : box.y + box.height / 2;
 
       map.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: rect.left + x, clientY: rect.top + top }));
     }
@@ -911,11 +1004,14 @@ describe('FixturePoolComponent', () => {
       await open();
       await click(treeRow('Bar'));
 
-      await choose(selects()[2], 'Floor');
+      await choose(element().querySelector('#fixtureUniverse'), 'Floor');
 
+      // the map follows it into its universe, where the fixtures of the other one are dimmed
       expect(poolFixture('bar').dmxUniverseUuid).toBe('floor');
-      expect(occupied()).toEqual(['0-5', '6-11']);
-      expect(treeRow('Bar').classList).toContain('inactive-list-item');
+      expect(pool.selectedUniverse.uuid).toBe('floor');
+      expect(occupied()).toEqual(['0-5', '6-8', '12-17']);
+      expect(treeRow('Bar').classList).not.toContain('inactive-list-item');
+      expect(treeRow('Par 1').classList).toContain('inactive-list-item');
     });
   });
 
@@ -1917,17 +2013,48 @@ describe('FixturePoolComponent', () => {
       expect(poolFixture('par-2').profileUuid).toBe('test/rgb-par~1');
     });
 
-    it('creates a profile with the AI, next to the one from a file, and adds a fixture of it or of a version found', async () => {
+    it('adds a missing profile from a file, or from the editor of the Open Fixture Library, where there is no AI', async () => {
       await open();
-      expect(element().querySelector('.create-profile-ai')).toBeNull();
+      expect(element().querySelector('.add-profile').classList).toContain('btn-primary');
 
+      // the last row of the list, where the user looks who doesn't find the fixture, also when the search finds nothing
+      const rows = () => element().querySelectorAll('.profiles-card .list-group-item');
+      expect(rows()[rows().length - 1].querySelector('.add-profile')).not.toBeNull();
+
+      pool.searchExpression = 'no such fixture';
+      pool.filterProfiles();
+      await update();
+      expect(rows().length).toBe(1);
+      expect(rows()[0].querySelector('.add-profile')).not.toBeNull();
+
+      await click(element().querySelector('.add-profile'));
+      expect(document.querySelector('popover-container .add-profile-ai')).toBeNull();
+      expect(document.querySelector('popover-container .add-profile-file').classList).toContain('btn-primary');
+      expect(document.querySelector('popover-container .add-profile-ofl').getAttribute('href')).toBe(
+        'https://open-fixture-library.org/fixture-editor'
+      );
+
+      (document.querySelector('popover-container .add-profile-file') as HTMLElement).click();
+      await update();
+      expect(show.calls.mostRecent().args[0]).toBe(FixturePoolCreateFromFileComponent);
+      expect(document.querySelector('popover-container')).toBeNull();
+    });
+
+    it('creates a missing profile with the AI, the first choice, and adds a fixture of it or of a version found', async () => {
       config.aiFixtures = true;
       config.aiAccount = 'host';
-      await update();
+      await open();
       expect(pool.canUseAi).toBe(true);
 
-      await click(element().querySelector('.create-profile-ai'));
+      await click(element().querySelector('.add-profile'));
+      const choices = Array.from(document.querySelectorAll('popover-container .add-profile-choice'));
+      expect(choices.map((choice) => choice.classList.contains('add-profile-ai'))).toEqual([true, false, false]);
+      expect(choices.map((choice) => choice.classList.contains('btn-primary'))).toEqual([true, false, false]);
+
+      (choices[0] as HTMLElement).click();
+      await update();
       expect(show.calls.mostRecent().args[1].initialState).toEqual({ parent: undefined, exchange: false });
+      expect(document.querySelector('popover-container')).toBeNull();
 
       const made = new FixtureProfile({ ...profile('chauvet-dj/colorband-pix'), uuid: 'chauvet-dj/colorband-pix~9', name: 'Made' });
       project.fixtureProfiles.push(made);

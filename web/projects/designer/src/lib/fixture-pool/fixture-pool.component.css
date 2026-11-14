@@ -48,6 +48,141 @@ lib-tree,
   contain: paint;
 }
 
+/* The patch below the profiles and the fixtures: a line with the universe and how full it is, the map, and the
+   fixture edited next to it (below it where there is no room). */
+.patch {
+  margin-top: var(--sd-space-4, 1.5rem);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-lg, 10px);
+}
+
+.patch-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2) var(--sd-space-3, 1rem);
+  padding: var(--sd-space-2) var(--sd-space-3, 1rem);
+  border-bottom: 1px solid var(--sd-border);
+  background-color: var(--sd-surface-2);
+  border-radius: var(--sd-radius-lg, 10px) var(--sd-radius-lg, 10px) 0 0;
+}
+
+.patch-title {
+  font-weight: 600;
+}
+
+.patch-universe {
+  width: 14rem;
+}
+
+.patch-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  font-size: 0.8125rem;
+  color: var(--sd-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.patch-meter {
+  display: inline-block;
+  width: 7rem;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--sd-surface-4);
+  overflow: hidden;
+}
+
+.patch-meter > span {
+  display: block;
+  height: 100%;
+  background-color: var(--sd-primary);
+}
+
+.patch-hint {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--sd-text-dim);
+}
+
+.patch-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+}
+
+.patch-map {
+  min-width: 0;
+  padding: var(--sd-space-3, 1rem);
+  border-right: 1px solid var(--sd-border);
+}
+
+.patch-fixture {
+  min-width: 0;
+  padding: var(--sd-space-3, 1rem);
+}
+
+.patch-fixture label {
+  margin-bottom: var(--sd-space-1);
+  font-size: 0.8125rem;
+  color: var(--sd-text-muted);
+}
+
+.patch-range {
+  margin-top: calc(-1 * var(--sd-space-2));
+  font-size: 0.8125rem;
+  color: var(--sd-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.patch-range-overlapped {
+  color: var(--sd-danger);
+}
+
+.patch-fixture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-2);
+}
+
+/* a phone can't drag a fixture across the map: its address is typed in. The map takes all the width there is, for
+   16 channels on a row. */
+@media (max-width: 575.98px) {
+  .patch-hint {
+    display: none;
+  }
+
+  .patch-map {
+    padding: var(--sd-space-2);
+  }
+}
+
+/* on a narrow screen the fixture edited goes below the map */
+@media (max-width: 991.98px) {
+  .patch-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patch-map {
+    border-right: none;
+    border-bottom: 1px solid var(--sd-border);
+  }
+}
+
+/* two fixtures on the same channels, with the fix */
+.patch-collision {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2);
+  margin-top: var(--sd-space-2);
+  padding: var(--sd-space-1) var(--sd-space-2);
+  border: 1px solid rgba(229, 84, 75, 0.4);
+  border-radius: var(--sd-radius);
+  background-color: rgba(229, 84, 75, 0.12);
+  color: var(--sd-danger);
+  font-size: 0.8125rem;
+}
+
 /* The channel map. It is drawn on a canvas: an element per channel put 512 of them in
    the page, which every hover had to walk through - and 512 more views for angular on
    top of that. The colours stay here, so the map is themed with everything else. */
@@ -55,12 +190,25 @@ lib-tree,
   position: relative;
   contain: layout;
 
-  --dmx-line: var(--sd-border);
-  --dmx-fill: var(--sd-primary-soft-strong);
-  --dmx-edge: var(--sd-primary);
+  --dmx-number: var(--sd-text-dim);
+  --dmx-free: var(--sd-surface-2);
+  --dmx-fill: var(--sd-surface-4);
+  --dmx-edge: var(--sd-border-strong);
+  --dmx-text: var(--sd-text);
+  --dmx-text-muted: var(--sd-text-muted);
   --dmx-selected-fill: var(--sd-primary);
-  --dmx-overlap-fill: rgba(229, 84, 75, 0.55);
+  --dmx-selected-text: #fff;
+  --dmx-selected-line: rgba(255, 255, 255, 0.3);
+  --dmx-overlap-fill: rgba(229, 84, 75, 0.6);
   --dmx-overlap-edge: var(--sd-danger);
+}
+
+/* what the channels of the fixture edited do, on its block (the icons themselves are styled in designer.component.scss:
+   they are built by the map, which this stylesheet doesn't reach) */
+.dmx-functions {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .dmx-canvas {
@@ -82,7 +230,7 @@ lib-tree,
 
 /* the hint keeps its distance to the map above it */
 .dmx-promo-hint {
-  padding-top: var(--sd-space-5);
+  padding-top: var(--sd-space-3, 1rem);
 }
 
 /* The fixtures of the project, grouped in the folders of the fixture panel. The rows
@@ -141,6 +289,47 @@ lib-tree,
 /* The profiles of the library: a version which tells where it comes from takes a second line for it. */
 .profiles-card {
   height: 240px;
+}
+
+/* the last row of the profiles, for a user who doesn't find the fixture: the button to add it, in the middle */
+.add-profile-row {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--sd-space-3, 1rem);
+  padding-bottom: var(--sd-space-3, 1rem);
+}
+
+/* below the profiles: where they come from on the left, the update of the library of a device on the right */
+.profiles-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2);
+  margin-top: var(--sd-space-2);
+}
+
+/* where a fixture of the tree is patched: how many channels it takes, and which */
+.fixture-channel-count {
+  padding-right: var(--sd-space-2);
+  font-size: 0.75rem;
+  color: var(--sd-text-dim);
+  white-space: nowrap;
+}
+
+.fixture-address {
+  margin-right: var(--sd-space-2);
+  padding: 0 0.375rem;
+  border-radius: var(--sd-radius-sm, 4px);
+  background-color: var(--sd-surface-3);
+  color: var(--sd-text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fixture-address-overlapped {
+  background-color: rgba(229, 84, 75, 0.22);
+  color: #ff8a82;
 }
 
 .profile-library,

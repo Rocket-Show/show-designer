@@ -1023,6 +1023,83 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
   }
 }
 
+// What the channels of the fixture edited do, on its block in the DMX map of the fixture pool: an icon each, or a dot
+// in the colour of a colour channel. The map builds them itself (see FixturePoolComponent.showChannelFunctions).
+.dmx-function {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.dmx-function-fine {
+  opacity: 0.55;
+  font-size: 0.6875rem;
+}
+
+.dmx-function-color {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+// "Add missing profile": the ways to add a profile the library doesn't have, one below the other with a line on what
+// each does, the AI first
+.popover.add-profile-popover {
+  width: 22rem;
+
+  .popover-body {
+    padding: $sd-space-2;
+  }
+}
+
+.add-profile-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: $sd-space-2;
+  width: 100%;
+  padding: $sd-space-2;
+  border: 1px solid transparent;
+  text-align: left;
+  white-space: normal;
+  font-weight: 500;
+
+  & + & {
+    margin-top: $sd-space-2;
+  }
+
+  // the other ways stand out from the popover as buttons as well
+  &.btn-secondary {
+    background-color: $sd-surface-2;
+    border-color: $sd-border-strong;
+    color: $sd-text;
+
+    &:hover {
+      background-color: $sd-surface-4;
+    }
+  }
+
+  // the same width for every icon, so the texts start on one line
+  .fa {
+    flex: 0 0 1.25em;
+    width: 1.25em;
+    margin-top: 0.1875rem;
+    text-align: center;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.125rem;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+}
+
 .popover-header {
   background-color: $sd-surface-4;
   border-bottom-color: $sd-border-strong;

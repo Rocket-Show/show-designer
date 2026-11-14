@@ -20,7 +20,6 @@ test.describe('The fixture pool', () => {
     await expect(designer.names(pool)).toHaveText(['RGB par', 'RGB par']);
 
     // the one added last is selected: it starts where the six channels of the first one end
-    await pool.getByRole('tab', { name: 'Settings' }).click();
     await expect(pool.getByRole('spinbutton')).toHaveValue('7');
     await pool.getByLabel('Fixture name').fill('Par right');
     await expect(designer.names(pool)).toHaveText(['RGB par', 'Par right']);

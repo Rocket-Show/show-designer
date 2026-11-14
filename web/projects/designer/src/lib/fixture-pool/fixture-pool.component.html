@@ -100,25 +100,78 @@
               </p>
             </div>
             }
+            <!-- the last row, where the user looks who doesn't find the fixture: a profile the library doesn't have -->
+            @if (!loadingProfiles) {
+            <div class="list-group-item add-profile-row">
+              <!-- a profile the library doesn't have: by the AI from the manual (the first choice), from a file, or made in
+                   the editor of the Open Fixture Library -->
+              <button
+                type="button"
+                class="btn btn-primary add-profile"
+                [popover]="addProfileChoices"
+                #addProfilePopover="bs-popover"
+                containerClass="fixture-library-popover add-profile-popover"
+                container="body"
+                placement="bottom"
+                [adaptivePosition]="false"
+                [outsideClick]="true"
+              >
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
+              </button>
+              <ng-template #addProfileChoices>
+                @if (configService.aiFixtures) {
+                <button
+                  type="button"
+                  class="btn btn-primary add-profile-choice add-profile-ai"
+                  (click)="addProfilePopover.hide(); createProfileWithAi()"
+                >
+                  <i class="fa fa-magic fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-ai' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-ai-hint' | translate }}</small>
+                  </span>
+                </button>
+                }
+                <button
+                  type="button"
+                  class="btn add-profile-choice add-profile-file"
+                  [class.btn-primary]="!configService.aiFixtures"
+                  [class.btn-secondary]="configService.aiFixtures"
+                  (click)="addProfilePopover.hide(); createFixtureFromProfileFile()"
+                >
+                  <i class="fa fa-file-o fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-file' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-file-hint' | translate }}</small>
+                  </span>
+                </button>
+                <a
+                  class="btn btn-secondary add-profile-choice add-profile-ofl"
+                  href="https://open-fixture-library.org/fixture-editor"
+                  target="_blank"
+                  rel="noopener"
+                  role="button"
+                  (click)="addProfilePopover.hide()"
+                >
+                  <i class="fa fa-external-link fa-fw" aria-hidden="true"></i>
+                  <span>
+                    {{ 'designer.fixture-pool.add-profile-ofl' | translate }}
+                    <small>{{ 'designer.fixture-pool.add-profile-ofl-hint' | translate }}</small>
+                  </span>
+                </a>
+              </ng-template>
+            </div>
+            }
           </div>
         </div>
       </div>
-      <div>
-        <p class="d-inline-block mb-0 mt-2">
-          Powered by the <a href="https://open-fixture-library.org/" target="_blank">Open Fixture Library</a>
-        </p>
-        <a
-          class="mt-2 btn btn-secondary btn-sm float-right"
-          href="https://open-fixture-library.org/fixture-editor"
-          target="_blank"
-          role="button"
-        >
-          <i class="fa fa-file-o" aria-hidden="true"></i> {{ 'designer.fixture-pool.add-profile' | translate }}
-        </a>
+      <!-- below the list: where the profiles come from, and on a device the update of its library -->
+      <div class="profiles-footer">
+        <p class="mb-0 mr-auto">Powered by the <a href="https://open-fixture-library.org/" target="_blank">Open Fixture Library</a></p>
         @if (configService.localProfiles) {
         <button
           type="button"
-          class="mr-2 mt-2 btn btn-secondary btn-sm float-right"
+          class="btn btn-secondary btn-sm update-profiles"
           (click)="updateProfiles(); (false)"
           [disabled]="updatingProfiles"
           role="button"
@@ -134,49 +187,6 @@
       </div>
     </div>
     <div class="col-12 col-md-6 mt-3 mt-md-0 d-flex flex-column">
-      <div class="row">
-        <!-- Add fixture from local profile -->
-        <div class="col-6">
-          <button type="button" class="btn btn-secondary" (click)="createFixtureFromProfileFile()" role="button">
-            <i class="fa fa-plus" aria-hidden="true"></i> {{ 'designer.fixture-pool.create-fixture-from-profile-file' | translate }}
-          </button>
-          <!-- a profile the AI makes from the manual of the fixture -->
-          @if (configService.aiFixtures) {
-          <button type="button" class="btn btn-secondary mt-2 create-profile-ai" (click)="createProfileWithAi()">
-            <i class="fa fa-magic" aria-hidden="true"></i> {{ 'designer.fixture-library.create-with-ai' | translate }}
-          </button>
-          }
-        </div>
-
-        <!-- Universe -->
-        <div class="col-6">
-          <div class="form-group row">
-            <label class="col-lg-4 col-form-label">{{ 'designer.fixture-pool.universe' | translate }}</label>
-            <div class="col-lg-8">
-              <div class="input-group">
-                <select
-                  class="custom-select"
-                  [disabled]="universes.length === 0"
-                  [ngModel]="selectedUniverse"
-                  (ngModelChange)="selectUniverse($event)"
-                >
-                  @for (universe of universes; track universe.uuid) {
-                  <option [ngValue]="universe">{{ universe.name }}</option>
-                  }
-                </select>
-                @if (freeUniverseEdit) {
-                <div class="input-group-append">
-                  <button type="button" class="btn btn-secondary" (click)="openEditUniverses()">
-                    <i class="fa fa-pencil" aria-hidden="true"></i>
-                  </button>
-                </div>
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Fixtures -->
       <div class="card border-secondary panel fixtures-card">
         <div class="card-header d-flex">
@@ -235,14 +245,23 @@
               </div>
               } @else {
               <div class="d-flex">
-                <div class="my-auto text-truncate">{{ node.fixture.name }}</div>
+                <div class="my-auto text-truncate fixture-name">{{ node.fixture.name }}</div>
+                <!-- where it is patched: its channels, red where another fixture is on one of them -->
+                @if (patches.get(node.fixture.uuid); as patch) {
+                <span class="fixture-channel-count ml-auto my-auto">{{
+                  'designer.fixture-pool.channel-count' | translate : { count: patch.count }
+                }}</span>
+                <span class="fixture-address my-auto" [class.fixture-address-overlapped]="patch.overlapped"
+                  >{{ patch.first }}–{{ patch.last }}</span
+                >
+                }
                 <!-- no tooltip on the rows: one is built, placed and thrown away again for
                      every row the cursor crosses, and a minus on a fixture speaks for itself -->
                 <!-- the library has a better version of the profile for the fixture: a click changes it to that one -->
                 @if (getBetterVersion(node.fixture); as better) {
                 <a
                   href="#"
-                  class="fixture-better-version ml-auto my-auto"
+                  class="fixture-better-version my-auto"
                   role="button"
                   [attr.aria-label]="'designer.fixture-library.better-' + better.reason | translate"
                   [title]="'designer.fixture-library.better-' + better.reason | translate"
@@ -255,7 +274,6 @@
                 <a
                   href="#"
                   class="fixture-maintenance my-auto"
-                  [class.ml-auto]="!getBetterVersion(node.fixture)"
                   role="button"
                   [class.maintaining]="isMaintaining(node.fixture, 'reset')"
                   [attr.aria-label]="'designer.fixture-pool.reset' | translate"
@@ -267,7 +285,6 @@
                 <a
                   href="#"
                   class="fixture-maintenance my-auto"
-                  [class.ml-auto]="!getBetterVersion(node.fixture) && !canMaintain(node.fixture, 'reset')"
                   role="button"
                   [class.maintaining]="isMaintaining(node.fixture, 'lamp-on')"
                   [attr.aria-label]="'designer.fixture-pool.lamp-on' | translate"
@@ -280,9 +297,6 @@
                 <a
                   href="#"
                   class="fixture-identify my-auto"
-                  [class.ml-auto]="
-                    !getBetterVersion(node.fixture) && !canMaintain(node.fixture, 'reset') && !canMaintain(node.fixture, 'lamp-on')
-                  "
                   role="button"
                   [class.identifying]="isIdentified(node.fixture)"
                   [attr.aria-label]="'designer.fixture-pool.identify' | translate"
@@ -306,218 +320,257 @@
       </div>
     </div>
   </div>
-  <div class="row mt-3">
-    <div class="col">
-      <!-- Tab navigation -->
-      <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-        <li class="nav-item">
-          <a class="nav-link active" id="sets-tab" data-toggle="tab" href="#dmx" role="tab">
-            <i class="icon-ola" aria-hidden="true"></i> {{ 'designer.fixture-pool.dmx' | translate }}
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" id="compositions-tab" data-toggle="tab" href="#settings" role="tab">
-            <i class="fa fa-cog" aria-hidden="true"></i> {{ 'designer.fixture-pool.settings' | translate }}
-          </a>
-        </li>
-      </ul>
-
-      <!-- Tab content -->
-      <div class="tab-content" id="myTabContent">
-        <!-- DMX universe overview-->
-        <div class="tab-pane show active" id="dmx" role="tabpanel">
-          <!-- The DMX channels. The map is drawn rather than built: an element per channel
-               is 512 of them in the page and 512 views for angular to walk, which is what
-               made hovering anywhere in this dialog slow. -->
-          <div class="dmx-map" #dmxMap (mousedown)="channelMouseDown($event)">
-            <canvas class="dmx-canvas" #dmxCanvas></canvas>
-            <!-- the number of the channel under the cursor, moved by the map itself -->
-            <div class="dmx-channel-label" #channelLabel hidden></div>
-          </div>
-
-          <!-- this patch is not controlling anything in the free online designer -->
-          @if (hardwarePromoService.enabled) {
-          <div class="dmx-promo-hint">
-            <div class="hardware-promo-hint">
-              <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
-              <span>
-                {{ 'designer.hardware-promo.dmx-hint' | translate }}
-                <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
-              </span>
-            </div>
-          </div>
+  <!-- The patch: the channels of the universe with the fixtures on them, and the fixture edited next to them -->
+  <div class="patch">
+    <div class="patch-head">
+      <span class="patch-title"><i class="icon-ola" aria-hidden="true"></i> {{ 'designer.fixture-pool.patch' | translate }}</span>
+      <div class="input-group input-group-sm patch-universe">
+        <select
+          class="custom-select"
+          id="poolUniverse"
+          [attr.aria-label]="'designer.fixture-pool.universe' | translate"
+          [disabled]="universes.length === 0"
+          [ngModel]="selectedUniverse"
+          (ngModelChange)="selectUniverse($event)"
+        >
+          @for (universe of universes; track universe.uuid) {
+          <option [ngValue]="universe">{{ universe.name }}</option>
           }
+        </select>
+        @if (freeUniverseEdit) {
+        <div class="input-group-append">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [attr.aria-label]="'designer.fixture-pool.edit-universes' | translate"
+            (click)="openEditUniverses()"
+          >
+            <i class="fa fa-pencil" aria-hidden="true"></i>
+          </button>
+        </div>
+        }
+      </div>
+      <!-- how full the universe is, and where the next fixture goes -->
+      <span class="patch-usage">
+        <span class="patch-meter" aria-hidden="true"><span [style.width.%]="(usedChannels / dmxChannels.length) * 100"></span></span>
+        {{ 'designer.fixture-pool.usage' | translate : { used: usedChannels, total: dmxChannels.length } }} @if (nextFreeChannel > 0) { ·
+        {{ 'designer.fixture-pool.next-free' | translate : { channel: nextFreeChannel } }}
+        }
+      </span>
+      <span class="patch-hint"
+        ><i class="fa fa-hand-paper-o" aria-hidden="true"></i> {{ 'designer.fixture-pool.drag-hint' | translate }}</span
+      >
+    </div>
+
+    <div class="patch-body">
+      <div class="patch-map">
+        <!-- The DMX channels. The map is drawn rather than built: an element per channel
+             is 512 of them in the page and 512 views for angular to walk, which is what
+             made hovering anywhere in this dialog slow. Only what the channels of the
+             fixture edited do is built, on top of it. -->
+        <div class="dmx-map" #dmxMap (mousedown)="channelMouseDown($event)">
+          <canvas class="dmx-canvas" #dmxCanvas></canvas>
+          <div class="dmx-functions" #dmxFunctions aria-hidden="true"></div>
+          <!-- the channel under the cursor, moved by the map itself -->
+          <div class="dmx-channel-label" #channelLabel hidden></div>
         </div>
 
-        <!-- Fixture settings -->
-        <div class="tab-pane" id="settings" role="tabpanel">
-          @if (selectedFixture && selectedFixtureProfile) {
-          <div>
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label" for="fixtureName">{{ 'designer.fixture-pool.fixture-name' | translate }}</label>
-              <div class="col-lg-9">
-                <input type="text" class="form-control" [(ngModel)]="selectedFixture.name" maxlength="200" id="fixtureName" />
-              </div>
-            </div>
-            <!-- the model of the fixture, which a profile picked on the left changes -->
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.fixture-type' | translate }}</label>
-              <div class="col-lg-9">
-                <p class="form-control-plaintext mb-0 fixture-type">{{ profileName(selectedFixtureProfile) }}</p>
-                <!-- what the library knows about the version, its other versions, and a profile from a file offered to it -->
-                <div class="fixture-type-library">
-                  <lib-fixture-version-badges [version]="selectedFixtureProfile"></lib-fixture-version-badges>
-                  @if (hasVersions(selectedFixtureProfile)) {
-
-                  <button
-                    type="button"
-                    class="btn btn-link btn-sm p-0 fixture-versions-button"
-                    [popover]="settingsVersions"
-                    #settingsVersionsPopover="bs-popover"
-                    [popoverTitle]="'designer.fixture-library.versions-title' | translate"
-                    containerClass="fixture-library-popover"
-                    container="body"
-                    placement="bottom"
-                    [adaptivePosition]="false"
-                    [outsideClick]="true"
-                  >
-                    <i class="fa fa-code-fork" aria-hidden="true"></i> {{ 'designer.fixture-library.all-versions' | translate }}
-                  </button>
-                  <ng-template #settingsVersions>
-                    <lib-fixture-versions
-                      [uuid]="selectedFixtureProfile.uuid"
-                      [currentUuid]="selectedFixtureProfile.uuid"
-                      useLabel="designer.fixture-library.change"
-                      [canImprove]="canUseAi"
-                      (use)="settingsVersionsPopover.hide(); exchangeProfile($event)"
-                      (improve)="settingsVersionsPopover.hide(); createProfileWithAi($event, true)"
-                    ></lib-fixture-versions>
-                  </ng-template>
-                  } @if (canOffer(selectedFixtureProfile)) {
-                  <button
-                    type="button"
-                    class="btn btn-secondary btn-sm fixture-offer-button"
-                    (click)="offerProfile(selectedFixtureProfile)"
-                  >
-                    <i class="fa fa-share" aria-hidden="true"></i> {{ 'designer.fixture-library.offer' | translate }}
-                  </button>
-                  }
-                </div>
-                <!-- the library has a better version for the mode of the fixture -->
-                @if (getBetterVersion(selectedFixture); as better) {
-                <div class="fixture-better-version-hint">
-                  <i class="fa fa-arrow-circle-up fa-fw" aria-hidden="true"></i>
-                  {{ 'designer.fixture-library.better-' + better.reason | translate }}
-                  <a href="#" role="button" class="ml-1" (click)="exchangeToBetter(selectedFixture); (false)">{{
-                    'designer.fixture-library.better-change' | translate
-                  }}</a>
-                </div>
-                }
-                <!-- what would have to be carried over to another model -->
-                @if (modelSpecificCount > 0) {
-                <small class="form-text text-muted mt-0 model-specific-count">
-                  <i class="fa fa-link fa-fw" aria-hidden="true"></i>
-                  {{ 'designer.fixture-pool.model-specific' | translate : { count: modelSpecificCount } }}
-                </small>
-                }
-              </div>
-            </div>
-            @if (exchangeReport && exchangedFrom) {
-            <div class="form-group row">
-              <div class="offset-lg-3 col-lg-9">
-                <div class="exchange-report">
-                  <p class="mb-1">
-                    {{ 'designer.fixture-pool.exchanged-from' | translate : { from: profileName(exchangedFrom) } }}
-                  </p>
-                  <p class="mb-1 exchange-carried">
-                    <i class="fa fa-check fa-fw" aria-hidden="true"></i>
-                    {{ 'designer.fixture-pool.exchange-carried' | translate : { count: exchangeReport.carried.length } }}
-                  </p>
-                  @if (exchangeReport.lost.length > 0) {
-                  <p class="mb-1 exchange-lost-title">
-                    <i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i>
-                    {{ 'designer.fixture-pool.exchange-lost' | translate : { count: exchangeReport.lost.length } }}
-                  </p>
-                  <ul class="exchange-lost mb-0">
-                    @for (item of exchangeReport.lost; track $index) {
-                    <li>
-                      {{ item.presetName }}: {{ item.from }} -
-                      {{ 'designer.fixture-pool.exchange-reason.' + item.reason | translate : { to: item.to } }}
-                    </li>
+        <!-- two fixtures on the same channels, and the fix: the later one moves to the first gap it fits in -->
+        @for (collision of collisions; track collision.fixture.uuid) {
+        <div class="patch-collision">
+          <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+          <span class="mr-auto">{{
+            'designer.fixture-pool.collision'
+              | translate : { fixture: collision.fixture.name, other: collision.other.name, first: collision.first, last: collision.last }
+          }}</span>
+          @if (collision.free > 0) {
+          <button type="button" class="btn btn-secondary btn-sm patch-collision-move" (click)="moveToFree(collision)">
+            {{
+              'designer.fixture-pool.collision-move'
+                | translate
+                  : {
+                      fixture: collision.fixture.name,
+                      first: collision.free,
+                      last: collision.free + patches.get(collision.fixture.uuid).count - 1
                     }
-                  </ul>
-                  }
-                </div>
-              </div>
-            </div>
-            }
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.mode' | translate }}</label>
-              <div class="col-lg-9">
-                <!-- each mode has a state of its own -->
-                <select class="custom-select" [ngModel]="selectedFixture.modeShortName" (ngModelChange)="selectMode($event)">
-                  @for (mode of selectedFixtureProfile.modes; track mode) {
-                  <option [ngValue]="mode.shortName || mode.name">
-                    {{ mode.name }}
-                    - {{ fixtureService.getModeChannelCount(selectedFixtureProfile, mode) }}
-                    {{ 'designer.fixture-pool.channels' | translate }}
-                    @if (modeBadge(mode); as state) { · {{ state.key | translate : { count: state.badge.count } }} }
-                  </option>
-                  }
-                </select>
-                <!-- whether the mode works with the real fixture, from the votes of the users -->
-                <lib-fixture-vote
-                  class="d-block mt-2"
-                  [profile]="selectedFixtureProfile"
-                  [mode]="selectedFixture.modeShortName"
-                ></lib-fixture-vote>
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.universe' | translate }}</label>
-              <div class="col-lg-9">
-                <select
-                  class="custom-select"
-                  [disabled]="universes.length === 0"
-                  [ngModel]="selectedFixture.dmxUniverseUuid"
-                  (ngModelChange)="selectedFixture.dmxUniverseUuid = $event; updateChannelMap()"
-                >
-                  @for (universe of universes; track universe.uuid) {
-                  <option [ngValue]="universe.uuid">{{ universe.name }}</option>
-                  }
-                </select>
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label">{{ 'designer.fixture-pool.first-channel' | translate }}</label>
-              <div class="col-lg-9">
-                <input
-                  type="number"
-                  class="form-control"
-                  min="1"
-                  [max]="dmxChannels.length"
-                  [ngModel]="selectedFixture.dmxFirstChannel + 1"
-                  (ngModelChange)="setFirstChannel($event)"
-                />
-              </div>
-            </div>
-            <div class="form-group row">
-              <label class="col-lg-3 col-form-label"></label>
-              <div class="col-lg-9">
-                <button type="button" class="btn btn-primary" (click)="addCopy(selectedFixture)">
-                  {{ 'designer.fixture.add-copy' | translate }}
-                </button>
-                <!-- the fixtures selected in the tree, one after another, e.g. after changing them to another model -->
-                @if (actedOnFixtures.length > 1) {
-                <button type="button" class="btn btn-secondary ml-2 patch-in-a-row" (click)="patchInARow()">
-                  {{ 'designer.fixture-pool.patch-in-a-row' | translate : { count: actedOnFixtures.length } }}
-                </button>
-                }
-              </div>
-            </div>
-          </div>
+            }}
+          </button>
           }
         </div>
+        }
+
+        <!-- this patch is not controlling anything in the free online designer -->
+        @if (hardwarePromoService.enabled) {
+        <div class="dmx-promo-hint">
+          <div class="hardware-promo-hint">
+            <i class="fa fa-lightbulb-o" aria-hidden="true"></i>
+            <span>
+              {{ 'designer.hardware-promo.dmx-hint' | translate }}
+              <a [href]="promoLink" target="_blank" rel="noopener">{{ 'designer.hardware-promo.cta' | translate }}</a>
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- The fixture edited, next to the map: its address can be typed while it is watched moving -->
+      <div class="patch-fixture" id="settings">
+        @if (selectedFixture && selectedFixtureProfile) {
+        <div class="form-group">
+          <label for="fixtureName">{{ 'designer.fixture-pool.fixture-name' | translate }}</label>
+          <input type="text" class="form-control" [(ngModel)]="selectedFixture.name" maxlength="200" id="fixtureName" />
+        </div>
+        <!-- the model of the fixture, which a profile picked on the left changes -->
+        <div class="form-group">
+          <label>{{ 'designer.fixture-pool.fixture-type' | translate }}</label>
+          <p class="mb-1 fixture-type">{{ profileName(selectedFixtureProfile) }}</p>
+          <!-- what the library knows about the version, its other versions, and a profile from a file offered to it -->
+          <div class="fixture-type-library">
+            <lib-fixture-version-badges [version]="selectedFixtureProfile"></lib-fixture-version-badges>
+            @if (hasVersions(selectedFixtureProfile)) {
+            <button
+              type="button"
+              class="btn btn-link btn-sm p-0 fixture-versions-button"
+              [popover]="settingsVersions"
+              #settingsVersionsPopover="bs-popover"
+              [popoverTitle]="'designer.fixture-library.versions-title' | translate"
+              containerClass="fixture-library-popover"
+              container="body"
+              placement="bottom"
+              [adaptivePosition]="false"
+              [outsideClick]="true"
+            >
+              <i class="fa fa-code-fork" aria-hidden="true"></i> {{ 'designer.fixture-library.all-versions' | translate }}
+            </button>
+            <ng-template #settingsVersions>
+              <lib-fixture-versions
+                [uuid]="selectedFixtureProfile.uuid"
+                [currentUuid]="selectedFixtureProfile.uuid"
+                useLabel="designer.fixture-library.change"
+                [canImprove]="canUseAi"
+                (use)="settingsVersionsPopover.hide(); exchangeProfile($event)"
+                (improve)="settingsVersionsPopover.hide(); createProfileWithAi($event, true)"
+              ></lib-fixture-versions>
+            </ng-template>
+            } @if (canOffer(selectedFixtureProfile)) {
+            <button type="button" class="btn btn-secondary btn-sm fixture-offer-button" (click)="offerProfile(selectedFixtureProfile)">
+              <i class="fa fa-share" aria-hidden="true"></i> {{ 'designer.fixture-library.offer' | translate }}
+            </button>
+            }
+          </div>
+          <!-- the library has a better version for the mode of the fixture -->
+          @if (getBetterVersion(selectedFixture); as better) {
+          <div class="fixture-better-version-hint">
+            <i class="fa fa-arrow-circle-up fa-fw" aria-hidden="true"></i>
+            {{ 'designer.fixture-library.better-' + better.reason | translate }}
+            <a href="#" role="button" class="ml-1" (click)="exchangeToBetter(selectedFixture); (false)">{{
+              'designer.fixture-library.better-change' | translate
+            }}</a>
+          </div>
+          }
+          <!-- what would have to be carried over to another model -->
+          @if (modelSpecificCount > 0) {
+          <small class="form-text text-muted mt-1 model-specific-count">
+            <i class="fa fa-link fa-fw" aria-hidden="true"></i>
+            {{ 'designer.fixture-pool.model-specific' | translate : { count: modelSpecificCount } }}
+          </small>
+          }
+        </div>
+        @if (exchangeReport && exchangedFrom) {
+        <div class="form-group">
+          <div class="exchange-report">
+            <p class="mb-1">
+              {{ 'designer.fixture-pool.exchanged-from' | translate : { from: profileName(exchangedFrom) } }}
+            </p>
+            <p class="mb-1 exchange-carried">
+              <i class="fa fa-check fa-fw" aria-hidden="true"></i>
+              {{ 'designer.fixture-pool.exchange-carried' | translate : { count: exchangeReport.carried.length } }}
+            </p>
+            @if (exchangeReport.lost.length > 0) {
+            <p class="mb-1 exchange-lost-title">
+              <i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i>
+              {{ 'designer.fixture-pool.exchange-lost' | translate : { count: exchangeReport.lost.length } }}
+            </p>
+            <ul class="exchange-lost mb-0">
+              @for (item of exchangeReport.lost; track $index) {
+              <li>
+                {{ item.presetName }}: {{ item.from }} -
+                {{ 'designer.fixture-pool.exchange-reason.' + item.reason | translate : { to: item.to } }}
+              </li>
+              }
+            </ul>
+            }
+          </div>
+        </div>
+        }
+        <div class="form-group">
+          <label for="fixtureMode">{{ 'designer.fixture-pool.mode' | translate }}</label>
+          <!-- each mode has a state of its own -->
+          <select class="custom-select" id="fixtureMode" [ngModel]="selectedFixture.modeShortName" (ngModelChange)="selectMode($event)">
+            @for (mode of selectedFixtureProfile.modes; track mode) {
+            <option [ngValue]="mode.shortName || mode.name">
+              {{ mode.name }}
+              - {{ fixtureService.getModeChannelCount(selectedFixtureProfile, mode) }}
+              {{ 'designer.fixture-pool.channels' | translate }}
+              @if (modeBadge(mode); as state) { · {{ state.key | translate : { count: state.badge.count } }} }
+            </option>
+            }
+          </select>
+          <!-- whether the mode works with the real fixture, from the votes of the users -->
+          <lib-fixture-vote
+            class="d-block mt-2"
+            [profile]="selectedFixtureProfile"
+            [mode]="selectedFixture.modeShortName"
+          ></lib-fixture-vote>
+        </div>
+        <!-- where it is patched: the universe and its first channel, and the channels that makes it take -->
+        <div class="form-row">
+          <div class="form-group col-7">
+            <label for="fixtureUniverse">{{ 'designer.fixture-pool.universe' | translate }}</label>
+            <select
+              class="custom-select"
+              id="fixtureUniverse"
+              [disabled]="universes.length === 0"
+              [ngModel]="selectedFixture.dmxUniverseUuid"
+              (ngModelChange)="selectedFixture.dmxUniverseUuid = $event; selectFixture(selectedFixture)"
+            >
+              @for (universe of universes; track universe.uuid) {
+              <option [ngValue]="universe.uuid">{{ universe.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group col-5">
+            <label for="fixtureFirstChannel">{{ 'designer.fixture-pool.first-channel' | translate }}</label>
+            <input
+              type="number"
+              class="form-control"
+              id="fixtureFirstChannel"
+              min="1"
+              [max]="dmxChannels.length"
+              [ngModel]="selectedFixture.dmxFirstChannel + 1"
+              (ngModelChange)="setFirstChannel($event)"
+            />
+          </div>
+        </div>
+        @if (patches.get(selectedFixture.uuid); as patch) {
+        <p class="patch-range" [class.patch-range-overlapped]="patch.overlapped">
+          {{ 'designer.fixture-pool.channel-range' | translate : { first: patch.first, last: patch.last, count: patch.count } }}
+        </p>
+        }
+        <div class="patch-fixture-actions">
+          <button type="button" class="btn btn-primary" (click)="addCopy(selectedFixture)">
+            {{ 'designer.fixture.add-copy' | translate }}
+          </button>
+          <!-- the fixtures selected in the tree, one after another, e.g. after changing them to another model -->
+          @if (actedOnFixtures.length > 1) {
+          <button type="button" class="btn btn-secondary patch-in-a-row" (click)="patchInARow()">
+            {{ 'designer.fixture-pool.patch-in-a-row' | translate : { count: actedOnFixtures.length } }}
+          </button>
+          }
+        </div>
+        } @else {
+        <p class="text-muted patch-no-fixture">{{ 'designer.fixture-pool.no-fixture' | translate }}</p>
+        }
       </div>
     </div>
   </div>

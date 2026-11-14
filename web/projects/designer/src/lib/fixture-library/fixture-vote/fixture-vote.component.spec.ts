@@ -220,15 +220,11 @@ describe('FixtureVoteComponent', () => {
     expect(element().textContent).toContain('1');
   });
 
-  it('asks nothing for a copy which is of no version, and says why where the user could vote', () => {
+  it('asks nothing and shows nothing for a copy which is of no version', () => {
     show(new FixtureProfile({ uuid: 'acme/par' }), '8ch');
 
     expect(library.getVotes).not.toHaveBeenCalled();
-    expect(element().querySelector('.fixture-vote-plain')).not.toBeNull();
-
-    config.loginAvailable = false;
-    fixture.detectChanges();
-    expect(element().querySelector('.fixture-vote-plain')).toBeNull();
+    expect(element().textContent.trim()).toBe('');
   });
 
   it('waits for the mode, and asks again for another profile only', () => {

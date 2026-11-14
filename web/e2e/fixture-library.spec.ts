@@ -47,7 +47,6 @@ test.describe('The fixture library', () => {
     await expect(designer.row(pool, 'Par left').getByRole('button', { name: better })).toBeVisible();
 
     // the fixture changed to the best version, which tells what is carried over
-    await pool.getByRole('tab', { name: 'Settings' }).click();
     await expect(pool.getByText('Changed from Test - RGB par')).toBeVisible();
     await expect(pool.locator('.fixture-type-library')).toContainText('AI-generated');
 
@@ -76,7 +75,12 @@ test.describe('The fixture library', () => {
     await designer.menu('Settings', 'Fixture pool');
     const pool = designer.fixturePool;
 
-    await pool.getByRole('button', { name: 'Create profile with AI' }).click();
+    // a missing profile: the AI is the first of the ways to add it
+    await pool.getByRole('button', { name: 'Add missing profile' }).click();
+    await page
+      .locator('.add-profile-popover')
+      .getByRole('button', { name: /Automatically, with AI/ })
+      .click();
     const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Create profile with AI' }) });
     await expect(dialog.getByText('20 of 20 profiles left today')).toBeVisible();
 
