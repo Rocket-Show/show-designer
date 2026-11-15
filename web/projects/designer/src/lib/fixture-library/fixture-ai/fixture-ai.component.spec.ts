@@ -235,6 +235,7 @@ describe('FixtureAiComponent', () => {
 
   it('looks a new manufacturer up by the model, and a link or a search without a manual', async () => {
     ai.lookup.and.returnValue(of({ versions: undefined, manualKnown: false }));
+    ai.generate.and.returnValue(new Subject<AiFixturesResponse>());
 
     open();
     component.manufacturerShortName = FixtureAiComponent.newManufacturer;
@@ -248,7 +249,38 @@ describe('FixtureAiComponent', () => {
     expect(ai.sha256).not.toHaveBeenCalled();
     expect(ai.lookup).toHaveBeenCalledWith('', 'Spot', '');
     expect(component.foundVersions).toEqual([]);
-    expect(element().textContent).toContain('designer.fixture-ai.not-found');
+    // with nothing to take, the AI makes the profile at once
+    expect(component.view).toBe('generating');
+    expect(ai.generate).toHaveBeenCalledWith({ manufacturerName: 'Lumen', model: 'Spot' });
+    component.ngOnDestroy();
+  });
+
+  it('goes back to the inputs when the AI, asked at once, fails', async () => {
+    ai.lookup.and.returnValue(of({ versions: [], manualKnown: false }));
+    ai.generate.and.returnValue(throwError(new HttpErrorResponse({ status: 422, error: { error: 'ai-no-manual' } })));
+    open();
+    fill();
+
+    await component.lookUp();
+    fixture.detectChanges();
+
+    expect(ai.generate).toHaveBeenCalled();
+    expect(component.view).toBe('input');
+    expect(component.error).toEqual({ key: 'designer.fixture-ai.error.ai-no-manual' });
+    expect(element().querySelector('.fixture-ai-error')).not.toBeNull();
+  });
+
+  it("tells that no profile is left today when nothing is found, and doesn't ask the AI", async () => {
+    ai.getStatus.and.returnValue(of({ ...status, requestsLast24Hours: 5 }));
+    ai.lookup.and.returnValue(of({ versions: [], manualKnown: false }));
+    open();
+    fill();
+
+    await component.lookUp();
+
+    expect(ai.generate).not.toHaveBeenCalled();
+    expect(component.view).toBe('input');
+    expect(component.error).toEqual({ key: 'designer.fixture-ai.error.ai-user-limit-reached' });
   });
 
   it('looks up without the hash of the manual where the browser has no cryptography', async () => {

@@ -1040,7 +1040,6 @@
       "use": "Utiliser cette version",
       "use-mode": "Utiliser ce mode",
       "found-generate": "Un mode manque ou est faux ? Faites améliorer une version par l'IA, ou créez un nouveau profil.",
-      "not-found": "La bibliothèque n'a pas encore de profil de ce fixture. L'IA peut en créer un à partir du manuel.",
       "generating": "L'IA lit le manuel et écrit le profil...",
       "generating-hint": "Cela prend quelques minutes. Gardez cette fenêtre ouverte.",
       "review-intro": "Vérifiez chaque canal avec le manuel avant d'utiliser le profil dans un spectacle. Là où une ligne est « non vérifiée », sa citation n'a pas été trouvée à la page indiquée.",

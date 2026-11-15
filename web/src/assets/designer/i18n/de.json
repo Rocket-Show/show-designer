@@ -1041,7 +1041,6 @@
       "use": "Diese Version verwenden",
       "use-mode": "Diesen Modus verwenden",
       "found-generate": "Fehlt ein Modus oder ist einer falsch? Lass die KI eine Version verbessern oder erstelle ein neues Profil.",
-      "not-found": "Die Bibliothek hat noch kein Profil dieses Fixtures. Die KI kann eines aus dem Handbuch erstellen.",
       "generating": "Die KI liest das Handbuch und schreibt das Profil...",
       "generating-hint": "Das dauert ein paar Minuten. Bitte lass diesen Dialog offen.",
       "review-intro": "Prüfe jeden Kanal mit dem Handbuch, bevor du das Profil in einer Show verwendest. Wo eine Zeile \"nicht geprüft\" ist, wurde ihr Zitat auf der genannten Seite nicht gefunden.",

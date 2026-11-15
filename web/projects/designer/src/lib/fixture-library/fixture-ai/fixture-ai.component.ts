@@ -42,8 +42,8 @@ interface FoundVersion {
 
 // "Create profile with AI" (see docs/fixture-library.md, section 10): the user names the manufacturer and the model of a
 // fixture and gives its manual, a link to it, or leaves the AI to search it. The library is looked into first, which
-// costs nothing: a version it has can be taken at once. Else the AI makes a profile, which takes minutes, and the
-// user reviews it, channel by channel, against where the AI read it in the manual, before it is added to the project.
+// costs nothing: a version it has can be taken at once. Else the AI makes a profile right away, which takes minutes,
+// and the user reviews it, channel by channel, against where the AI read it in the manual, before it is added to the project.
 // Opened for a version (parent), the AI improves that version as the user says instead.
 @Component({
   selector: 'lib-fixture-ai',
@@ -192,7 +192,8 @@ export class FixtureAiComponent implements OnInit, OnDestroy {
     }
   }
 
-  // look into the library for the fixture, and for what was made from the manual before
+  // look into the library for the fixture, and for what was made from the manual before; with nothing found, the AI
+  // makes the profile
   async lookUp() {
     if (!this.available || !this.complete) {
       return;
@@ -215,7 +216,19 @@ export class FixtureAiComponent implements OnInit, OnDestroy {
             return { name: mode.name || mode.shortName, shortName: mode.shortName, badge, key: getStateBadgeKey(badge) };
           }),
         }));
-        this.view = 'found';
+
+        if (this.foundVersions.length > 0) {
+          this.view = 'found';
+          return;
+        }
+
+        // nothing to take: the AI makes the profile at once, and a request which fails goes back to the inputs
+        this.view = 'input';
+        if (this.requestsLeft === 0) {
+          this.error = { key: 'designer.fixture-ai.error.ai-user-limit-reached' };
+          return;
+        }
+        this.generate();
       },
       error: (error) => {
         this.view = 'input';

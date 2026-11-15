@@ -109,7 +109,7 @@
   <p class="text-center my-4">
     <i class="fa fa-spinner fa-pulse fa-fw" aria-hidden="true"></i> {{ 'designer.fixture-ai.looking' | translate }}
   </p>
-  } @if (view === 'found') { @if (foundVersions.length > 0) {
+  } @if (view === 'found') {
   <p>{{ 'designer.fixture-ai.found' | translate }}</p>
   @for (found of foundVersions; track found.version.uuid) {
   <div class="fixture-ai-found">
@@ -139,9 +139,7 @@
   </div>
   }
   <p class="text-muted small mt-3 mb-0">{{ 'designer.fixture-ai.found-generate' | translate }}</p>
-  } @else {
-  <p class="mb-0">{{ 'designer.fixture-ai.not-found' | translate }}</p>
-  } } @if (view === 'generating') {
+  } @if (view === 'generating') {
   <div class="text-center my-4 fixture-ai-generating">
     <i class="fa fa-magic fa-3x text-primary" aria-hidden="true"></i>
     <p class="mt-3 mb-1">{{ 'designer.fixture-ai.generating' | translate }} {{ elapsed }}</p>

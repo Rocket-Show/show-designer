@@ -90,9 +90,10 @@ test.describe('The fixture library', () => {
       .locator('input[type=file]')
       .setInputFiles({ name: 'spot.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
 
-    // the library is looked into first, by the manual as well
+    // the library is looked into first, by the manual as well; with nothing found, the AI makes it at once, and the user
+    // reviews it against the manual
     await dialog.getByRole('button', { name: 'Look up' }).click();
-    await expect(dialog.getByText('The library has no profile of this fixture yet.')).toBeVisible();
+    await expect(dialog.getByText('The manual names two tilt ranges.')).toBeVisible();
     const [lookup] = api.requestsTo('POST ai-fixtures');
     expect(lookup.form).toEqual({
       action: 'lookup',
@@ -101,9 +102,6 @@ test.describe('The fixture library', () => {
       manualSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
     });
 
-    // the AI makes it, and the user reviews it against the manual
-    await dialog.getByRole('button', { name: 'Create with AI' }).click();
-    await expect(dialog.getByText('The manual names two tilt ranges.')).toBeVisible();
     // (the fine channel of pan is read where pan is)
     await expect(dialog.getByRole('row').filter({ hasText: 'Pan fine' })).toContainText('CH1 Pan 0-540°');
     await expect(dialog.getByText('not verified').first()).toBeVisible();

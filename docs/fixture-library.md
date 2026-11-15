@@ -292,7 +292,7 @@ counts for the statistics, not for the ranking (section 11).
 
 1. **Look in the library first**, by manufacturer and `match_key` (section 4) and by the hash of the PDF. The dialog
    shows the versions found, with their modes and the state of each: the user takes one, at once and for free, or says
-   that a mode is missing or wrong, which is "Improve" below.
+   that a mode is missing or wrong, which is "Improve" below. With nothing found, the dialog goes on to the AI at once.
 2. **Check the size.** The token counting of the API says what the request costs before it is sent, for free. A manual
    above the limit (`fixtureMaxInputTokens`: 400,000 tokens, roughly 150 pages, _proposed_) is refused, and the dialog
    asks for the pages with the DMX chart only (section 15). For a link or a search, web fetch gets the same limit
