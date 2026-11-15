@@ -35,6 +35,17 @@ describe('AI fixture profiles', () => {
       });
     });
 
+    it('tells why the AI found no manual it could use, in its words', () => {
+      const reason = 'The manual at https://example.com/tube.pdf is the one of the LED Tube of 2011, which has no DMX chart.';
+
+      expect(getAiFixturesError(httpError(422, { error: 'ai-no-manual', reason: ' ' + reason + '\n' }))).toEqual({
+        key: prefix + 'ai-no-manual',
+        reason,
+      });
+      expect(getAiFixturesError(httpError(422, { error: 'ai-no-manual', reason: ' ' }))).toEqual({ key: prefix + 'ai-no-manual' });
+      expect(getAiFixturesError(httpError(422, { error: 'ai-no-manual', reason: 12 }))).toEqual({ key: prefix + 'ai-no-manual' });
+    });
+
     it('names the errors of the API it knows, a web server giving up waiting, and something gone wrong otherwise', () => {
       for (const code of ['ai-unavailable', 'ai-user-limit-reached', 'ai-limit-reached', 'ai-no-manual', 'ai-busy', 'unknown-version']) {
         expect(getAiFixturesError(httpError(400, { error: code }))).toEqual({ key: prefix + code });

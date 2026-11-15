@@ -213,7 +213,9 @@
   </table>
   } } @if (error) {
   <div class="alert alert-danger mt-3 mb-0 fixture-ai-error" role="alert">
-    {{ error.key | translate : error.params }} @if (error.errors?.length > 0) {
+    {{ error.key | translate : error.params }} @if (error.reason) {
+    <p class="mb-0 mt-2 fixture-ai-reason">{{ error.reason }}</p>
+    } @if (error.errors?.length > 0) {
     <ul class="mb-0 mt-1">
       @for (text of error.errors; track $index) {
       <li>{{ text }}</li>

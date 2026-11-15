@@ -66,6 +66,8 @@ export interface AiFixturesError {
   params?: { [name: string]: any };
   // what was still wrong with a profile the AI couldn't make right
   errors?: string[];
+  // why the AI found no manual it could use, in its words (e.g. the manual of another model)
+  reason?: string;
 }
 
 // One channel of a mode in the review of a generated profile: where the AI read it (see FixtureReviewNote, undefined
@@ -117,6 +119,10 @@ export function getAiFixturesError(error: any): AiFixturesError {
 
   if (code === 'ai-invalid-profile') {
     return { key: errorPrefix + code, errors: Array.isArray(body.errors) ? body.errors : [] };
+  }
+
+  if (code === 'ai-no-manual' && typeof body.reason === 'string' && body.reason.trim()) {
+    return { key: errorPrefix + code, reason: body.reason.trim() };
   }
 
   if (knownErrors.indexOf(code) >= 0) {

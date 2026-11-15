@@ -255,9 +255,10 @@ describe('FixtureAiComponent', () => {
     component.ngOnDestroy();
   });
 
-  it('goes back to the inputs when the AI, asked at once, fails', async () => {
+  it('goes back to the inputs when the AI, asked at once, fails, and tells why it found no manual', async () => {
+    const reason = 'The PDF is the manual of the LED Tube of 2011, which has no DMX chart.';
     ai.lookup.and.returnValue(of({ versions: [], manualKnown: false }));
-    ai.generate.and.returnValue(throwError(new HttpErrorResponse({ status: 422, error: { error: 'ai-no-manual' } })));
+    ai.generate.and.returnValue(throwError(new HttpErrorResponse({ status: 422, error: { error: 'ai-no-manual', reason } })));
     open();
     fill();
 
@@ -266,8 +267,9 @@ describe('FixtureAiComponent', () => {
 
     expect(ai.generate).toHaveBeenCalled();
     expect(component.view).toBe('input');
-    expect(component.error).toEqual({ key: 'designer.fixture-ai.error.ai-no-manual' });
+    expect(component.error).toEqual({ key: 'designer.fixture-ai.error.ai-no-manual', reason });
     expect(element().querySelector('.fixture-ai-error')).not.toBeNull();
+    expect(element().querySelector('.fixture-ai-reason').textContent).toBe(reason);
   });
 
   it("tells that no profile is left today when nothing is found, and doesn't ask the AI", async () => {
