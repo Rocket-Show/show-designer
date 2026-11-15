@@ -1044,6 +1044,7 @@
       "generating": "Die KI liest das Handbuch und schreibt das Profil...",
       "generating-hint": "Das dauert ein paar Minuten. Bitte lass diesen Dialog offen.",
       "review-intro": "Prüfe jeden Kanal mit dem Handbuch, bevor du das Profil in einer Show verwendest. Wo eine Zeile \"nicht geprüft\" ist, wurde ihr Zitat auf der genannten Seite nicht gefunden.",
+      "other-fixture": "Das Handbuch gehört zu einem anderen Fixture als dem gesuchten. Das Profil ist nach ihm benannt: {{name}}.",
       "uncertain": "Worüber die KI unsicher war:",
       "channel": "Kanal",
       "page": "Seite",

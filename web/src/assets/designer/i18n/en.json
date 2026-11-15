@@ -1043,6 +1043,7 @@
       "generating": "The AI reads the manual and writes the profile...",
       "generating-hint": "This takes a few minutes. Please keep this dialog open.",
       "review-intro": "Check each channel against the manual before you use the profile in a show. Where a row is \"not verified\", its quote was not found on the page it names.",
+      "other-fixture": "The manual is of another fixture than the one you asked for. The profile is named after it: {{name}}.",
       "uncertain": "What the AI wasn't sure about:",
       "channel": "Channel",
       "page": "Page",

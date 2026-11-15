@@ -1043,6 +1043,7 @@
       "generating": "L'IA legge il manuale e scrive il profilo...",
       "generating-hint": "Ci vogliono alcuni minuti. Per favore tieni aperta questa finestra.",
       "review-intro": "Controlla ogni canale con il manuale prima di usare il profilo in uno show. Dove una riga è \"non verificata\", la sua citazione non è stata trovata alla pagina indicata.",
+      "other-fixture": "Il manuale è di un fixture diverso da quello richiesto. Il profilo ne porta il nome: {{name}}.",
       "uncertain": "Di cosa l'IA non era sicura:",
       "channel": "Canale",
       "page": "Pagina",

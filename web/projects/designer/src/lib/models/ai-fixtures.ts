@@ -29,6 +29,8 @@ export interface FixtureReview {
   channels: { [channelKey: string]: FixtureReviewNote };
   uncertain: string[];
   manualUrl?: string;
+  // the manual given was of another fixture, whose profile the AI wrote instead, named after it: what the AI says
+  otherFixture?: string;
 }
 
 // what the library already has for a fixture: its versions, and the ones made from the manual given

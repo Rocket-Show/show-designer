@@ -298,8 +298,10 @@ counts for the statistics, not for the ranking (section 11).
    asks for the pages with the DMX chart only (section 15). For a link or a search, web fetch gets the same limit
    (`max_content_tokens`) and a number of uses (`max_uses`).
 3. **Ask Claude** (the model of the looks, `claude-opus-5-5`, with the fallbacks on). It always works from a manual,
-   never from memory: when it finds none, it says so instead of guessing. The manual is marked for the cache
-   (`cache_control` on the document).
+   never from memory: when it finds none, it says so instead of guessing, and the dialog shows why (e.g. the manual of
+   another model, or one without a DMX chart). A manual the user gave which is of another model of the same
+   manufacturer gives the profile of that model, named after it, and the review warns about it. The manual is marked
+   for the cache (`cache_control` on the document).
 4. **The answer is OFL JSON**, the format the designer, Rocket Show and OFL read. The designer uses all of the
    capabilities of OFL (`models/fixture-capability.ts`). Not as a structured output: the schema of OFL is much larger
    than the one of the looks, which Anthropic already refused as too large a grammar (`ai/ai.php`). Along with it come,
@@ -317,7 +319,8 @@ counts for the statistics, not for the ranking (section 11).
    this manufacturer and `match_key`, else as a new fixture.
 
 **The review in the designer:** the channels of each mode with the page of the manual they come from, the quoted row,
-"not verified" where the quote wasn't found, and what the AI wasn't sure about. Maintenance (reset, lamp on and off) and
+"not verified" where the quote wasn't found, and what the AI wasn't sure about; a warning first when the manual was of
+another fixture. Maintenance (reset, lamp on and off) and
 strobe stand out: the fixture pool has buttons for reset and lamp, and a wrong range could fire during a show.
 
 **Reset and lamp ask first.** For a profile from the AI or from a user, the buttons of the fixture pool show the

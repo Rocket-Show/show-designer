@@ -357,6 +357,31 @@ describe('FixtureAiComponent', () => {
     expect(element().querySelectorAll('.fixture-ai-review tbody tr').length).toBe(6);
   }));
 
+  it('warns that the manual was of another fixture, which the profile is named after', () => {
+    const otherFixture = 'The manual is of the LED Bar 120/4 RGB, not of the LED Bar 240/8 RGB, which has 8 segments.';
+    const made = response();
+    made.profile.name = 'LED Bar 120/4 RGB';
+    made.review.otherFixture = otherFixture;
+    ai.generate.and.returnValue(of(made));
+    open();
+    fill();
+    component.view = 'found';
+
+    component.generate();
+    fixture.detectChanges();
+
+    const warning = element().querySelector('.fixture-ai-other-fixture');
+    expect(warning.textContent).toContain('designer.fixture-ai.other-fixture');
+    expect(warning.textContent).toContain(otherFixture);
+
+    // nothing to warn about for a manual of the fixture asked for
+    ai.generate.and.returnValue(of(response()));
+    component.view = 'found';
+    component.generate();
+    fixture.detectChanges();
+    expect(element().querySelector('.fixture-ai-other-fixture')).toBeNull();
+  });
+
   it('reviews the first mode, where the user asked for none', () => {
     open();
     fill();

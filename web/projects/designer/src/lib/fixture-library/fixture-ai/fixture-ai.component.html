@@ -147,6 +147,12 @@
   </div>
   } @if (view === 'review' && response) {
   <!-- what the AI read where: the user compares it with the manual before the profile plays a show -->
+  @if (response.review?.otherFixture) {
+  <div class="alert alert-warning fixture-ai-other-fixture" role="alert">
+    <strong>{{ 'designer.fixture-ai.other-fixture' | translate : { name: response.profile?.name } }}</strong>
+    <p class="mb-0 mt-1">{{ response.review.otherFixture }}</p>
+  </div>
+  }
   <p>{{ 'designer.fixture-ai.review-intro' | translate }}</p>
   @if (response.review?.manualUrl) {
   <p>
