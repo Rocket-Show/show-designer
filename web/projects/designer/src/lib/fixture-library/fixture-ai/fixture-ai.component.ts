@@ -71,6 +71,9 @@ export class FixtureAiComponent implements OnInit, OnDestroy {
   source: FixtureAiSource = 'manual';
   manual: File;
   link = '';
+  // what the user typed as the manufacturer (see setManufacturer): the key of the one of the library, or the name of a
+  // new one
+  manufacturerInput = '';
   manufacturerShortName = '';
   manufacturerName = '';
   model = '';
@@ -114,10 +117,14 @@ export class FixtureAiComponent implements OnInit, OnDestroy {
       },
     });
 
+    // (a name typed before the list is there is matched again; without the list, any name is a new manufacturer)
     if (!this.parent) {
       this.fixtureLibraryService.getManufacturers().subscribe({
-        next: (manufacturers) => (this.manufacturers = manufacturers),
-        error: () => (this.manufacturerShortName = FixtureAiComponent.newManufacturer),
+        next: (manufacturers) => {
+          this.manufacturers = manufacturers;
+          this.setManufacturer(this.manufacturerInput);
+        },
+        error: () => this.setManufacturer(this.manufacturerInput),
       });
     }
   }
@@ -157,6 +164,20 @@ export class FixtureAiComponent implements OnInit, OnDestroy {
 
   get canGenerate(): boolean {
     return this.available && this.complete && this.requestsLeft !== 0;
+  }
+
+  // The manufacturer typed, or picked from the suggestions: the one of the library of that name (in any case) or key,
+  // else a new one of that name
+  setManufacturer(text: string) {
+    this.manufacturerInput = text || '';
+
+    const name = this.manufacturerInput.trim();
+    const known = this.manufacturers.find(
+      (manufacturer) => manufacturer.name.toLowerCase() === name.toLowerCase() || manufacturer.shortName === name.toLowerCase()
+    );
+
+    this.manufacturerShortName = known ? known.shortName : name ? FixtureAiComponent.newManufacturer : '';
+    this.manufacturerName = known ? '' : name;
   }
 
   setSource(source: FixtureAiSource) {

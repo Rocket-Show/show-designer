@@ -84,7 +84,11 @@ test.describe('The fixture library', () => {
     const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Create profile with AI' }) });
     await expect(dialog.getByText('20 of 20 profiles left today')).toBeVisible();
 
-    await dialog.getByLabel('Manufacturer').selectOption({ label: 'Test' });
+    // the manufacturers of the library are suggested as the user types
+    await dialog.getByLabel('Manufacturer').fill('tes');
+    await page.locator('typeahead-container').getByRole('option', { name: 'Test' }).click();
+    await expect(dialog.getByLabel('Manufacturer')).toHaveValue('Test');
+    await expect(dialog.getByText('A new manufacturer')).toBeHidden();
     await dialog.getByLabel('Model').fill('Spot 1');
     await dialog
       .locator('input[type=file]')
@@ -92,7 +96,7 @@ test.describe('The fixture library', () => {
 
     // the library is looked into first, by the manual as well; with nothing found, the AI makes it at once, and the user
     // reviews it against the manual
-    await dialog.getByRole('button', { name: 'Look up' }).click();
+    await dialog.getByRole('button', { name: 'Create with AI' }).click();
     await expect(dialog.getByText('The manual names two tilt ranges.')).toBeVisible();
     const [lookup] = api.requestsTo('POST ai-fixtures');
     expect(lookup.form).toEqual({

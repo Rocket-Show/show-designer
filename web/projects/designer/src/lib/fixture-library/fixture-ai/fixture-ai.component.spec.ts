@@ -3,10 +3,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, discardPeriodicTasks, fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { TypeaheadModule } from 'ngx-bootstrap/typeahead';
 import { ToastrModule } from 'ngx-toastr';
 import { of, Subject, throwError } from 'rxjs';
 
@@ -79,11 +81,17 @@ describe('FixtureAiComponent', () => {
       generate: jasmine.createSpy('generate').and.returnValue(of(response())),
       sha256: jasmine.createSpy('sha256').and.returnValue(Promise.resolve('abc')),
     };
-    manufacturers = jasmine.createSpy('getManufacturers').and.returnValue(of([{ shortName: 'acme', name: 'Acme' }]));
+    manufacturers = jasmine.createSpy('getManufacturers').and.returnValue(
+      of([
+        { shortName: 'acme', name: 'Acme' },
+        { shortName: 'acme-lighting', name: 'Acme Lighting' },
+        { shortName: 'lumen', name: 'Lumen' },
+      ])
+    );
 
     TestBed.configureTestingModule({
       declarations: [FixtureAiComponent, FixtureVersionBadgesComponent],
-      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot(), PopoverModule.forRoot()],
+      imports: [FormsModule, TranslateModule.forRoot(), ToastrModule.forRoot(), PopoverModule.forRoot(), TypeaheadModule.forRoot()],
       providers: [
         { provide: BsModalRef, useValue: { hide } },
         { provide: BsModalService, useValue: {} },
@@ -93,6 +101,8 @@ describe('FixtureAiComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        // (the suggestions of the manufacturers are animated)
+        provideNoopAnimations(),
       ],
     });
 
@@ -126,17 +136,84 @@ describe('FixtureAiComponent', () => {
     expect(component.loadingStatus).toBe(false);
     expect(component.available).toBe(true);
     expect(component.requestsLeft).toBe(4);
-    expect(component.manufacturers).toEqual([{ shortName: 'acme', name: 'Acme' }]);
+    expect(component.manufacturers.map((manufacturer) => manufacturer.shortName)).toEqual(['acme', 'acme-lighting', 'lumen']);
     expect(element().querySelector('.modal-footer').textContent).toContain('designer.fixture-ai.requests-left');
     expect(component.complete).toBe(false);
     expect(footerButton().disabled).toBe(true);
   });
 
+  it('takes the manufacturer typed: one of the library by its name or key, else a new one', () => {
+    open();
+
+    component.setManufacturer(' acme lighting ');
+    expect([component.manufacturerShortName, component.manufacturerName, component.newManufacturer]).toEqual(['acme-lighting', '', false]);
+    component.setManufacturer('lumen');
+    expect(component.manufacturerShortName).toBe('lumen');
+
+    component.setManufacturer('Lumen Pro ');
+    fixture.detectChanges();
+    expect([component.manufacturerShortName, component.manufacturerName, component.newManufacturer]).toEqual([
+      FixtureAiComponent.newManufacturer,
+      'Lumen Pro',
+      true,
+    ]);
+    expect(element().querySelector('.fixture-ai-new-manufacturer').textContent).toContain('designer.fixture-ai.manufacturer-new');
+
+    component.setManufacturer(' ');
+    fixture.detectChanges();
+    expect([component.manufacturerShortName, component.manufacturerName]).toEqual(['', '']);
+    expect(element().querySelector('.fixture-ai-new-manufacturer')).toBeNull();
+  });
+
+  it('suggests the manufacturers of the library as the user types, and takes the one picked', fakeAsync(() => {
+    open();
+    const input: HTMLInputElement = element().querySelector('#fixtureAiManufacturer');
+
+    input.value = 'acm';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    tick(500);
+    fixture.detectChanges();
+
+    const offered = Array.from(document.querySelectorAll('typeahead-container button')) as HTMLElement[];
+    expect(offered.map((match) => match.textContent.trim())).toEqual(['Acme', 'Acme Lighting']);
+    offered[1].click();
+    fixture.detectChanges();
+    tick(500);
+
+    expect([component.manufacturerInput, component.manufacturerShortName]).toEqual(['Acme Lighting', 'acme-lighting']);
+    discardPeriodicTasks();
+  }));
+
   it('names a new manufacturer when the list of the library could not be loaded', () => {
     manufacturers.and.returnValue(throwError(new Error('offline')));
     open();
 
+    component.setManufacturer('Acme');
+
+    expect([component.newManufacturer, component.manufacturerName]).toEqual([true, 'Acme']);
+  });
+
+  it('matches a name typed before the list of the library is there', () => {
+    const list = new Subject<{ shortName: string; name: string }[]>();
+    manufacturers.and.returnValue(list);
+    open();
+
+    component.setManufacturer('Acme');
     expect(component.newManufacturer).toBe(true);
+    list.next([{ shortName: 'acme', name: 'Acme' }]);
+
+    expect(component.manufacturerShortName).toBe('acme');
+  });
+
+  it('asks the AI for a profile of a PDF, and looks a link or a search up in the library first', () => {
+    open();
+    fill();
+    expect(footerButton().textContent).toContain('designer.fixture-ai.generate');
+
+    component.setSource('search');
+    fixture.detectChanges();
+    expect(footerButton().textContent).toContain('designer.fixture-ai.look-up');
   });
 
   it('needs the manufacturer, the model and what to read', () => {

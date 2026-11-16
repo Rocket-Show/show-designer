@@ -32,22 +32,24 @@
   <div class="form-row">
     <div class="form-group col-sm-6">
       <label for="fixtureAiManufacturer">{{ 'designer.fixture-ai.manufacturer' | translate }}</label>
-      <select id="fixtureAiManufacturer" class="custom-select" [(ngModel)]="manufacturerShortName">
-        <option value="" disabled>{{ 'designer.fixture-ai.manufacturer-choose' | translate }}</option>
-        @for (manufacturer of manufacturers; track manufacturer.shortName) {
-        <option [value]="manufacturer.shortName">{{ manufacturer.name }}</option>
-        }
-        <option value="~new">{{ 'designer.fixture-ai.manufacturer-new' | translate }}</option>
-      </select>
-      @if (newManufacturer) {
+      <!-- the manufacturers of the library are suggested as the user types; another name is a new manufacturer -->
       <input
+        id="fixtureAiManufacturer"
         type="text"
-        class="form-control mt-2"
+        class="form-control"
         maxlength="100"
-        [attr.aria-label]="'designer.fixture-ai.manufacturer-name' | translate"
-        [placeholder]="'designer.fixture-ai.manufacturer-name' | translate"
-        [(ngModel)]="manufacturerName"
+        autocomplete="off"
+        [placeholder]="'designer.fixture-ai.manufacturer-choose' | translate"
+        [ngModel]="manufacturerInput"
+        (ngModelChange)="setManufacturer($event)"
+        [typeahead]="manufacturers"
+        typeaheadOptionField="name"
+        [typeaheadMinLength]="1"
+        [typeaheadOptionsLimit]="10"
+        (typeaheadOnSelect)="setManufacturer($event.item.name)"
       />
+      @if (newManufacturer) {
+      <small class="form-text text-muted fixture-ai-new-manufacturer">{{ 'designer.fixture-ai.manufacturer-new' | translate }}</small>
       }
     </div>
     <div class="form-group col-sm-6">
@@ -242,7 +244,8 @@
   <a class="mr-3 my-auto" href="#" role="button" (click)="cancel(); (false)">{{ 'designer.misc.cancel' | translate }}</a>
   } @if (view === 'input') {
   <button type="button" class="btn btn-primary fixture-ai-next" [disabled]="!available || !complete" (click)="next()">
-    @if (parent) {
+    <!-- (with a PDF, the library is still looked into first, by its hash, but the user asks for a profile of it) -->
+    @if (parent || source === 'manual') {
     <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{ 'designer.fixture-ai.generate' | translate }}
     } @else {
     {{ 'designer.fixture-ai.look-up' | translate }}
