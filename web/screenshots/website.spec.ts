@@ -1,7 +1,7 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
-import { apiUrl } from '../e2e/fake-api';
+import { dirname, join, resolve } from 'path';
+import { apiUrl, FakeApi } from '../e2e/fake-api';
 import { expect, jane, test } from '../e2e/designer';
 
 // The pictures of the online designer on the website (rocketshow.net/lighting-designer and the pages showing the
@@ -13,8 +13,14 @@ const demoProject = resolve(
   process.env.DEMO_PROJECT || join(__dirname, '../../../rocketshow/docs/screenshots/demo-data/designer/project-summer-tour-2026.json')
 );
 const outDir = resolve(process.env.OUT_DIR || join(__dirname, '../../../spark/website/assets/images'));
-// where each picture goes in there: the AI on the documentation page too, which has its pictures in docs/
-const files: { [name: string]: string } = { 'designer-ai': 'docs/designer-ai' };
+// where each picture goes in there: the AI on the documentation page too, which has its pictures in docs/, like the
+// fixture pool and the profiles of the AI
+const files: { [name: string]: string } = {
+  'designer-ai': 'docs/designer-ai',
+  'designer-fixture-pool': 'docs/designer-fixture-pool',
+  'designer-add-profile': 'docs/designer-add-profile',
+  'designer-ai-fixture': 'docs/designer-ai-fixture',
+};
 
 // 1600 x 923 pixels, the size the pages reserve for them
 test.use({ signedIn: true, viewport: { width: 1280, height: 738 }, deviceScaleFactor: 1.25, colorScheme: 'dark' });
@@ -162,20 +168,119 @@ async function saveWebp(page: Page, png: Buffer, name: string) {
   writeFileSync(file, Buffer.from(dataUrl.split(',')[1], 'base64'));
 }
 
-async function shoot(page: Page, name: string) {
+// the page, a part of it (e.g. a dialog) or the area passed
+async function shoot(page: Page, name: string, part?: Locator | { x: number; y: number; width: number; height: number }) {
   await page.mouse.move(0, 0);
   await page.addStyleTag({ content: '*{caret-color:transparent!important}' });
   await page.waitForTimeout(300);
-  await saveWebp(page, await page.screenshot({ animations: 'disabled', timeout: 60_000 }), name);
+  const options = { animations: 'disabled' as const, timeout: 60_000 };
+  const png =
+    part && 'screenshot' in part
+      ? await part.screenshot(options)
+      : await page.screenshot({ ...options, clip: part as { x: number; y: number; width: number; height: number } });
+  await saveWebp(page, png, name);
+}
+
+// The fixture library as it knows the profiles of the demo project: the par and the moving head as the Open Fixture
+// Library has them, the pixel bar as well, and in a version the AI made from its manual since, doing the mode
+// differently, which the users confirmed and the library takes as the best one. The left bar of the demo was added from
+// the version of the Open Fixture Library: the fixture pool marks it with the better version, which the right bar
+// plays already. The project keeps the versions with their copies of the profiles, the universe its fixtures are
+// patched in as well (the device the demo comes from names it itself).
+function libraryOfTheDemo(api: FakeApi, project: any) {
+  const mode = (shortName: string, hash: string, state = 'open', good = 0, bad = 0) => ({ shortName, hash, state, good, bad });
+  const versions = [
+    {
+      uuid: 'generic/led-pixel-bar-8~1',
+      origin: 'ofl',
+      state: 'open',
+      usage: 9,
+      versions: 2,
+      best: false,
+      bestUuid: 'generic/led-pixel-bar-8~2',
+      modeStates: [mode('25ch', 'bar-25ch-1')],
+    },
+    {
+      uuid: 'generic/led-pixel-bar-8~2',
+      origin: 'ai',
+      state: 'confirmed',
+      confirmations: 4,
+      problems: 0,
+      usage: 12,
+      versions: 2,
+      best: true,
+      created: '2026-10-14',
+      manual: { name: 'led-pixel-bar-8-manual.pdf' },
+      modeStates: [mode('25ch', 'bar-25ch-2', 'confirmed', 4, 0)],
+    },
+    {
+      uuid: 'generic/rgbw-par~1',
+      origin: 'ofl',
+      state: 'open',
+      usage: 318,
+      versions: 1,
+      best: true,
+      modeStates: [mode('4ch', 'par-4ch'), mode('6ch', 'par-6ch')],
+    },
+    {
+      uuid: 'stairville/mh-100~1',
+      origin: 'ofl',
+      state: 'confirmed',
+      confirmations: 7,
+      problems: 0,
+      usage: 41,
+      versions: 2,
+      best: true,
+      modeStates: [mode('9ch', 'mh-9ch', 'confirmed', 7, 0), mode('14ch', 'mh-14ch')],
+    },
+    {
+      uuid: 'stairville/mh-100~2',
+      origin: 'ai',
+      state: 'open',
+      usage: 1,
+      versions: 2,
+      best: false,
+      created: '2026-11-03',
+      modeStates: [mode('9ch', 'mh-9ch'), mode('14ch', 'mh-14ch-2')],
+    },
+  ];
+  const copies: any[] = [];
+
+  api.library.length = 0;
+
+  for (const version of versions) {
+    const fixture = version.uuid.split('~')[0];
+    const copy = project.fixtureProfiles.find((candidate: any) => candidate.uuid === fixture);
+    const profile = JSON.parse(readFileSync(join(dirname(demoProject), 'profile-' + fixture.replace('/', '-') + '.json'), 'utf8'));
+    const { name, manufacturerShortName, manufacturerName } = copy;
+
+    api.library.push({ name, manufacturerShortName, manufacturerName, mainCategory: copy.categories[0], profile, fixture, ...version });
+
+    // the project has a copy of the versions its fixtures play
+    if (version.uuid !== 'stairville/mh-100~2') {
+      copies.push({ ...copy, ...version });
+    }
+  }
+
+  // the first version of each, the best one of the bar for the right bar
+  project.fixtureProfiles = copies;
+  for (const fixture of project.fixtures) {
+    fixture.profileUuid += fixture.name === 'LED bar right' ? '~2' : '~1';
+  }
+  project.universes = [{ uuid: project.fixtures[0].dmxUniverseUuid, name: 'Universe 1' }];
 }
 
 test.describe('Website pictures of the online designer', () => {
   test.setTimeout(180_000);
 
+  // the demo project as the API holds it, saved by Jane
+  let project: any;
+
   test.beforeEach(async ({ api, page }) => {
     // the demo project, saved by Jane and opened again on her next visit
-    const project = JSON.parse(readFileSync(demoProject, 'utf8'));
+    project = JSON.parse(readFileSync(demoProject, 'utf8'));
     const id = api.addProject(jane.email, project);
+    project = api.savedProject(id);
     await page.addInitScript(
       ([projectId, projectName, designerLayout]) => {
         localStorage.setItem('projectId', projectId);
@@ -223,5 +328,119 @@ test.describe('Website pictures of the online designer', () => {
     await expect(designer.previewPanel).toContainText('Chorus');
     await page.waitForTimeout(4000);
     await shoot(page, 'designer-ai');
+  });
+
+  // The fixture pool and the profiles of the fixture library: the dialog alone, sharp, for the documentation
+  test.describe('The fixture library', () => {
+    test.use({ viewport: { width: 1400, height: 1300 }, deviceScaleFactor: 2, previewHidden: true });
+
+    test.beforeEach(async ({ api, page }) => {
+      libraryOfTheDemo(api, project);
+
+      // the manufacturers of the library, which the AI suggests as the user types
+      await page.context().route(apiUrl + 'manufacturer', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { shortName: 'generic', name: 'Generic', website: null },
+            { shortName: 'stairville', name: 'Stairville', website: null },
+          ]),
+        })
+      );
+    });
+
+    test('designer-fixture-pool: the profiles of the library, the fixtures and their patch', async ({ designer, page }) => {
+      await designer.open();
+      await designer.menu('Settings', 'Fixture pool');
+      const pool = designer.fixturePool;
+
+      // the best version of each fixture in the search, with where it comes from and what is known about it
+      await expect(pool.locator('.list-group-item').filter({ hasText: 'Generic - LED Pixel Bar 8' })).toContainText('2 versions');
+
+      // the left bar plays the version of the Open Fixture Library: the library has a better one
+      const better = 'There is a better version, which does this mode differently.';
+      await expect(designer.row(pool, 'LED bar left').getByRole('button', { name: better })).toBeVisible();
+      await designer.row(pool, 'LED bar left').click();
+      await expect(pool.locator('#fixtureName')).toHaveValue('LED bar left');
+      await expect(pool.getByText('Does this mode work with your fixture?')).toBeVisible();
+      await expect(pool.locator('.fa-spinner')).toHaveCount(0);
+
+      // the fixtures from the last moving head on, the left bar among them
+      await designer.row(pool, 'Moving head 4').evaluate((row) => row.scrollIntoView({ block: 'start' }));
+
+      await shoot(page, 'designer-fixture-pool', pool.locator('.modal-content'));
+    });
+
+    test('designer-add-profile: the ways to add a profile the library does not have', async ({ designer, page }) => {
+      await designer.open();
+      await designer.menu('Settings', 'Fixture pool');
+      const pool = designer.fixturePool;
+
+      await pool.getByRole('button', { name: 'Add missing profile' }).click();
+      const choices = page.locator('.add-profile-popover');
+      await expect(choices.getByRole('button', { name: /Automatically, with AI/ })).toBeVisible();
+
+      // the search and the list of the profiles with the button at its end, and the choices below it
+      const search = (await pool.getByPlaceholder('Search profiles').boundingBox())!;
+      const list = (await pool.locator('.profiles-card').boundingBox())!;
+      const popover = (await choices.boundingBox())!;
+      const left = Math.min(list.x, popover.x) - 16;
+      const top = search.y - 16;
+      const right = Math.max(list.x + list.width, popover.x + popover.width) + 16;
+      const bottom = popover.y + popover.height + 16;
+      await shoot(page, 'designer-add-profile', { x: left, y: top, width: right - left, height: bottom - top });
+    });
+
+    test('designer-ai-fixture: the review of a profile the AI made from the manual', async ({ api, designer, page }) => {
+      // the profiles of the AI a user may have made a day on rocketshow.net
+      api.aiRequestsPerUserPerDay = 5;
+
+      // a generic moving head, its profile made by the AI from the manual, with where it read each channel
+      const profile = JSON.parse(readFileSync(join(__dirname, '../projects/designer/conformance/profiles/test/moving-head.json'), 'utf8'));
+      const name = 'Moving head spot 60 W';
+      api.aiFixture = {
+        version: {
+          uuid: 'generic/moving-head-spot-60-w~1',
+          fixture: 'generic/moving-head-spot-60-w',
+          manufacturerShortName: 'generic',
+          manufacturerName: 'Generic',
+          name,
+          origin: 'ai',
+          state: 'open',
+        },
+        profile: { ...profile, name },
+        review: {
+          channels: {
+            Pan: { page: 12, quote: 'CH1 Pan 0–540°', verified: true, uncertain: null },
+            Tilt: { page: 12, quote: 'CH3 Tilt 0–270°', verified: true, uncertain: null },
+            Dimmer: { page: 12, quote: 'CH5 Dimmer 8–134, strobe 135–255', verified: true, uncertain: null },
+            'Color Wheel': { page: 13, quote: 'CH6 Color wheel, 8 colors', verified: false, uncertain: null },
+          },
+          uncertain: ['The color chart on page 13 lists 8 colors, the photo of the wheel on page 4 shows 7.'],
+        },
+      };
+      await designer.open();
+      await designer.menu('Settings', 'Fixture pool');
+      await designer.fixturePool.getByRole('button', { name: 'Add missing profile' }).click();
+      await page
+        .locator('.add-profile-popover')
+        .getByRole('button', { name: /Automatically, with AI/ })
+        .click();
+
+      const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Create profile with AI' }) });
+      await dialog.getByLabel('Manufacturer').fill('Gen');
+      await page.locator('typeahead-container').getByRole('option', { name: 'Generic' }).click();
+      await dialog.getByLabel('Model').fill(name);
+      await dialog
+        .locator('input[type=file]')
+        .setInputFiles({ name: 'moving-head-spot-60w-manual.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
+      await dialog.getByRole('button', { name: 'Create with AI' }).click();
+
+      // the review, to compare with the manual
+      await expect(dialog.getByText('4 of 5 profiles left today')).toBeVisible();
+      await expect(dialog.getByRole('row').filter({ hasText: 'Color Wheel' })).toContainText('not verified');
+      await shoot(page, 'designer-ai-fixture', dialog.locator('.modal-content'));
+    });
   });
 });

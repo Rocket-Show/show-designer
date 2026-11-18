@@ -1,17 +1,23 @@
-# Website picture of the online designer
+# Website pictures of the online designer
 
-`website.spec.ts` takes the picture of the online designer designing looks with AI for
-[rocketshow.net](https://rocketshow.net/lighting-designer), the way the end-to-end tests run it: the app on the dev
-server, its API faked in the page (`../e2e/fake-api.ts`), with the demo project of the documentation screenshots of
-Rocket Show opened by a user who is signed in. No request reaches the AI: the spec answers the looks itself, made for the
-groups of fixtures the designer sends.
+`website.spec.ts` takes the pictures of the online designer for [rocketshow.net](https://rocketshow.net/lighting-designer)
+and its documentation, the way the end-to-end tests run it: the app on the dev server, its API faked in the page
+(`../e2e/fake-api.ts`), with the demo project of the documentation screenshots of Rocket Show opened by a user who is
+signed in. No request reaches the AI: the spec answers the looks itself, made for the groups of fixtures the designer
+sends, and the profile of the AI with its review. For the fixture library, the fake library holds versions of the
+profiles of the demo project, with where they come from and what is known about them.
 
-| Picture                 | Where it goes                 | What it shows                                                                                            |
-| ----------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `docs/designer-ai.webp` | `website/assets/images/docs/` | Design with AI beside the designer, the chorus it designed on the stage (the designer page and the docs) |
+| Picture                           | Where it goes                 | What it shows                                                                                                                                         |
+| --------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/designer-ai.webp`           | `website/assets/images/docs/` | Design with AI beside the designer, the chorus it designed on the stage (the designer page and the docs)                                              |
+| `docs/designer-fixture-pool.webp` | `website/assets/images/docs/` | The fixture pool: the profiles of the library with their versions, the fixtures with their addresses, one marked with a better version, the DMX patch |
+| `docs/designer-add-profile.webp`  | `website/assets/images/docs/` | The ways to add a profile the library doesn't have, below the list of the profiles: with AI, from a file, in the editor of the Open Fixture Library   |
+| `docs/designer-ai-fixture.webp`   | `website/assets/images/docs/` | Create profile with AI: the review of a profile made from the manual, channel by channel with the page and the quote                                  |
 
-It is 1600 × 923 pixels, the size the pages reserve for it. The main picture of the designer on the website is the one
-of the Rocket Show docs (`docs/designer.webp`, taken by `docs/screenshots/capture.js` in the rocketshow repository), with
+`designer-ai.webp` is 1600 × 923 pixels, the size the pages reserve for it. The pictures of the fixture library are
+taken at twice the pixels, of the dialog or the part of it they show: the fixture pool 2720 × 2158, the ways to add a
+profile 1352 × 1110 and the review of the AI 1600 × 1290. The main picture of the designer on the website is the one of
+the Rocket Show docs (`docs/designer.webp`, taken by `docs/screenshots/capture.js` in the rocketshow repository), with
 the whole of the preset editor in view.
 
 ## Taking it
