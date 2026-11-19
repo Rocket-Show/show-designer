@@ -76,6 +76,17 @@ describe('TimelineService with an audio file which cannot be read', () => {
     expect(service.loadingAudioFile).toBe(false);
   });
 
+  it('keeps what the browser said, for the user to tell support', () => {
+    (service as any).audioFileLoadFailed(new TypeError('Failed to fetch'));
+    expect(service.audioFileErrorDetail).toBe('Failed to fetch');
+
+    (service as any).audioFileLoadFailed('Error decoding audiobuffer');
+    expect(service.audioFileErrorDetail).toBe('Error decoding audiobuffer');
+
+    service.destroyWaveSurfer();
+    expect(service.audioFileErrorDetail).toBe('');
+  });
+
   it('forgets the missing file again once another composition is selected', () => {
     (service as any).audioFileLoadFailed(new Error('could not read the file'));
     service.destroyWaveSurfer();

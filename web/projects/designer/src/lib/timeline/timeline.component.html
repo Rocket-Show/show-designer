@@ -189,7 +189,10 @@
     } @if (timelineService.audioFileError) {
     <div class="w-100 d-flex">
       <a href="#" class="m-auto text-warning" (click)="compositionSettings(); (false)"
-        ><i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.audio-file-error' | translate }}</a
+        ><i class="fa fa-exclamation-triangle fa-fw" aria-hidden="true"></i> {{ 'designer.timeline.audio-file-error' | translate }}
+        @if (timelineService.audioFileErrorDetail) {
+        <small class="audio-file-error-detail">({{ timelineService.audioFileErrorDetail }})</small>
+        }</a
       >
     </div>
     } @if (!folded && timelineService.selectedComposition) {

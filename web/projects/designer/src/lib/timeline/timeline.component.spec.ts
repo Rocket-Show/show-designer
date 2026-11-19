@@ -1882,6 +1882,7 @@ describe('TimelineComponent', () => {
       const link = Array.from(element.querySelectorAll<HTMLElement>('a.text-warning')).find((candidate) =>
         candidate.textContent.includes('designer.timeline.audio-file-error')
       );
+      expect(link.textContent).toContain('(not found)');
       link.click();
 
       expect(showModal).toHaveBeenCalledWith(CompositionSettingsComponent, jasmine.objectContaining({ keyboard: false }));

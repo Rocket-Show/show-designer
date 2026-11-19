@@ -123,6 +123,9 @@ export class TimelineService {
   // could the audio file of the selected composition not be read? (it is missing, the
   // server did not hand it out or the browser cannot play it)
   public audioFileError = false;
+  // what the browser said when it could not load the audio file (like "Failed to fetch" when it could not download it, or
+  // "Error decoding audiobuffer" when it could not read it): shown with the error, so that a user can tell support
+  public audioFileErrorDetail = '';
 
   constructor(
     private sceneService: SceneService,
@@ -966,6 +969,7 @@ export class TimelineService {
     console.error('Could not load the audio file of the composition', error);
 
     this.audioFileError = true;
+    this.audioFileErrorDetail = error instanceof Error ? error.message : error ? String(error) : '';
     this.loadingAudioFile = false;
     this.detectChanges.next();
   }
@@ -988,6 +992,7 @@ export class TimelineService {
     this.analyzingAudio = false;
     this.loadingAudioFile = false;
     this.audioFileError = false;
+    this.audioFileErrorDetail = '';
 
     if (this.waveSurfer) {
       this.waveSurfer.destroy();
