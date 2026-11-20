@@ -1190,6 +1190,11 @@ export class TimelineService {
 
       this.waveSurfer.on('ready', () => {
         setTimeout(() => {
+          // the file was let go of meanwhile (another composition, or the designer closed): nothing left to read
+          if (this.waveSurfer !== waveSurfer) {
+            return;
+          }
+
           // try guessing the bpm and offset from the file, if necessary
           if (this.selectedComposition.tempoGuessed) {
             // we already guessed the BPM of this file --> don't do it again
