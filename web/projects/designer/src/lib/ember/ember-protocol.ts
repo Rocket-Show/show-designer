@@ -163,7 +163,7 @@ export function parseEmberInfo(data: Uint8Array): EmberInfo {
   const flags = view.getUint16(30, true);
   const firmwareVersion = { major: data[1], minor: data[2], patch: data[3] };
   const serialNumber = Array.from(data.slice(56, 64))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .map((byte) => ('0' + byte.toString(16)).slice(-2))
     .join('')
     .toUpperCase();
 
