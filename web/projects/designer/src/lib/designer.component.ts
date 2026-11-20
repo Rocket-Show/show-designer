@@ -38,6 +38,9 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { EmberDialogComponent } from './ember/ember-dialog.component';
+import { AppInstall } from './models/app-install';
+import { EmberService } from './services/ember.service';
 import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
@@ -146,6 +149,25 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.hardwarePromo = value;
   }
 
+  // the Ember stick on the computer's USB port (only the online designer, see ConfigService.ember)
+  @Input()
+  set ember(value: boolean) {
+    this.configService.ember = value;
+  }
+
+  @Input()
+  set emberEngineUrl(value: string) {
+    if (value) {
+      this.configService.emberEngineUrl = value;
+    }
+  }
+
+  // installing the designer as an app (the online designer, see AppInstall)
+  @Input()
+  set appInstall(value: AppInstall) {
+    this.configService.appInstall = value;
+  }
+
   // the size of the menu used in the designer
   private designerMenuSizePx = 34;
 
@@ -189,6 +211,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     public colorService: ColorService,
     private effectService: EffectService,
     private hardwarePromoService: HardwarePromoService,
+    public emberService: EmberService,
     public undoService: UndoService,
     public layoutService: LayoutService,
     public aiLooksService: AiLooksService,
@@ -217,6 +240,9 @@ export class DesignerComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.hardwarePromoService.countSession();
+
+    // a stick this browser was allowed to use before is connected by itself
+    this.emberService.start();
 
     if (localStorage.getItem('language')) {
       this.translateService.use(localStorage.getItem('language'));
@@ -344,6 +370,15 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   // without darkening the rest, so that the preview above them shows what the faders do.
   openDmxChannels() {
     this.modalService.show(DmxChannelsComponent, { keyboard: true, backdrop: false, ignoreBackdropClick: true, class: 'modal-dmx' });
+  }
+
+  // The Ember stick: connecting it, copying the project onto it, the preview live on the lights
+  openEmber() {
+    this.modalService.show(EmberDialogComponent, { keyboard: true, ignoreBackdropClick: false });
+  }
+
+  installApp() {
+    this.configService.appInstall?.install();
   }
 
   undo() {

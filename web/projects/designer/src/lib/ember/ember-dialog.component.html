@@ -1,0 +1,148 @@
+<div class="card-modal ember-dialog">
+  <div class="card">
+    <div class="card-header d-flex align-items-center">
+      <span><i class="fa fa-usb mr-2" aria-hidden="true"></i>{{ 'designer.ember.title' | translate }}</span>
+      @if (ember.supported) {
+      <span
+        class="ml-auto badge ember-state"
+        [class.badge-success]="ember.state === 'connected' && !ember.live"
+        [class.badge-primary]="ember.live"
+        [class.badge-secondary]="ember.state !== 'connected'"
+      >
+        @if (ember.live) {
+        {{ 'designer.ember.state-live' | translate }}
+        } @else if (ember.state === 'connected') {
+        {{ 'designer.ember.state-connected' | translate }}
+        } @else if (ember.state === 'connecting') {
+        {{ 'designer.ember.state-connecting' | translate }}
+        } @else {
+        {{ 'designer.ember.state-disconnected' | translate }}
+        }
+      </span>
+      }
+    </div>
+
+    <div class="card-body">
+      @if (!ember.supported) {
+      <!-- Safari and other browsers without Web Serial -->
+      <div class="alert alert-info mb-3 ember-unsupported">
+        <strong class="d-block mb-1">{{ 'designer.ember.unsupported-title' | translate }}</strong>
+        {{ 'designer.ember.unsupported-text' | translate }}
+      </div>
+      <button type="button" class="btn btn-primary" (click)="download()">
+        <i class="fa fa-download mr-1" aria-hidden="true"></i>{{ 'designer.ember.download' | translate }}
+      </button>
+      <p class="text-muted small mt-2 mb-0">{{ 'designer.ember.download-text' | translate }}</p>
+      } @else if (ember.state !== 'connected') {
+      <!-- not connected -->
+      <p>{{ 'designer.ember.connect-text' | translate }}</p>
+      <button type="button" class="btn btn-primary" [disabled]="ember.state === 'connecting'" (click)="connect()">
+        <i class="fa fa-usb mr-1" aria-hidden="true"></i>{{ 'designer.ember.connect' | translate }}
+      </button>
+      } @else {
+      <!-- what the stick plays -->
+      <dl class="row mb-2 ember-info">
+        <dt class="col-4">{{ 'designer.ember.show' | translate }}</dt>
+        <dd class="col-8">
+          @if (ember.info.imageLength > 0) {
+          {{ 'designer.ember.show-size' | translate : { kb: showKb, entries: ember.info.entries } }}
+          @if (ember.playsProject) {
+          <span class="badge badge-success ml-1">{{ 'designer.ember.show-this-project' | translate }}</span>
+          } @else {
+          <span class="badge badge-warning ml-1">{{ 'designer.ember.show-other' | translate }}</span>
+          } } @else {
+          {{ 'designer.ember.show-none' | translate }}
+          }
+        </dd>
+        @if (ember.info.imageLength > 0) {
+        <dt class="col-4">{{ 'designer.ember.entry' | translate }}</dt>
+        <dd class="col-8">
+          {{ 'designer.ember.entry-of' | translate : { entry: ember.info.entry + 1, entries: ember.info.entries } }}
+          @if (ember.info.blackout) {
+          <span class="badge badge-secondary ml-1">{{ 'designer.ember.blackout' | translate }}</span>
+          }
+        </dd>
+        }
+        <dt class="col-4">{{ 'designer.ember.firmware' | translate }}</dt>
+        <dd class="col-8">{{ ember.info.firmware }}</dd>
+        @if (errorKey && ember.info.error !== 1) {
+        <dt class="col-4">{{ 'designer.ember.trouble' | translate }}</dt>
+        <dd class="col-8 text-danger">{{ errorKey | translate }}</dd>
+        }
+      </dl>
+
+      <!-- copying the project onto it -->
+      <div class="d-flex align-items-center mb-3">
+        <button type="button" class="btn btn-primary ember-send" [disabled]="!!ember.sending" (click)="sendShow()">
+          <i class="fa fa-upload mr-1" aria-hidden="true"></i>{{ 'designer.ember.send' | translate }}
+        </button>
+        @if (ember.sending) {
+        <div class="progress flex-grow-1 ml-3">
+          <div class="progress-bar" role="progressbar" [style.width.%]="sendingPercent" [attr.aria-valuenow]="sendingPercent"></div>
+        </div>
+        } @else if (sent) {
+        <span class="text-success ml-3"><i class="fa fa-check mr-1" aria-hidden="true"></i>{{ 'designer.ember.sent' | translate }}</span>
+        }
+      </div>
+
+      <!-- the preview on the lights -->
+      <div class="custom-control custom-switch">
+        <input
+          type="checkbox"
+          class="custom-control-input"
+          id="ember-live"
+          [checked]="ember.live"
+          (change)="setLive($any($event.target).checked)"
+        />
+        <label class="custom-control-label" for="ember-live">{{ 'designer.ember.live' | translate }}</label>
+      </div>
+      <p class="text-muted small mb-2">{{ 'designer.ember.live-text' | translate }}</p>
+      @if (universes.length > 1) {
+      <div class="form-group form-inline mb-2">
+        <label class="small mr-2" for="ember-universe">{{ 'designer.ember.universe' | translate }}</label>
+        <select
+          id="ember-universe"
+          class="form-control form-control-sm"
+          [value]="ember.liveUniverseUuid || ember.defaultUniverseUuid()"
+          (change)="selectUniverse($any($event.target).value)"
+        >
+          @for (universe of universes; track universe.uuid) {
+          <option [value]="universe.uuid">{{ universe.name }}</option>
+          }
+        </select>
+      </div>
+      }
+
+      <!-- like its button -->
+      @if (ember.info.imageLength > 0) {
+      <div class="btn-group btn-group-sm mt-2" role="group" [attr.aria-label]="'designer.ember.operate' | translate">
+        <button type="button" class="btn btn-secondary" (click)="ember.back()">
+          <i class="fa fa-step-backward mr-1" aria-hidden="true"></i>{{ 'designer.ember.back' | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="ember.next()">
+          {{ 'designer.ember.next' | translate }}<i class="fa fa-step-forward ml-1" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn btn-secondary" [class.active]="ember.info.blackout" (click)="ember.toggleBlackout()">
+          <i class="fa fa-moon-o mr-1" aria-hidden="true"></i>{{ 'designer.ember.blackout' | translate }}
+        </button>
+      </div>
+      } } @if (ember.problem) {
+      <div class="alert alert-danger mt-3 mb-0 ember-problem">{{ ember.problem.key | translate : ember.problem.params }}</div>
+      }
+    </div>
+
+    <div class="card-footer d-flex align-items-center">
+      @if (ember.supported) {
+      <a href="#" class="small" (click)="download(); (false)"
+        ><i class="fa fa-download mr-1" aria-hidden="true"></i>{{ 'designer.ember.download' | translate }}</a
+      >
+      }
+      <span class="ml-auto d-flex align-items-center">
+        @if (ember.state === 'connected') {
+        <a href="#" class="mr-3" (click)="disconnect(); (false)">{{ 'designer.ember.disconnect' | translate }}</a>
+        }
+        <button type="button" class="btn btn-secondary" (click)="close()">{{ 'designer.ember.close' | translate }}</button>
+      </span>
+    </div>
+  </div>
+</div>

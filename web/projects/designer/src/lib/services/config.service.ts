@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { AppInstall } from '../models/app-install';
 import { UniverseConfig } from '../models/universe-config';
 
 @Injectable({
@@ -45,6 +46,17 @@ export class ConfigService {
   // designer (online), 'host' leaves it to the application around it, e.g. a Rocket Show device linked with an account
   // in its settings, which the designer can't log in.
   public aiAccount: 'designer' | 'host' = 'designer';
+
+  // When true, the designer works with the Ember stick on the computer's USB port: it copies the project onto it as a
+  // show and sends the preview to the lights through it (Web Serial), or gives the show as a file. Only meant for the
+  // online designer: a Rocket Show device plays its shows itself.
+  public ember = false;
+
+  // where the host application keeps engine.wasm of the lighting engine, which compiles the shows for the stick
+  public emberEngineUrl = 'assets/ember/engine.wasm';
+
+  // When set, the designer offers to install itself as an app (the online designer as a progressive web app)
+  public appInstall: AppInstall;
 
   public menuHeightChanged: Subject<void> = new Subject<void>();
 

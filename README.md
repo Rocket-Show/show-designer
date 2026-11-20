@@ -145,7 +145,24 @@ Tag the version correspondingly.
 
 ```
 cd web
+tools/ember-engine.sh   # engine.wasm for the Ember stick, from a checkout of Rocket-Show/lighting-engine
 ng build --configuration production --base-href /designer/app/
 ```
 
 Take the content of the folder dist/show-designer/browser and upload it to the web /designer/app (after emptying the folder there first).
+
+The online version is a progressive web app: it can be installed (Help → Install as an app, in Chrome and Edge) and
+opens without internet. `ngsw-worker.js`, `ngsw.json` and `manifest.webmanifest` are part of the upload; a browser
+which has the designer installed loads a new upload in the background and offers a reload. Only the online version
+(`src/app`) has the service worker, the library and Rocket Show don't.
+
+## The Ember stick
+
+The online designer works with the Ember stick on the computer's USB port (`[ember]="true"` in `src/app`, off in Rocket
+Show): in Chrome, Edge and Firefox over Web Serial it copies the project onto the stick as a show, sends the preview to
+the lights live and steps the stick; in Safari it gives the show as a file to copy onto the stick's drive. The show is
+compiled in the browser by `engine.wasm` of the lighting engine, at `src/assets/ember/engine.wasm`: not in git (the
+engine is a private repository), copied in by `web/tools/ember-engine.sh`. It has to be built from the engine revision
+the stick's firmware is pinned to (`Cargo.toml` of the firmware in the Ember repository), or the stick refuses the
+shows. The protocol and the show file are specified in the Ember repository (`firmware/docs/serial.md`,
+`firmware/docs/show-file.md`); `projects/designer/src/lib/ember/` implements them.

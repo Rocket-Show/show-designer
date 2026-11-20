@@ -19,3 +19,6 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+
+# engine.wasm of the lighting engine (a private repository), copied in by tools/ember-engine.sh, not in git
+/src/assets/ember/engine.wasm

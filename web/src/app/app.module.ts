@@ -1,5 +1,6 @@
 import { HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
-import { NgModule } from '@angular/core';
+import { NgModule, isDevMode } from '@angular/core';
+import { ServiceWorkerModule } from '@angular/service-worker';
 import { BrowserModule } from '@angular/platform-browser';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
@@ -27,6 +28,11 @@ import { AppComponent } from './app.component';
     AccordionModule.forRoot(),
     PopoverModule.forRoot(),
     TypeaheadModule.forRoot(),
+    // the online designer as an installable app which opens offline (built into production builds only)
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
   providers: [
     AppHttpInterceptor,
