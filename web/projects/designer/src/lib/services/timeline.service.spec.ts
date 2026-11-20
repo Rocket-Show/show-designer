@@ -19,7 +19,7 @@ import { LivePreviewService } from './live-preview.service';
 import { PresetService } from './preset.service';
 import { ProjectService } from './project.service';
 import { SceneService } from './scene.service';
-import { TimelineService } from './timeline.service';
+import { startOfData, TimelineService } from './timeline.service';
 
 // An audio file which cannot be read says nothing about the show written over it: the
 // composition holds the scenes played along the song, so it stays where it is and only
@@ -108,6 +108,152 @@ describe('TimelineService with an audio file which cannot be read', () => {
 
 // The tracks are layered like the presets of a scene: the topmost one is on top. The presets
 // are handed out from the bottom up, so the ones handed out later overwrite the earlier ones.
+describe('TimelineService loading the audio file of a composition', () => {
+  let service: TimelineService;
+  let http: HttpTestingController;
+  let waveSurfer: any;
+  let decode: (data: ArrayBuffer, resolve: (buffer: any) => void, reject: (error: any) => void) => void;
+
+  const url = 'https://api.example.com/composition-files/?file=composition-1.mp3';
+  const decoded = { duration: 3 };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot(), ToastrModule.forRoot()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
+    service = TestBed.inject(TimelineService);
+    http = TestBed.inject(HttpTestingController);
+
+    // a WaveSurfer decoding at the rate of a sound output at 48 kHz
+    decode = (data, resolve) => resolve(decoded);
+    waveSurfer = {
+      backend: { ac: { sampleRate: 48000 }, decodeArrayBuffer: (data, resolve, reject) => decode(data, resolve, reject) },
+      loadDecodedBuffer: jasmine.createSpy('loadDecodedBuffer'),
+      destroy: () => {},
+    };
+    service.waveSurfer = waveSurfer;
+    service.loadingAudioFile = true;
+  });
+
+  function answer(body: string, init: ResponseInit = { status: 200, headers: { 'Content-Type': 'audio/mpeg' } }) {
+    return spyOn(window, 'fetch').and.callFake(async () => new Response(body, init));
+  }
+
+  it('hands the decoded file to WaveSurfer, downloaded with the cookies of the API', async () => {
+    const fetch = answer('ID3 audio');
+
+    await (service as any).loadAudioFile(waveSurfer, url, true);
+
+    expect(fetch).toHaveBeenCalledWith(url, jasmine.objectContaining({ credentials: 'include' }));
+    expect(waveSurfer.loadDecodedBuffer).toHaveBeenCalledWith(decoded);
+    expect(service.audioFileError).toBe(false);
+    http.expectNone('client-problem');
+  });
+
+  it('tells the user and the API what arrived when the browser could not decode it', async () => {
+    // a virus scanner handing over a page of its own instead of the file
+    answer('<!DOCTYPE html><html>Blocked</html>', { status: 200, headers: { 'Content-Type': 'text/html', 'Content-Length': '35' } });
+    decode = (data, resolve, reject) => reject(new DOMException('Unable to decode audio data', 'EncodingError'));
+
+    await (service as any).loadAudioFile(waveSurfer, url, true);
+
+    expect(service.audioFileError).toBe(true);
+    expect(service.audioFileErrorDetail).toBe('EncodingError: Unable to decode audio data');
+    expect(service.loadingAudioFile).toBe(false);
+    expect(waveSurfer.loadDecodedBuffer).not.toHaveBeenCalled();
+
+    const report = http.expectOne('client-problem');
+    expect(report.request.method).toBe('POST');
+    expect(report.request.body).toEqual({
+      problem: 'audio-file',
+      stage: 'decode',
+      file: 'composition-1.mp3',
+      status: 200,
+      contentType: 'text/html',
+      contentLength: '35',
+      receivedBytes: 35,
+      start: '<!DOCTYPE html><',
+      sampleRate: 48000,
+      error: 'EncodingError: Unable to decode audio data',
+    });
+    report.flush(null);
+  });
+
+  it('says so when the decoding failed without a reason, as in Safari', async () => {
+    answer('ID3 audio');
+    decode = (data, resolve, reject) => reject(null);
+
+    await (service as any).loadAudioFile(waveSurfer, url, true);
+
+    expect(service.audioFileErrorDetail).toBe('Error decoding audiobuffer');
+    http.expectOne('client-problem').flush(null);
+  });
+
+  it('tells the user and the API when the file could not be downloaded', async () => {
+    spyOn(window, 'fetch').and.callFake(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+
+    await (service as any).loadAudioFile(waveSurfer, url, true);
+
+    expect(service.audioFileErrorDetail).toBe('Failed to fetch');
+    const report = http.expectOne('client-problem');
+    expect(report.request.body).toEqual({ problem: 'audio-file', stage: 'download', file: 'composition-1.mp3', error: 'Failed to fetch' });
+    report.flush(null);
+  });
+
+  it('tells the user and the API when the server did not hand the file out', async () => {
+    answer('{"error":"no-file"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+
+    await (service as any).loadAudioFile(waveSurfer, url, true);
+
+    expect(service.audioFileErrorDetail).toBe('HTTP error status: 404');
+    expect(http.expectOne('client-problem').request.body).toEqual(jasmine.objectContaining({ stage: 'download', status: 404 }));
+  });
+
+  it('reports nothing to Rocket Show, which has no such report', async () => {
+    spyOn(window, 'fetch').and.callFake(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+
+    await (service as any).loadAudioFile(waveSurfer, 'file/get?name=Song.mp3&type=AUDIO', false);
+
+    expect(service.audioFileError).toBe(true);
+    http.expectNone('client-problem');
+  });
+
+  it('forgets the file once another composition is selected while it loads', async () => {
+    let started: () => void;
+    const fetchStarted = new Promise<void>((resolve) => (started = resolve));
+    spyOn(window, 'fetch').and.callFake(
+      (input, init) =>
+        new Promise((resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(new DOMException('The user aborted a request.', 'AbortError')));
+          started();
+        })
+    );
+
+    const loading = (service as any).loadAudioFile(waveSurfer, url, true);
+    await fetchStarted;
+    service.destroyWaveSurfer();
+    await loading;
+
+    expect(service.audioFileError).toBe(false);
+    expect(waveSurfer.loadDecodedBuffer).not.toHaveBeenCalled();
+    http.expectNone('client-problem');
+  });
+});
+
+describe('the first bytes of an audio file', () => {
+  it('shows them as text, other bytes as dots', () => {
+    expect(startOfData(new Uint8Array([0x49, 0x44, 0x33, 0x04, 0x00, 0xff]).buffer)).toBe('ID3...');
+    expect(startOfData(new TextEncoder().encode('<!DOCTYPE html><html><body>').buffer)).toBe('<!DOCTYPE html><');
+    expect(startOfData(new ArrayBuffer(0))).toBe('');
+  });
+});
+
 describe('TimelineService playing the tracks of a composition', () => {
   let service: TimelineService;
   let projectService: ProjectService;
@@ -606,6 +752,7 @@ describe('TimelineService playing along an audio file', () => {
   let configService: ConfigService;
   let livePreviewService: LivePreviewService;
   let waveSurfer: FakeWaveSurfer;
+  let loadAudioFile: jasmine.Spy;
 
   class FakeWaveSurfer {
     handlers: { [event: string]: (argument?: any) => void } = {};
@@ -613,7 +760,6 @@ describe('TimelineService playing along an audio file', () => {
     currentTime = 0;
     duration = 0;
     backend = { buffer: new AudioBuffer({ length: 8000, sampleRate: 8000, numberOfChannels: 1 }) };
-    load = jasmine.createSpy('load');
     play = jasmine.createSpy('play');
     pause = jasmine.createSpy('pause');
     destroy = jasmine.createSpy('destroy');
@@ -648,6 +794,8 @@ describe('TimelineService playing along an audio file', () => {
 
     waveSurfer = new FakeWaveSurfer();
     spyOn(WaveSurfer, 'create').and.callFake(() => waveSurfer as any);
+    // the file is not downloaded: the tests let WaveSurfer say that it is ready
+    loadAudioFile = spyOn(service as any, 'loadAudioFile').and.returnValue(Promise.resolve());
 
     projectService.project = new Project();
     const composition = new Composition();
@@ -682,7 +830,7 @@ describe('TimelineService playing along an audio file', () => {
     expect(service.loadingAudioFile).toBe(true);
     tick();
 
-    expect(waveSurfer.load).toHaveBeenCalledWith('https://show/api/composition-files/?file=song.mp3');
+    expect(loadAudioFile).toHaveBeenCalledWith(waveSurfer, 'https://show/api/composition-files/?file=song.mp3', true);
   }));
 
   it('loads the audio file the server stored with its extension in lower case', fakeAsync(() => {
@@ -691,7 +839,7 @@ describe('TimelineService playing along an audio file', () => {
     service.selectCompositionIndex(0);
     tick();
 
-    expect(waveSurfer.load).toHaveBeenCalledWith('https://show/api/composition-files/?file=song.mp3');
+    expect(loadAudioFile).toHaveBeenCalledWith(waveSurfer, 'https://show/api/composition-files/?file=song.mp3', true);
   }));
 
   it('loads the audio file of a composition from the media library of Rocket Show, named for an address', fakeAsync(() => {
@@ -700,7 +848,8 @@ describe('TimelineService playing along an audio file', () => {
     service.selectCompositionIndex(0);
     tick();
 
-    expect(waveSurfer.load).toHaveBeenCalledWith('https://show/api/file/get?name=Rock%20%26%20Roll%20%231.mp3&type=AUDIO');
+    // Rocket Show has no report of a problem with the file
+    expect(loadAudioFile).toHaveBeenCalledWith(waveSurfer, 'https://show/api/file/get?name=Rock%20%26%20Roll%20%231.mp3&type=AUDIO', false);
   }));
 
   it('lasts as long as the song, once it has been read', fakeAsync(() => {

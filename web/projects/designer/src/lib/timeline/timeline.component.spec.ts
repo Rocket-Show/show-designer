@@ -1777,7 +1777,6 @@ describe('TimelineComponent', () => {
         duration: 100,
         currentTime: 0,
         backend: { buffer: new AudioBuffer({ length: 8000, sampleRate: 8000, numberOfChannels: 1 }) },
-        load: jasmine.createSpy('load'),
         play: jasmine.createSpy('play'),
         pause: jasmine.createSpy('pause'),
         destroy: jasmine.createSpy('destroy'),
@@ -1787,6 +1786,8 @@ describe('TimelineComponent', () => {
         getDuration: () => waveSurfer.duration,
       };
       spyOn(WaveSurfer, 'create').and.callFake(() => waveSurfer);
+      // the file is not downloaded: the tests let WaveSurfer say that it is ready
+      spyOn(TestBed.inject(TimelineService) as any, 'loadAudioFile').and.returnValue(Promise.resolve());
 
       Object.assign(project.compositions[0], { syncType: 'audio', audioFileName: 'song.mp3' });
     });

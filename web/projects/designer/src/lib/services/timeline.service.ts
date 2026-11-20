@@ -34,6 +34,41 @@ export interface AudioBus {
 // the files of the buses are mixed at this rate to be analyzed
 const BUS_ANALYSIS_SAMPLE_RATE = 48000;
 
+// What the designer knows when the audio file of a composition could not be loaded, as it reports it to the API: the
+// stage which failed (download, decode or ready), what the server answered, how much arrived and how it starts (an
+// audio file starts with "ID3", "RIFF", "OggS" or the like, a page of a virus scanner with "<"), the rate the browser
+// decodes at (the one of the sound output) and the error of the browser.
+export interface AudioFileProblem {
+  problem: 'audio-file';
+  stage: 'download' | 'decode' | 'ready';
+  file: string;
+  status?: number;
+  contentType?: string;
+  contentLength?: string;
+  receivedBytes?: number;
+  start?: string;
+  sampleRate?: number;
+  error?: string;
+}
+
+// the first bytes of the data, as text (other bytes as dots)
+export function startOfData(data: ArrayBuffer, length = 16): string {
+  return Array.from(new Uint8Array(data, 0, Math.min(length, data.byteLength)))
+    .map((byte) => (byte >= 32 && byte < 127 ? String.fromCharCode(byte) : '.'))
+    .join('');
+}
+
+// what the browser said about an error, with its name where it tells more than the message (like "EncodingError")
+export function describeError(error: any): string {
+  if (!error) {
+    return '';
+  }
+  if (error instanceof Error || error instanceof DOMException) {
+    return error.name && error.name !== 'Error' && error.name !== 'TypeError' ? error.name + ': ' + error.message : error.message;
+  }
+  return String(error);
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -126,6 +161,8 @@ export class TimelineService {
   // what the browser said when it could not load the audio file (like "Failed to fetch" when it could not download it, or
   // "Error decoding audiobuffer" when it could not read it): shown with the error, so that a user can tell support
   public audioFileErrorDetail = '';
+  // the download of the audio file of the selected composition, stopped when another one is selected
+  private audioFileLoading: AbortController;
 
   constructor(
     private sceneService: SceneService,
@@ -969,7 +1006,7 @@ export class TimelineService {
     console.error('Could not load the audio file of the composition', error);
 
     this.audioFileError = true;
-    this.audioFileErrorDetail = error instanceof Error ? error.message : error ? String(error) : '';
+    this.audioFileErrorDetail = describeError(error);
     this.loadingAudioFile = false;
     this.detectChanges.next();
   }
@@ -993,6 +1030,11 @@ export class TimelineService {
     this.loadingAudioFile = false;
     this.audioFileError = false;
     this.audioFileErrorDetail = '';
+
+    if (this.audioFileLoading) {
+      this.audioFileLoading.abort();
+      this.audioFileLoading = undefined;
+    }
 
     if (this.waveSurfer) {
       this.waveSurfer.destroy();
@@ -1122,15 +1164,14 @@ export class TimelineService {
 
     setTimeout(() => {
       // the container is hidden: only the audio is used, the timeline draws the waveform
+      // the file is loaded by loadAudioFile, not by WaveSurfer
       this.waveSurfer = WaveSurfer.create({
         container: '#waveform',
         height: 1,
         interact: false,
         cursorWidth: 0,
-        xhr: {
-          credentials: 'include',
-        },
       });
+      const waveSurfer = this.waveSurfer;
 
       let audioFileName: string;
 
@@ -1146,8 +1187,6 @@ export class TimelineService {
           '.' +
           this.selectedComposition.audioFileName.substr(this.selectedComposition.audioFileName.lastIndexOf('.') + 1).toLowerCase();
       }
-
-      this.waveSurfer.load(this.configService.restUrl + audioFileName);
 
       this.waveSurfer.on('ready', () => {
         setTimeout(() => {
@@ -1214,7 +1253,67 @@ export class TimelineService {
           this.updateCurrentTime();
         });
       });
+
+      // a problem with a file of the online designer's API is reported to it (a Rocket Show device has no such report)
+      this.loadAudioFile(waveSurfer, this.configService.restUrl + audioFileName, !this.configService.enableMediaLibrary);
     }, 0);
+  }
+
+  // Downloads and decodes the audio file of the composition for WaveSurfer, as WaveSurfer would do it itself, but
+  // keeping what went wrong. WaveSurfer only says "Error decoding audiobuffer" when the browser can't decode a file,
+  // without the reason of the browser, and without what arrived: something on the way, like a virus scanner, may have
+  // handed over a page of its own instead of the file. When reportProblem is set, the API is told what went wrong,
+  // for support to see it in the API's log, as most users never write.
+  private async loadAudioFile(waveSurfer: WaveSurfer, url: string, reportProblem: boolean) {
+    const loading = new AbortController();
+    this.audioFileLoading = loading;
+
+    const problem: AudioFileProblem = {
+      problem: 'audio-file',
+      stage: 'download',
+      file: url.substring(url.lastIndexOf('=') + 1),
+    };
+
+    try {
+      const response = await fetch(url, { credentials: 'include', signal: loading.signal });
+      problem.status = response.status;
+      problem.contentType = response.headers.get('Content-Type');
+      problem.contentLength = response.headers.get('Content-Length');
+      if (!response.ok) {
+        throw new Error('HTTP error status: ' + response.status);
+      }
+
+      const data: ArrayBuffer = await response.arrayBuffer();
+      problem.receivedBytes = data.byteLength;
+      problem.start = startOfData(data);
+
+      problem.stage = 'decode';
+      problem.sampleRate = waveSurfer.backend?.ac?.sampleRate;
+      const buffer = await new Promise<AudioBuffer>((resolve, reject) =>
+        waveSurfer.backend.decodeArrayBuffer(data, resolve, (error: any) => reject(error || new Error('Error decoding audiobuffer')))
+      );
+
+      // unless another composition has been opened meanwhile
+      if (this.waveSurfer !== waveSurfer) {
+        return;
+      }
+
+      problem.stage = 'ready';
+      waveSurfer.loadDecodedBuffer(buffer);
+    } catch (error) {
+      if (loading.signal.aborted || this.waveSurfer !== waveSurfer) {
+        return;
+      }
+
+      this.audioFileLoadFailed(error);
+
+      if (reportProblem) {
+        problem.error = describeError(error);
+        this.http.post('client-problem', problem).subscribe({
+          error: (reportError) => console.error('Could not report the problem with the audio file', reportError),
+        });
+      }
+    }
   }
 
   getExternalCompositionNames(): Observable<string[]> {
