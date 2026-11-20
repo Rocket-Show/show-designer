@@ -22,6 +22,10 @@ class FakeStick extends EventTarget implements EmberSerialPort {
   blackout = false;
   // the error a show is refused with on its last block (0: none)
   refuseWith = 0;
+  // the stick doesn't answer at all
+  silent = false;
+  // what the stick holds at most
+  maxImageBytes = 4190208;
 
   private controller: ReadableStreamDefaultController<Uint8Array>;
   private parser = new EmberMessageParser();
@@ -52,6 +56,10 @@ class FakeStick extends EventTarget implements EmberSerialPort {
   }
 
   private received(chunk: Uint8Array) {
+    if (this.silent) {
+      return;
+    }
+
     for (const message of this.parser.push(chunk)) {
       switch (message.label) {
         case EmberLabel.info:
@@ -79,7 +87,7 @@ class FakeStick extends EventTarget implements EmberSerialPort {
     const view = new DataView(data.buffer);
     data.set([1, 0, 1, 0], 0);
     view.setUint32(12, 0x7ff, true);
-    view.setUint32(20, 4190208, true);
+    view.setUint32(20, this.maxImageBytes, true);
     data[28] = this.imageLength > 0 ? 1 : 0;
     data[29] = this.imageLength > 0 ? 0 : 1;
     view.setUint16(30, 0x0002 | (this.blackout ? 0x0008 : 0), true);
@@ -136,6 +144,12 @@ class FakeSerial extends EventTarget {
   async getPorts() {
     return this.granted ? [this.stick] : [];
   }
+
+  announce(type: 'connect' | 'disconnect') {
+    const event = new Event(type);
+    Object.defineProperty(event, 'target', { value: this.stick });
+    this.dispatchEvent(event);
+  }
 }
 
 function wait(millis: number) {
@@ -147,6 +161,7 @@ describe('EmberService', () => {
   let stick: FakeStick;
   let service: EmberService;
   let compile: jasmine.Spy;
+  let configService: ConfigService;
 
   function setUp(serial: FakeSerial | undefined) {
     Object.defineProperty(navigator, 'serial', { value: serial, configurable: true });
@@ -170,7 +185,8 @@ describe('EmberService', () => {
       ],
     });
 
-    TestBed.inject(ConfigService).ember = true;
+    configService = TestBed.inject(ConfigService);
+    configService.ember = true;
     service = TestBed.inject(EmberService);
   }
 
@@ -179,6 +195,7 @@ describe('EmberService', () => {
   });
 
   afterEach(async () => {
+    (EmberService as any).answerMillis = 2000;
     await service?.disconnect();
     delete (navigator as any).serial;
   });
@@ -271,6 +288,174 @@ describe('EmberService', () => {
     expect(service.state).toBe('disconnected');
     expect(service.live).toBe(false);
     expect(service.info).toBeUndefined();
+  });
+
+  it('leaves the stick alone when the user picks none', async () => {
+    const serial = new FakeSerial(stick, false);
+    serial.requestPort = () => Promise.reject(new Error('No port selected by the user.'));
+    setUp(serial);
+
+    await service.connect();
+
+    expect(service.state).toBe('disconnected');
+    expect(service.problem).toBeUndefined();
+  });
+
+  it("says when the browser can't open the stick", async () => {
+    setUp(new FakeSerial(stick, false));
+    stick.open = () => Promise.reject(new Error('Failed to open serial port.'));
+
+    await service.connect();
+
+    expect(service.state).toBe('disconnected');
+    expect(service.problem.key).toBe('designer.ember.problem-open');
+  });
+
+  it("gives up on a stick which doesn't answer", async () => {
+    (EmberService as any).answerMillis = 50;
+    setUp(new FakeSerial(stick, false));
+    stick.silent = true;
+
+    await service.connect();
+
+    expect(service.state).toBe('disconnected');
+    expect(service.problem.key).toBe('designer.ember.problem-answer');
+  });
+
+  it('connects to a stick plugged in later, and lets go of it when it is pulled', async () => {
+    const serial = new FakeSerial(stick, false);
+    setUp(serial);
+    service.start();
+
+    serial.announce('connect');
+    await wait(50);
+    expect(service.state).toBe('connected');
+
+    serial.announce('disconnect');
+    expect(service.state).toBe('disconnected');
+  });
+
+  it('copies nothing without a stick', async () => {
+    setUp(new FakeSerial(stick, false));
+
+    expect(await service.sendShow()).toBe(false);
+    await service.compareProject();
+    expect(service.projectChecksum).toBeUndefined();
+    expect(service.playsProject).toBe(false);
+  });
+
+  it('tells whether the stick plays the project', async () => {
+    setUp(new FakeSerial(stick, false));
+    await service.connect();
+    await service.compareProject();
+
+    expect(service.playsProject).toBe(false);
+
+    await service.sendShow();
+    await service.compareProject();
+
+    expect(service.projectChecksum).toBe(stick.checksum);
+    expect(service.playsProject).toBe(true);
+  });
+
+  it("doesn't send a show larger than the stick holds", async () => {
+    setUp(new FakeSerial(stick, false));
+    stick.maxImageBytes = 100;
+    await service.connect();
+
+    expect(await service.sendShow()).toBe(false);
+
+    expect(service.problem.key).toBe('designer.ember.error-5');
+    expect(stick.image).toBeUndefined();
+  });
+
+  it("says the stick did not take the show when it refuses it for a reason the designer doesn't know", async () => {
+    setUp(new FakeSerial(stick, false));
+    await service.connect();
+    stick.refuseWith = 99;
+
+    expect(await service.sendShow()).toBe(false);
+
+    expect(service.problem.key).toBe('designer.ember.problem-answer');
+  });
+
+  it('says why the project could not be made into a show', async () => {
+    setUp(new FakeSerial(stick, false));
+    await service.connect();
+
+    compile.and.callFake(() => Promise.resolve({ code: 3, message: 'too many', features: 0 }));
+    expect(await service.sendShow()).toBe(false);
+    expect(service.problem.key).toBe('designer.ember.problem-too-large');
+
+    compile.and.callFake(() => Promise.resolve({ code: 1, message: 'no fixtures', features: 0 }));
+    expect(await service.sendShow()).toBe(false);
+    expect(service.problem).toEqual({ key: 'designer.ember.problem-project', params: { message: 'no fixtures' } });
+
+    compile.and.callFake(() => Promise.reject(new Error('engine.wasm: 404')));
+    expect(await service.sendShow()).toBe(false);
+    expect(service.problem.key).toBe('designer.ember.problem-engine');
+  });
+
+  it('gives the show as a file, for any stick', async () => {
+    setUp(new FakeSerial(stick, false));
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:show');
+    const click = spyOn(HTMLAnchorElement.prototype, 'click');
+
+    expect(await service.downloadShowFile()).toBe(true);
+
+    expect(compile).toHaveBeenCalledWith('{"version":11}', 0x7ff);
+    const anchor = click.calls.mostRecent().object as HTMLAnchorElement;
+    expect(anchor.getAttribute('download')).toBe('Gig.emb');
+    expect(anchor.getAttribute('href')).toBe('blob:show');
+  });
+
+  it('gives no file when there is no show to put in it', async () => {
+    setUp(new FakeSerial(stick, false));
+
+    compile.and.callFake(() => Promise.resolve({ code: 2, message: 'feature 11', features: 0x800 }));
+    expect(await service.downloadShowFile()).toBe(false);
+    expect(service.problem.key).toBe('designer.ember.problem-firmware');
+
+    compile.and.callFake(() => Promise.reject(new Error('engine.wasm: 404')));
+    expect(await service.downloadShowFile()).toBe(false);
+    expect(service.problem.key).toBe('designer.ember.problem-engine');
+  });
+
+  it('offers the universes of the configuration and the ones the fixtures use', () => {
+    setUp(new FakeSerial(stick, false));
+    configService.universes = [{ uuid: 'side', name: 'Side' }];
+
+    expect(service.universes()).toEqual([
+      { uuid: 'side', name: 'Side' },
+      { uuid: 'front', name: 'Universe 2' },
+    ]);
+    expect(service.defaultUniverseUuid()).toBe('front');
+  });
+
+  it('goes live only with a stick, and only once', async () => {
+    setUp(new FakeSerial(stick, false));
+
+    service.setLive(true);
+    expect(service.live).toBe(false);
+
+    await service.connect();
+    service.setLive(true);
+    service.setLive(true);
+    service.setLive(false);
+    service.setLive(false);
+
+    expect(service.live).toBe(false);
+  });
+
+  it("says when the stick doesn't take an action", async () => {
+    setUp(new FakeSerial(stick, false));
+    await service.connect();
+    (EmberService as any).answerMillis = 50;
+    stick.silent = true;
+
+    await service.next();
+
+    expect(service.problem.key).toBe('designer.ember.problem-answer');
   });
 
   it('has nothing to connect to in a browser without Web Serial', () => {

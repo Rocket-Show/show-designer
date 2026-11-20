@@ -84,6 +84,58 @@ describe('EmberDialogComponent', () => {
     expect(ember.setLive).toHaveBeenCalledWith(true);
   });
 
+  it('shows how far the copy has come, and lets go of the stick', () => {
+    render({
+      state: 'connected',
+      playsProject: false,
+      sending: { taken: 5, blocks: 20 },
+      info: { firmware: '0.1.0', imageLength: 0, entries: 0, entry: 0, error: 1, blackout: false } as any,
+    });
+
+    expect(fixture.componentInstance.sendingPercent).toBe(25);
+    expect(fixture.componentInstance.showKb).toBe(0);
+    expect(text()).toContain('designer.ember.show-none');
+    // no show: nothing to step
+    expect(fixture.nativeElement.querySelector('.btn-group')).toBeNull();
+
+    fixture.componentInstance.selectUniverse('side');
+    expect(ember.liveUniverseUuid).toBe('side');
+
+    fixture.nativeElement.querySelector('.card-footer a.small').click();
+    expect(ember.downloadShowFile).toHaveBeenCalled();
+
+    fixture.nativeElement.querySelector('.card-footer span a').click();
+    expect(ember.disconnect).toHaveBeenCalled();
+
+    fixture.nativeElement.querySelector('.card-footer .btn-secondary').click();
+    expect(TestBed.inject(BsModalRef).hide).toHaveBeenCalled();
+  });
+
+  it('steps the stick like its button', () => {
+    render({
+      state: 'connected',
+      playsProject: true,
+      info: { firmware: '0.1.0', imageLength: 5480, entries: 5, entry: 1, error: 0, blackout: true } as any,
+    });
+
+    const buttons = fixture.nativeElement.querySelectorAll('.btn-group button');
+    buttons[0].click();
+    buttons[1].click();
+    buttons[2].click();
+
+    expect(ember.back).toHaveBeenCalled();
+    expect(ember.next).toHaveBeenCalled();
+    expect(ember.toggleBlackout).toHaveBeenCalled();
+    expect(text()).toContain('designer.ember.blackout');
+  });
+
+  it('has no trouble to tell without a stick', () => {
+    render({});
+
+    expect(fixture.componentInstance.errorKey).toBeUndefined();
+    expect(fixture.componentInstance.sendingPercent).toBe(0);
+  });
+
   it('says what is wrong on the stick', () => {
     render({
       state: 'connected',

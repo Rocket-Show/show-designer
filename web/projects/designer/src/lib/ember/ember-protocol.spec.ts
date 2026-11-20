@@ -75,6 +75,18 @@ describe('Ember protocol', () => {
     expect(parser.push(new Uint8Array([...broken, ...good])).map((message) => message.label)).toEqual([EmberLabel.control]);
   });
 
+  it('takes a start byte with a length longer than any message for none', () => {
+    const parser = new EmberMessageParser();
+    const good = encodeEmberMessage(EmberLabel.info);
+
+    expect(parser.push(new Uint8Array([0x7e, 0xd0, 0xff, 0xff, ...good])).map((message) => message.label)).toEqual([EmberLabel.info]);
+  });
+
+  it('refuses answers too short to be what the stick sends', () => {
+    expect(() => parseEmberInfo(new Uint8Array(10))).toThrow();
+    expect(() => parseEmberBlockAnswer(new Uint8Array(4))).toThrow();
+  });
+
   it('reads what the stick reports', () => {
     const report = parseEmberInfo(info());
 
