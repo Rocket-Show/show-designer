@@ -1766,6 +1766,80 @@ describe('TimelineComponent', () => {
     }));
   });
 
+  // WaveSurfer itself, reading a song in stereo for the timeline, as the browser of a user does
+  describe('with an audio file read by WaveSurfer', () => {
+    // a WAV file of silence
+    function wav(seconds: number, channels: number, sampleRate = 44100): ArrayBuffer {
+      const frames = Math.round(seconds * sampleRate);
+      const view = new DataView(new ArrayBuffer(44 + frames * channels * 2));
+      const text = (offset: number, value: string) => [...value].forEach((char, i) => view.setUint8(offset + i, char.charCodeAt(0)));
+
+      text(0, 'RIFF');
+      view.setUint32(4, 36 + frames * channels * 2, true);
+      text(8, 'WAVEfmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, channels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * channels * 2, true);
+      view.setUint16(32, channels * 2, true);
+      view.setUint16(34, 16, true);
+      text(36, 'data');
+      view.setUint32(40, frames * channels * 2, true);
+
+      return view.buffer;
+    }
+
+    async function readSong(): Promise<void> {
+      Object.assign(project.compositions[0], { syncType: 'audio', audioFileName: 'song.wav' });
+      timelineService.selectCompositionIndex(0);
+
+      fixture = TestBed.createComponent(TimelineComponent);
+      element = fixture.nativeElement;
+      element.style.display = 'block';
+      element.style.width = '1200px';
+      fixture.detectChanges();
+
+      for (let wait = 0; wait < 500 && !timelineService.waveSurfer?.isReady && !timelineService.audioFileError; wait++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+
+    it('reads a song in stereo on a screen of any pixel ratio', async () => {
+      spyOn(window, 'fetch').and.callFake(async () => new Response(wav(0.5, 2), { status: 200, headers: { 'Content-Type': 'audio/wav' } }));
+      const original = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+
+      const read: { [ratio: string]: string } = {};
+
+      try {
+        // a Windows laptop at 100 % and at 125 %, a Mac or a phone
+        for (const ratio of [1, 1.25, 2]) {
+          Object.defineProperty(window, 'devicePixelRatio', { value: ratio, configurable: true, writable: true });
+
+          await readSong();
+
+          const waveSurfer = timelineService.waveSurfer;
+          read[ratio] = timelineService.audioFileError
+            ? 'error: ' + timelineService.audioFileErrorDetail
+            : waveSurfer.isReady
+            ? waveSurfer.getDuration().toFixed(2) + ' s, ' + waveSurfer.backend.buffer.numberOfChannels + ' channels'
+            : 'not read';
+
+          timelineService.destroyWaveSurfer();
+          fixture.destroy();
+        }
+      } finally {
+        if (original) {
+          Object.defineProperty(window, 'devicePixelRatio', original);
+        } else {
+          delete (window as any).devicePixelRatio;
+        }
+      }
+
+      expect(read).toEqual({ 1: '0.50 s, 2 channels', 1.25: '0.50 s, 2 channels', 2: '0.50 s, 2 channels' });
+    });
+  });
+
   // the timeline plays along an audio file, which WaveSurfer reads and plays
   describe('with an audio file', () => {
     let waveSurfer: any;

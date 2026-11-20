@@ -358,10 +358,12 @@
   content: ', ';
 }
 
-/* WaveSurfer only plays the song: its own drawing is not shown */
+/* WaveSurfer only plays the song: its own drawing is not shown. No width at all: WaveSurfer 6 takes a width of a pixel
+   (1px on a screen of a pixel ratio below 1.5, like most Windows laptops) for the one of the empty waveform it starts
+   with, keeps the peaks of a single channel and fails on a song in stereo, which it reports as an error decoding it */
 .tl-audio {
   position: absolute;
-  width: 1px;
+  width: 0;
   height: 1px;
   overflow: hidden;
   opacity: 0;
