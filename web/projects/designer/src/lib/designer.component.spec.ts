@@ -204,6 +204,32 @@ describe('DesignerComponent', () => {
       expect(projectLoadService.load).toHaveBeenCalledWith(null, 'Show');
     });
 
+    it('opens the project of its own saved last, for a host which keeps the projects of a user without an account', async () => {
+      configService.loginAvailable = true;
+      configService.projectsWithoutLogin = true;
+      configService.autoLoadKeyPrefix = 'stick.';
+      // (the one the online designer at the same address had open)
+      localStorage.setItem('projectId', '7');
+      localStorage.setItem('stick.projectId', '-3');
+      localStorage.setItem('stick.projectName', 'Gig');
+      await open();
+
+      expect(projectLoadService.load).toHaveBeenCalledWith(-3, 'Gig');
+
+      localStorage.removeItem('stick.projectId');
+      localStorage.removeItem('stick.projectName');
+
+      // (the host sets both on the designer)
+      component.projectsWithoutLogin = false;
+      component.autoLoadKeyPrefix = undefined;
+      expect(configService.projectsWithoutLogin).toBe(false);
+      expect(configService.autoLoadKeyPrefix).toBe('');
+
+      component.autoLoadKeyPrefix = 'app.';
+      expect(configService.autoLoadKeyPrefix).toBe('app.');
+      configService.autoLoadKeyPrefix = '';
+    });
+
     it('starts with the template for a user not logged in', async () => {
       configService.loginAvailable = true;
       localStorage.setItem('projectId', '7');
