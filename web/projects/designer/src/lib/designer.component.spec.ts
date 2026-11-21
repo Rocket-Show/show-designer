@@ -13,7 +13,6 @@ import { of, throwError } from 'rxjs';
 
 import { DesignerLayout } from './designer-layout';
 import { DesignerComponent } from './designer.component';
-import { EmberDialogComponent } from './ember/ember-dialog.component';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
@@ -202,6 +201,32 @@ describe('DesignerComponent', () => {
       await open();
 
       expect(projectLoadService.load).toHaveBeenCalledWith(null, 'Show');
+    });
+
+    it('opens the project of its own saved last, for a host which keeps the projects of a user without an account', async () => {
+      configService.loginAvailable = true;
+      configService.projectsWithoutLogin = true;
+      configService.autoLoadKeyPrefix = 'stick.';
+      // (the one the online designer at the same address had open)
+      localStorage.setItem('projectId', '7');
+      localStorage.setItem('stick.projectId', '-3');
+      localStorage.setItem('stick.projectName', 'Gig');
+      await open();
+
+      expect(projectLoadService.load).toHaveBeenCalledWith(-3, 'Gig');
+
+      localStorage.removeItem('stick.projectId');
+      localStorage.removeItem('stick.projectName');
+
+      // (the host sets both on the designer)
+      component.projectsWithoutLogin = false;
+      component.autoLoadKeyPrefix = undefined;
+      expect(configService.projectsWithoutLogin).toBe(false);
+      expect(configService.autoLoadKeyPrefix).toBe('');
+
+      component.autoLoadKeyPrefix = 'app.';
+      expect(configService.autoLoadKeyPrefix).toBe('app.');
+      configService.autoLoadKeyPrefix = '';
     });
 
     it('starts with the template for a user not logged in', async () => {
@@ -648,28 +673,6 @@ describe('DesignerComponent', () => {
       click('designer.navigation.app-install');
 
       expect(install).toHaveBeenCalled();
-    });
-
-    it('has the Ember stick in the menu while its host has one', () => {
-      const stickEntry = (): HTMLElement => fixture.nativeElement.querySelector('.ember-nav');
-      const host: any = { state: 'disconnected', live: false };
-
-      // the online designer, a Rocket Show device
-      expect(stickEntry()).toBeNull();
-
-      fixture.componentInstance.ember = host;
-      fixture.detectChanges();
-      expect(TestBed.inject(ConfigService).ember).toBe(host);
-      expect(stickEntry().querySelector('.ember-dot-connected')).toBeNull();
-
-      host.state = 'connected';
-      host.live = true;
-      fixture.detectChanges();
-      expect(stickEntry().querySelector('.ember-dot-connected.ember-dot-live')).not.toBeNull();
-
-      show.calls.reset();
-      stickEntry().click();
-      expect(show).toHaveBeenCalledWith(EmberDialogComponent, jasmine.anything());
     });
 
     it('opens the fixture pool', () => {

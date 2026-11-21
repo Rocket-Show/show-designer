@@ -51,6 +51,27 @@ describe('UserEnsureLoginService', () => {
     expect(done).toEqual(['without a login', 'logged in', 'logged in now']);
   });
 
+  it('opens and saves projects without a login where the host keeps them for a user without an account', () => {
+    const done: string[] = [];
+
+    config.loginAvailable = true;
+    user.isLoggedIn.and.returnValue(false);
+
+    // as the login of the designer has it
+    service.loginForProjects().subscribe(() => done.push('logged in'));
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(done).toEqual([]);
+
+    config.projectsWithoutLogin = true;
+    service.loginForProjects().subscribe(() => done.push('without a login'));
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(done).toEqual(['without a login']);
+
+    // (what needs an account still asks for it)
+    service.login().subscribe(() => done.push('logged in'));
+    expect(show).toHaveBeenCalledTimes(2);
+  });
+
   it('tells a request refused for want of an account from other failures', () => {
     expect(service.isRefused(new HttpErrorResponse({ status: 401, error: { error: 'unauthorized' } }))).toBe(true);
     expect(service.isRefused(new HttpErrorResponse({ status: 403, error: { error: 'device-not-linked' } }))).toBe(true);

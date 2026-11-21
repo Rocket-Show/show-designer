@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { AppInstall } from '../models/app-install';
-import { EmberHost } from '../models/ember-host';
 import { UniverseConfig } from '../models/universe-config';
 
 @Injectable({
@@ -51,9 +50,14 @@ export class ConfigService {
   // When set, the designer offers to install itself as an app (the online designer as a progressive web app)
   public appInstall: AppInstall;
 
-  // When set, the designer works with an Ember stick through its host (see EmberHost): the stick has its entry in the
-  // menu. Only the app of the stick sets it; the online designer and a Rocket Show device have no stick.
-  public ember: EmberHost;
+  // When true, projects are opened and saved without an account as well: the host keeps the projects of a user who is
+  // not logged in (the app of the Ember stick, in the browser). The login is still asked for where an account is
+  // needed: the AI, the votes on the fixture profiles.
+  public projectsWithoutLogin = false;
+
+  // What the designer remembers in the browser of the project it had open last is kept under names with this in front
+  // of them: two hosts at one address (the online designer and the app of the Ember stick) each have their own.
+  public autoLoadKeyPrefix = '';
 
   public menuHeightChanged: Subject<void> = new Subject<void>();
 

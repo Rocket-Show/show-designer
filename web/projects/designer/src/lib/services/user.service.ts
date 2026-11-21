@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Project } from '../models/project';
+import { ConfigService } from './config.service';
 
 // a device linked with the account of the user: a Rocket Show device logged in in its settings, or an Ember stick the
 // designer linked when it was connected (see docs/fixture-library.md, section 8)
@@ -28,7 +29,7 @@ export class UserService {
   tokenExpiration: Date;
   username: string;
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private configService: ConfigService) {
     this.loadFromLocalStorage();
   }
 
@@ -121,23 +122,28 @@ export class UserService {
     return this.http.post('device-unlink', body, { headers: options.headers.set('Authorization', this.token) });
   }
 
+  // The project opened last is remembered in the browser, under names of the host's own where it has some
+  private autoLoadKey(name: string): string {
+    return this.configService.autoLoadKeyPrefix + name;
+  }
+
   setAutoLoadProject(project: Project) {
-    localStorage.setItem('projectName', project.name);
+    localStorage.setItem(this.autoLoadKey('projectName'), project.name);
     if (project.id) {
-      localStorage.setItem('projectId', project.id.toString());
+      localStorage.setItem(this.autoLoadKey('projectId'), project.id.toString());
     } else {
-      localStorage.removeItem('projectId');
+      localStorage.removeItem(this.autoLoadKey('projectId'));
     }
   }
 
   getAutoLoadProjectId(): number {
-    if (!localStorage.getItem('projectId')) {
+    if (!localStorage.getItem(this.autoLoadKey('projectId'))) {
       return null;
     }
-    return Number.parseInt(localStorage.getItem('projectId'), 10);
+    return Number.parseInt(localStorage.getItem(this.autoLoadKey('projectId')), 10);
   }
 
   getAutoLoadProjectName(): string {
-    return localStorage.getItem('projectName');
+    return localStorage.getItem(this.autoLoadKey('projectName'));
   }
 }

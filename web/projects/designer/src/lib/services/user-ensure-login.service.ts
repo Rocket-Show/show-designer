@@ -26,6 +26,11 @@ export class UserEnsureLoginService {
     return subject;
   }
 
+  // The same before a project is opened or saved, which a host may do for a user without an account as well
+  loginForProjects(): Observable<void> {
+    return this.configService.projectsWithoutLogin ? of(null) : this.login();
+  }
+
   // Whether the API refused a request for want of an account: the session of the user ran out, or the host the designer
   // runs on (a Rocket Show device) isn't linked with an account
   isRefused(error: any): boolean {

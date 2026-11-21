@@ -159,13 +159,6 @@
         </div>
         }
       </li>
-      } @if (configService.ember; as ember) {
-      <li class="nav-item d-flex">
-        <a class="nav-link ember-nav" href="#" [title]="'designer.ember.title' | translate" (click)="openEmber(); (false)"
-          ><span class="ember-dot" [class.ember-dot-connected]="ember.state === 'connected'" [class.ember-dot-live]="ember.live"></span
-          ><i class="fa fa-usb" aria-hidden="true"></i> Ember</a
-        >
-      </li>
       } @if (configService.shareAvailable) {
       <li class="nav-item d-flex" data-toggle="collapse">
         <a class="nav-link text-primary" (click)="projectShare(); (false)" routerLinkActive="active"

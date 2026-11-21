@@ -38,9 +38,7 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
-import { EmberDialogComponent } from './ember/ember-dialog.component';
 import { AppInstall } from './models/app-install';
-import { EmberHost } from './models/ember-host';
 import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
@@ -155,10 +153,16 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.appInstall = value;
   }
 
-  // the Ember stick of the host application (the app of the stick, see EmberHost)
+  // projects are opened and saved without an account as well (see ConfigService.projectsWithoutLogin)
   @Input()
-  set ember(value: EmberHost) {
-    this.configService.ember = value;
+  set projectsWithoutLogin(value: boolean) {
+    this.configService.projectsWithoutLogin = value;
+  }
+
+  // the project opened last is remembered under names of the host's own (see ConfigService.autoLoadKeyPrefix)
+  @Input()
+  set autoLoadKeyPrefix(value: string) {
+    this.configService.autoLoadKeyPrefix = value || '';
   }
 
   // the size of the menu used in the designer
@@ -265,7 +269,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
         }
       );
     } else if (
-      (this.userService.isLoggedIn() || !this.configService.loginAvailable) &&
+      (this.userService.isLoggedIn() || !this.configService.loginAvailable || this.configService.projectsWithoutLogin) &&
       (this.userService.getAutoLoadProjectId() || this.userService.getAutoLoadProjectName())
     ) {
       // restore the last saved project
@@ -361,11 +365,6 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.modalService.show(DmxChannelsComponent, { keyboard: true, backdrop: false, ignoreBackdropClick: true, class: 'modal-dmx' });
   }
 
-  // The Ember stick: what it plays, copying the project onto it, the preview on the lights
-  openEmber() {
-    this.modalService.show(EmberDialogComponent, { keyboard: true, ignoreBackdropClick: false });
-  }
-
   installApp() {
     this.configService.appInstall?.install();
   }
@@ -403,7 +402,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
       .pipe(
         map((result) => {
           if (result) {
-            this.userEnsureLoginService.login().subscribe(() => {
+            this.userEnsureLoginService.loginForProjects().subscribe(() => {
               this.modalService.show(ProjectBrowserComponent, { keyboard: true, ignoreBackdropClick: false });
             });
           }
@@ -413,7 +412,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectSave() {
-    this.userEnsureLoginService.login().subscribe(() => {
+    this.userEnsureLoginService.loginForProjects().subscribe(() => {
       if (this.projectService.project.name) {
         // this project has been saved before -> just save it again
         this.projectService.save(this.projectService.project);
@@ -425,7 +424,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectSaveAs() {
-    this.userEnsureLoginService.login().subscribe(() => {
+    this.userEnsureLoginService.loginForProjects().subscribe(() => {
       this.modalService.show(ProjectSaveComponent, { keyboard: true, ignoreBackdropClick: false });
     });
   }

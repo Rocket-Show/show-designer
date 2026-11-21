@@ -42,7 +42,6 @@ import { FixturePixelGridComponent } from './fixture/fixture-pixel-grid/fixture-
 import { GradientEditorComponent } from './gradient-editor/gradient-editor.component';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
-import { EmberDialogComponent } from './ember/ember-dialog.component';
 import { IconPickerComponent } from './icon-picker/icon-picker.component';
 import { IntroComponent } from './intro/intro.component';
 import { MasterDimmerComponent } from './master-dimmer/master-dimmer.component';
@@ -143,7 +142,6 @@ import { keepSliderValues } from './slider-value';
     IconPickerComponent,
     HardwarePromoBarComponent,
     HardwarePromoDialogComponent,
-    EmberDialogComponent,
     FixtureVersionBadgesComponent,
     FixtureVersionsComponent,
     FixtureVoteComponent,

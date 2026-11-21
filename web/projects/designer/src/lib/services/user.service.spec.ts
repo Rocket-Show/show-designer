@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { Project } from '../models/project';
+import { ConfigService } from './config.service';
 import { UserService } from './user.service';
 
 // The user logged in to the designer API: the token is kept in the local storage for a month.
@@ -146,5 +147,28 @@ describe('UserService', () => {
     service.setAutoLoadProject(new Project({ name: 'New' }));
     expect(service.getAutoLoadProjectId()).toBeNull();
     expect(service.getAutoLoadProjectName()).toBe('New');
+  });
+
+  it('remembers it under names of its own for a host which shares its address with another', () => {
+    const service = createService();
+
+    service.setAutoLoadProject(new Project({ id: 7, name: 'Show' }));
+    TestBed.inject(ConfigService).autoLoadKeyPrefix = 'stick.';
+
+    // (the project of the other host is not the one of this one)
+    expect(service.getAutoLoadProjectId()).toBeNull();
+    expect(service.getAutoLoadProjectName()).toBeNull();
+
+    service.setAutoLoadProject(new Project({ id: -3, name: 'Gig' }));
+    expect(service.getAutoLoadProjectId()).toBe(-3);
+    expect(service.getAutoLoadProjectName()).toBe('Gig');
+    expect(localStorage.getItem('stick.projectId')).toBe('-3');
+    expect(localStorage.getItem('projectId')).toBe('7');
+
+    service.setAutoLoadProject(new Project({ name: 'New' }));
+    expect(localStorage.getItem('stick.projectId')).toBeNull();
+    expect(localStorage.getItem('projectName')).toBe('Show');
+
+    localStorage.removeItem('stick.projectName');
   });
 });
