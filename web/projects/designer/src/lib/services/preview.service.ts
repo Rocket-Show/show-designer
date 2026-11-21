@@ -29,6 +29,7 @@ import { toInt } from '../models/pixel-math';
 import { pixelHousingSize, pixelStagePosition, stagePixelPlaces } from '../models/pixel-stage';
 import { AudioFrames, PixelAudio } from '../models/pixel-audio';
 import { demoAudioFrames } from '../models/pixel-audio-analysis';
+import { EnginePreviewService } from './engine-preview.service';
 import { getMaintenanceCapability, MaintenanceAction } from '../models/maintenance';
 import {
   getAxisChannelValue,
@@ -214,7 +215,8 @@ export class PreviewService implements OnDestroy {
     private fixtureService: FixtureService,
     private sceneService: SceneService,
     private timelineService: TimelineService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private enginePreviewService?: EnginePreviewService
   ) {
     this.stageMaterial = new THREE.MeshStandardMaterial({
       color: PREVIEW_STAGE_COLOR,
@@ -1530,7 +1532,53 @@ export class PreviewService implements OnDestroy {
   }
 
   // return all fixture uuids with their corresponding channel values
+  // The values of every channel of every part of the fixtures at a moment, with the passed presets playing (see
+  // getPresets): worked out by the shared lighting engine where the switch is on and it can play what is previewed
+  // (not a scene of the AI looks, which isn't in the project), by the TypeScript engine otherwise
   public getChannelValues(timeMillis: number, presets: PresetRegionScene[]): Map<CachedFixture, FixtureChannelValue[]> {
+    if (this.enginePreviewService?.playing && !(this.aiPreview && this.timelineService.playState !== 'playing')) {
+      const values = this.enginePreviewService.getChannelValues(timeMillis, this.getEngineAudioFrames());
+
+      if (values) {
+        // the step list still shows how far the preset being edited is
+        this.updateActiveStep(presets, timeMillis);
+        return values;
+      }
+    }
+
+    return this.getTypeScriptChannelValues(timeMillis, presets);
+  }
+
+  // the audio the shared engine is handed: the one the effects follow, of all buses (see getAudioFrames)
+  getEngineAudioFrames(): AudioFrames {
+    if (this.audioFrames) {
+      return this.audioFrames;
+    }
+
+    const frames = this.timelineService.playState === 'playing' ? this.timelineService.audioFramesFor([]) : undefined;
+
+    return frames || demoAudioFrames;
+  }
+
+  // which step the preset being edited is on and how far into it, for its list to mark and fill while it runs
+  private updateActiveStep(presets: PresetRegionScene[], timeMillis: number) {
+    let activeStep: PresetStep;
+    let activeStepProgress = 0;
+
+    for (const preset of presets) {
+      if (preset.preset === this.presetService.selectedPreset && (preset.region || this.presetService.stepPreviewRunning)) {
+        const state = this.getPresetStepState(preset, timeMillis);
+        activeStep = state.currentStep;
+        activeStepProgress = state.currentStepProgress;
+      }
+    }
+
+    this.presetService.activeStep = activeStep;
+    this.presetService.activeStepProgress = activeStepProgress;
+  }
+
+  // the values of the TypeScript engine of the designer (see getChannelValues)
+  public getTypeScriptChannelValues(timeMillis: number, presets: PresetRegionScene[]): Map<CachedFixture, FixtureChannelValue[]> {
     // Loop over all relevant presets and calc the property values from the presets (capabilities, channels and effects)
     const calculatedFixtures = new Map<CachedFixture, FixtureChannelValue[]>();
 

@@ -46,6 +46,14 @@ export class ConfigService {
   // in its settings, which the designer can't log in.
   public aiAccount: 'designer' | 'host' = 'designer';
 
+  // When true, the preview and the DMX channels are worked out by the shared lighting engine (engine.wasm, loaded from
+  // engineUrl) instead of the TypeScript engine of the designer, where it can play the project (see
+  // EnginePreviewService). Off by default: the shared engine is being compared with the TypeScript engine.
+  public sharedEngine = false;
+
+  // where engine.wasm is loaded from. It is not part of the library (see web/engine/build.sh).
+  public engineUrl = 'assets/engine/engine.wasm';
+
   public menuHeightChanged: Subject<void> = new Subject<void>();
 
   constructor() {}
