@@ -11,7 +11,8 @@ export interface EmberStick {
   // the version of its firmware
   firmware: string;
 
-  // the show it plays: its size (0 without a show), and a mark which only this very show has
+  // the show it plays: its size (0 without a show), and a mark which only this very show has (undefined as long as
+  // the host doesn't know it)
   showBytes: number;
   showMark: string;
 
@@ -55,7 +56,8 @@ export interface EmberHost {
   disconnect(): void;
 
   // The mark the show made from this project has (see EmberStick.showMark): the stick plays the project, when it has
-  // the same. Undefined when no show can be made from it.
+  // the same. What is only selected in a project shouldn't change its mark. Undefined when no show can be made from
+  // it.
   showMark(projectJson: string): Promise<string>;
 
   // Copy the project onto the stick as its show. False when it didn't work: why is in problem.

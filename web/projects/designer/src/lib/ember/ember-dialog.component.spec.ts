@@ -207,7 +207,21 @@ describe('EmberDialogComponent', () => {
     await render({ state: 'connected' });
 
     expect(fixture.componentInstance.showKb).toBe(0);
-    expect(fixture.componentInstance.playsProject).toBe(false);
+    expect(fixture.componentInstance.playsProject).toBeUndefined();
     expect(text()).toContain('designer.ember.connect-text');
+  });
+
+  it('does not say whose show the stick plays until the host knows the show', async () => {
+    await render({ state: 'connected', stick: { ...stick, showMark: undefined } });
+
+    expect(text()).toContain('designer.ember.show-size');
+    expect(text()).not.toContain('designer.ember.show-this-project');
+    expect(text()).not.toContain('designer.ember.show-other');
+
+    // the host has read it
+    host.stick = { ...stick };
+    host.changed.next();
+    fixture.detectChanges();
+    expect(text()).toContain('designer.ember.show-this-project');
   });
 });

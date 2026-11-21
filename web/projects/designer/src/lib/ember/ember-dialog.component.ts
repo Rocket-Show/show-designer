@@ -64,7 +64,8 @@ export class EmberDialogComponent implements OnInit, OnDestroy {
 
   // Does the stick play this project as it is now. Undefined as long as it is not known.
   get playsProject(): boolean {
-    return this.projectMark === undefined ? undefined : this.projectMark === this.ember.stick?.showMark;
+    const showMark = this.ember.stick?.showMark;
+    return this.projectMark === undefined || showMark === undefined ? undefined : this.projectMark === showMark;
   }
 
   // the show on the stick, in KB
