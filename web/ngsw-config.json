@@ -14,7 +14,7 @@
       "installMode": "prefetch",
       "updateMode": "prefetch",
       "resources": {
-        "files": ["/assets/**", "/media/*.woff2", "/media/*.woff"]
+        "files": ["/assets/**", "/media/*.woff2", "/media/*.woff", "/media/icomoon-*.ttf"]
       },
       "cacheQueryOptions": {
         "ignoreSearch": true
