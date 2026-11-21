@@ -23,7 +23,12 @@
     </div>
 
     <div class="card-body">
-      @if (!ember.supported) {
+      <!-- what the host says about this project on a stick -->
+      @for (note of notes; track note.key) {
+      <p class="text-warning small ember-note">
+        <i class="fa fa-exclamation-triangle mr-1" aria-hidden="true"></i>{{ note.key | translate : note.params }}
+      </p>
+      } @if (!ember.supported) {
       <!-- Safari and other browsers which can't talk to a stick -->
       <p class="ember-unsupported">
         <strong class="d-block mb-1">{{ 'designer.ember.unsupported-title' | translate }}</strong>

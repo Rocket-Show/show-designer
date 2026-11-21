@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { BsModalRef } from 'ngx-bootstrap/modal';
 import { Subscription } from 'rxjs';
-import { EmberHost } from '../models/ember-host';
+import { EmberHost, EmberNote } from '../models/ember-host';
 import { ConfigService } from '../services/config.service';
 import { ProjectService } from '../services/project.service';
 
@@ -17,6 +17,9 @@ import { ProjectService } from '../services/project.service';
 export class EmberDialogComponent implements OnInit, OnDestroy {
   // the project was copied onto the stick just now
   sent = false;
+
+  // what the host has to say about this project on a stick (see EmberHost.notes)
+  notes: EmberNote[] = [];
 
   // the mark the show of this project has (see EmberHost.showMark)
   private projectMark: string;
@@ -37,11 +40,21 @@ export class EmberDialogComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.subscription = this.ember.changed.subscribe(() => this.changeDetectorRef.markForCheck());
 
+    const projectJson = this.projectJson();
+
     this.ember
-      .showMark(this.projectJson())
+      .showMark(projectJson)
       .catch((): string => undefined)
       .then((mark) => {
         this.projectMark = mark;
+        this.changeDetectorRef.markForCheck();
+      });
+
+    this.ember
+      .notes(projectJson)
+      .catch((): EmberNote[] => [])
+      .then((notes) => {
+        this.notes = notes || [];
         this.changeDetectorRef.markForCheck();
       });
   }

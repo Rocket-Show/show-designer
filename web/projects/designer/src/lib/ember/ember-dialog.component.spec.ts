@@ -25,6 +25,7 @@ describe('EmberDialogComponent', () => {
       connect: jasmine.createSpy('connect'),
       disconnect: jasmine.createSpy('disconnect'),
       showMark: jasmine.createSpy('showMark').and.callFake(() => Promise.resolve('a1')),
+      notes: jasmine.createSpy('notes').and.callFake(() => Promise.resolve([])),
       send: jasmine.createSpy('send').and.callFake(() => Promise.resolve(true)),
       download: jasmine.createSpy('download'),
       setLive: jasmine.createSpy('setLive'),
@@ -201,6 +202,30 @@ describe('EmberDialogComponent', () => {
     fixture.detectChanges();
     expect(text()).not.toContain('designer.ember.show-this-project');
     expect(text()).not.toContain('designer.ember.show-other');
+  });
+
+  it('says what the host has to say about the project on a stick, with or without a stick', async () => {
+    const notes = jasmine
+      .createSpy('notes')
+      .and.callFake(() =>
+        Promise.resolve([{ key: 'stick.note-slow', params: { scene: 'Finale', millis: 31 } }, { key: 'stick.note-universes' }])
+      );
+
+    await render({ notes });
+
+    expect(notes).toHaveBeenCalledWith(JSON.stringify(project));
+    expect(fixture.nativeElement.querySelectorAll('.ember-note').length).toBe(2);
+    expect(text()).toContain('stick.note-slow');
+    expect(text()).toContain('stick.note-universes');
+  });
+
+  it('has nothing to say when the host can not tell', async () => {
+    await render({ notes: jasmine.createSpy('notes').and.callFake(() => Promise.reject(new Error('no engine'))) });
+    expect(fixture.nativeElement.querySelector('.ember-note')).toBeNull();
+
+    await TestBed.resetTestingModule();
+    await render({ notes: jasmine.createSpy('notes').and.callFake(() => Promise.resolve(undefined)) });
+    expect(fixture.nativeElement.querySelector('.ember-note')).toBeNull();
   });
 
   it('waits for what the stick tells about itself', async () => {

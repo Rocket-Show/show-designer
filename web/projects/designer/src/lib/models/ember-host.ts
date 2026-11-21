@@ -60,6 +60,10 @@ export interface EmberHost {
   // it.
   showMark(projectJson: string): Promise<string>;
 
+  // What there is to say about this project on a stick before it is copied, e.g. that a scene might be too much for
+  // the stick, or that it has fixtures the stick doesn't play. Empty when there is nothing to say.
+  notes(projectJson: string): Promise<EmberNote[]>;
+
   // Copy the project onto the stick as its show. False when it didn't work: why is in problem.
   send(projectJson: string): Promise<boolean>;
 
