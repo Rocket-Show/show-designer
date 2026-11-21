@@ -54,6 +54,15 @@ export class ConfigService {
   // where engine.wasm is loaded from. It is not part of the library (see web/engine/build.sh).
   public engineUrl = 'assets/engine/engine.wasm';
 
+  // When true, projects are opened and saved without an account as well: the host keeps the projects of a user who is
+  // not logged in (the app of the Ember stick, in the browser). The login is still asked for where an account is
+  // needed: the AI, the votes on the fixture profiles.
+  public projectsWithoutLogin = false;
+
+  // What the designer remembers in the browser of the project it had open last is kept under names with this in front
+  // of them: two hosts at one address (the online designer and the app of the Ember stick) each have their own.
+  public autoLoadKeyPrefix = '';
+
   public menuHeightChanged: Subject<void> = new Subject<void>();
 
   constructor() {}

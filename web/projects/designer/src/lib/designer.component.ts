@@ -160,6 +160,18 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.engineUrl = value || this.configService.engineUrl;
   }
 
+  // projects are opened and saved without an account as well (see ConfigService.projectsWithoutLogin)
+  @Input()
+  set projectsWithoutLogin(value: boolean) {
+    this.configService.projectsWithoutLogin = value;
+  }
+
+  // the project opened last is remembered under names of the host's own (see ConfigService.autoLoadKeyPrefix)
+  @Input()
+  set autoLoadKeyPrefix(value: string) {
+    this.configService.autoLoadKeyPrefix = value || '';
+  }
+
   // the size of the menu used in the designer
   private designerMenuSizePx = 34;
 
@@ -265,7 +277,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
         }
       );
     } else if (
-      (this.userService.isLoggedIn() || !this.configService.loginAvailable) &&
+      (this.userService.isLoggedIn() || !this.configService.loginAvailable || this.configService.projectsWithoutLogin) &&
       (this.userService.getAutoLoadProjectId() || this.userService.getAutoLoadProjectName())
     ) {
       // restore the last saved project
@@ -394,7 +406,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
       .pipe(
         map((result) => {
           if (result) {
-            this.userEnsureLoginService.login().subscribe(() => {
+            this.userEnsureLoginService.loginForProjects().subscribe(() => {
               this.modalService.show(ProjectBrowserComponent, { keyboard: true, ignoreBackdropClick: false });
             });
           }
@@ -404,7 +416,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectSave() {
-    this.userEnsureLoginService.login().subscribe(() => {
+    this.userEnsureLoginService.loginForProjects().subscribe(() => {
       if (this.projectService.project.name) {
         // this project has been saved before -> just save it again
         this.projectService.save(this.projectService.project);
@@ -416,7 +428,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   }
 
   projectSaveAs() {
-    this.userEnsureLoginService.login().subscribe(() => {
+    this.userEnsureLoginService.loginForProjects().subscribe(() => {
       this.modalService.show(ProjectSaveComponent, { keyboard: true, ignoreBackdropClick: false });
     });
   }

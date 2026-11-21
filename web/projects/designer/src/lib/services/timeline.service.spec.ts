@@ -872,6 +872,23 @@ describe('TimelineService playing along an audio file', () => {
     expect(ready).toHaveBeenCalled();
   }));
 
+  it('leaves a song alone which was let go of before it could be read', fakeAsync(() => {
+    service.selectCompositionIndex(0);
+    tick();
+    const ready = jasmine.createSpy('ready');
+    service.waveSurferReady.subscribe(ready);
+
+    waveSurfer.isReady = true;
+    waveSurfer.duration = 60;
+    waveSurfer.handlers.ready();
+    // another composition, or the designer closed, before the file was read
+    service.destroyWaveSurfer();
+    tick();
+
+    expect(service.duration).toBeUndefined();
+    expect(ready).not.toHaveBeenCalled();
+  }));
+
   it('plays and pauses the song, Rocket Show along with it', fakeAsync(() => {
     load();
     waveSurfer.currentTime = 2.5;

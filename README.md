@@ -128,6 +128,15 @@ asked to log in or to register first. A Rocket Show device has no such endpoint 
   them, as one step to undo, or discarding them. It opens from the menu bar, a tip shown once the project has fixtures
   and the welcome tour (`AiLooksService.start`).
 
+### A host which keeps the projects
+
+Two switches for a host which keeps the projects itself, like the app of the Ember stick (in the Ember repository),
+which is served at the same address as the online designer and keeps projects in the browser: with
+`[projectsWithoutLogin]="true"` a user without an account opens and saves projects as well (the host keeps them; the AI
+and the votes still ask for the login), and with `[autoLoadKeyPrefix]` the project opened last is remembered under
+names of the host's own. A project keeps what the designer doesn't know of it (`Project.toJSON`), such as the set the
+Ember app keeps in it.
+
 ## Build & publish as NPM package
 
 ```shell
