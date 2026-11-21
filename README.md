@@ -155,5 +155,12 @@ opens without internet. `ngsw-worker.js`, `ngsw.json` and `manifest.webmanifest`
 which has the designer installed loads a new upload in the background and offers a reload. Only the online version
 (`src/app`) has the service worker, the library and Rocket Show don't.
 
+## Ember stick
+
 The Ember stick has an app of its own, which wraps the designer like Rocket Show does (the `app/` folder of the Ember
-repository): nothing of the stick is in the designer.
+repository). The designer has the parts to work with a stick, and its host switches them on, like a Rocket Show device
+switches on the preview on its lights: the host hands the designer an
+[`EmberHost`](web/projects/designer/src/lib/models/ember-host.ts) (`[ember]="..."`), and the designer has the stick in
+its menu, with a dialog which shows what the stick plays, copies the project onto it and sends the preview to the lights
+(`web/projects/designer/src/lib/ember`). The host does the work: USB, the stick's files and its firmware are not in the
+designer. Without `[ember]`, as in the online designer and on a Rocket Show device, nothing of the stick shows.

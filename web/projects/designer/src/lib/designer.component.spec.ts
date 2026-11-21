@@ -13,6 +13,7 @@ import { of, throwError } from 'rxjs';
 
 import { DesignerLayout } from './designer-layout';
 import { DesignerComponent } from './designer.component';
+import { EmberDialogComponent } from './ember/ember-dialog.component';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
@@ -647,6 +648,28 @@ describe('DesignerComponent', () => {
       click('designer.navigation.app-install');
 
       expect(install).toHaveBeenCalled();
+    });
+
+    it('has the Ember stick in the menu while its host has one', () => {
+      const stickEntry = (): HTMLElement => fixture.nativeElement.querySelector('.ember-nav');
+      const host: any = { state: 'disconnected', live: false };
+
+      // the online designer, a Rocket Show device
+      expect(stickEntry()).toBeNull();
+
+      fixture.componentInstance.ember = host;
+      fixture.detectChanges();
+      expect(TestBed.inject(ConfigService).ember).toBe(host);
+      expect(stickEntry().querySelector('.ember-dot-connected')).toBeNull();
+
+      host.state = 'connected';
+      host.live = true;
+      fixture.detectChanges();
+      expect(stickEntry().querySelector('.ember-dot-connected.ember-dot-live')).not.toBeNull();
+
+      show.calls.reset();
+      stickEntry().click();
+      expect(show).toHaveBeenCalledWith(EmberDialogComponent, jasmine.anything());
     });
 
     it('opens the fixture pool', () => {

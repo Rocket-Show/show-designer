@@ -1,0 +1,12 @@
+.ember-dialog .ember-info dt {
+  font-weight: normal;
+  color: #6c757d;
+}
+
+.ember-dialog .ember-info dd {
+  margin-bottom: 0.25rem;
+}
+
+.ember-dialog .ember-state {
+  font-weight: normal;
+}

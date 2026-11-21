@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { AppInstall } from '../models/app-install';
+import { EmberHost } from '../models/ember-host';
 import { UniverseConfig } from '../models/universe-config';
 
 @Injectable({
@@ -49,6 +50,10 @@ export class ConfigService {
 
   // When set, the designer offers to install itself as an app (the online designer as a progressive web app)
   public appInstall: AppInstall;
+
+  // When set, the designer works with an Ember stick through its host (see EmberHost): the stick has its entry in the
+  // menu. Only the app of the stick sets it; the online designer and a Rocket Show device have no stick.
+  public ember: EmberHost;
 
   public menuHeightChanged: Subject<void> = new Subject<void>();
 

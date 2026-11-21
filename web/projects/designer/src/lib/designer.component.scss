@@ -1864,3 +1864,28 @@ $sd-rail-icons-height: 1px + $sd-space-1 + 5 * $sd-rail-icon-size + 4 * $sd-rail
     background: linear-gradient(to right, rgba(253, 126, 20, 0.45), rgba(253, 126, 20, 0));
   }
 }
+
+// the Ember stick in the menu: a dot grey without a stick, green with one, in the accent while the preview goes to the
+// lights
+.ember-nav {
+  white-space: nowrap;
+}
+
+.ember-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background-color: #adb5bd;
+  vertical-align: middle;
+}
+
+.ember-dot-connected {
+  background-color: var(--success);
+}
+
+.ember-dot-live {
+  background-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}

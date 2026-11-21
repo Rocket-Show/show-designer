@@ -38,7 +38,9 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { EmberDialogComponent } from './ember/ember-dialog.component';
 import { AppInstall } from './models/app-install';
+import { EmberHost } from './models/ember-host';
 import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
@@ -151,6 +153,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   @Input()
   set appInstall(value: AppInstall) {
     this.configService.appInstall = value;
+  }
+
+  // the Ember stick of the host application (the app of the stick, see EmberHost)
+  @Input()
+  set ember(value: EmberHost) {
+    this.configService.ember = value;
   }
 
   // the size of the menu used in the designer
@@ -351,6 +359,11 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   // without darkening the rest, so that the preview above them shows what the faders do.
   openDmxChannels() {
     this.modalService.show(DmxChannelsComponent, { keyboard: true, backdrop: false, ignoreBackdropClick: true, class: 'modal-dmx' });
+  }
+
+  // The Ember stick: what it plays, copying the project onto it, the preview on the lights
+  openEmber() {
+    this.modalService.show(EmberDialogComponent, { keyboard: true, ignoreBackdropClick: false });
   }
 
   installApp() {
