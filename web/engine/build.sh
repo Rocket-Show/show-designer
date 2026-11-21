@@ -9,7 +9,7 @@
 # Needs Rust with the target wasm32-unknown-unknown, and a checkout of Rocket-Show/lighting-engine (LIGHTING_ENGINE,
 # default ../lighting-engine next to this repository) or else the internet to clone it from GitHub.
 set -e
-revision=5f84480e22ff7088d12d24c86dc044e8eaf1abab
+revision=9801adfd1765365f8c3e2464a82ce0304763e3d7
 
 here="$(cd "$(dirname "$0")" && pwd)"
 engine="${LIGHTING_ENGINE:-$here/../../../lighting-engine}"

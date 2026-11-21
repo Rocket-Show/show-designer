@@ -8,7 +8,7 @@ repository: `concept.md`, `docs/format.md` and `README.md`.
 
 Status: steps 1 and 2 built and online, 21 November 2026: the preview and the DMX channels play with `engine.wasm`
 behind a switch which is off by default (`?engine=shared` in the online app). Steps 3 and 4 are decisions of a release.
-The engine is the revision `5f84480` of `Rocket-Show/lighting-engine` (its `main`), unchanged.
+The engine is the revision `9801adf` of `Rocket-Show/lighting-engine` (its `main`), unchanged.
 
 ## 1. Decisions
 
@@ -178,4 +178,4 @@ else cloned from GitHub), and the production build of the app serves it at `asse
 fetched with the switch on. The library leaves it out: a host serves one and passes `engineUrl`.
 
 Sources: the lighting engine (`Rocket-Show/lighting-engine`: `concept.md`, `docs/format.md`, `README.md`,
-`conformance/DIFFERENCES.md`). Read on 11 November 2026, the revisions `ed1768c` and `5f84480` again on 21 November 2026.
+`conformance/DIFFERENCES.md`). Read on 11 November 2026, the revisions `ed1768c`, `5f84480` and `9801adf` again on 21 November 2026.
