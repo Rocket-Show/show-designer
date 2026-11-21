@@ -59,6 +59,8 @@
       "login": "Iniciar sessão",
       "logout": "Terminar sessão",
       "support": "Suporte",
+      "app-install": "Instalar como app",
+      "app-update": "Está pronta uma nova versão do designer. Clica aqui para a carregar.",
       "reset-intro": "Mostrar introdução",
       "view": "Ver",
       "devices": "Os meus dispositivos"

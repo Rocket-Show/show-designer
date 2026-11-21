@@ -38,6 +38,7 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { EffectService } from './services/effect.service';
 import { HardwarePromoService } from './services/hardware-promo.service';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
+import { AppInstall } from './models/app-install';
 import { getProjectLoadError } from './models/project-load-error';
 import { UniverseConfig } from './models/universe-config';
 import { UndoService } from './services/undo.service';
@@ -144,6 +145,12 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   @Input()
   set hardwarePromo(value: boolean) {
     this.configService.hardwarePromo = value;
+  }
+
+  // installing the designer as an app (the online designer, see AppInstall)
+  @Input()
+  set appInstall(value: AppInstall) {
+    this.configService.appInstall = value;
   }
 
   // the size of the menu used in the designer
@@ -344,6 +351,10 @@ export class DesignerComponent implements OnInit, AfterViewInit {
   // without darkening the rest, so that the preview above them shows what the faders do.
   openDmxChannels() {
     this.modalService.show(DmxChannelsComponent, { keyboard: true, backdrop: false, ignoreBackdropClick: true, class: 'modal-dmx' });
+  }
+
+  installApp() {
+    this.configService.appInstall?.install();
   }
 
   undo() {

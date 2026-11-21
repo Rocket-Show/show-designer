@@ -59,6 +59,8 @@
       "login": "登录",
       "logout": "退出登录",
       "support": "技术支持",
+      "app-install": "安装为应用",
+      "app-update": "设计器的新版本已准备就绪。点击此处加载。",
       "reset-intro": "显示介绍",
       "view": "视图",
       "devices": "我的设备"

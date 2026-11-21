@@ -627,6 +627,28 @@ describe('DesignerComponent', () => {
       expect(redo).toHaveBeenCalled();
     });
 
+    it('offers to install the designer as an app while its host can', () => {
+      const configService = TestBed.inject(ConfigService);
+      const install = jasmine.createSpy('install').and.returnValue(Promise.resolve());
+      let available = false;
+
+      // a host which can't install anything, like a Rocket Show device
+      fixture.componentInstance.installApp();
+      expect(menuItem('designer.navigation.app-install')).toBeUndefined();
+
+      fixture.componentInstance.appInstall = { available: () => available, install };
+      fixture.detectChanges();
+      expect(configService.appInstall).toBeDefined();
+      expect(menuItem('designer.navigation.app-install')).toBeUndefined();
+
+      // the browser offers it
+      available = true;
+      fixture.detectChanges();
+      click('designer.navigation.app-install');
+
+      expect(install).toHaveBeenCalled();
+    });
+
     it('opens the fixture pool', () => {
       const open = spyOn(TestBed.inject(FixturePoolService), 'open');
 

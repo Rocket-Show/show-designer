@@ -59,6 +59,8 @@
       "login": "Iniciar sesión",
       "logout": "Cerrar sesión",
       "support": "Soporte",
+      "app-install": "Instalar como aplicación",
+      "app-update": "Hay una nueva versión del diseñador lista. Haz clic aquí para cargarla.",
       "reset-intro": "Mostrar introducción",
       "view": "Ver",
       "devices": "Mis dispositivos"

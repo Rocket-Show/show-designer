@@ -59,6 +59,8 @@
       "login": "Se connecter",
       "logout": "Se déconnecter",
       "support": "Assistance",
+      "app-install": "Installer comme application",
+      "app-update": "Une nouvelle version du designer est prête. Cliquez ici pour la charger.",
       "reset-intro": "Afficher l'introduction",
       "view": "Affichage",
       "devices": "Mes appareils"

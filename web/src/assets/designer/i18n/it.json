@@ -59,6 +59,8 @@
       "login": "Accedi",
       "logout": "Esci",
       "support": "Supporto",
+      "app-install": "Installa come app",
+      "app-update": "È pronta una nuova versione del designer. Clicca qui per caricarla.",
       "reset-intro": "Mostra introduzione",
       "view": "Vista",
       "devices": "I miei dispositivi"

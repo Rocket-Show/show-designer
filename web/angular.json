@@ -19,7 +19,7 @@
             "index": "src/index.html",
             "polyfills": ["src/polyfills.ts"],
             "tsConfig": "src/tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": ["src/favicon.ico", "src/manifest.webmanifest", "src/assets"],
             "styles": [
               "node_modules/font-awesome/css/font-awesome.css",
               "node_modules/bootstrap-slider/dist/css/bootstrap-slider.min.css",
@@ -58,7 +58,8 @@
               "outputHashing": "all",
               "sourceMap": false,
               "namedChunks": false,
-              "extractLicenses": true
+              "extractLicenses": true,
+              "serviceWorker": "ngsw-config.json"
             },
             "device": {
               "fileReplacements": [

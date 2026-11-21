@@ -115,6 +115,9 @@
         </a>
         <div class="dropdown-menu" aria-labelledby="settingsDropdown">
           <a class="dropdown-item" href="#" (click)="introService.reset(); (false)">{{ 'designer.navigation.reset-intro' | translate }}</a>
+          @if (configService.appInstall?.available()) {
+          <a class="dropdown-item" href="#" (click)="installApp(); (false)">{{ 'designer.navigation.app-install' | translate }}</a>
+          }
           <a class="dropdown-item" href="https://rocketshow.net/support/" target="_blank">{{
             'designer.navigation.support' | translate
           }}</a>

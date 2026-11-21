@@ -149,3 +149,11 @@ ng build --configuration production --base-href /designer/app/
 ```
 
 Take the content of the folder dist/show-designer/browser and upload it to the web /designer/app (after emptying the folder there first).
+
+The online version is a progressive web app: it can be installed (Help → Install as an app, in Chrome and Edge) and
+opens without internet. `ngsw-worker.js`, `ngsw.json` and `manifest.webmanifest` are part of the upload; a browser
+which has the designer installed loads a new upload in the background and offers a reload. Only the online version
+(`src/app`) has the service worker, the library and Rocket Show don't.
+
+The Ember stick has an app of its own, which wraps the designer like Rocket Show does (the `app/` folder of the Ember
+repository): nothing of the stick is in the designer.

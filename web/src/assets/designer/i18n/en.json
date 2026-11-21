@@ -59,6 +59,8 @@
       "login": "Sign in",
       "logout": "Log out",
       "support": "Support",
+      "app-install": "Install as an app",
+      "app-update": "A new version of the designer is ready. Click here to load it.",
       "reset-intro": "Show intro",
       "view": "View",
       "devices": "My devices"

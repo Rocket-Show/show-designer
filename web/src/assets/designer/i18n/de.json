@@ -59,6 +59,8 @@
       "login": "Einloggen",
       "logout": "Ausloggen",
       "support": "Support",
+      "app-install": "Als App installieren",
+      "app-update": "Eine neue Version des Designers ist bereit. Klicke hier, um sie zu laden.",
       "reset-intro": "Einführung anzeigen",
       "view": "Ansicht",
       "devices": "Meine Geräte"
