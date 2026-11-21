@@ -6,9 +6,9 @@ engine written once, in Rust, in the repository `Rocket-Show/lighting-engine`. T
 it. How the engine itself works (its core, its compiler, the compiled show, the boundary of `engine.wasm`) is in that
 repository: `concept.md`, `docs/format.md` and `README.md`.
 
-Status: steps 1 and 2 built, 21 November 2026, on the branch `claude/shared-engine`: the preview and the DMX channels
-play with `engine.wasm` behind a switch which is off by default. Steps 3 and 4 are decisions of a release. The engine is
-the revision `ed1768c` of `Rocket-Show/lighting-engine` (branch `claude/lighter-arithmetic`), unchanged.
+Status: steps 1 and 2 built and online, 21 November 2026: the preview and the DMX channels play with `engine.wasm`
+behind a switch which is off by default (`?engine=shared` in the online app). Steps 3 and 4 are decisions of a release.
+The engine is the revision `5f84480` of `Rocket-Show/lighting-engine` (its `main`), unchanged.
 
 ## 1. Decisions
 
@@ -70,7 +70,7 @@ is a complete host in JavaScript):
 | `DmxService.getUniverseValues`                     | Sends the universes the engine worked out in the same frame                                                                                                                                                                               |
 | The switch                                         | The input `sharedEngine` of `lib-designer` (`ConfigService.sharedEngine`, off), with `engineUrl` (default `assets/engine/engine.wasm`); the online app turns it on with `?engine=shared`                                                  |
 | The comparison                                     | While the engine plays, a button of the preview compares it with the TypeScript engine over the next 50 frames (2 s): every value of every part and every DMX channel; the differences beyond 1 go to the console                         |
-| `web/engine/build.sh`                              | Builds `engine.wasm` from the engine at the pinned revision into `web/engine/`, which git ignores. The dev server serves it, the production build of the app and the library leave it out                                                 |
+| `web/engine/build.sh`                              | Builds `engine.wasm` from the engine at the pinned revision into `web/engine/`, which git ignores. The dev server and the production build of the app serve it, the library leaves it out                                                 |
 | `engine-conformance.spec.ts`, `e2e/engine.spec.ts` | Play the cases and the app with the real `engine.wasm`; skipped without it, so on CI, which can't build it                                                                                                                                |
 
 The project is compiled again on the frame after it changed: each frame compares its JSON without the profiles and
@@ -171,9 +171,11 @@ for everyone within the hour. Because it updates itself, it always carries the n
 projects stay JSON: nothing stored in the browser or the account depends on the compiled show. From step 2 on, new
 engine features land in the shared engine only.
 
-**Shipping `engine.wasm`.** The engine's repository is private and has no licence yet, this one is public: the binary
-is neither committed nor in the library nor in the production build of the app. Until that is decided, the switch can
-only be tried on a dev server with a built `engine.wasm`, or by a host which serves one and passes `engineUrl`.
+**Shipping `engine.wasm`.** The engine is open source since 21 November 2026
+([Rocket-Show/lighting-engine](https://github.com/Rocket-Show/lighting-engine), GPL-3.0-or-later, like the designer).
+The binary isn't committed: `web/engine/build.sh` builds it (from a checkout of the engine next to this repository, or
+else cloned from GitHub), and the production build of the app serves it at `assets/engine/engine.wasm`, which is only
+fetched with the switch on. The library leaves it out: a host serves one and passes `engineUrl`.
 
 Sources: the lighting engine (`Rocket-Show/lighting-engine`: `concept.md`, `docs/format.md`, `README.md`,
-`conformance/DIFFERENCES.md`). Read on 11 November 2026, the revision `ed1768c` again on 21 November 2026.
+`conformance/DIFFERENCES.md`). Read on 11 November 2026, the revisions `ed1768c` and `5f84480` again on 21 November 2026.

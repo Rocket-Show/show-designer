@@ -54,7 +54,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "assets": ["src/favicon.ico", "src/assets"],
+              "assets": ["src/favicon.ico", "src/assets", { "glob": "engine.wasm", "input": "engine", "output": "assets/engine" }],
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,

@@ -11,6 +11,11 @@ import { Scene } from './scene';
 import { UniverseConfig } from './universe-config';
 import { ProjectPixelPalette } from './pixel-palette';
 
+// What a project has besides what the designer knows of it, by the project: e.g. what a host keeps in it (the set of a
+// stick). The designer doesn't read it, but saves it with the project again, so a project opened and saved here keeps
+// what another app put into it. (Kept beside the project, not on it: nothing else of the designer sees it.)
+const unknownFields = new WeakMap<Project, { [key: string]: any }>();
+
 export class Project {
   public id: number;
   public version: number;
@@ -186,5 +191,32 @@ export class Project {
         target.push(new Folder(folder));
       }
     }
+
+    // what the designer doesn't know of, kept as it is
+    const unknown: { [key: string]: any } = {};
+
+    for (const key of Object.keys(data)) {
+      if (!(key in this) && data[key] !== undefined) {
+        unknown[key] = data[key];
+      }
+    }
+
+    if (Object.keys(unknown).length > 0) {
+      unknownFields.set(this, unknown);
+    }
+  }
+
+  // The project as it is saved: what the designer knows of it, and after it what it doesn't (see unknownFields)
+  toJSON(): any {
+    const json: any = { ...this };
+    const unknown = unknownFields.get(this);
+
+    for (const key of Object.keys(unknown || {})) {
+      if (!(key in json)) {
+        json[key] = unknown[key];
+      }
+    }
+
+    return json;
   }
 }
