@@ -137,6 +137,9 @@
       "hidden-hint": "El escenario no se renderiza mientras la vista previa está oculta.",
       "glow-off": "Desactivar el halo de las luces para ahorrar rendimiento",
       "glow-on": "Activar el halo de las luces",
+      "engine-compare": "Comparar el motor compartido que reproduce la vista previa con el motor TypeScript",
+      "engine-same": "El motor compartido y el motor TypeScript coinciden con una diferencia máxima de 1: {{values}} valores en {{frames}} fotogramas",
+      "engine-differs": "{{count}} de {{values}} valores difieren en más de 1 entre el motor compartido y el motor TypeScript (ver la consola)",
       "ai": "Vista previa de la IA",
       "ai-not-added": "Aún no está en tu proyecto"
     },

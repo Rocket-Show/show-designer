@@ -5,6 +5,7 @@ import { DmxOverride, dmxUniverseSize } from '../models/dmx-override';
 import { FixtureCapabilityType } from '../models/fixture-capability';
 import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { FixtureModeChannel } from '../models/fixture-mode-channel';
+import { EnginePreviewService } from './engine-preview.service';
 import { FixtureService } from './fixture.service';
 import { LivePreviewService } from './live-preview.service';
 import { ProjectService } from './project.service';
@@ -36,7 +37,8 @@ export class DmxService {
   constructor(
     private fixtureService: FixtureService,
     private projectService: ProjectService,
-    private livePreviewService: LivePreviewService
+    private livePreviewService: LivePreviewService,
+    private enginePreviewService?: EnginePreviewService
   ) {}
 
   // the channels of all fixtures of the passed universe, by their DMX channel
@@ -159,8 +161,22 @@ export class DmxService {
   }
 
   // The values sent on each DMX channel of the passed universe for the passed values of the fixtures (see
-  // PreviewService.getChannelValues): 0 where nothing is sent
+  // PreviewService.getChannelValues): 0 where nothing is sent. Values the shared lighting engine came to come with the
+  // universes it worked out in the same frame.
   getUniverseValues(universeUuid: string, values: Map<CachedFixture, FixtureChannelValue[]>): number[] {
+    if (this.enginePreviewService?.playedFrame(values)) {
+      const universe = this.enginePreviewService.getUniverse(universeUuid);
+
+      if (universe) {
+        return universe;
+      }
+    }
+
+    return this.getTypeScriptUniverseValues(universeUuid, values);
+  }
+
+  // the values sent on a universe, worked out by the designer (see getUniverseValues)
+  getTypeScriptUniverseValues(universeUuid: string, values: Map<CachedFixture, FixtureChannelValue[]>): number[] {
     const universe: number[] = new Array(dmxUniverseSize).fill(0);
     const masterDimmer = this.projectService.project?.masterDimmerValue ?? 1;
 

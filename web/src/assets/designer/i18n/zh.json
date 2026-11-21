@@ -137,6 +137,9 @@
       "hidden-hint": "预览隐藏时不会渲染舞台。",
       "glow-off": "关闭灯光辉光以节省性能",
       "glow-on": "开启灯光辉光",
+      "engine-compare": "将播放预览的共享引擎与 TypeScript 引擎进行比较",
+      "engine-same": "共享引擎与 TypeScript 引擎的差异不超过 1：{{frames}} 帧中的 {{values}} 个值",
+      "engine-differs": "{{values}} 个值中有 {{count}} 个在共享引擎与 TypeScript 引擎之间相差超过 1（见控制台）",
       "ai": "AI 预览",
       "ai-not-added": "尚未加入你的项目"
     },

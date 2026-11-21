@@ -13,6 +13,7 @@ import { of, throwError } from 'rxjs';
 
 import { DesignerLayout } from './designer-layout';
 import { DesignerComponent } from './designer.component';
+import { EnginePreviewService } from './services/engine-preview.service';
 import { HardwarePromoBarComponent } from './hardware-promo/hardware-promo-bar.component';
 import { HardwarePromoDialogComponent } from './hardware-promo/hardware-promo-dialog.component';
 import { InlineEditComponent } from './inline-edit/inline-edit.component';
@@ -300,6 +301,27 @@ describe('DesignerComponent', () => {
       fixture.componentRef.setInput('aiAccount', undefined);
       fixture.detectChanges();
       expect(configService.aiAccount).toBe('designer');
+    });
+
+    it('plays the preview with the shared lighting engine where the host turns it on', async () => {
+      const enginePreviewService = TestBed.inject(EnginePreviewService);
+      const setOn = spyOn(enginePreviewService, 'setOn');
+      fixture = TestBed.createComponent(DesignerComponent);
+
+      fixture.componentRef.setInput('engineUrl', 'engine/engine.wasm');
+      fixture.componentRef.setInput('sharedEngine', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(setOn).toHaveBeenCalledWith(true);
+      expect(configService.engineUrl).toBe('engine/engine.wasm');
+
+      // a host which doesn't say where engine.wasm is leaves it where it is
+      fixture.componentRef.setInput('engineUrl', undefined);
+      fixture.componentRef.setInput('sharedEngine', undefined);
+      fixture.detectChanges();
+      expect(configService.engineUrl).toBe('engine/engine.wasm');
+      expect(setOn).toHaveBeenCalledWith(false);
     });
   });
 

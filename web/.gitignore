@@ -19,3 +19,6 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+
+# engine.wasm of the shared lighting engine, built by engine/build.sh (not to be committed)
+/engine/*.wasm

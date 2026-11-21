@@ -8,7 +8,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FixtureCategory } from '../models/fixture-profile';
+import { TranslateService } from '@ngx-translate/core';
+import { ToastrService } from 'ngx-toastr';
 import { DmxService } from '../services/dmx.service';
+import { EngineComparison, EnginePreviewService } from '../services/engine-preview.service';
 import { FixtureService } from '../services/fixture.service';
 import { PreviewMeshService } from '../services/preview-mesh.service';
 import { HardwarePromoService } from '../services/hardware-promo.service';
@@ -109,6 +112,10 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
 
   public promoLink: string;
 
+  // what a comparison of the engines covers: 50 frames 40 ms apart
+  static compareFrames = 50;
+  static compareFrameMillis = 40;
+
   // the frame rendered next, and the rebuilding of the fixtures: both stop with the preview
   private animationFrame: number;
   private fixtureSetupSubscription: Subscription;
@@ -125,7 +132,10 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
     private ngZone: NgZone,
     public hardwarePromoService: HardwarePromoService,
     private layoutService: LayoutService,
-    private dmxService: DmxService
+    private dmxService: DmxService,
+    public enginePreviewService: EnginePreviewService,
+    private toastrService: ToastrService,
+    private translateService: TranslateService
   ) {
     this.promoLink = this.hardwarePromoService.link('preview-badge');
 
@@ -598,6 +608,36 @@ export class PreviewComponent implements AfterViewInit, OnDestroy {
   }
 
   // the lights glow, or not (to save performance)
+  // Compare the shared lighting engine playing the preview with the TypeScript engine, over the next two seconds of
+  // what is previewed: the values of every channel of every part and the universes sent. The differences beyond 1 go
+  // to the console.
+  compareEngines(): EngineComparison {
+    const from = this.animationService.timeMillis;
+    const times: number[] = [];
+
+    for (let frame = 0; frame < PreviewComponent.compareFrames; frame++) {
+      times.push(from + frame * PreviewComponent.compareFrameMillis);
+    }
+
+    const comparison = this.enginePreviewService.compare(
+      times,
+      (timeMillis) => this.previewService.getTypeScriptChannelValues(timeMillis, this.previewService.getPresets(timeMillis)),
+      (universeUuid, values) => this.dmxService.getTypeScriptUniverseValues(universeUuid, values),
+      () => this.previewService.getEngineAudioFrames()
+    );
+
+    const parameters = { frames: comparison.frames, values: comparison.values, count: comparison.differenceCount };
+
+    if (comparison.differenceCount === 0) {
+      this.toastrService.success(this.translateService.instant('designer.preview.engine-same', parameters));
+    } else {
+      console.warn('The shared lighting engine differs from the TypeScript engine by more than 1:', comparison.differences);
+      this.toastrService.warning(this.translateService.instant('designer.preview.engine-differs', parameters));
+    }
+
+    return comparison;
+  }
+
   switchGlow() {
     this.previewService.setGlow(!this.previewService.glowing);
   }

@@ -36,6 +36,21 @@
     }
   </div>
 
+  <!-- the shared lighting engine plays the preview (the switch of the host is on): compare it with the TypeScript
+       engine -->
+  @if (enginePreviewService.playing && !enginePreviewService.unplayable) {
+  <a
+    href="#"
+    class="preview-chrome-button preview-engine-button preview-chrome-button-on"
+    popover="{{ 'designer.preview.engine-compare' | translate }}"
+    container="body"
+    placement="left"
+    triggers="mouseenter:mouseleave"
+    (click)="compareEngines(); (false)"
+    ><i class="fa fa-fw fa-balance-scale" aria-hidden="true"></i
+  ></a>
+  }
+
   <!-- the glow around the lights, which costs a bit of performance -->
   @if (!previewHidden) {
   <a

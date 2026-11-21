@@ -19,7 +19,7 @@
             "index": "src/index.html",
             "polyfills": ["src/polyfills.ts"],
             "tsConfig": "src/tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": ["src/favicon.ico", "src/assets", { "glob": "engine.wasm", "input": "engine", "output": "assets/engine" }],
             "styles": [
               "node_modules/font-awesome/css/font-awesome.css",
               "node_modules/bootstrap-slider/dist/css/bootstrap-slider.min.css",
@@ -54,6 +54,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
+              "assets": ["src/favicon.ico", "src/assets", { "glob": "engine.wasm", "input": "engine", "output": "assets/engine" }],
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,

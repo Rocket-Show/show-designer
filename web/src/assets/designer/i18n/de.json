@@ -137,6 +137,9 @@
       "hidden-hint": "Die Bühne wird nicht gerendert, solange die Vorschau ausgeblendet ist.",
       "glow-off": "Lichtschein ausschalten, um Leistung zu sparen",
       "glow-on": "Lichtschein einschalten",
+      "engine-compare": "Die gemeinsame Engine, die die Vorschau spielt, mit der TypeScript-Engine vergleichen",
+      "engine-same": "Die gemeinsame Engine und die TypeScript-Engine stimmen auf 1 genau überein: {{values}} Werte in {{frames}} Bildern",
+      "engine-differs": "{{count}} von {{values}} Werten weichen zwischen der gemeinsamen Engine und der TypeScript-Engine um mehr als 1 ab (siehe Konsole)",
       "ai": "KI-Vorschau",
       "ai-not-added": "Noch nicht in deinem Projekt"
     },

@@ -28,6 +28,18 @@ module.exports = function (config) {
         global: { statements: 97, branches: 94, functions: 97, lines: 97 },
       },
     },
+    // engine.wasm of the shared lighting engine, if it has been built (engine/build.sh): it is not in git, and the specs
+    // which need it are skipped without it
+    files: [
+      {
+        pattern: require('path').join(__dirname, '../../engine/engine.wasm'),
+        included: false,
+        served: true,
+        watched: false,
+        nocache: true,
+      },
+    ],
+    proxies: { '/assets/engine/': '/absolute' + require('path').join(__dirname, '../../engine') + '/' },
     reporters: ['progress', 'kjhtml'],
     port: 9876,
     colors: true,
