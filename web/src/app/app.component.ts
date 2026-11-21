@@ -13,5 +13,9 @@ export class AppComponent {
     '[{"uuid":"f869189e-4068-4800-a61f-66a1499946fd","name":"DMX"},{"uuid":"363b72d6-f58f-4873-a98c-02fb49d01ed2","name":"Universe 2"},{"uuid":"204d88c6-8deb-4c03-9d5d-721693a9723b","name":"Universe 3"}]'
   );
 
+  // the preview played by the shared lighting engine, to compare it with the TypeScript engine: ?engine=shared (needs
+  // engine.wasm, see engine/build.sh)
+  public sharedEngine = new URLSearchParams(window.location.search).get('engine') === 'shared';
+
   constructor(public appHttpInterceptor: AppHttpInterceptor) {}
 }

@@ -44,6 +44,7 @@ import { UndoService } from './services/undo.service';
 import { LayoutService } from './services/layout.service';
 import { AiLooksService } from './services/ai-looks.service';
 import { UserDevicesComponent } from './user/user-devices/user-devices.component';
+import { EnginePreviewService } from './services/engine-preview.service';
 
 @Component({
   selector: 'lib-designer',
@@ -146,6 +147,19 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     this.configService.hardwarePromo = value;
   }
 
+  // Play the preview with the shared lighting engine (engine.wasm) instead of the TypeScript engine, where it can play
+  // the project (see EnginePreviewService). Off by default.
+  @Input()
+  set sharedEngine(value: boolean) {
+    this.enginePreviewService.setOn(value === true);
+  }
+
+  // where engine.wasm is loaded from (see ConfigService.engineUrl)
+  @Input()
+  set engineUrl(value: string) {
+    this.configService.engineUrl = value || this.configService.engineUrl;
+  }
+
   // the size of the menu used in the designer
   private designerMenuSizePx = 34;
 
@@ -192,6 +206,7 @@ export class DesignerComponent implements OnInit, AfterViewInit {
     public undoService: UndoService,
     public layoutService: LayoutService,
     public aiLooksService: AiLooksService,
+    private enginePreviewService: EnginePreviewService,
     private elementRef: ElementRef
   ) {
     this.configService.menuHeightChanged.subscribe(() => {

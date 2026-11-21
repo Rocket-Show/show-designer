@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { ToastrModule } from 'ngx-toastr';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { of } from 'rxjs';
 import * as THREE from 'three';
 
@@ -13,6 +13,7 @@ import { FixtureChannelValue } from '../models/fixture-channel-value';
 import { Project } from '../models/project';
 import { AnimationService } from '../services/animation.service';
 import { ConfigService } from '../services/config.service';
+import { EnginePreviewService } from '../services/engine-preview.service';
 import { FixtureService } from '../services/fixture.service';
 import { LayoutService } from '../services/layout.service';
 import { PresetService } from '../services/preset.service';
@@ -893,6 +894,40 @@ describe('PreviewComponent', () => {
     open();
 
     expect(element('a.preview-simulation')).toBeNull();
+  });
+
+  it('compares the shared lighting engine with the TypeScript engine while the shared engine plays the preview', () => {
+    const enginePreviewService = TestBed.inject(EnginePreviewService);
+    const toastrService = TestBed.inject(ToastrService);
+    spyOn(toastrService, 'success');
+    spyOn(toastrService, 'warning');
+    open();
+    expect(element('a.preview-engine-button')).toBeNull();
+
+    spyOnProperty(enginePreviewService, 'playing').and.returnValue(true);
+    let differences = 0;
+    const compare = spyOn(enginePreviewService, 'compare').and.callFake((times, typeScript, typeScriptUniverse, audio) => {
+      const values = typeScript(times[0]);
+      typeScriptUniverse('u', values);
+      audio(times[0]);
+      return {
+        frames: times.length,
+        values: 10,
+        differences: differences ? [{ timeMillis: 0, place: 'Par: Red', typeScript: 0, engine: 9 }] : [],
+        differenceCount: differences,
+        largest: 9,
+      };
+    });
+    fixture.detectChanges();
+
+    element('a.preview-engine-button').click();
+    expect(compare.calls.mostRecent().args[0].length).toBe(50);
+    expect(toastrService.success).toHaveBeenCalled();
+
+    differences = 1;
+    expect(component.compareEngines().differenceCount).toBe(1);
+    expect(toastrService.warning).toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalled();
   });
 
   // the designer is left for another page of Rocket Show

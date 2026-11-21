@@ -137,6 +137,9 @@
       "hidden-hint": "The stage is not rendered while the preview is hidden.",
       "glow-off": "Turn the glow of the lights off to save performance",
       "glow-on": "Let the lights glow",
+      "engine-compare": "Compare the shared engine playing the preview with the TypeScript engine",
+      "engine-same": "The shared engine and the TypeScript engine agree within 1: {{values}} values in {{frames}} frames",
+      "engine-differs": "{{count}} of {{values}} values differ by more than 1 between the shared engine and the TypeScript engine (see the console)",
       "ai": "AI preview",
       "ai-not-added": "Not in your project yet"
     },

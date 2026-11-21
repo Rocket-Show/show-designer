@@ -137,6 +137,9 @@
       "hidden-hint": "Il palco non viene renderizzato mentre l'anteprima è nascosta.",
       "glow-off": "Disattiva l'alone delle luci per risparmiare prestazioni",
       "glow-on": "Attiva l'alone delle luci",
+      "engine-compare": "Confronta il motore condiviso che riproduce l'anteprima con il motore TypeScript",
+      "engine-same": "Il motore condiviso e il motore TypeScript concordano entro 1: {{values}} valori in {{frames}} fotogrammi",
+      "engine-differs": "{{count}} valori su {{values}} differiscono di più di 1 tra il motore condiviso e il motore TypeScript (vedi la console)",
       "ai": "Anteprima dell'IA",
       "ai-not-added": "Non ancora nel tuo progetto"
     },

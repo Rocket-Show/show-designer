@@ -137,6 +137,9 @@
       "hidden-hint": "O palco não é renderizado enquanto a pré-visualização estiver oculta.",
       "glow-off": "Desativar o brilho das luzes para poupar desempenho",
       "glow-on": "Ativar o brilho das luzes",
+      "engine-compare": "Comparar o motor partilhado que reproduz a pré-visualização com o motor TypeScript",
+      "engine-same": "O motor partilhado e o motor TypeScript coincidem com uma diferença máxima de 1: {{values}} valores em {{frames}} quadros",
+      "engine-differs": "{{count}} de {{values}} valores diferem mais de 1 entre o motor partilhado e o motor TypeScript (ver a consola)",
       "ai": "Pré-visualização da IA",
       "ai-not-added": "Ainda não está no seu projeto"
     },
